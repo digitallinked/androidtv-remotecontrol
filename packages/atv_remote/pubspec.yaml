@@ -8,6 +8,9 @@ environment:
 
 resolution: workspace
 
+dependencies:
+  protobuf: 6.1.0
+
 dev_dependencies:
   test: ^1.25.6
   very_good_analysis: 10.3.0
