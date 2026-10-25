@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 
 /// Pumps [child] inside a themed [MaterialApp].
@@ -18,6 +19,8 @@ Future<void> pumpApp(
   return tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: buildAppTheme(brightness: brightness),
       builder: (context, app) => MediaQuery(
         data: MediaQuery.of(context).copyWith(

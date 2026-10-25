@@ -1,0 +1,45 @@
+{
+  "@@locale": "en",
+  "statusConnected": "Connected",
+  "@statusConnected": {
+    "description": "Connection status pill: the TV is connected."
+  },
+  "statusConnecting": "Connecting…",
+  "@statusConnecting": {
+    "description": "Connection status pill: the first connection attempt is running."
+  },
+  "statusReconnecting": "Reconnecting…",
+  "@statusReconnecting": {
+    "description": "Connection status pill: the connection was lost and the app is trying again."
+  },
+  "statusOffline": "Offline",
+  "@statusOffline": {
+    "description": "Connection status pill: every reconnect attempt failed."
+  },
+  "statusNeedsPairing": "Pair again",
+  "@statusNeedsPairing": {
+    "description": "Connection status pill: the TV no longer accepts this phone and it must be paired again."
+  },
+  "statusDisconnected": "Not connected",
+  "@statusDisconnected": {
+    "description": "Connection status pill: no connection and no attempt in progress."
+  },
+  "statusReconnectAction": "Reconnect",
+  "@statusReconnectAction": {
+    "description": "Button next to the Offline status that tries to connect again."
+  },
+  "statusSemantics": "Connection: {status}",
+  "@statusSemantics": {
+    "description": "Screen-reader label of the connection status pill.",
+    "placeholders": {
+      "status": {
+        "type": "String",
+        "example": "Offline"
+      }
+    }
+  },
+  "closeAction": "Close",
+  "@closeAction": {
+    "description": "Tooltip and screen-reader label of the button that closes a bottom sheet."
+  }
+}
