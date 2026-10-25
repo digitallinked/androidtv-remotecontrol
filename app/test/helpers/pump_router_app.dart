@@ -11,6 +11,9 @@ import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+
+import 'fake_tv_discovery.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
 /// store it runs on (backed by in-memory preferences and an in-memory
@@ -38,6 +41,9 @@ Future<SettingsStore> pumpRouterApp(
         settingsStoreProvider.overrideWithValue(store),
         appDatabaseProvider.overrideWithValue(db),
         initialLocationProvider.overrideWithValue(initialLocation),
+        tvDiscoveryFactoryProvider.overrideWithValue(
+          FakeTvDiscoveries().create,
+        ),
         ...overrides,
       ],
       child: Consumer(
