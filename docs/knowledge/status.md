@@ -29,6 +29,19 @@ _Last updated: 2026-10-25 by Claude (controller, subagent-driven run of Phase 0â
 2. Set `RemoteClient.idleTimeout` from the measured ping interval (decision #10).
 3. Write the detailed plan for Phase 2 (`superpowers:writing-plans`), then execute it.
 
+## Carry-over from the Phase 1 reviews (do these when the app wires the library)
+
+- `TvConnection`: re-check the generation after the `verifyServerKey` callback returns (guards a re-entrant `dispose()`); fold the duplicated rejection path into `_handleFailure`.
+- The app must **debounce/coalesce** resume and network-change notifications: each one abandons the attempt in flight.
+- The Reconnect button should call `notifyNetworkChanged()` (re-resolves the host), not `connect()`.
+- Wake-on-LAN: pass the subnet broadcast address as well as `255.255.255.255`.
+- The pairing UI must trim and upper-case the code before `submitCode`.
+- `PairingClient` puts BoringSSL text in `connectionFailed` messages when the identity can't load; reduce to the exception type like `RemoteClient` does. `ClientIdentity.fromPem` still echoes `$e` for the certificate branch (only risky if a caller swaps the cert/key arguments).
+- An identity that can't be loaded currently surfaces as `networkError` and retries until offline; the app may want a distinct "identity corrupt" state.
+- CLI hardening before sharing it: write the identity file atomically with `chmod 600` on POSIX; catch setup errors; handle SIGINT in `pair`/`key`; add a test that `cliKeyCodes` covers every `KeyCodes` member.
+- Release manifest still lacks `INTERNET`, `ACCESS_NETWORK_STATE`, `CHANGE_WIFI_MULTICAST_STATE`; iOS lacks `NSLocalNetworkUsageDescription`/`NSBonjourServices` (Phase 2/3 tasks).
+- Record the protoc download URL/version in the gen scripts.
+
 ## Blocked / needs the owner
 
 - Real-TV smoke test (TV on, same Wi-Fi; read the pairing code to Claude).
