@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:atv_remote/src/framing.dart';
 import 'package:atv_remote/src/identity.dart';
@@ -96,6 +97,10 @@ class FakeTvServer {
   final List<RemoteDirection> _receivedKeyDirections = [];
   final List<String> _receivedAppLinks = [];
   String _receivedText = '';
+  RemoteConfigure? _receivedConfigure;
+  int? _receivedActiveCode;
+  RemoteImeBatchEdit? _receivedImeBatchEdit;
+  int _answeredPings = 0;
 
   /// Port of the pairing (polo) service.
   int get pairingPort => _pairingServer.port;
@@ -120,6 +125,19 @@ class FakeTvServer {
 
   /// The text of the most recent `RemoteImeBatchEdit`, or an empty string.
   String get receivedText => _receivedText;
+
+  /// The `RemoteConfigure` the client answered the TV's with, or `null`.
+  RemoteConfigure? get receivedConfigure => _receivedConfigure;
+
+  /// The `active` value of the client's `RemoteSetActive` reply, or `null`.
+  int? get receivedActiveCode => _receivedActiveCode;
+
+  /// The most recent `RemoteImeBatchEdit` in full (counters included), or
+  /// `null`.
+  RemoteImeBatchEdit? get receivedImeBatchEdit => _receivedImeBatchEdit;
+
+  /// How many pings (all clients, all time) have been answered.
+  int get answeredPingCount => _answeredPings;
 
   /// Whether the most recently sent ping has been answered.
   ///
@@ -165,6 +183,22 @@ class FakeTvServer {
     _activeWaiters.clear();
     for (final waiter in waiters) {
       if (!waiter.isCompleted) waiter.complete();
+    }
+  }
+
+  /// Sends [message] to every active remote client.
+  void sendMessage(RemoteMessage message) => _broadcast(message);
+
+  /// Sends all [messages] to every active remote client in a single socket
+  /// write, so they reach the client in one chunk.
+  void sendMessages(List<RemoteMessage> messages) {
+    final bytes = BytesBuilder(copy: false);
+    for (final message in messages) {
+      bytes.add(encodeFrame(message.writeToBuffer()));
+    }
+    final chunk = bytes.takeBytes();
+    for (final client in _remoteClients) {
+      if (client.active) client.sendRaw(chunk);
     }
   }
 
@@ -383,13 +417,18 @@ class FakeTvServer {
   }
 
   void _handleClientMessage(RemoteMessage message) {
-    if (message.hasRemoteKeyInject()) {
+    if (message.hasRemoteConfigure()) {
+      _receivedConfigure = message.remoteConfigure;
+    } else if (message.hasRemoteSetActive()) {
+      _receivedActiveCode = message.remoteSetActive.active;
+    } else if (message.hasRemoteKeyInject()) {
       final inject = message.remoteKeyInject;
       _receivedKeyCodes.add(inject.keyCode.value);
       _receivedKeyDirections.add(inject.direction);
     } else if (message.hasRemoteAppLinkLaunchRequest()) {
       _receivedAppLinks.add(message.remoteAppLinkLaunchRequest.appLink);
     } else if (message.hasRemoteImeBatchEdit()) {
+      _receivedImeBatchEdit = message.remoteImeBatchEdit;
       // androidtvremote2 sends the typed text in
       // edit_info[].text_field_status.value; the last entry wins.
       final edits = message.remoteImeBatchEdit.editInfo;
@@ -474,17 +513,23 @@ class _RemoteClient {
     if (message.hasRemoteConfigure()) {
       if (_configured) return;
       _configured = true;
+      _tv._handleClientMessage(message);
       send(RemoteMessage(remoteSetActive: RemoteSetActive(active: 622)));
     } else if (message.hasRemoteSetActive()) {
       if (active) return;
       active = true;
-      _tv._clientBecameActive();
+      _tv
+        .._handleClientMessage(message)
+        .._clientBecameActive();
       if (_tv.sendPings) {
         _pingTimer = Timer.periodic(_tv.pingInterval, (_) => _ping());
       }
     } else if (message.hasRemotePingResponse()) {
       final n = message.remotePingResponse.val1;
-      if (n > _answeredUpTo) _answeredUpTo = n;
+      if (n > _answeredUpTo) {
+        _answeredUpTo = n;
+        _tv._answeredPings++;
+      }
     } else {
       _tv._handleClientMessage(message);
     }
@@ -520,10 +565,13 @@ class _RemoteClient {
     return false;
   }
 
-  void send(RemoteMessage message) {
+  void send(RemoteMessage message) =>
+      sendRaw(encodeFrame(message.writeToBuffer()));
+
+  void sendRaw(List<int> bytes) {
     if (_closed) return;
     try {
-      _socket.add(encodeFrame(message.writeToBuffer()));
+      _socket.add(bytes);
     } on Object {
       close();
     }
