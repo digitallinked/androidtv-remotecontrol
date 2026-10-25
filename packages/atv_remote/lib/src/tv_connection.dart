@@ -105,8 +105,10 @@ class NotConnectedException implements Exception {
 /// * `certificateRejected` at any point gives `needsPairing`; nothing more is
 ///   tried until [connect] is called again.
 /// * [notifyAppResumed] and [notifyNetworkChanged] retry at once from
-///   `reconnecting` (when no attempt is running) and `offline`, restarting
-///   the backoff and the attempt count; in every other state they do nothing.
+///   `reconnecting` and `offline`, restarting the backoff and the attempt
+///   count; an attempt still running (possibly hanging until its connect
+///   timeout) is abandoned for the fresh one. In every other state they do
+///   nothing.
 /// * [dispose] ends everything in `disconnected`.
 ///
 /// A failed `RemoteClient.connect` both throws and emits `RemoteClosed`; each
@@ -120,21 +122,25 @@ class TvConnection {
   /// attempts. Before every reconnect attempt (not the first [connect]),
   /// [reResolveHost] is awaited if given (typically an mDNS lookup of the
   /// TV): a non-null result replaces the host from then on; errors and
-  /// `null` keep the old host.
+  /// `null` keep the old host, and so does a lookup that takes longer than
+  /// [reResolveTimeout].
   TvConnection({
     required String host,
     required RemoteClient Function(String host) clientFactory,
     Backoff? backoff,
     Future<String?> Function()? reResolveHost,
+    Duration reResolveTimeout = const Duration(seconds: 5),
   }) : _host = host,
        _clientFactory = clientFactory,
        _backoff = backoff ?? Backoff(),
-       _reResolveHost = reResolveHost;
+       _reResolveHost = reResolveHost,
+       _reResolveTimeout = reResolveTimeout;
 
   String _host;
   final RemoteClient Function(String host) _clientFactory;
   final Backoff _backoff;
   final Future<String?> Function()? _reResolveHost;
+  final Duration _reResolveTimeout;
 
   final StreamController<ConnectionState> _states =
       StreamController<ConnectionState>.broadcast();
@@ -154,7 +160,6 @@ class TvConnection {
   // Identifies the attempt (or cancellation) that callbacks belong to; a
   // callback whose token is stale does nothing.
   int _generation = 0;
-  bool _attemptInFlight = false;
   bool _disposed = false;
   Future<void>? _disposal;
 
@@ -230,74 +235,69 @@ class TvConnection {
   /// Runs one connection attempt. Never throws.
   Future<void> _runAttempt({required bool reconnect}) async {
     final generation = ++_generation;
-    _attemptInFlight = true;
-    try {
-      if (reconnect) {
-        final resolve = _reResolveHost;
-        if (resolve != null) {
-          try {
-            final host = await resolve();
-            if (host != null) _host = host;
-          } on Object {
-            // Keep the old host: the TV may simply be unreachable.
-          }
-          if (generation != _generation) return;
+    if (reconnect) {
+      final resolve = _reResolveHost;
+      if (resolve != null) {
+        try {
+          final host = await resolve().timeout(_reResolveTimeout);
+          if (host != null) _host = host;
+        } on Object {
+          // Keep the old host: the TV may simply be unreachable.
         }
-      }
-      await _detachClient();
-      if (generation != _generation) return;
-
-      final RemoteClient client;
-      try {
-        client = _clientFactory(_host);
-      } on Object {
-        _handleFailure(RemoteCloseReason.networkError);
-        return;
-      }
-      _client = client;
-
-      var ready = false;
-      RemoteCloseReason? closedWith;
-      _clientEvents = client.events.listen((event) {
         if (generation != _generation) return;
-        switch (event) {
-          case RemoteReady():
-            break;
-          case RemoteClosed(:final reason):
-            closedWith = reason;
-            // Before ready the connect() exception reports the failure.
-            if (ready) _handleLost(reason);
-          case _:
-            if (!_events.isClosed) _events.add(event);
-        }
-      });
-
-      try {
-        await client.connect();
-      } on RemoteConnectException catch (e) {
-        if (generation == _generation) _handleFailure(e.reason);
-        return;
-      } on Object {
-        if (generation == _generation) {
-          _handleFailure(RemoteCloseReason.networkError);
-        }
-        return;
       }
-      if (generation != _generation) return;
-
-      ready = true;
-      final lost = closedWith;
-      if (lost != null) {
-        // Closed again before this continuation ran.
-        _handleLost(lost);
-        return;
-      }
-      if (!client.isReady) return; // its RemoteClosed is on the way
-      _backoff.reset();
-      _set(const ConnectionState(status: ConnectionStatus.connected));
-    } finally {
-      if (generation == _generation) _attemptInFlight = false;
     }
+    await _detachClient();
+    if (generation != _generation) return;
+
+    final RemoteClient client;
+    try {
+      client = _clientFactory(_host);
+    } on Object {
+      _handleFailure(RemoteCloseReason.networkError);
+      return;
+    }
+    _client = client;
+
+    var ready = false;
+    RemoteCloseReason? closedWith;
+    _clientEvents = client.events.listen((event) {
+      if (generation != _generation) return;
+      switch (event) {
+        case RemoteReady():
+          break;
+        case RemoteClosed(:final reason):
+          closedWith = reason;
+          // Before ready the connect() exception reports the failure.
+          if (ready) _handleLost(reason);
+        case _:
+          if (!_events.isClosed) _events.add(event);
+      }
+    });
+
+    try {
+      await client.connect();
+    } on RemoteConnectException catch (e) {
+      if (generation == _generation) _handleFailure(e.reason);
+      return;
+    } on Object {
+      if (generation == _generation) {
+        _handleFailure(RemoteCloseReason.networkError);
+      }
+      return;
+    }
+    if (generation != _generation) return;
+
+    ready = true;
+    final lost = closedWith;
+    if (lost != null) {
+      // Closed again before this continuation ran.
+      _handleLost(lost);
+      return;
+    }
+    if (!client.isReady) return; // its RemoteClosed is on the way
+    _backoff.reset();
+    _set(const ConnectionState(status: ConnectionStatus.connected));
   }
 
   /// A client that had been ready closed.
@@ -355,10 +355,15 @@ class TvConnection {
     });
   }
 
-  /// Retries immediately from `reconnecting` (no attempt running) or
-  /// `offline`; does nothing otherwise.
+  /// Retries immediately from `reconnecting` or `offline`; does nothing
+  /// otherwise.
+  ///
+  /// An attempt that is running (it may hang for the client's connect
+  /// timeout, e.g. on a dead network) is abandoned: starting the new attempt
+  /// bumps the generation, so the old one's outcome is ignored, and closes
+  /// its client.
   Future<void> _retryNow() {
-    if (_disposed || _attemptInFlight) return Future<void>.value();
+    if (_disposed) return Future<void>.value();
     switch (_current.status) {
       case ConnectionStatus.reconnecting || ConnectionStatus.offline:
         break;
@@ -433,7 +438,6 @@ class TvConnection {
   Future<void> _dispose() async {
     _disposed = true;
     _generation++;
-    _attemptInFlight = false;
     _cancelTimer();
     await _detachClient();
     _set(const ConnectionState(status: ConnectionStatus.disconnected));

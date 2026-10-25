@@ -67,6 +67,10 @@ class _Rig {
   /// make the retry tests slow.
   bool unreachable = false;
 
+  /// While set, new connections hang until it completes (a dead network);
+  /// afterwards [unreachable] decides.
+  Completer<void>? hold;
+
   /// The host passed to the client factory, one entry per client created.
   final List<String> hosts;
   final TvConnection connection;
@@ -89,6 +93,7 @@ Future<void> _pair(FakeTvServer tv, ClientIdentity identity) async {
 Future<_Rig> _rig({
   Backoff? backoff,
   Future<String?> Function()? reResolveHost,
+  Duration reResolveTimeout = const Duration(seconds: 5),
   ClientIdentity? identity,
   bool pair = true,
   bool sendPings = true,
@@ -111,17 +116,20 @@ Future<_Rig> _rig({
         deviceInfo: _deviceInfo,
         idleTimeout: idleTimeout,
         connectTimeout: const Duration(seconds: 2),
-        connector: (host, port, context) => rig.unreachable
-            ? Future<SecureSocket>.error(const SocketException('refused'))
-            : socketConnectorWithTimeout(const Duration(seconds: 2))(
-                host,
-                port,
-                context,
-              ),
+        connector: (host, port, context) async {
+          await rig.hold?.future;
+          if (rig.unreachable) throw const SocketException('refused');
+          return socketConnectorWithTimeout(const Duration(seconds: 2))(
+            host,
+            port,
+            context,
+          );
+        },
       );
     },
     backoff: backoff ?? _fastBackoff(),
     reResolveHost: reResolveHost,
+    reResolveTimeout: reResolveTimeout,
   );
   addTearDown(connection.dispose);
   return rig = _Rig._(tv, tv.remotePort, hosts, connection);
@@ -382,7 +390,7 @@ void main() {
       conn
         ..notifyAppResumed()
         ..notifyNetworkChanged();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await _pump();
 
       expect(conn.current.status, ConnectionStatus.needsPairing);
       expect(rig.clientsCreated, 1);
@@ -454,6 +462,63 @@ void main() {
 
       expect(seen, isEmpty);
       expect(rig.clientsCreated, 1);
+    });
+
+    for (final (name, notify) in <(String, void Function(TvConnection))>[
+      ('app_resume', (c) => c.notifyAppResumed()),
+      ('network_change', (c) => c.notifyNetworkChanged()),
+    ]) {
+      test('${name}_during_an_in_flight_attempt_retries_immediately', () async {
+        final backoff = _CountingBackoff(initial: const Duration(seconds: 30));
+        final rig = await _rig(backoff: backoff);
+        final conn = rig.connection;
+        await _connected(rig);
+
+        // A dead network: attempts hang instead of failing fast.
+        final hold = rig.hold = Completer<void>();
+        addTearDown(() {
+          if (!hold.isCompleted) hold.complete();
+        });
+        rig.unreachable = true;
+        await rig.tv.dropConnections();
+        await _untilStatus(conn, ConnectionStatus.reconnecting);
+        expect(backoff.nextCalls, 1);
+
+        notify(conn); // starts attempt 2, which hangs
+        await _eventually(() => rig.clientsCreated == 2);
+        final resets = backoff.resetCalls;
+
+        notify(conn); // mid-attempt: abandon it and start over now
+        await _eventually(() => rig.clientsCreated == 3);
+        expect(backoff.resetCalls, greaterThan(resets));
+        expect(conn.current.status, ConnectionStatus.reconnecting);
+        expect(conn.current.attempt, 1);
+
+        // The network answers (with a failure): only the fresh attempt
+        // counts, and the backoff is back at its first step.
+        hold.complete();
+        final state = await _until(
+          conn,
+          (s) => s.status == ConnectionStatus.reconnecting && s.attempt == 2,
+        );
+        expect(state.lastError, RemoteCloseReason.networkError);
+        expect(backoff.nextCalls, 2, reason: 'one step after the restart');
+        await _pump();
+        expect(rig.clientsCreated, 3, reason: 'the abandoned attempt is inert');
+      });
+    }
+
+    test('a_hanging_re_resolve_times_out_and_keeps_the_old_host', () async {
+      final rig = await _rig(
+        reResolveHost: () => Completer<String?>().future,
+        reResolveTimeout: const Duration(milliseconds: 50),
+      );
+      await _connected(rig);
+
+      await rig.tv.dropConnections();
+      await _lostAndBack(rig);
+
+      expect(rig.hosts, ['127.0.0.1', '127.0.0.1']);
     });
 
     test('reconnect_uses_the_re_resolved_host', () async {
