@@ -126,4 +126,28 @@ void main() {
       Duration.zero,
     );
   });
+
+  testWidgets('second_press_ripple_is_not_stuck_after_first_fades_out', (
+    t,
+  ) async {
+    await pumpApp(t, key());
+    final centre = t.getCenter(find.byType(AppKeyButton));
+    await t.tapAt(centre);
+    await t.pump(); // Start the ripple's animations.
+    await t.pump(const Duration(milliseconds: 150));
+    // The second press is held while the first ripple finishes fading out.
+    final g = await t.startGesture(centre);
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 600));
+    await g.up();
+    await t.pumpAndSettle();
+
+    final material = t.renderObject(
+      find.descendant(
+        of: find.byType(AppKeyButton),
+        matching: find.byType(Material),
+      ),
+    );
+    expect(material, paintsExactlyCountTimes(#drawCircle, 0));
+  });
 }

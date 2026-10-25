@@ -191,7 +191,8 @@ class _InkLayerState extends State<_InkLayer> {
     widget.onPointerDown();
     // A second pointer must not leave the first ripple stuck.
     _splash?.cancel();
-    _splash = InkRipple.splashFactory.create(
+    late final InteractiveInkFeature splash;
+    splash = InkRipple.splashFactory.create(
       controller: Material.of(context),
       referenceBox: context.findRenderObject()! as RenderBox,
       position: event.localPosition,
@@ -199,8 +200,13 @@ class _InkLayerState extends State<_InkLayer> {
       containedInkWell: true,
       borderRadius: BorderRadius.circular(AppRadii.key),
       textDirection: Directionality.of(context),
-      onRemoved: () => _splash = null,
+      // A cancelled ripple is removed after its fade-out, by which time a newer
+      // one may be current; only clear our own.
+      onRemoved: () {
+        if (identical(_splash, splash)) _splash = null;
+      },
     );
+    _splash = splash;
   }
 
   @override
