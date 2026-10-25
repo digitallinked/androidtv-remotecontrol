@@ -365,8 +365,7 @@ void main() {
       final tv = await _start();
       await _pair(tv, _clientA);
       final peer = await _connectRemote(tv, _clientA);
-      // Give the server a moment to process the client's SetActive.
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await tv.waitForActiveClient();
 
       tv
         ..sendVolume(level: 7, max: 100, muted: true)
@@ -440,5 +439,70 @@ void main() {
     final reply = await _pair(tv, _clientC);
 
     expect(reply.hasSecretAck(), isTrue);
+  });
+
+  test('waitForActiveClient completes once SetActive was processed', () async {
+    final tv = await _start();
+    await _pair(tv, _clientA);
+    final waiting = tv.waitForActiveClient();
+    await _connectRemote(tv, _clientA);
+
+    await waiting;
+
+    // Already active: completes at once.
+    await tv.waitForActiveClient(timeout: const Duration(milliseconds: 50));
+  });
+
+  test('waitForActiveClient times out without an active client', () async {
+    final tv = await _start();
+
+    await expectLater(
+      tv.waitForActiveClient(timeout: const Duration(milliseconds: 50)),
+      throwsA(isA<TimeoutException>()),
+    );
+  });
+
+  test('clientAnsweredLastPing is false after the client is dropped', () async {
+    final tv = await _start(
+      sendPings: true,
+      pingInterval: const Duration(milliseconds: 50),
+    );
+    await _pair(tv, _clientA);
+    final peer = await _connectRemote(tv, _clientA);
+    final ping = await peer.nextRemote();
+    peer.sendRemote(
+      RemoteMessage(
+        remotePingResponse: RemotePingResponse(
+          val1: ping.remotePingRequest.val1,
+        ),
+      ),
+    );
+    await _eventually(() => tv.clientAnsweredLastPing);
+
+    await tv.dropConnections();
+
+    expect(tv.clientAnsweredLastPing, isFalse);
+  });
+
+  test('clientAnsweredLastPing is false after the client hangs up', () async {
+    final tv = await _start(
+      sendPings: true,
+      pingInterval: const Duration(milliseconds: 50),
+    );
+    await _pair(tv, _clientA);
+    final peer = await _connectRemote(tv, _clientA);
+    final ping = await peer.nextRemote();
+    peer.sendRemote(
+      RemoteMessage(
+        remotePingResponse: RemotePingResponse(
+          val1: ping.remotePingRequest.val1,
+        ),
+      ),
+    );
+    await _eventually(() => tv.clientAnsweredLastPing);
+
+    await peer.close();
+
+    await _eventually(() => !tv.clientAnsweredLastPing);
   });
 }

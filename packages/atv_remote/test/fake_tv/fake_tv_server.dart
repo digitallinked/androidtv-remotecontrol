@@ -87,6 +87,7 @@ class FakeTvServer {
   final Set<SecureSocket> _pairingSockets = {};
   final Set<_RemoteClient> _remoteClients = {};
   _RemoteClient? _lastPingedClient;
+  final List<Completer<void>> _activeWaiters = [];
   int _pingCounter = 0;
   bool _closed = false;
 
@@ -126,8 +127,46 @@ class FakeTvServer {
   /// sent only moments ago is still in flight, so while it is, the answer for
   /// the ping before it is reported instead; that keeps polling free of
   /// timing races on a fast loopback.
-  bool get clientAnsweredLastPing =>
-      _lastPingedClient?.answeredLastPing(pingInterval) ?? false;
+  ///
+  /// `false` once that client has closed (it hung up, was dropped, or was
+  /// closed for ignoring pings), so a stale answer cannot leak into a test
+  /// that has already lost its connection.
+  bool get clientAnsweredLastPing {
+    final client = _lastPingedClient;
+    if (client == null || client.isClosed) return false;
+    return client.answeredLastPing(pingInterval);
+  }
+
+  /// Completes when a remote client has finished the `RemoteSetActive`
+  /// exchange, i.e. the TV considers it ready (immediately if one already
+  /// has).
+  ///
+  /// A client's own `connect()` may complete a moment before the fake has
+  /// processed that client's `RemoteSetActive`; await this before relying on
+  /// server pushes such as [sendVolume]. Throws a [TimeoutException] after
+  /// [timeout].
+  Future<void> waitForActiveClient({
+    Duration timeout = const Duration(seconds: 5),
+  }) {
+    if (_remoteClients.any((client) => client.active)) return Future.value();
+    final waiter = Completer<void>();
+    _activeWaiters.add(waiter);
+    return waiter.future.timeout(
+      timeout,
+      onTimeout: () {
+        _activeWaiters.remove(waiter);
+        throw TimeoutException('No remote client became active', timeout);
+      },
+    );
+  }
+
+  void _clientBecameActive() {
+    final waiters = _activeWaiters.toList();
+    _activeWaiters.clear();
+    for (final waiter in waiters) {
+      if (!waiter.isCompleted) waiter.complete();
+    }
+  }
 
   /// Sends a volume update to every active remote client.
   void sendVolume({
@@ -175,6 +214,7 @@ class FakeTvServer {
       client.close();
     }
     _remoteClients.clear();
+    _lastPingedClient = null;
   }
 
   /// Forgets every paired client, as if the TV had been factory reset.
@@ -193,6 +233,9 @@ class FakeTvServer {
 
   void _onPairingSocket(SecureSocket socket) {
     _pairingSockets.add(socket);
+    // A write after the peer reset the connection fails `done`; without a
+    // handler that would surface as an unhandled async error.
+    unawaited(socket.done.then<void>((_) {}, onError: (Object _) {}));
     final decoder = FrameDecoder();
     var stage = _PairingStage.request;
     final RsaPublicParts clientParts;
@@ -316,6 +359,7 @@ class FakeTvServer {
   // ----------------------------------------------------------------- remote
 
   void _onRemoteSocket(SecureSocket socket) {
+    unawaited(socket.done.then<void>((_) {}, onError: (Object _) {}));
     final RsaPublicParts parts;
     try {
       parts = _peerParts(socket);
@@ -434,6 +478,7 @@ class _RemoteClient {
     } else if (message.hasRemoteSetActive()) {
       if (active) return;
       active = true;
+      _tv._clientBecameActive();
       if (_tv.sendPings) {
         _pingTimer = Timer.periodic(_tv.pingInterval, (_) => _ping());
       }
@@ -484,12 +529,15 @@ class _RemoteClient {
     }
   }
 
+  bool get isClosed => _closed;
+
   void close() {
     if (_closed) return;
     _closed = true;
     active = false;
     _pingTimer?.cancel();
     _tv._remoteClients.remove(this);
+    if (_tv._lastPingedClient == this) _tv._lastPingedClient = null;
     _socket.destroy();
   }
 }
