@@ -34,12 +34,13 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsControllerProvider);
     final router = ref.watch(appRouterProvider);
+    final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final useDynamic = settings.dynamicColor;
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          onGenerateTitle: (_) => ref.watch(flavorProvider).displayName,
+          title: title,
           theme: buildAppTheme(
             brightness: Brightness.light,
             dynamicScheme: useDynamic

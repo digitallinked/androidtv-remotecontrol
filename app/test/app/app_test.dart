@@ -78,8 +78,7 @@ void main() {
     await t.pumpAndSettle();
 
     final app = t.widget<MaterialApp>(find.byType(MaterialApp));
-    final context = t.element(find.text('Get started'));
-    expect(app.onGenerateTitle!(context), 'Remotely Dev');
+    expect(app.title, 'Remotely Dev');
   });
 
   testWidgets('startup_opens_exactly_one_database', (t) async {
