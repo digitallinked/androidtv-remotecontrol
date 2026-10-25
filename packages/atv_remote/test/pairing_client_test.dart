@@ -100,6 +100,10 @@ class _ScriptedTv {
   final void Function(OuterMessage message, SecureSocket socket) _onMessage;
   final List<SecureSocket> _sockets = [];
   final Completer<OuterMessage> _first = Completer<OuterMessage>();
+  final Completer<void> _firstClosed = Completer<void>();
+
+  /// Completes when the first accepted connection ends, however it ends.
+  Future<void> get firstConnectionClosed => _firstClosed.future.timeout(_wait);
 
   int get port => _server.port;
 
@@ -117,7 +121,12 @@ class _ScriptedTv {
           _onMessage(message, socket);
         }
       },
-      onError: (Object _) {},
+      onError: (Object _) {
+        if (!_firstClosed.isCompleted) _firstClosed.complete();
+      },
+      onDone: () {
+        if (!_firstClosed.isCompleted) _firstClosed.complete();
+      },
     );
   }
 
@@ -264,6 +273,133 @@ void main() {
         client.start(clientName: 'Test phone'),
         throwsA(_pairingFailure(PairingFailure.connectionFailed)),
       );
+    });
+
+    test('stalled_handshake_times_out_promptly', () async {
+      // Accepts TCP, then never speaks TLS.
+      final plain = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(plain.close);
+      final accepted = <Socket>[];
+      addTearDown(() {
+        for (final s in accepted) {
+          s.destroy();
+        }
+      });
+      plain.listen((s) {
+        accepted.add(s);
+        s.listen((_) {}, onError: (Object _) {});
+      });
+      final client = _client(
+        plain.port,
+        timeout: const Duration(milliseconds: 200),
+      );
+      final clock = Stopwatch()..start();
+
+      await expectLater(
+        client.start(clientName: 'Test phone'),
+        throwsA(_pairingFailure(PairingFailure.timeout)),
+      );
+      // Bounded by `timeout`, not by the 10 s default of the connector.
+      expect(clock.elapsed, lessThan(const Duration(seconds: 3)));
+    });
+
+    test('handshake_completing_after_timeout_is_destroyed', () async {
+      // Accepts TCP at once but only starts the TLS handshake after the
+      // client has given up.
+      final plain = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(plain.close);
+      final accepted = Completer<Socket>();
+      plain.listen((s) {
+        if (!accepted.isCompleted) accepted.complete(s);
+      });
+      final client = _client(
+        plain.port,
+        timeout: const Duration(milliseconds: 200),
+      );
+      await expectLater(
+        client.start(clientName: 'Test phone'),
+        throwsA(_pairingFailure(PairingFailure.timeout)),
+      );
+
+      final tcp = await accepted.future.timeout(_wait);
+      final secure = await SecureSocket.secureServer(
+        tcp,
+        securityContextFor(fakeTvIdentity),
+      ).timeout(_wait);
+      addTearDown(secure.destroy);
+      final closed = Completer<void>();
+      secure.listen(
+        (_) {},
+        onError: (Object _) {
+          if (!closed.isCompleted) closed.complete();
+        },
+        onDone: () {
+          if (!closed.isCompleted) closed.complete();
+        },
+      );
+
+      // The late TLS session was closed by the client, not leaked.
+      await closed.future.timeout(_wait);
+    });
+
+    test('socket_arriving_after_timeout_is_destroyed', () async {
+      final tv = await _ScriptedTv.start((message, socket) {});
+      final gate = Completer<void>();
+      final client = PairingClient(
+        host: InternetAddress.loopbackIPv4.address,
+        port: tv.port,
+        identity: _identity,
+        timeout: const Duration(milliseconds: 100),
+        // A slow connector that only finishes once the test lets it.
+        connector: (host, port, context) async {
+          await gate.future;
+          return SecureSocket.connect(
+            host,
+            port,
+            context: context,
+            onBadCertificate: (_) => true,
+          );
+        },
+      );
+      addTearDown(client.close);
+
+      await expectLater(
+        client.start(clientName: 'Test phone'),
+        throwsA(_pairingFailure(PairingFailure.timeout)),
+      );
+      gate.complete();
+
+      // The late socket reaches the TV and is then closed by the client.
+      await tv.firstConnectionClosed;
+    });
+
+    test('socket_arriving_after_close_is_destroyed', () async {
+      final tv = await _ScriptedTv.start((message, socket) {});
+      final gate = Completer<void>();
+      final client = PairingClient(
+        host: InternetAddress.loopbackIPv4.address,
+        port: tv.port,
+        identity: _identity,
+        connector: (host, port, context) async {
+          await gate.future;
+          return SecureSocket.connect(
+            host,
+            port,
+            context: context,
+            onBadCertificate: (_) => true,
+          );
+        },
+      );
+      addTearDown(client.close);
+      final outcome = expectLater(
+        client.start(clientName: 'Test phone'),
+        throwsA(_pairingFailure(PairingFailure.connectionFailed)),
+      );
+      await client.close();
+      gate.complete();
+
+      await outcome;
+      await tv.firstConnectionClosed;
     });
 
     test('sends_pairing_request_first', () async {

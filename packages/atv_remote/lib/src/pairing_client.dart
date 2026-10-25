@@ -15,7 +15,8 @@ enum PairingFailure {
   /// the connection mid-flow.
   connectionFailed,
 
-  /// The TV did not answer within the configured timeout.
+  /// The TV did not accept the connection (TCP and TLS handshake) or answer
+  /// a message within the configured timeout.
   timeout,
 
   /// The TV rejected the secret. The code is now void; start a new session.
@@ -69,15 +70,19 @@ enum _Phase { idle, starting, awaitingCode, submitting, paired, ended }
 class PairingClient {
   /// Creates a client for the TV at [host]:[port].
   ///
-  /// Every wait for the TV's reply is limited by [timeout]. [connector] is
-  /// replaceable for tests.
+  /// Connecting (TCP and TLS handshake together) and every wait for the TV's
+  /// reply are limited by [timeout]; running out maps to
+  /// [PairingFailure.timeout]. [connector] is replaceable for tests; when
+  /// omitted, a connector bound to [timeout] that tears down a stalled
+  /// handshake is used (see [socketConnectorWithTimeout]). A custom connector
+  /// that delivers a socket after the timeout has the socket destroyed.
   PairingClient({
     required this.host,
     required this.identity,
     this.port = 6467,
-    this.connector = defaultSocketConnector,
+    SocketConnector? connector,
     this.timeout = const Duration(seconds: 10),
-  });
+  }) : _connector = connector ?? socketConnectorWithTimeout(timeout);
 
   /// TV address.
   final String host;
@@ -88,8 +93,7 @@ class PairingClient {
   /// The client certificate and key presented to the TV.
   final ClientIdentity identity;
 
-  /// Opens the TLS socket.
-  final SocketConnector connector;
+  final SocketConnector _connector;
 
   /// Longest wait for the connection and for each reply.
   final Duration timeout;
@@ -226,21 +230,35 @@ class PairingClient {
 
   Future<void> _connect() async {
     final SecureSocket socket;
+    var abandoned = false;
     try {
       // No trusted roots: the TV's self-signed certificate is accepted by the
       // connector instead, and only our identity is loaded.
       final context = SecurityContext()
         ..useCertificateChainBytes(utf8.encode(identity.certificatePem))
         ..usePrivateKeyBytes(utf8.encode(identity.privateKeyPem));
-      socket = await connector(host, port, context).timeout(timeout);
+      final pending = _connector(host, port, context);
+      // Future.timeout does not cancel the connector. If its socket arrives
+      // after we gave up, close it instead of leaking a live pairing session.
+      unawaited(
+        pending.then<void>((late) {
+          if (abandoned) late.destroy();
+        }, onError: (Object _) {}),
+      );
+      socket = await pending.timeout(timeout);
     } on TimeoutException {
+      abandoned = true;
       throw const PairingException(
-        PairingFailure.connectionFailed,
-        'connect timed out',
+        PairingFailure.timeout,
+        'connecting to the TV timed out',
       );
     } on IOException catch (e) {
       // SocketException, HandshakeException, TlsException.
+      abandoned = true;
       throw PairingException(PairingFailure.connectionFailed, '$e');
+    } on Object {
+      abandoned = true;
+      rethrow;
     }
     if (_phase == _Phase.ended) {
       // close() ran while connecting.
