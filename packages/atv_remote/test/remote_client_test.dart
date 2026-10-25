@@ -107,6 +107,23 @@ Future<void> _eventually(bool Function() condition) async {
   }
 }
 
+/// An identity whose PEM strings `SecurityContext` cannot load (for example
+/// storage handed back corrupt data that bypassed `ClientIdentity.fromPem`).
+class _UnloadableIdentity implements ClientIdentity {
+  _UnloadableIdentity(this._real);
+
+  final ClientIdentity _real;
+
+  @override
+  String get certificatePem => 'not a certificate';
+
+  @override
+  String get privateKeyPem => 'not a key';
+
+  @override
+  RsaPublicParts get publicParts => _real.publicParts;
+}
+
 Matcher _connectFailure(RemoteCloseReason reason) =>
     isA<RemoteConnectException>().having((e) => e.reason, 'reason', reason);
 
@@ -335,6 +352,23 @@ void main() {
       await _eventually(() => closed);
     });
 
+    test('an_unloadable_identity_is_a_network_error_and_ends_events', () async {
+      final tv = await _startTv();
+      final client = _client(tv, identity: _UnloadableIdentity(_paired));
+      final all = client.events.toList();
+
+      await expectLater(
+        client.connect().timeout(_wait),
+        throwsA(_connectFailure(RemoteCloseReason.networkError)),
+      );
+
+      expect(await all.timeout(_wait), [
+        const RemoteClosed(RemoteCloseReason.networkError),
+      ]);
+      expect(client.isReady, isFalse);
+      await expectLater(client.connect, throwsStateError);
+    });
+
     test('close_during_connect_fails_connect_with_closedByClient', () async {
       final tv = await _startTv();
       final never = Completer<SecureSocket>();
@@ -355,10 +389,8 @@ void main() {
 
   group('keep-alive', () {
     test('answers_pings', () async {
-      final (tv, client) = await _ready(
-        sendPings: true,
-        pingInterval: const Duration(milliseconds: 50),
-      );
+      // The plan's 200 ms ping interval (the _ready default).
+      final (tv, client) = await _ready(sendPings: true);
       final seen = <RemoteEvent>[];
       client.events.listen(seen.add);
 
@@ -386,21 +418,17 @@ void main() {
     });
 
     test('traffic_keeps_the_idle_timer_from_firing', () async {
-      final tv = await _startTv(
-        sendPings: true,
-        pingInterval: const Duration(milliseconds: 50),
-      );
+      // 200 ms pings against a 1 s idle timeout: a ping can be 800 ms late
+      // (a loaded CI runner) before the timer could fire.
+      final tv = await _startTv(sendPings: true);
       await _pair(tv, _paired);
-      final client = _client(
-        tv,
-        idleTimeout: const Duration(milliseconds: 400),
-      );
+      final client = _client(tv, idleTimeout: const Duration(seconds: 1));
       await client.connect().timeout(_wait);
       final seen = <RemoteEvent>[];
       client.events.listen(seen.add);
 
-      // Well past the idle timeout in ping time (about 20 pings).
-      await _eventually(() => tv.answeredPingCount >= 20);
+      // Twice the idle timeout in ping time (about 10 pings, 2 s).
+      await _eventually(() => tv.answeredPingCount >= 10);
 
       expect(client.isReady, isTrue);
       expect(seen.whereType<RemoteClosed>(), isEmpty);

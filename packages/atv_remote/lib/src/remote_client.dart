@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -186,11 +185,17 @@ class RemoteClient {
     if (_state != _State.idle) {
       throw StateError('connect() can only be called once, on a new client.');
     }
-    // No trusted roots: the TV's self-signed certificate is accepted by the
-    // connector instead, and only our identity is loaded.
-    final context = SecurityContext()
-      ..useCertificateChainBytes(utf8.encode(identity.certificatePem))
-      ..usePrivateKeyBytes(utf8.encode(identity.privateKeyPem));
+    final SecurityContext context;
+    try {
+      context = clientSecurityContext(identity);
+    } on Object catch (e) {
+      // Only the type: the TlsException text is about our private key.
+      _terminate(RemoteCloseReason.networkError);
+      throw RemoteConnectException(
+        RemoteCloseReason.networkError,
+        'could not load the client identity (${e.runtimeType})',
+      );
+    }
     _state = _State.connecting;
 
     final SecureSocket socket;

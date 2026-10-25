@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -243,12 +242,7 @@ class PairingClient {
     final SecureSocket socket;
     var abandoned = false;
     try {
-      // No trusted roots: the TV's self-signed certificate is accepted by the
-      // connector instead, and only our identity is loaded.
-      final context = SecurityContext()
-        ..useCertificateChainBytes(utf8.encode(identity.certificatePem))
-        ..usePrivateKeyBytes(utf8.encode(identity.privateKeyPem));
-      final pending = _connector(host, port, context);
+      final pending = _connector(host, port, clientSecurityContext(identity));
       // Future.timeout does not cancel the connector. If its socket arrives
       // after we gave up, close it instead of leaking a live pairing session.
       unawaited(
