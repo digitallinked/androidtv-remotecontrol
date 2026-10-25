@@ -21,46 +21,52 @@ Future<T?> showAppSheet<T>({
     showDragHandle: true,
     builder: (sheetContext) {
       final l10n = AppLocalizations.of(sheetContext);
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.xl,
-              right: AppSpacing.s,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(sheetContext).textTheme.titleLarge,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: l10n.closeAction,
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size.square(AppSizes.touchMin),
-                  ),
-                  onPressed: () => Navigator.of(sheetContext).pop(),
-                ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.s,
-                AppSpacing.xl,
-                AppSpacing.xl,
+      // Lift the content above the keyboard so a text field stays visible.
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.xl,
+                right: AppSpacing.s,
               ),
-              child: Builder(builder: builder),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(sheetContext).textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: l10n.closeAction,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size.square(AppSizes.touchMin),
+                    ),
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.s,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                ),
+                child: Builder(builder: builder),
+              ),
+            ),
+          ],
+        ),
       );
     },
   );

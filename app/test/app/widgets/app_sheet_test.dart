@@ -101,4 +101,17 @@ void main() {
     );
     expect(t.takeException(), isNull);
   });
+
+  testWidgets('sheet_body_stays_above_the_keyboard', (t) async {
+    // Physical pixels: 300 logical.
+    t.view.viewInsets = FakeViewPadding(bottom: 300 * t.view.devicePixelRatio);
+    addTearDown(t.view.resetViewInsets);
+    await _open(t, (_) {}, body: const TextField());
+
+    final screenBottom = t.view.physicalSize.height / t.view.devicePixelRatio;
+    expect(
+      t.getBottomLeft(find.byType(TextField)).dy,
+      lessThanOrEqualTo(screenBottom - 300),
+    );
+  });
 }
