@@ -1,0 +1,21 @@
+name: tv_remote
+description: Phone remote for Android TV and Google TV.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: 10.3.0
+
+flutter:
+  uses-material-design: true

@@ -4,6 +4,10 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #8 — 2026-10-25 — Pin Flutter 3.44.1 stable / Dart 3.12.1
+- **Why:** reproducible builds locally and in CI (`.github/workflows/ci.yml` pins `flutter-version: 3.44.1`). Lints are `very_good_analysis` 10.3.0, the newest release that supports Dart 3.12 (11.x needs Dart 3.13). Protocol-package tests run via `flutter test` because `dart test` cannot resolve a workspace that contains a Flutter member.
+- **Revisit:** when a Flutter or plugin upgrade is needed; bump CI, `environment.sdk` in the three pubspecs and `very_good_analysis` together.
+
 ### #7 — 2026-10-25 — Voice search ships after v1.0
 - **Why:** the voice part of the protocol is the least documented; v1 should ship on solid features. The mic button stays hidden until it works.
 - **Revisit:** once a voice spike works on the test TV.

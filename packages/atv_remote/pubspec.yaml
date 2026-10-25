@@ -1,0 +1,13 @@
+name: atv_remote
+description: Pure-Dart client for the Android TV Remote Service v2 protocol.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.1
+
+resolution: workspace
+
+dev_dependencies:
+  test: ^1.25.6
+  very_good_analysis: 10.3.0
