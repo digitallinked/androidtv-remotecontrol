@@ -4,7 +4,7 @@ _Last updated: 2026-10-25 by Claude (controller, subagent-driven run of Phase 0â
 
 ## Current phase
 
-**Phase 1: Protocol library.** All tasks are implemented and reviewed on branch `feat/phase-0-1-protocol` (not merged yet). The **real-TV smoke test** is pending (needs the owner).
+**Phase 1: Protocol library.** All tasks are implemented, reviewed and merged into `main` (not pushed). The **real-TV smoke test** is pending (needs the owner).
 
 ## Done
 
@@ -21,7 +21,7 @@ _Last updated: 2026-10-25 by Claude (controller, subagent-driven run of Phase 0â
 
 ## In progress
 
-- Merge of `feat/phase-0-1-protocol` into `main` (waiting on the owner).
+_Nothing._
 
 ## Next up
 
