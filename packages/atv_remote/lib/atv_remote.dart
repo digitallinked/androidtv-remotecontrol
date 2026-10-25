@@ -29,7 +29,11 @@ export 'src/remote_events.dart'
 export 'src/socket_connector.dart'
     show SocketConnector, defaultSocketConnector, socketConnectorWithTimeout;
 export 'src/tv_connection.dart'
-    show ConnectionState, ConnectionStatus, NotConnectedException, TvConnection;
+    show
+        ConnectionStatus,
+        NotConnectedException,
+        TvConnection,
+        TvConnectionState;
 export 'src/wake_on_lan.dart' show buildMagicPacket, sendWakeOnLan;
 
 /// Name of this package, used by the smoke test to prove the library loads.

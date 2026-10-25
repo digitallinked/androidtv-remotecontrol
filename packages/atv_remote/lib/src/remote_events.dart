@@ -21,6 +21,15 @@ enum RemoteCloseReason {
 
   /// `RemoteClient.close` was called.
   closedByClient,
+
+  /// The TV presented a different public key than the one pinned for it
+  /// (trust on first use): it was reset or replaced, or something else
+  /// answers at its address. The phone has to pair again.
+  ///
+  /// Never reported by `RemoteClient` itself; `TvConnection` sets it as
+  /// `lastError` (with `needsPairing`) when its `verifyServerKey` callback
+  /// rejects `RemoteClient.serverPublicKeySha256`.
+  serverKeyChanged,
 }
 
 /// Something that happened on the control channel.

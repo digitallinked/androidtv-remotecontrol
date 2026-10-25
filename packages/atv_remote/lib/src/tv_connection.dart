@@ -3,6 +3,7 @@
 // ignore_for_file: prefer_initializing_formals
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:atv_remote/src/backoff.dart';
 import 'package:atv_remote/src/key_codes.dart';
@@ -28,8 +29,10 @@ enum ConnectionStatus {
   /// backoff delay.
   reconnecting,
 
-  /// The TV does not accept this phone's certificate: pair again. No attempt
-  /// is made until `TvConnection.connect` is called.
+  /// The TV does not accept this phone's certificate
+  /// (`RemoteCloseReason.certificateRejected`), or its key no longer matches
+  /// the pinned one (`RemoteCloseReason.serverKeyChanged`): pair again. No
+  /// attempt is made until `TvConnection.connect` is called.
   needsPairing,
 
   /// Every reconnect attempt failed. A resume, a network change or
@@ -39,9 +42,9 @@ enum ConnectionStatus {
 
 /// A snapshot of a [TvConnection].
 @immutable
-class ConnectionState {
+class TvConnectionState {
   /// Creates a state.
-  const ConnectionState({
+  const TvConnectionState({
     required this.status,
     this.attempt = 0,
     this.lastError,
@@ -62,7 +65,7 @@ class ConnectionState {
 
   @override
   bool operator ==(Object other) =>
-      other is ConnectionState &&
+      other is TvConnectionState &&
       other.status == status &&
       other.attempt == attempt &&
       other.lastError == lastError;
@@ -72,7 +75,7 @@ class ConnectionState {
 
   @override
   String toString() =>
-      'ConnectionState(${status.name}, attempt: $attempt, '
+      'TvConnectionState(${status.name}, attempt: $attempt, '
       'lastError: ${lastError?.name})';
 }
 
@@ -104,6 +107,9 @@ class NotConnectedException implements Exception {
 ///   count and the last error).
 /// * `certificateRejected` at any point gives `needsPairing`; nothing more is
 ///   tried until [connect] is called again.
+/// * A ready client whose TV key the `verifyServerKey` callback rejects is
+///   closed and gives `needsPairing` with `serverKeyChanged`, never
+///   `connected`; nothing more is tried until [connect] is called again.
 /// * [notifyAppResumed] and [notifyNetworkChanged] retry at once from
 ///   `reconnecting` and `offline`, restarting the backoff and the attempt
 ///   count; an attempt still running (possibly hanging until its connect
@@ -124,30 +130,42 @@ class TvConnection {
   /// TV): a non-null result replaces the host from then on; errors and
   /// `null` keep the old host, and so does a lookup that takes longer than
   /// [reResolveTimeout].
+  ///
+  /// [verifyServerKey] pins the TV's identity (trust on first use): on every
+  /// attempt, once the client is ready and before `connected` is emitted, it
+  /// gets the client's `RemoteClient.serverPublicKeySha256` (compare it with
+  /// the `PairingClient.serverPublicKeySha256` stored at pairing). If it
+  /// returns `false` (or throws), that client is closed without any command
+  /// or event getting through, and the state becomes `needsPairing` with
+  /// [RemoteCloseReason.serverKeyChanged]. When omitted, every key is
+  /// accepted.
   TvConnection({
     required String host,
     required RemoteClient Function(String host) clientFactory,
     Backoff? backoff,
     Future<String?> Function()? reResolveHost,
     Duration reResolveTimeout = const Duration(seconds: 5),
+    bool Function(Uint8List serverKeySha256)? verifyServerKey,
   }) : _host = host,
        _clientFactory = clientFactory,
        _backoff = backoff ?? Backoff(),
        _reResolveHost = reResolveHost,
-       _reResolveTimeout = reResolveTimeout;
+       _reResolveTimeout = reResolveTimeout,
+       _verifyServerKey = verifyServerKey;
 
   String _host;
   final RemoteClient Function(String host) _clientFactory;
   final Backoff _backoff;
   final Future<String?> Function()? _reResolveHost;
   final Duration _reResolveTimeout;
+  final bool Function(Uint8List serverKeySha256)? _verifyServerKey;
 
-  final StreamController<ConnectionState> _states =
-      StreamController<ConnectionState>.broadcast();
+  final StreamController<TvConnectionState> _states =
+      StreamController<TvConnectionState>.broadcast();
   final StreamController<RemoteEvent> _events =
       StreamController<RemoteEvent>.broadcast();
 
-  ConnectionState _current = const ConnectionState(
+  TvConnectionState _current = const TvConnectionState(
     status: ConnectionStatus.disconnected,
   );
 
@@ -165,10 +183,10 @@ class TvConnection {
 
   /// State changes, emitted only when [current] actually changes. A
   /// broadcast stream; read [current] for the state before subscribing.
-  Stream<ConnectionState> get states => _states.stream;
+  Stream<TvConnectionState> get states => _states.stream;
 
   /// The latest state.
-  ConnectionState get current => _current;
+  TvConnectionState get current => _current;
 
   /// Everything the TV pushes (volume, power, current app, ...), forwarded
   /// from the current client across reconnects. `RemoteReady` and
@@ -196,7 +214,7 @@ class TvConnection {
           ConnectionStatus.offline:
         _cancelTimer();
         _backoff.reset();
-        _set(const ConnectionState(status: ConnectionStatus.connecting));
+        _set(const TvConnectionState(status: ConnectionStatus.connecting));
         return _runAttempt(reconnect: false);
     }
   }
@@ -260,7 +278,10 @@ class TvConnection {
     _client = client;
 
     var ready = false;
+    var accepted = false;
     RemoteCloseReason? closedWith;
+    // TV pushes are held back until the TV's key was accepted.
+    final early = <RemoteEvent>[];
     _clientEvents = client.events.listen((event) {
       if (generation != _generation) return;
       switch (event) {
@@ -271,7 +292,11 @@ class TvConnection {
           // Before ready the connect() exception reports the failure.
           if (ready) _handleLost(reason);
         case _:
-          if (!_events.isClosed) _events.add(event);
+          if (accepted) {
+            _forward(event);
+          } else {
+            early.add(event);
+          }
       }
     });
 
@@ -296,8 +321,40 @@ class TvConnection {
       return;
     }
     if (!client.isReady) return; // its RemoteClosed is on the way
+    if (!_serverKeyAccepted(client)) {
+      _dropClient();
+      _cancelTimer();
+      _set(
+        TvConnectionState(
+          status: ConnectionStatus.needsPairing,
+          attempt: _current.attempt,
+          lastError: RemoteCloseReason.serverKeyChanged,
+        ),
+      );
+      return;
+    }
+    accepted = true;
     _backoff.reset();
-    _set(const ConnectionState(status: ConnectionStatus.connected));
+    _set(const TvConnectionState(status: ConnectionStatus.connected));
+    early.forEach(_forward);
+  }
+
+  /// Whether [client]'s TV key passes `verifyServerKey` (always without one).
+  bool _serverKeyAccepted(RemoteClient client) {
+    final verify = _verifyServerKey;
+    if (verify == null) return true;
+    final key = client.serverPublicKeySha256;
+    if (key == null) return false;
+    try {
+      return verify(Uint8List.fromList(key));
+    } on Object {
+      // Fail closed: an identity check that cannot decide does not pass.
+      return false;
+    }
+  }
+
+  void _forward(RemoteEvent event) {
+    if (!_events.isClosed) _events.add(event);
   }
 
   /// A client that had been ready closed.
@@ -310,10 +367,11 @@ class TvConnection {
   void _handleFailure(RemoteCloseReason reason) {
     _dropClient();
     switch (reason) {
-      case RemoteCloseReason.certificateRejected:
+      case RemoteCloseReason.certificateRejected ||
+          RemoteCloseReason.serverKeyChanged:
         _cancelTimer();
         _set(
-          ConnectionState(
+          TvConnectionState(
             status: ConnectionStatus.needsPairing,
             attempt: _current.attempt,
             lastError: reason,
@@ -321,7 +379,7 @@ class TvConnection {
         );
       case RemoteCloseReason.closedByClient:
         _cancelTimer();
-        _set(const ConnectionState(status: ConnectionStatus.disconnected));
+        _set(const TvConnectionState(status: ConnectionStatus.disconnected));
       case RemoteCloseReason.remoteClosed ||
           RemoteCloseReason.pingTimeout ||
           RemoteCloseReason.networkError:
@@ -333,7 +391,7 @@ class TvConnection {
     final delay = _backoff.next();
     if (delay == null) {
       _set(
-        ConnectionState(
+        TvConnectionState(
           status: ConnectionStatus.offline,
           attempt: _current.attempt,
           lastError: reason,
@@ -342,7 +400,7 @@ class TvConnection {
       return;
     }
     _set(
-      ConnectionState(
+      TvConnectionState(
         status: ConnectionStatus.reconnecting,
         attempt: _current.attempt + 1,
         lastError: reason,
@@ -376,7 +434,7 @@ class TvConnection {
     _cancelTimer();
     _backoff.reset();
     _set(
-      ConnectionState(
+      TvConnectionState(
         status: ConnectionStatus.reconnecting,
         attempt: 1,
         lastError: _current.lastError,
@@ -405,7 +463,7 @@ class TvConnection {
     }
   }
 
-  void _set(ConnectionState next) {
+  void _set(TvConnectionState next) {
     if (next == _current) return;
     _current = next;
     if (!_states.isClosed) _states.add(next);
@@ -440,7 +498,7 @@ class TvConnection {
     _generation++;
     _cancelTimer();
     await _detachClient();
-    _set(const ConnectionState(status: ConnectionStatus.disconnected));
+    _set(const TvConnectionState(status: ConnectionStatus.disconnected));
     await _states.close();
     await _events.close();
   }

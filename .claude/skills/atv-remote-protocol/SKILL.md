@@ -37,7 +37,7 @@ valid  = secret[0] == int(code[0..2], 16)   // check before sending; wrong code 
 Moduli and exponents are unsigned big-endian bytes with no leading zero byte. Take the server key from the TLS peer certificate of the pairing socket.
 
 ## Connection state machine (UI depends on this)
-`disconnected → connecting → (needsPairing → pairing) → connected → (lost → reconnecting with backoff 1s,2s,4s… max 30s) → connected`. Expose it as a `Stream<ConnectionState>`. **"Connected"** means: on 6466 the TV sent `RemoteConfigure` and we replied, then the TV sent `RemoteSetActive` and we replied. Before that, controls stay disabled.
+`disconnected → connecting → (needsPairing → pairing) → connected → (lost → reconnecting with backoff 1s,2s,4s… max 30s) → connected`. Expose it as a `Stream<TvConnectionState>`. **"Connected"** means: on 6466 the TV sent `RemoteConfigure` and we replied, then the TV sent `RemoteSetActive` and we replied. Before that, controls stay disabled.
 
 - **App lifecycle:** when the app goes to the background, keep the socket for up to 60 s (quick app switches stay instant), then close it. On resume, reconnect immediately. Don't try to keep a background connection in v1.
 - **Server key changed (TOFU mismatch):** the TV was reset or replaced. Never silently accept. Show "This TV's identity changed — pair again", delete the stored pin and pairing flag for that device, and route to pairing.

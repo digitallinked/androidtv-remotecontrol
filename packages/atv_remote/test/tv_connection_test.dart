@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:atv_remote/src/backoff.dart';
 import 'package:atv_remote/src/identity.dart';
 import 'package:atv_remote/src/key_codes.dart';
 import 'package:atv_remote/src/pairing_client.dart';
+import 'package:atv_remote/src/proto/remotemessage.pb.dart';
 import 'package:atv_remote/src/remote_client.dart';
 import 'package:atv_remote/src/remote_events.dart';
 import 'package:atv_remote/src/socket_connector.dart';
 import 'package:atv_remote/src/tv_connection.dart';
+import 'package:pointycastle/export.dart' show SHA256Digest;
 import 'package:test/test.dart';
 
+import 'fake_tv/fake_tv_identity.dart';
 import 'fake_tv/fake_tv_server.dart';
 
 const Duration _wait = Duration(seconds: 5);
@@ -54,7 +58,7 @@ class _CountingBackoff extends Backoff {
 
 /// A fake TV, a [TvConnection] to it and a record of what the factory did.
 class _Rig {
-  _Rig._(this.tv, this.port, this.hosts, this.connection);
+  _Rig._(this.tv, this.port, this.hosts, this.clients, this.connection);
 
   FakeTvServer tv;
 
@@ -73,6 +77,9 @@ class _Rig {
 
   /// The host passed to the client factory, one entry per client created.
   final List<String> hosts;
+
+  /// Every client the factory created, in order.
+  final List<RemoteClient> clients;
   final TvConnection connection;
 
   int get clientsCreated => hosts.length;
@@ -98,18 +105,24 @@ Future<_Rig> _rig({
   bool pair = true,
   bool sendPings = true,
   Duration idleTimeout = const Duration(seconds: 5),
+  bool Function(Uint8List serverKeySha256)? verifyServerKey,
+  List<RemoteMessage> initialPushes = const [],
 }) async {
-  final tv = await FakeTvServer.start(sendPings: sendPings);
+  final tv = await FakeTvServer.start(
+    sendPings: sendPings,
+    initialPushes: initialPushes,
+  );
   addTearDown(tv.close);
   final who = identity ?? _paired;
   if (pair) await _pair(tv, who);
   late final _Rig rig;
   final hosts = <String>[];
+  final clients = <RemoteClient>[];
   final connection = TvConnection(
     host: '127.0.0.1',
     clientFactory: (host) {
       hosts.add(host);
-      return RemoteClient(
+      final client = RemoteClient(
         host: host,
         port: rig.port,
         identity: who,
@@ -126,26 +139,29 @@ Future<_Rig> _rig({
           );
         },
       );
+      clients.add(client);
+      return client;
     },
     backoff: backoff ?? _fastBackoff(),
     reResolveHost: reResolveHost,
     reResolveTimeout: reResolveTimeout,
+    verifyServerKey: verifyServerKey,
   );
   addTearDown(connection.dispose);
-  return rig = _Rig._(tv, tv.remotePort, hosts, connection);
+  return rig = _Rig._(tv, tv.remotePort, hosts, clients, connection);
 }
 
 /// Resolves with the first state (current or future) matching [test].
-Future<ConnectionState> _until(
+Future<TvConnectionState> _until(
   TvConnection connection,
-  bool Function(ConnectionState state) test, {
+  bool Function(TvConnectionState state) test, {
   Duration timeout = _wait,
 }) {
   if (test(connection.current)) return Future.value(connection.current);
   return connection.states.firstWhere(test).timeout(timeout);
 }
 
-Future<ConnectionState> _untilStatus(
+Future<TvConnectionState> _untilStatus(
   TvConnection connection,
   ConnectionStatus status, {
   Duration timeout = _wait,
@@ -200,7 +216,7 @@ void main() {
       final rig = await _rig();
       final conn = rig.connection;
       expect(conn.current.status, ConnectionStatus.disconnected);
-      final seen = <ConnectionState>[];
+      final seen = <TvConnectionState>[];
       final sub = conn.states.listen(seen.add);
       addTearDown(sub.cancel);
 
@@ -208,8 +224,8 @@ void main() {
       await _pump();
 
       expect(seen, const [
-        ConnectionState(status: ConnectionStatus.connecting),
-        ConnectionState(status: ConnectionStatus.connected),
+        TvConnectionState(status: ConnectionStatus.connecting),
+        TvConnectionState(status: ConnectionStatus.connected),
       ]);
       expect(conn.current.attempt, 0);
       expect(conn.current.lastError, isNull);
@@ -451,7 +467,7 @@ void main() {
       final rig = await _rig();
       final conn = rig.connection;
       await conn.connect().timeout(_wait);
-      final seen = <ConnectionState>[];
+      final seen = <TvConnectionState>[];
       final sub = conn.states.listen(seen.add);
       addTearDown(sub.cancel);
 
@@ -624,6 +640,97 @@ void main() {
     });
   });
 
+  group('server key pinning', () {
+    final parts = fakeTvIdentity.publicParts;
+    Uint8List fakeTvKey() => SHA256Digest().process(
+      Uint8List.fromList([...parts.modulus, ...parts.exponent]),
+    );
+    final pushes = [
+      RemoteMessage(
+        remoteSetVolumeLevel: RemoteSetVolumeLevel(
+          volumeLevel: 3,
+          volumeMax: 10,
+        ),
+      ),
+    ];
+
+    test('a_rejected_key_routes_to_pairing_and_never_connects', () async {
+      final keys = <Uint8List>[];
+      final rig = await _rig(
+        initialPushes: pushes,
+        verifyServerKey: (key) {
+          keys.add(key);
+          return false;
+        },
+      );
+      final conn = rig.connection;
+      final seen = <TvConnectionState>[];
+      final events = <RemoteEvent>[];
+      final stateSub = conn.states.listen(seen.add);
+      final eventSub = conn.events.listen(events.add);
+      addTearDown(stateSub.cancel);
+      addTearDown(eventSub.cancel);
+
+      await conn.connect().timeout(_wait);
+
+      expect(conn.current.status, ConnectionStatus.needsPairing);
+      expect(conn.current.lastError, RemoteCloseReason.serverKeyChanged);
+      expect(keys.single, orderedEquals(fakeTvKey()));
+      expect(
+        () => conn.sendKey(KeyCodes.home),
+        throwsA(isA<NotConnectedException>()),
+      );
+      // The rejected client is closed, and nothing more is tried.
+      await _eventually(() => !rig.clients.single.isReady);
+      conn
+        ..notifyAppResumed()
+        ..notifyNetworkChanged();
+      await _pump();
+      expect(rig.clientsCreated, 1);
+      expect(seen, const [
+        TvConnectionState(status: ConnectionStatus.connecting),
+        TvConnectionState(
+          status: ConnectionStatus.needsPairing,
+          lastError: RemoteCloseReason.serverKeyChanged,
+        ),
+      ]);
+      expect(events, isEmpty, reason: 'pushes of an unverified TV are dropped');
+      expect(rig.tv.receivedKeyCodes, isEmpty);
+      expect(rig.tv.receivedAppLinks, isEmpty);
+      expect(rig.tv.receivedText, isEmpty);
+    });
+
+    test('an_accepted_key_connects_as_before', () async {
+      final keys = <Uint8List>[];
+      final rig = await _rig(
+        initialPushes: pushes,
+        verifyServerKey: (key) {
+          keys.add(key);
+          return true;
+        },
+      );
+      final conn = rig.connection;
+      final seen = <TvConnectionState>[];
+      final events = <RemoteEvent>[];
+      final stateSub = conn.states.listen(seen.add);
+      final eventSub = conn.events.listen(events.add);
+      addTearDown(stateSub.cancel);
+      addTearDown(eventSub.cancel);
+
+      await _connected(rig);
+      conn.sendKey(KeyCodes.home);
+
+      await _eventually(() => rig.tv.receivedKeyCodes.isNotEmpty);
+      expect(keys.single, orderedEquals(fakeTvKey()));
+      expect(seen, const [
+        TvConnectionState(status: ConnectionStatus.connecting),
+        TvConnectionState(status: ConnectionStatus.connected),
+      ]);
+      await _eventually(() => events.isNotEmpty);
+      expect(events, const [VolumeChanged(3, 10, false)]);
+    });
+  });
+
   group('dispose', () {
     test('dispose_emits_disconnected_and_stops_reconnecting', () async {
       final rig = await _rig(
@@ -634,7 +741,7 @@ void main() {
       await rig.tv.dropConnections();
       await _untilStatus(conn, ConnectionStatus.reconnecting);
 
-      final seen = <ConnectionState>[];
+      final seen = <TvConnectionState>[];
       final done = Completer<void>();
       conn.states.listen(seen.add, onDone: done.complete);
       await conn.dispose();

@@ -8,6 +8,7 @@ import 'package:atv_remote/src/identity.dart';
 import 'package:atv_remote/src/pairing_secret.dart';
 import 'package:atv_remote/src/proto/polo.pb.dart';
 import 'package:atv_remote/src/socket_connector.dart';
+import 'package:atv_remote/src/tls.dart';
 
 /// Why pairing failed.
 enum PairingFailure {
@@ -108,6 +109,16 @@ class PairingClient {
   Completer<void>? _waiter;
   PairingException? _failure;
   late RsaPublicParts _serverParts;
+  Uint8List? _serverPublicKeySha256;
+
+  /// SHA-256 over the TV certificate's RSA modulus followed by its exponent
+  /// (unsigned big-endian, no leading zero), or `null` before the TLS
+  /// handshake of [start] finished. Kept after [close].
+  ///
+  /// The same value `RemoteClient.serverPublicKeySha256` reports for the
+  /// same TV: store it with the pairing (trust on first use) and check later
+  /// connections against it, e.g. with `TvConnection`'s `verifyServerKey`.
+  Uint8List? get serverPublicKeySha256 => _serverPublicKeySha256;
 
   /// Connects to the TV and negotiates until it shows the pairing code.
   ///
@@ -276,6 +287,7 @@ class PairingClient {
     }
     try {
       _serverParts = rsaPublicPartsFromCertificateDer(certificate.der);
+      _serverPublicKeySha256 = publicKeySha256(_serverParts);
     } on Object catch (e) {
       // ArgumentError: not an RSA X.509 certificate.
       socket.destroy();

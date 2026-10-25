@@ -38,7 +38,7 @@ void main() {
       RemoteConnectException,
       // Connection.
       TvConnection,
-      ConnectionState,
+      TvConnectionState,
       ConnectionStatus.connected,
       NotConnectedException,
       Backoff,

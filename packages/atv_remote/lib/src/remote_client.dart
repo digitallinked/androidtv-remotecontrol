@@ -10,7 +10,7 @@ import 'package:atv_remote/src/key_codes.dart';
 import 'package:atv_remote/src/proto/remotemessage.pb.dart';
 import 'package:atv_remote/src/remote_events.dart';
 import 'package:atv_remote/src/socket_connector.dart';
-import 'package:pointycastle/export.dart' show SHA256Digest;
+import 'package:atv_remote/src/tls.dart';
 
 /// Feature bitmask the client announces in `RemoteConfigure.code1` and
 /// `RemoteSetActive.active` (androidtvremote2's value).
@@ -216,9 +216,8 @@ class RemoteClient {
       );
     }
     try {
-      final parts = rsaPublicPartsFromCertificateDer(certificate.der);
-      _serverPublicKeySha256 = SHA256Digest().process(
-        Uint8List.fromList([...parts.modulus, ...parts.exponent]),
+      _serverPublicKeySha256 = publicKeySha256(
+        rsaPublicPartsFromCertificateDer(certificate.der),
       );
     } on Object catch (e) {
       // ArgumentError: not an RSA X.509 certificate.

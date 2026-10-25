@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:atv_remote/src/framing.dart';
 import 'package:atv_remote/src/identity.dart';
@@ -8,6 +9,8 @@ import 'package:atv_remote/src/pairing_client.dart';
 import 'package:atv_remote/src/pairing_secret.dart';
 import 'package:atv_remote/src/proto/polo.pb.dart';
 import 'package:atv_remote/src/proto/remotemessage.pb.dart';
+import 'package:atv_remote/src/remote_client.dart';
+import 'package:pointycastle/export.dart' show SHA256Digest;
 import 'package:test/test.dart';
 
 import 'fake_tv/fake_tv_identity.dart';
@@ -171,6 +174,43 @@ void main() {
       final decoder = FrameDecoder();
       final first = await socket.expand(decoder.add).first.timeout(_wait);
       expect(RemoteMessage.fromBuffer(first).hasRemoteConfigure(), isTrue);
+    });
+
+    test('exposes_the_tv_key_hash_the_remote_client_later_sees', () async {
+      final tv = await _startTv();
+      final client = _client(tv.pairingPort);
+      expect(client.serverPublicKeySha256, isNull);
+
+      await client.start(clientName: 'Test phone').timeout(_wait);
+      final pinned = client.serverPublicKeySha256;
+      expect(pinned, hasLength(32));
+      await client.submitCode(tv.displayedCode!).timeout(_wait);
+      expect(client.serverPublicKeySha256, orderedEquals(pinned!));
+
+      final remote = RemoteClient(
+        host: InternetAddress.loopbackIPv4.address,
+        port: tv.remotePort,
+        identity: _identity,
+        deviceInfo: const DeviceInfo(
+          model: 'Test Phone',
+          vendor: 'Test Vendor',
+          packageName: 'com.example.remote',
+          appVersion: '1.2.3',
+        ),
+      );
+      addTearDown(remote.close);
+      await remote.connect().timeout(_wait);
+
+      expect(remote.serverPublicKeySha256, orderedEquals(pinned));
+      final parts = fakeTvIdentity.publicParts;
+      expect(
+        pinned,
+        orderedEquals(
+          SHA256Digest().process(
+            Uint8List.fromList([...parts.modulus, ...parts.exponent]),
+          ),
+        ),
+      );
     });
 
     test('accepts_lower_case_code', () async {
