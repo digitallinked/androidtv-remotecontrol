@@ -90,6 +90,7 @@ class Rocker extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 40),
                   child: Center(
+                    heightFactor: 1,
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Column(

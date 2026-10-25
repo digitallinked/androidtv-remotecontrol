@@ -142,7 +142,11 @@ class _AppKeyButtonState extends State<AppKeyButton> {
                 },
                 child: IconTheme.merge(
                   data: IconThemeData(color: colors.textPrimary),
-                  child: Center(child: widget.icon),
+                  child: Center(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: widget.icon,
+                  ),
                 ),
               ),
             ),
@@ -185,6 +189,8 @@ class _InkLayerState extends State<_InkLayer> {
 
   void _down(PointerDownEvent event) {
     widget.onPointerDown();
+    // A second pointer must not leave the first ripple stuck.
+    _splash?.cancel();
     _splash = InkRipple.splashFactory.create(
       controller: Material.of(context),
       referenceBox: context.findRenderObject()! as RenderBox,

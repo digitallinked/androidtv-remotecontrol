@@ -30,8 +30,7 @@ void main() {
       ),
     );
     final s = t.getSize(find.byType(AppKeyButton));
-    expect(s.width, greaterThanOrEqualTo(56));
-    expect(s.height, greaterThanOrEqualTo(56));
+    expect(s, const Size(56, 56));
   });
 
   testWidgets('tap_calls_onTap_once', (t) async {

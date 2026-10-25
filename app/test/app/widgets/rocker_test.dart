@@ -81,4 +81,21 @@ void main() {
       greaterThanOrEqualTo(56),
     );
   });
+
+  testWidgets('rocker_shrink_wraps_in_a_loose_parent', (t) async {
+    await pumpApp(
+      t,
+      Rocker(
+        label: 'VOL',
+        upSemanticLabel: 'Volume up',
+        downSemanticLabel: 'Volume down',
+        onUp: () {},
+        onDown: () {},
+      ),
+    );
+    final s = t.getSize(find.byType(Rocker));
+    expect(s.width, 64);
+    // Two 56 dp keys, a 40 dp centre and 4 dp padding on each side.
+    expect(s.height, 56 + 40 + 56 + 8);
+  });
 }
