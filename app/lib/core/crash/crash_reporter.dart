@@ -36,13 +36,16 @@ class LoggingCrashReporter implements CrashReporter {
     bool fatal = false,
     String? reason,
   }) async {
+    final label = fatal ? 'Fatal error' : 'Error';
+    final message = reason == null ? label : '$label ($reason)';
     developer.log(
-      '${fatal ? 'Fatal error' : 'Error'}${reason == null ? '' : ' ($reason)'}',
+      message,
       name: 'crash',
       level: fatal ? 1000 : 900,
       error: error,
       stackTrace: stack,
     );
+    _echo(message, error, stack);
   }
 
   @override
@@ -50,14 +53,24 @@ class LoggingCrashReporter implements CrashReporter {
     FlutterErrorDetails details, {
     bool fatal = false,
   }) async {
+    final message =
+        '${fatal ? 'Fatal Flutter error' : 'Flutter error'}: '
+        '${details.exceptionAsString()}';
     developer.log(
-      '${fatal ? 'Fatal Flutter error' : 'Flutter error'}: '
-      '${details.exceptionAsString()}',
+      message,
       name: 'crash',
       level: fatal ? 1000 : 900,
       error: details.exception,
       stackTrace: details.stack,
     );
+    _echo(message, details.exception, details.stack);
+  }
+
+  // `developer.log` does not show in `flutter run` or logcat output, so debug
+  // builds print the error as well.
+  void _echo(String message, Object error, StackTrace? stack) {
+    if (!kDebugMode) return;
+    debugPrint('$message\n$error${stack == null ? '' : '\n$stack'}');
   }
 }
 
