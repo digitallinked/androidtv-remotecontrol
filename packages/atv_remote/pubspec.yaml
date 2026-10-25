@@ -9,6 +9,8 @@ environment:
 resolution: workspace
 
 dependencies:
+  basic_utils: 5.8.2
+  pointycastle: 4.0.0
   protobuf: 6.1.0
 
 dev_dependencies:
