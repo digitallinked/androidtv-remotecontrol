@@ -82,6 +82,35 @@ void main() {
     );
   });
 
+  test('fromPem never echoes private key material in its error', () {
+    // Corrupt one character in the middle of the base64 body.
+    final lines = const LineSplitter().convert(identity.privateKeyPem.trim());
+    final line = lines[lines.length ~/ 2];
+    final mid = line.length ~/ 2;
+    lines[lines.length ~/ 2] =
+        '${line.substring(0, mid)}!'
+        '${line.substring(mid + 1)}';
+    final corrupt = lines.join('\n');
+
+    // Any base64 run longer than 16 characters could be key material.
+    final base64Run = RegExp('[A-Za-z0-9+/=]{17,}');
+    expect(
+      () => ClientIdentity.fromPem(
+        certificatePem: identity.certificatePem,
+        privateKeyPem: corrupt,
+      ),
+      throwsA(
+        isA<ArgumentError>()
+            .having((e) => '$e', 'toString()', isNot(matches(base64Run)))
+            .having(
+              (e) => '${e.message}',
+              'message',
+              isNot(matches(base64Run)),
+            ),
+      ),
+    );
+  });
+
   test('rsaPublicPartsFromCertificateDer matches publicParts', () {
     final der = _derFromPem(identity.certificatePem);
     final parts = rsaPublicPartsFromCertificateDer(der);

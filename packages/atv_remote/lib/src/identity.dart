@@ -51,11 +51,20 @@ class ClientIdentity {
       parts = rsaPublicPartsFromCertificateDer(
         CryptoUtils.getBytesFromPEMString(certificatePem),
       );
+    } on Object catch (e) {
+      // The certificate is public, so the parser's detail may be echoed.
+      throw ArgumentError('Invalid client identity certificate PEM: $e');
+    }
+    try {
       privateKey = privateKeyPem.contains('RSA PRIVATE KEY')
           ? CryptoUtils.rsaPrivateKeyFromPemPkcs1(privateKeyPem)
           : CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
     } on Object catch (e) {
-      throw ArgumentError('Invalid client identity PEM: $e');
+      // Never echo the parser's message: a FormatException quotes the input
+      // around the bad character, which would leak private key material.
+      throw ArgumentError(
+        'Invalid client identity private key PEM (${e.runtimeType}).',
+      );
     }
     if (!_sameBytes(_unsignedBytes(privateKey.modulus!), parts.modulus)) {
       throw ArgumentError(
