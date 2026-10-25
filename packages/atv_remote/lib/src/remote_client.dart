@@ -69,11 +69,17 @@ enum _State { idle, connecting, handshaking, ready, closed }
 /// 1. [connect] opens TLS with the client certificate. The TV sends
 ///    `RemoteConfigure`; the client answers with feature code 622 and its
 ///    [DeviceInfo]. The TV sends `RemoteSetActive`; the client answers
-///    `active: 622`. Then [connect] completes, [isReady] is true and
-///    [RemoteReady] is emitted.
-/// 2. While ready, `RemotePingRequest`s are echoed, [sendKey],
-///    [launchAppLink] and [sendText] go to the TV, and TV pushes arrive on
-///    [events].
+///    `active: 622`. On the first `RemoteSetActive` answered, [connect]
+///    completes, [isReady] is true and [RemoteReady] is emitted.
+/// 2. Like `remote.py`, every `RemoteConfigure` and `RemoteSetActive` is
+///    answered whenever it arrives, in any order and as often as the TV
+///    sends it, and `RemotePingRequest`s are always echoed.
+/// 3. TV pushes (power, volume, current app, keyboard, errors) are handled
+///    the same way during the handshake and once ready. Events for pushes
+///    that arrive before ready are held back and emitted right after
+///    [RemoteReady], so [RemoteReady] is always the first event.
+/// 4. While ready, [sendKey], [launchAppLink] and [sendText] go to the TV,
+///    and TV pushes arrive on [events].
 ///
 /// A client is single use: after it closed (for any reason) create a new one.
 ///
@@ -146,6 +152,8 @@ class RemoteClient {
   Timer? _idleTimer;
   bool _configured = false;
   Uint8List? _serverPublicKeySha256;
+  // Events of TV pushes received before ready; emitted after RemoteReady.
+  final List<RemoteEvent> _heldBack = [];
 
   // Counters from the latest IME message of the TV; sendText echoes them.
   int _imeCounter = 0;
@@ -169,10 +177,10 @@ class RemoteClient {
   /// Connects and completes once the TV finished the handshake.
   ///
   /// Throws a [RemoteConnectException] otherwise: `certificateRejected` when
-  /// the TLS handshake fails or the TV closes the connection before sending
-  /// its first message (it does not know this client), `networkError` when it
-  /// cannot be reached or is too slow, `remoteClosed` when it hangs up
-  /// mid-handshake, `closedByClient` when [close] ran first. Throws a
+  /// the TLS handshake fails or the TV closes the connection before the first
+  /// `RemoteConfigure` (it does not know this client), `networkError` when it
+  /// cannot be reached or is too slow, `remoteClosed` when it hangs up later
+  /// in the handshake, `closedByClient` when [close] ran first. Throws a
   /// [StateError] if this client was already used.
   Future<void> connect() async {
     if (_state != _State.idle) {
@@ -403,7 +411,10 @@ class RemoteClient {
     }
   }
 
+  /// Handles one TV message the same way while handshaking and while ready
+  /// (androidtvremote2's `remote.py` has no separate handshake phase).
   void _handle(RemoteMessage message) {
+    if (_state != _State.handshaking && _state != _State.ready) return;
     if (message.hasRemotePingRequest()) {
       _write(
         RemoteMessage(
@@ -412,21 +423,7 @@ class RemoteClient {
           ),
         ),
       );
-      return;
-    }
-    switch (_state) {
-      case _State.handshaking:
-        _handleHandshake(message);
-      case _State.ready:
-        _handleReady(message);
-      case _State.idle || _State.connecting || _State.closed:
-        break;
-    }
-  }
-
-  void _handleHandshake(RemoteMessage message) {
-    if (!_configured) {
-      if (!message.hasRemoteConfigure()) return;
+    } else if (message.hasRemoteConfigure()) {
       _configured = true;
       _write(
         RemoteMessage(
@@ -447,23 +444,12 @@ class RemoteClient {
       _write(
         RemoteMessage(remoteSetActive: RemoteSetActive(active: _featureCode)),
       );
-      if (_state == _State.closed) return;
-      _state = _State.ready;
-      _handshakeTimer?.cancel();
-      _handshakeTimer = null;
-      _restartIdleTimer();
-      _emit(const RemoteReady());
-      final ready = _ready;
-      if (ready != null && !ready.isCompleted) ready.complete();
-    }
-  }
-
-  void _handleReady(RemoteMessage message) {
-    if (message.hasRemoteStart()) {
-      _emit(PowerStateChanged(message.remoteStart.started));
+      if (_state == _State.handshaking) _becomeReady();
+    } else if (message.hasRemoteStart()) {
+      _emitPush(PowerStateChanged(message.remoteStart.started));
     } else if (message.hasRemoteSetVolumeLevel()) {
       final volume = message.remoteSetVolumeLevel;
-      _emit(
+      _emitPush(
         VolumeChanged(volume.volumeLevel, volume.volumeMax, volume.volumeMuted),
       );
     } else if (message.hasRemoteImeKeyInject()) {
@@ -473,29 +459,58 @@ class RemoteClient {
       }
       // Emitted every time the TV names an app, even an unchanged one.
       final package = inject.appInfo.appPackage;
-      if (package.isNotEmpty) _emit(CurrentAppChanged(package));
+      if (package.isNotEmpty) _emitPush(CurrentAppChanged(package));
     } else if (message.hasRemoteImeBatchEdit()) {
       final edit = message.remoteImeBatchEdit;
       _imeCounter = edit.imeCounter;
       _fieldCounter = edit.fieldCounter;
     } else if (message.hasRemoteImeShowRequest()) {
-      _emit(const ImeShowRequested());
+      _emitPush(const ImeShowRequested());
     } else if (message.hasRemoteError()) {
       final text = message.remoteError.toString().trim().replaceAll('\n', ' ');
-      _emit(RemoteErrorReceived(text.isEmpty ? 'remote error' : text));
+      _emitPush(RemoteErrorReceived(text.isEmpty ? 'remote error' : text));
     }
     // Anything else (voice, audio devices, ...) is ignored.
   }
 
+  /// The first `RemoteSetActive` was answered: the session is usable.
+  void _becomeReady() {
+    // The reply's write may have failed and closed the client.
+    if (_state != _State.handshaking) return;
+    _state = _State.ready;
+    _handshakeTimer?.cancel();
+    _handshakeTimer = null;
+    _restartIdleTimer();
+    _emit(const RemoteReady());
+    _heldBack
+      ..forEach(_emit)
+      ..clear();
+    final ready = _ready;
+    if (ready != null && !ready.isCompleted) ready.complete();
+  }
+
+  /// Emits the event of a TV push, holding it back until ready.
+  void _emitPush(RemoteEvent event) {
+    if (_state == _State.ready) {
+      _emit(event);
+    } else {
+      _heldBack.add(event);
+    }
+  }
+
+  /// Whether the TV gave up on us during the handshake before its first
+  /// `RemoteConfigure`: it does not know this client (R4).
+  bool get _endedBeforeConfigure => !_configured && _state != _State.ready;
+
   void _onSocketDone() => _terminate(
-    _configured || _state == _State.ready
-        ? RemoteCloseReason.remoteClosed
+    _endedBeforeConfigure
         // The TV says nothing to a client it does not know and just hangs up.
-        : RemoteCloseReason.certificateRejected,
+        ? RemoteCloseReason.certificateRejected
+        : RemoteCloseReason.remoteClosed,
   );
 
   void _onSocketError(Object error) => _terminate(
-    error is TlsException && !_configured
+    error is TlsException && _endedBeforeConfigure
         ? RemoteCloseReason.certificateRejected
         : RemoteCloseReason.networkError,
   );
@@ -541,6 +556,7 @@ class RemoteClient {
     _handshakeTimer = null;
     _idleTimer?.cancel();
     _idleTimer = null;
+    _heldBack.clear();
 
     final ready = _ready;
     if (ready != null && !ready.isCompleted) {

@@ -298,6 +298,32 @@ void main() {
     expect((await peer.nextRemote()).hasRemoteSetActive(), isTrue);
   });
 
+  test('setActiveFirst sends pushes, SetActive, then Configure', () async {
+    final tv = await FakeTvServer.start(
+      sendPings: false,
+      setActiveFirst: true,
+      initialPushes: [RemoteMessage(remoteStart: RemoteStart(started: true))],
+    );
+    addTearDown(tv.close);
+    await _pair(tv, _clientA);
+
+    final peer = await _Peer.connect(tv.remotePort, _clientA);
+    expect((await peer.nextRemote()).hasRemoteStart(), isTrue);
+    expect((await peer.nextRemote()).hasRemoteSetActive(), isTrue);
+    expect((await peer.nextRemote()).hasRemoteConfigure(), isTrue);
+
+    peer
+      ..sendRemote(RemoteMessage(remoteSetActive: RemoteSetActive(active: 1)))
+      ..sendRemote(RemoteMessage(remoteSetActive: RemoteSetActive(active: 2)))
+      ..sendRemote(RemoteMessage(remoteConfigure: RemoteConfigure(code1: 3)));
+    await tv.waitForActiveClient();
+    await _eventually(
+      () => tv.setActiveReplyCount == 2 && tv.configureReplyCount == 1,
+    );
+    expect(tv.receivedActiveCode, 2);
+    expect(tv.receivedConfigure!.code1, 3);
+  });
+
   test('forgetClients makes a previously paired cert unknown', () async {
     final tv = await _start();
     await _pair(tv, _clientA);

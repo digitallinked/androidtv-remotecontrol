@@ -21,8 +21,10 @@ import 'fake_tv_identity.dart';
 ///   [displayedCode]. A client that returns the right secret becomes paired,
 ///   identified by its certificate's public key.
 /// * [remotePort] only talks to paired clients (unless `rejectUnknownClients`
-///   is false). It sends `RemoteConfigure`, then `RemoteSetActive`, then
-///   pings, and records what the client injects.
+///   is false). It sends `RemoteConfigure`, then (once the client answered)
+///   any `initialPushes` and `RemoteSetActive`, then pings, and records what
+///   the client injects. With `setActiveFirst` it sends `initialPushes`,
+///   `RemoteSetActive` and `RemoteConfigure` straight away, in that order.
 class FakeTvServer {
   FakeTvServer._(
     this._pairingServer,
@@ -30,7 +32,9 @@ class FakeTvServer {
     required this.sendPings,
     required this.pingInterval,
     required this.rejectUnknownClients,
-  });
+    required this.setActiveFirst,
+    required List<RemoteMessage> initialPushes,
+  }) : _initialPushes = List.unmodifiable(initialPushes);
 
   /// Lets [identity] get through the TLS handshake of every fake TV.
   ///
@@ -41,10 +45,17 @@ class FakeTvServer {
       trustClientCertificate(identity);
 
   /// Binds both ports on the loopback interface and starts serving.
+  ///
+  /// [setActiveFirst] makes the TV send `RemoteSetActive` before
+  /// `RemoteConfigure`. [initialPushes] are sent to every new remote client
+  /// right before the TV's `RemoteSetActive`, i.e. before the client is
+  /// ready (androidtvremote2's TVs push power, volume and current app early).
   static Future<FakeTvServer> start({
     bool sendPings = true,
     Duration pingInterval = const Duration(milliseconds: 200),
     bool rejectUnknownClients = true,
+    bool setActiveFirst = false,
+    List<RemoteMessage> initialPushes = const [],
   }) async {
     final context = fakeTvServerContext;
     final pairingServer = await SecureServerSocket.bind(
@@ -65,6 +76,8 @@ class FakeTvServer {
       sendPings: sendPings,
       pingInterval: pingInterval,
       rejectUnknownClients: rejectUnknownClients,
+      setActiveFirst: setActiveFirst,
+      initialPushes: initialPushes,
     );
     // Handshake failures arrive as stream errors; a fake TV just ignores them.
     pairingServer.listen(tv._onPairingSocket, onError: (Object _) {});
@@ -80,6 +93,11 @@ class FakeTvServer {
 
   /// Whether clients that have not paired are disconnected on the remote port.
   final bool rejectUnknownClients;
+
+  /// Whether `RemoteSetActive` is sent before `RemoteConfigure`.
+  final bool setActiveFirst;
+
+  final List<RemoteMessage> _initialPushes;
 
   final SecureServerSocket _pairingServer;
   final SecureServerSocket _remoteServer;
@@ -101,6 +119,8 @@ class FakeTvServer {
   int? _receivedActiveCode;
   RemoteImeBatchEdit? _receivedImeBatchEdit;
   int _answeredPings = 0;
+  int _configureReplies = 0;
+  int _setActiveReplies = 0;
 
   /// Port of the pairing (polo) service.
   int get pairingPort => _pairingServer.port;
@@ -138,6 +158,12 @@ class FakeTvServer {
 
   /// How many pings (all clients, all time) have been answered.
   int get answeredPingCount => _answeredPings;
+
+  /// How many `RemoteConfigure` replies (all clients, all time) arrived.
+  int get configureReplyCount => _configureReplies;
+
+  /// How many `RemoteSetActive` replies (all clients, all time) arrived.
+  int get setActiveReplyCount => _setActiveReplies;
 
   /// Whether the most recently sent ping has been answered.
   ///
@@ -201,6 +227,14 @@ class FakeTvServer {
       if (client.active) client.sendRaw(chunk);
     }
   }
+
+  /// Sends another `RemoteConfigure` to every active remote client, as a
+  /// TV may at any time.
+  void resendConfigure() => _broadcast(_RemoteClient.configureMessage);
+
+  /// Sends another `RemoteSetActive` to every active remote client, as a TV
+  /// may at any time.
+  void resendSetActive() => _broadcast(_RemoteClient.setActiveMessage);
 
   /// Sends a volume update to every active remote client.
   void sendVolume({
@@ -418,8 +452,10 @@ class FakeTvServer {
 
   void _handleClientMessage(RemoteMessage message) {
     if (message.hasRemoteConfigure()) {
+      _configureReplies++;
       _receivedConfigure = message.remoteConfigure;
     } else if (message.hasRemoteSetActive()) {
+      _setActiveReplies++;
       _receivedActiveCode = message.remoteSetActive.active;
     } else if (message.hasRemoteKeyInject()) {
       final inject = message.remoteKeyInject;
@@ -492,35 +528,49 @@ class _RemoteClient {
       onError: (Object _) => close(),
       onDone: close,
     );
-    send(
-      RemoteMessage(
-        remoteConfigure: RemoteConfigure(
-          code1: 622,
-          deviceInfo: RemoteDeviceInfo(
-            model: 'FakeTV',
-            vendor: 'Fake',
-            unknown1: 1,
-            unknown2: '1',
-            packageName: 'com.fake.tv',
-            appVersion: '1.0.0',
-          ),
-        ),
+    if (_tv.setActiveFirst) {
+      _sendPushesAndSetActive();
+      send(configureMessage);
+    } else {
+      send(configureMessage);
+    }
+  }
+
+  static final RemoteMessage configureMessage = RemoteMessage(
+    remoteConfigure: RemoteConfigure(
+      code1: 622,
+      deviceInfo: RemoteDeviceInfo(
+        model: 'FakeTV',
+        vendor: 'Fake',
+        unknown1: 1,
+        unknown2: '1',
+        packageName: 'com.fake.tv',
+        appVersion: '1.0.0',
       ),
-    );
+    ),
+  );
+
+  static final RemoteMessage setActiveMessage = RemoteMessage(
+    remoteSetActive: RemoteSetActive(active: 622),
+  );
+
+  void _sendPushesAndSetActive() {
+    _tv._initialPushes.forEach(send);
+    send(setActiveMessage);
   }
 
   void _handle(RemoteMessage message) {
     if (message.hasRemoteConfigure()) {
+      // Every reply is recorded; only the first one drives the handshake.
+      _tv._handleClientMessage(message);
       if (_configured) return;
       _configured = true;
-      _tv._handleClientMessage(message);
-      send(RemoteMessage(remoteSetActive: RemoteSetActive(active: 622)));
+      if (!_tv.setActiveFirst) _sendPushesAndSetActive();
     } else if (message.hasRemoteSetActive()) {
+      _tv._handleClientMessage(message);
       if (active) return;
       active = true;
-      _tv
-        .._handleClientMessage(message)
-        .._clientBecameActive();
+      _tv._clientBecameActive();
       if (_tv.sendPings) {
         _pingTimer = Timer.periodic(_tv.pingInterval, (_) => _ping());
       }

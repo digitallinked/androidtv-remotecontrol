@@ -3,7 +3,7 @@ import 'package:meta/meta.dart';
 /// Why a `RemoteClient` stopped.
 enum RemoteCloseReason {
   /// The TV closed the connection after the session was running, or during
-  /// the handshake after its first message.
+  /// the handshake after its first `RemoteConfigure`.
   remoteClosed,
 
   /// No bytes arrived from the TV for the idle timeout while ready: the TV
@@ -11,8 +11,8 @@ enum RemoteCloseReason {
   pingTimeout,
 
   /// The TV does not accept this client's certificate: the TLS handshake
-  /// failed, or the TV closed the connection before sending anything. The
-  /// phone has to pair again.
+  /// failed, or the TV closed the connection during the handshake before
+  /// its first `RemoteConfigure`. The phone has to pair again.
   certificateRejected,
 
   /// Connecting failed or the connection broke: refused, unreachable, reset,

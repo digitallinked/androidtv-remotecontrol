@@ -33,10 +33,14 @@ late ClientIdentity _untrusted;
 Future<FakeTvServer> _startTv({
   bool sendPings = false,
   Duration pingInterval = const Duration(milliseconds: 200),
+  bool setActiveFirst = false,
+  List<RemoteMessage> initialPushes = const [],
 }) async {
   final tv = await FakeTvServer.start(
     sendPings: sendPings,
     pingInterval: pingInterval,
+    setActiveFirst: setActiveFirst,
+    initialPushes: initialPushes,
   );
   addTearDown(tv.close);
   return tv;
@@ -139,6 +143,79 @@ void main() {
       expect(configure.deviceInfo.packageName, 'com.example.remote');
       expect(configure.deviceInfo.appVersion, '1.2.3');
       expect(tv.receivedActiveCode, 622);
+    });
+
+    test('becomes_ready_when_set_active_comes_before_configure', () async {
+      final tv = await _startTv(setActiveFirst: true);
+      await _pair(tv, _paired);
+      final client = _client(tv);
+      final seen = <RemoteEvent>[];
+      client.events.listen(seen.add);
+
+      await client.connect().timeout(_wait);
+
+      expect(client.isReady, isTrue);
+      await tv.waitForActiveClient();
+      // The Configure that followed SetActive is answered too.
+      await _eventually(() => tv.configureReplyCount == 1);
+      expect(tv.setActiveReplyCount, 1);
+      expect(tv.receivedConfigure!.code1, 622);
+      expect(tv.receivedActiveCode, 622);
+      expect(seen, [const RemoteReady()]);
+    });
+
+    test('answers_every_configure_and_set_active_after_ready', () async {
+      final (tv, client) = await _ready();
+      final seen = <RemoteEvent>[];
+      client.events.listen(seen.add);
+      expect(tv.configureReplyCount, 1);
+      expect(tv.setActiveReplyCount, 1);
+
+      tv
+        ..resendSetActive()
+        ..resendConfigure()
+        ..resendSetActive();
+
+      await _eventually(
+        () => tv.setActiveReplyCount == 3 && tv.configureReplyCount == 2,
+      );
+      expect(tv.receivedConfigure!.deviceInfo.model, 'Test Phone');
+      expect(tv.receivedActiveCode, 622);
+      expect(client.isReady, isTrue);
+      expect(seen, isEmpty, reason: 'no second RemoteReady');
+    });
+
+    test('pushes_before_set_active_are_emitted_after_ready', () async {
+      final tv = await _startTv(
+        initialPushes: [
+          RemoteMessage(remoteStart: RemoteStart(started: true)),
+          RemoteMessage(
+            remoteSetVolumeLevel: RemoteSetVolumeLevel(
+              volumeLevel: 9,
+              volumeMax: 100,
+            ),
+          ),
+          RemoteMessage(
+            remoteImeKeyInject: RemoteImeKeyInject(
+              appInfo: RemoteAppInfo(
+                appPackage: 'com.google.android.tvlauncher',
+              ),
+            ),
+          ),
+        ],
+      );
+      await _pair(tv, _paired);
+      final client = _client(tv);
+      final first4 = client.events.take(4).toList();
+
+      await client.connect().timeout(_wait);
+
+      expect(await first4.timeout(_wait), [
+        const RemoteReady(),
+        const PowerStateChanged(true),
+        const VolumeChanged(9, 100, false),
+        const CurrentAppChanged('com.google.android.tvlauncher'),
+      ]);
     });
 
     test('connect_twice_throws_StateError', () async {
