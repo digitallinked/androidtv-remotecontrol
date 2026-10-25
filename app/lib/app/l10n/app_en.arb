@@ -41,5 +41,65 @@
   "closeAction": "Close",
   "@closeAction": {
     "description": "Tooltip and screen-reader label of the button that closes a bottom sheet."
+  },
+  "onboardingTitle": "Control your TV from your phone",
+  "@onboardingTitle": {
+    "description": "Headline of the first-run onboarding screen."
+  },
+  "onboardingBody": "Find your Android TV on this Wi-Fi network and pair it in a few seconds.",
+  "@onboardingBody": {
+    "description": "Body text of the first-run onboarding screen."
+  },
+  "onboardingGetStarted": "Get started",
+  "@onboardingGetStarted": {
+    "description": "Button that finishes onboarding and opens the TV list."
+  },
+  "discoverTitle": "Choose your TV",
+  "@discoverTitle": {
+    "description": "Title of the TV discovery screen."
+  },
+  "discoverEmptyTitle": "No TVs found yet",
+  "@discoverEmptyTitle": {
+    "description": "Heading of the discovery screen when no TV has been found."
+  },
+  "discoverEmptyBody": "Make sure your phone and TV are on the same Wi-Fi network and the TV is turned on.",
+  "@discoverEmptyBody": {
+    "description": "Hint under the empty discovery heading."
+  },
+  "pageTitlePair": "Pair your TV",
+  "@pageTitlePair": {
+    "description": "Title of the pairing screen."
+  },
+  "pageTitleRemote": "Remote",
+  "@pageTitleRemote": {
+    "description": "Title of the remote screen."
+  },
+  "pageTitleApps": "Apps",
+  "@pageTitleApps": {
+    "description": "Title of the TV apps screen."
+  },
+  "pageTitleDevices": "Devices",
+  "@pageTitleDevices": {
+    "description": "Title of the saved TVs screen."
+  },
+  "pageTitleSettings": "Settings",
+  "@pageTitleSettings": {
+    "description": "Title of the settings screen."
+  },
+  "pageTitlePaywall": "Premium",
+  "@pageTitlePaywall": {
+    "description": "Title of the premium upgrade screen."
+  },
+  "placeholderBody": "This screen is coming soon.",
+  "@placeholderBody": {
+    "description": "Text shown on screens that are not built yet."
+  },
+  "routeNotFoundTitle": "Page not found",
+  "@routeNotFoundTitle": {
+    "description": "Title shown when the app is asked to open a page that does not exist."
+  },
+  "routeNotFoundAction": "Back to TVs",
+  "@routeNotFoundAction": {
+    "description": "Button on the page-not-found screen that returns to the TV list."
   }
 }

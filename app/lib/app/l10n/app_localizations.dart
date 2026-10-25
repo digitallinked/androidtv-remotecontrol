@@ -147,6 +147,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get closeAction;
+
+  /// Headline of the first-run onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Control your TV from your phone'**
+  String get onboardingTitle;
+
+  /// Body text of the first-run onboarding screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Find your Android TV on this Wi-Fi network and pair it in a few seconds.'**
+  String get onboardingBody;
+
+  /// Button that finishes onboarding and opens the TV list.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get onboardingGetStarted;
+
+  /// Title of the TV discovery screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your TV'**
+  String get discoverTitle;
+
+  /// Heading of the discovery screen when no TV has been found.
+  ///
+  /// In en, this message translates to:
+  /// **'No TVs found yet'**
+  String get discoverEmptyTitle;
+
+  /// Hint under the empty discovery heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure your phone and TV are on the same Wi-Fi network and the TV is turned on.'**
+  String get discoverEmptyBody;
+
+  /// Title of the pairing screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair your TV'**
+  String get pageTitlePair;
+
+  /// Title of the remote screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote'**
+  String get pageTitleRemote;
+
+  /// Title of the TV apps screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps'**
+  String get pageTitleApps;
+
+  /// Title of the saved TVs screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get pageTitleDevices;
+
+  /// Title of the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get pageTitleSettings;
+
+  /// Title of the premium upgrade screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get pageTitlePaywall;
+
+  /// Text shown on screens that are not built yet.
+  ///
+  /// In en, this message translates to:
+  /// **'This screen is coming soon.'**
+  String get placeholderBody;
+
+  /// Title shown when the app is asked to open a page that does not exist.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get routeNotFoundTitle;
+
+  /// Button on the page-not-found screen that returns to the TV list.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to TVs'**
+  String get routeNotFoundAction;
 }
 
 class _AppLocalizationsDelegate
