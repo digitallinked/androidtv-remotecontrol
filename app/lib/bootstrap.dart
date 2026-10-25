@@ -134,6 +134,7 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate> {
   Widget? _app;
   bool _failed = false;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -142,6 +143,9 @@ class _StartupGateState extends State<StartupGate> {
   }
 
   Future<void> _start() async {
+    // A second tap in the same frame must not start a second build.
+    if (_busy) return;
+    _busy = true;
     if (_failed) setState(() => _failed = false);
     try {
       final app = await widget.build();
@@ -155,6 +159,8 @@ class _StartupGateState extends State<StartupGate> {
         reason: 'startup',
       );
       if (mounted) setState(() => _failed = true);
+    } finally {
+      _busy = false;
     }
   }
 
@@ -201,14 +207,9 @@ class _StartupErrorScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
                 ),
-                Semantics(
-                  button: true,
-                  label: 'Try again',
-                  excludeSemantics: true,
-                  child: FilledButton(
-                    onPressed: onRetry,
-                    child: const Text('Try again'),
-                  ),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Try again'),
                 ),
               ],
             ),

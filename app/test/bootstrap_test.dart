@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -81,8 +82,10 @@ void main() {
     Future<void> expectErrorThenRetrySucceeds(
       WidgetTester tester,
       RecordingCrashReporter reporter,
-      void Function() fixFailure,
-    ) async {
+      void Function() fixFailure, {
+      bool retryWithSemantics = false,
+    }) async {
+      final semantics = tester.ensureSemantics();
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsOneWidget);
@@ -94,14 +97,21 @@ void main() {
         greaterThanOrEqualTo(48),
       );
       expect(find.bySemanticsLabel('Try again'), findsOneWidget);
+      final node = tester.getSemantics(find.bySemanticsLabel('Try again'));
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
 
       fixFailure();
-      await tester.tap(find.text('Try again'));
+      if (retryWithSemantics) {
+        tester.semantics.tap(find.semantics.byLabel('Try again'));
+      } else {
+        await tester.tap(find.text('Try again'));
+      }
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsNothing);
       expect(find.text('Get started'), findsOneWidget);
       expect(reporter.errors, hasLength(1));
+      semantics.dispose();
     }
 
     testWidgets('settings_failure_shows_error_screen_and_retry_recovers', (
@@ -141,7 +151,32 @@ void main() {
 
       await expectErrorThenRetrySucceeds(tester, reporter, () {
         broken = false;
-      });
+      }, retryWithSemantics: true);
+    });
+
+    testWidgets('two_rapid_retries_open_only_one_database', (tester) async {
+      final reporter = RecordingCrashReporter();
+      var opens = 0;
+      await tester.pumpWidget(
+        gate(
+          reporter,
+          openDatabase: () {
+            opens++;
+            if (opens == 1) throw StateError('database is locked');
+            return AppDatabase(NativeDatabase.memory());
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(opens, 1);
+
+      final retry = tester.widget<FilledButton>(find.byType(FilledButton));
+      retry.onPressed!();
+      retry.onPressed!();
+      await tester.pumpAndSettle();
+
+      expect(opens, 2);
+      expect(find.text('Get started'), findsOneWidget);
     });
   });
 }
