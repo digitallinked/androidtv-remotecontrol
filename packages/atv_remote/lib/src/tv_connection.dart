@@ -115,7 +115,9 @@ class NotConnectedException implements Exception {
 ///   count; an attempt still running (possibly hanging until its connect
 ///   timeout) is abandoned for the fresh one. In every other state they do
 ///   nothing.
-/// * [dispose] ends everything in `disconnected`.
+/// * [disconnect] closes the client and cancels any retry, ending in
+///   `disconnected`; unlike [dispose], a later [connect] starts afresh.
+/// * [dispose] ends everything in `disconnected`, for good.
 ///
 /// A failed `RemoteClient.connect` both throws and emits `RemoteClosed`; each
 /// failure is handled exactly once, from the exception. A `RemoteClosed` only
@@ -188,6 +190,10 @@ class TvConnection {
   /// The latest state.
   TvConnectionState get current => _current;
 
+  /// The address the current or next attempt connects to: the constructor's
+  /// `host` until a reconnect's `reResolveHost` returns a new one.
+  String get host => _host;
+
   /// Everything the TV pushes (volume, power, current app, ...), forwarded
   /// from the current client across reconnects. `RemoteReady` and
   /// `RemoteClosed` are left out: [states] represents them. A broadcast
@@ -197,7 +203,8 @@ class TvConnection {
   /// Connects, completing once that first attempt has an outcome (see the
   /// class documentation; failures show in [states], they are not thrown).
   ///
-  /// From `disconnected`, `needsPairing` or `offline` this starts afresh. In
+  /// From `disconnected` (also after [disconnect]), `needsPairing` or
+  /// `offline` this starts afresh. In
   /// `connecting` and `connected` it does nothing, and in `reconnecting` it
   /// behaves like [notifyAppResumed]. Throws a [StateError] after [dispose].
   Future<void> connect() async {
@@ -244,6 +251,24 @@ class TvConnection {
   /// Throws [NotConnectedException] unless [ConnectionStatus.connected].
   void sendText(String text) => _command((client) => client.sendText(text));
 
+  /// Closes the connection cleanly and emits `disconnected`, but keeps this
+  /// object usable: [connect] starts afresh afterwards.
+  ///
+  /// Cancels a scheduled retry, abandons an attempt in flight and closes the
+  /// current client; completes once the client is closed. [notifyAppResumed]
+  /// and [notifyNetworkChanged] do nothing while `disconnected`. Idempotent,
+  /// and a no-op after [dispose].
+  Future<void> disconnect() async {
+    if (_disposed) return;
+    _generation++;
+    _cancelTimer();
+    // The client is detached synchronously, so a connect() that follows
+    // the emitted state cannot be disturbed by this close.
+    final closing = _detachClient();
+    _set(const TvConnectionState(status: ConnectionStatus.disconnected));
+    await closing;
+  }
+
   /// Stops reconnecting, closes the client, emits `disconnected` and closes
   /// [states] and [events]. Idempotent. [connect] throws afterwards.
   Future<void> dispose() => _disposal ??= _dispose();
@@ -278,7 +303,7 @@ class TvConnection {
     _client = client;
 
     var ready = false;
-    var accepted = false;
+    var trusted = false;
     RemoteCloseReason? closedWith;
     // TV pushes are held back until the TV's key was accepted.
     final early = <RemoteEvent>[];
@@ -292,7 +317,7 @@ class TvConnection {
           // Before ready the connect() exception reports the failure.
           if (ready) _handleLost(reason);
         case _:
-          if (accepted) {
+          if (trusted) {
             _forward(event);
           } else {
             early.add(event);
@@ -321,19 +346,14 @@ class TvConnection {
       return;
     }
     if (!client.isReady) return; // its RemoteClosed is on the way
-    if (!_serverKeyAccepted(client)) {
-      _dropClient();
-      _cancelTimer();
-      _set(
-        TvConnectionState(
-          status: ConnectionStatus.needsPairing,
-          attempt: _current.attempt,
-          lastError: RemoteCloseReason.serverKeyChanged,
-        ),
-      );
+    final accepted = _serverKeyAccepted(client);
+    // The callback may have re-entered: dispose() or disconnect().
+    if (generation != _generation) return;
+    if (!accepted) {
+      _handleFailure(RemoteCloseReason.serverKeyChanged);
       return;
     }
-    accepted = true;
+    trusted = true;
     _backoff.reset();
     _set(const TvConnectionState(status: ConnectionStatus.connected));
     early.forEach(_forward);
