@@ -13,6 +13,7 @@ class PlaceholderScreen extends StatelessWidget {
     super.key,
     this.params = const {},
     this.extra,
+    this.body,
     this.actionLabel,
     this.onAction,
   });
@@ -25,6 +26,9 @@ class PlaceholderScreen extends StatelessWidget {
 
   /// The route's `extra` object, if any.
   final Object? extra;
+
+  /// The text shown under the app bar; defaults to a "coming soon" message.
+  final String? body;
 
   /// Label of the optional button; shown only when [onAction] is also set.
   final String? actionLabel;
@@ -48,7 +52,7 @@ class PlaceholderScreen extends StatelessWidget {
               spacing: AppSpacing.l,
               children: [
                 Text(
-                  l10n.placeholderBody,
+                  body ?? l10n.placeholderBody,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
                 ),

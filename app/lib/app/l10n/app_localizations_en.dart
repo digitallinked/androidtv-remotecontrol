@@ -82,5 +82,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routeNotFoundTitle => 'Page not found';
 
   @override
+  String get routeNotFoundBody => 'We couldn\'t find that page.';
+
+  @override
   String get routeNotFoundAction => 'Back to TVs';
 }

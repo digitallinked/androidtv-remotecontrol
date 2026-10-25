@@ -98,6 +98,10 @@
   "@routeNotFoundTitle": {
     "description": "Title shown when the app is asked to open a page that does not exist."
   },
+  "routeNotFoundBody": "We couldn't find that page.",
+  "@routeNotFoundBody": {
+    "description": "Explanation shown on the page-not-found screen."
+  },
   "routeNotFoundAction": "Back to TVs",
   "@routeNotFoundAction": {
     "description": "Button on the page-not-found screen that returns to the TV list."

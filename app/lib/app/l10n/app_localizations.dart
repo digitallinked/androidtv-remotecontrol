@@ -232,6 +232,12 @@ abstract class AppLocalizations {
   /// **'Page not found'**
   String get routeNotFoundTitle;
 
+  /// Explanation shown on the page-not-found screen.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find that page.'**
+  String get routeNotFoundBody;
+
   /// Button on the page-not-found screen that returns to the TV list.
   ///
   /// In en, this message translates to:

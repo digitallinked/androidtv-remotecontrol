@@ -129,6 +129,7 @@ GoRouter appRouter(Ref ref) {
       final l10n = AppLocalizations.of(context);
       return PlaceholderScreen(
         title: l10n.routeNotFoundTitle,
+        body: l10n.routeNotFoundBody,
         actionLabel: l10n.routeNotFoundAction,
         onAction: () => context.go(AppRoutes.discover),
       );

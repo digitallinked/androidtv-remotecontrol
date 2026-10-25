@@ -68,6 +68,8 @@ void main() {
   testWidgets('unknown_route_offers_way_back_to_discover', (t) async {
     await pumpRouterApp(t, initialLocation: '/nope');
     expect(find.text('Page not found'), findsOneWidget);
+    expect(find.text("We couldn't find that page."), findsOneWidget);
+    expect(find.text('This screen is coming soon.'), findsNothing);
     await t.tap(find.text('Back to TVs'));
     await t.pumpAndSettle();
     expect(find.text('Choose your TV'), findsOneWidget);
