@@ -4,6 +4,18 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #11 — 2026-10-25 — TOFU: pin the TV key at pairing time
+- `PairingClient.serverPublicKeySha256` (SHA-256 over the TV cert's RSA modulus ‖ exponent) is stored as `SavedDevice.serverKeyPin` right after pairing. `TvConnection.verifyServerKey` checks it before reporting `connected`; on a mismatch → `needsPairing` with `serverKeyChanged`.
+- **Why:** the pairing code is a hash over the TV's modulus, so the key seen during pairing is the only authenticated one. Hashing the key (not the whole cert) survives cert re-issuance with the same key.
+- **Revisit:** if a real TV presents different keys on 6467 and 6466.
+
+### #10 — 2026-10-25 — Idle timeout 15 s until measured
+- `RemoteClient.idleTimeout` = 15 s for now. After the real-TV smoke test measures the ping interval, set it to ~2 intervals + margin, aiming for ≤ 10 s detection of a TV that vanished.
+- **Why:** shorter timeouts risk false disconnects if the TV pings rarely; longer ones lose key presses after a power loss.
+
+### #9 — 2026-10-25 — `TvConnectionState`, not `ConnectionState`
+- Renamed to avoid clashing with Flutter's `ConnectionState` (imported by every widget file).
+
 ### #8 — 2026-10-25 — Pin Flutter 3.44.1 stable / Dart 3.12.1
 - **Why:** reproducible builds locally and in CI (`.github/workflows/ci.yml` pins `flutter-version: 3.44.1`). Lints are `very_good_analysis` 10.3.0, the newest release that supports Dart 3.12 (11.x needs Dart 3.13). Protocol-package tests run via `flutter test` because `dart test` cannot resolve a workspace that contains a Flutter member.
 - **Revisit:** when a Flutter or plugin upgrade is needed; bump CI, `environment.sdk` in the three pubspecs and `very_good_analysis` together.

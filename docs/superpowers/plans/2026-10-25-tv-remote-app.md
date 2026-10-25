@@ -183,9 +183,9 @@ test('code is case-insensitive', () => expect(computePairingSecret(client: c, se
 **Interfaces:**
 - Produces:
   - `enum ConnectionStatus { disconnected, connecting, connected, reconnecting, needsPairing, offline }`
-  - `class ConnectionState { final ConnectionStatus status; final int attempt; final RemoteCloseReason? lastError; }`
+  - `class TvConnectionState { final ConnectionStatus status; final int attempt; final RemoteCloseReason? lastError; }`
   - `class Backoff { Backoff({Duration initial = const Duration(seconds: 1), Duration max = const Duration(seconds: 30), int maxAttempts = 6}); Duration? next(); void reset(); }`
-  - `class TvConnection { TvConnection({required RemoteClient Function() clientFactory, Backoff? backoff, Future<String?> Function()? reResolveHost}); Stream<ConnectionState> get states; ConnectionState get current; Stream<RemoteEvent> get events; Future<void> connect(); void notifyAppResumed(); void notifyNetworkChanged(); void sendKey(int keyCode, {KeyDirection direction}); void launchAppLink(String link); void sendText(String text); Future<void> dispose(); }`. Commands while not `connected` throw `NotConnectedException` (the UI disables controls instead of dropping presses silently).
+  - `class TvConnection { TvConnection({required RemoteClient Function() clientFactory, Backoff? backoff, Future<String?> Function()? reResolveHost}); Stream<TvConnectionState> get states; TvConnectionState get current; Stream<RemoteEvent> get events; Future<void> connect(); void notifyAppResumed(); void notifyNetworkChanged(); void sendKey(int keyCode, {KeyDirection direction}); void launchAppLink(String link); void sendText(String text); Future<void> dispose(); }`. Commands while not `connected` throw `NotConnectedException` (the UI disables controls instead of dropping presses silently).
 
 - [ ] **Step 1: Write the failing tests:** `backoff_sequence_1_2_4_8_16_30_then_null`; `connects_and_emits_connecting_then_connected`; `marks_lost_when_socket_closes` (server drop → `reconnecting` within 100 ms, then `connected` again); `goes_offline_after_max_attempts` (server closed → `offline` with `attempt == 6`, using a fake fast backoff); `routes_to_pairing_on_cert_rejection` (`server.forgetClients()` + drop → `needsPairing`, no further attempts); `reconnects_after_resume` (drop while "backgrounded", then `notifyAppResumed()` → immediate attempt and `connected`); `commands_throw_when_not_connected`.
 - [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5:** Commit `feat(atv_remote): connection state machine with reconnect`.
@@ -240,7 +240,7 @@ test('code is case-insensitive', () => expect(computePairingSecret(client: c, se
 
 ### Task 3.3: Session provider, lifecycle, status UI
 - **Files:** `app/lib/core/session/remote_session.dart` (keepAlive provider wrapping `TvConnection`), `lifecycle_observer.dart`, `connectivity_observer.dart`
-- **Interfaces:** `remoteSessionProvider`, `connectionStateProvider` (`Stream<ConnectionState>`), `volumeProvider`, `powerStateProvider`, `currentAppProvider`; `reResolveHost` uses discovery to find the stored `serviceName` and returns its current host
+- **Interfaces:** `remoteSessionProvider`, `connectionStateProvider` (`Stream<TvConnectionState>`), `volumeProvider`, `powerStateProvider`, `currentAppProvider`; `reResolveHost` uses discovery to find the stored `serviceName` and returns its current host
 - **Rules:** in the background, keep the socket for 60 s, then close it; reconnect on resume. After connecting, compare `serverPublicKeySha256` with `SavedDevice.serverKeyPin` (set at first successful connect); on mismatch → "This TV's identity changed — pair again", clear the pin, route to pairing.
 - **Tests:** `re_resolves_host_on_reconnect` (the stored host is unreachable, discovery returns a new IP → connects and updates `lastHost`); `resume_triggers_reconnect`; `closes_socket_after_60s_in_background`; `identity_changed_routes_to_pairing`; `needs_pairing_routes_to_pairing_screen`; `status_pill_reflects_socket_state_not_saved_state`.
 

@@ -1,28 +1,38 @@
 # Project status
 
-_Last updated: 2026-10-25 by Claude (setup session)._
+_Last updated: 2026-10-25 by Claude (controller, subagent-driven run of Phase 0–1)._
 
 ## Current phase
 
-**Phase 0: Foundations.** The plan has been written; no app code exists yet.
+**Phase 1: Protocol library.** All tasks are implemented and reviewed on branch `feat/phase-0-1-protocol` (not merged yet). The **real-TV smoke test** is pending (needs the owner).
 
 ## Done
 
-- Competitor teardown of Remote ATV (`docs/competitor-analysis/remote-atv/`).
-- Project skills, `CLAUDE.md` and this knowledge base.
-- Build plan: `docs/superpowers/plans/2026-10-25-tv-remote-app.md`.
+- Task 0.1: monorepo scaffold (Dart pub workspace: `app/` + `packages/atv_remote/`), lints, `tool/check.ps1`/`.sh`, CI.
+- Task 1.1: protobufs from androidtvremote2, generated Dart committed (`tool/gen_proto.ps1`/`.sh`).
+- Task 1.2: varint framing codec.
+- Task 1.3: client identity (RSA-2048 self-signed cert) and pairing secret, cross-checked by `tool/pairing_vector.py`.
+- Task 1.4: `FakeTvServer` test harness (`packages/atv_remote/test/fake_tv/`).
+- Task 1.5: `PairingClient` (port 6467).
+- Task 1.6: `RemoteClient` (port 6466): ping echo, 15 s idle timeout, events, IME text, app links.
+- Task 1.7: `TvConnection` state machine: backoff, reconnect, resume/network-change, host re-resolution.
+- Task 1.8: Wake-on-LAN, discovery model, public API barrel `package:atv_remote/atv_remote.dart`, CLI `bin/atv_cli.dart`.
+- Final review fixes: no key material in errors; handshake answers Configure/SetActive in any order; TOFU hooks (`PairingClient.serverPublicKeySha256`, `TvConnection.verifyServerKey`); `ConnectionState` renamed `TvConnectionState`.
 
 ## In progress
 
-_Nothing._
+- Merge of `feat/phase-0-1-protocol` into `main` (waiting on the owner).
 
 ## Next up
 
-- Plan Phase 0, Task 0.1: scaffold the monorepo (Flutter app + `packages/atv_remote`).
+1. **Real-TV smoke test (owner + Claude):** from `packages/atv_remote` run `dart run bin/atv_cli.dart pair <tv-ip>`, enter the code shown on the TV, then `key <tv-ip> home` and a 5-minute `watch <tv-ip>`. Use the checklist in `learnings.md` → "Unverified protocol behaviour"; record results there.
+2. Set `RemoteClient.idleTimeout` from the measured ping interval (decision #10).
+3. Write the detailed plan for Phase 2 (`superpowers:writing-plans`), then execute it.
 
 ## Blocked / needs the owner
 
-- Apple Developer account (needed from Phase 6) and Google Play Console account. A new personal Play account must run a closed test with **12 testers for 14 days** before production.
+- Real-TV smoke test (TV on, same Wi-Fi; read the pairing code to Claude).
+- Apple Developer account and Google Play Console account. A new personal Play account must run a closed test with **12 testers for 14 days** before production.
 - App name and bundle ID (placeholder: `Remotely for Android TV`, `com.digitallinked.atvremote`).
 - Privacy policy and terms URLs.
 
@@ -30,3 +40,9 @@ _Nothing._
 
 - Phone: Samsung Galaxy Note10+ (SM-N975F, Android 12), reachable over ADB Wi-Fi when the owner enables it.
 - TV: MediaTek-based Android TV "Living Room TV 3" on the home LAN (192.168.0.x).
+
+## How to run things
+
+- All checks: `powershell -File tool/check.ps1` (Windows) or `tool/check.sh`.
+- Package tests: from `packages/atv_remote`, `flutter test` (not `dart test`; see learnings).
+- CLI: from `packages/atv_remote`, `dart run bin/atv_cli.dart <pair|key|watch> <host> ...`.

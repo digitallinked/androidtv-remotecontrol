@@ -4,6 +4,33 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Unverified protocol behaviour — checklist for the real-TV smoke test
+All of these are (unverified) until the smoke test records an answer here:
+- How a TV rejects an **unpaired client cert** on 6466: TLS alert, clean close, or TCP reset? We map an alert or close before the first `RemoteConfigure` to `certificateRejected`, and a reset to `networkError` (rulings R4/R12).
+- The TV's **ping interval**. `RemoteClient.idleTimeout` is 15 s; target ≤ 10 s detection (decision #10).
+- **Message order:** does the TV send `RemoteConfigure` before `RemoteSetActive`, and does it push `RemoteStart`/volume/current app before `SetActive`? (The client now handles any order.)
+- **IME counters** for `sendText` (`RemoteImeBatchEdit` `ime_counter`/`field_counter` from the latest TV IME message), and whether text with emoji positions the cursor correctly (we count UTF-16 code units; androidtvremote2 counts code points).
+- Does the TV present the **same key** on 6467 (pairing) and 6466 (control)? TOFU pinning assumes yes.
+- Does `watch` run 5 minutes with no drop (pings answered)?
+
+### `dart test` cannot resolve this workspace; use `flutter test`
+- The root pub workspace contains a Flutter member, so `dart test` fails to find the Flutter SDK. `flutter test` runs pure-Dart tests (including `dart:io` sockets) on the host VM. `dart run bin/...` works, because it reuses the existing package config.
+- Source: Task 0.1 / decision #8.
+
+### dart:io TLS limits that shape the protocol code
+- `SecureServerSocket` has no server-side bad-certificate callback, so a self-signed client cert fails the handshake unless it's in the server's trusted certs. The fake TV uses `FakeTvServer.trustClient(identity)`.
+- A TLS handshake already in flight can't be aborted (`destroy`/`close`/`ConnectionTask.cancel` on the raw socket don't stop it). We bound waits with timeouts and destroy late sockets instead.
+- `SecureSocket.connect(timeout:)` bounds only the TCP connect, not the handshake. `Socket.startConnect` resolves DNS before its timeout starts. Always wrap the whole connect in an outer timeout.
+- `SecurityContext()` has no trusted roots by default; passing `withTrustedRoots: false` triggers a lint.
+- Source: Tasks 1.4–1.6.
+
+### Toolchain pins and gotchas
+- protoc 36.2 (downloaded into git-ignored `tool/bin/`) + `protoc_plugin` 25.1.0. `protobuf` runtime is `^6.1.0`. Generated code is formatted by the gen scripts and excluded from the analyzer.
+- `very_good_analysis` 10.3.0 is the newest version for Dart 3.12 (11.x needs 3.13).
+- X.509 `UTCTime` can't encode dates in 2050+, so client certs use 20-year validity.
+- On Windows a refused loopback connect takes ~2 s to fail; tests that need fast failures inject a fail-fast connector.
+- Source: Tasks 1.1–1.7.
+
 ### Competitor connection silently drops; "Connected" badge lies
 - Remote ATV lost the TV connection after a few minutes with no indicator, and its picker kept showing "Connected". Users had to tap the TV again to reconnect.
 - **Rule for us:** answer every `RemotePingRequest`, show real-time connection state, and auto-reconnect with backoff. The UI badge must reflect socket state, not "paired" state.
