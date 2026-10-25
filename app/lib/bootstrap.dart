@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/app.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -110,6 +111,114 @@ class _RootHostState extends State<_RootHost> {
   );
 }
 
+/// Runs [build] and shows what it returns; when it fails, reports the error
+/// as fatal and shows a plain error screen with a "Try again" button that
+/// runs [build] again.
+///
+/// The error screen has no localisation or provider dependencies, because
+/// those are exactly what may have failed to start.
+class StartupGate extends StatefulWidget {
+  /// Creates a gate around [build].
+  const StartupGate({required this.build, required this.reporter, super.key});
+
+  /// Builds the app, as [buildRootWidget] does.
+  final Future<Widget> Function() build;
+
+  /// Where a failure is reported.
+  final CrashReporter reporter;
+
+  @override
+  State<StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<StartupGate> {
+  Widget? _app;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_start());
+  }
+
+  Future<void> _start() async {
+    if (_failed) setState(() => _failed = false);
+    try {
+      final app = await widget.build();
+      if (mounted) setState(() => _app = app);
+    } on Object catch (error, stack) {
+      await safeRecordError(
+        widget.reporter,
+        error,
+        stack,
+        fatal: true,
+        reason: 'startup',
+      );
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = _app;
+    if (app != null) return app;
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(brightness: Brightness.light),
+      darkTheme: buildAppTheme(brightness: Brightness.dark),
+      home: _failed
+          ? _StartupErrorScreen(onRetry: _start)
+          : const Scaffold(body: SizedBox.expand()),
+    );
+  }
+}
+
+class _StartupErrorScreen extends StatelessWidget {
+  const _StartupErrorScreen({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 16,
+              children: [
+                Text(
+                  'The app could not start',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displaySmall,
+                ),
+                Text(
+                  'Something went wrong while opening your saved data. '
+                  'Try again, or restart the app if this keeps happening.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge,
+                ),
+                Semantics(
+                  button: true,
+                  label: 'Try again',
+                  excludeSemantics: true,
+                  child: FilledButton(
+                    onPressed: onRetry,
+                    child: const Text('Try again'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Starts the app as [flavor].
 Future<void> bootstrap(Flavor flavor) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -120,5 +229,10 @@ Future<void> bootstrap(Flavor flavor) async {
   );
   const reporter = LoggingCrashReporter();
   installErrorHandlers(reporter);
-  runApp(await buildRootWidget(flavor: flavor, crashReporter: reporter));
+  runApp(
+    StartupGate(
+      reporter: reporter,
+      build: () => buildRootWidget(flavor: flavor, crashReporter: reporter),
+    ),
+  );
 }
