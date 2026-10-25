@@ -20,3 +20,17 @@ jobs:
           flutter-version: 3.44.1
           cache: true
       - run: tool/check.sh
+
+  goldens:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+          cache: true
+      - run: flutter pub get
+      - run: flutter test --tags golden
+        working-directory: app

@@ -14,7 +14,8 @@ echo "== analyze =="
 (cd packages/atv_remote && dart analyze --fatal-infos)
 
 echo "== test =="
-(cd app && flutter test)
+# Goldens are Windows baselines; the `goldens` CI job runs them.
+(cd app && flutter test --exclude-tags golden)
 # `dart test` cannot resolve the workspace (app needs the Flutter SDK), so use flutter test.
 (cd packages/atv_remote && flutter test)
 
