@@ -1,12 +1,14 @@
 # Project status
 
-_Last updated: 2026-10-25 by Claude (controller, subagent-driven run of Phase 0–1)._
+_Last updated: 2026-10-25 by Claude (controller, subagent-driven run, Phase 2 merged)._
 
 ## Current phase
 
-**Phase 1: Protocol library.** All tasks are implemented, reviewed and merged into `main` (not pushed). The **real-TV smoke test** is pending (needs the owner).
+**Phase 3: Connect flow** (next). Phases 0–2 are merged into `main`. The **real-TV smoke test** of the library is still pending (needs the owner).
 
 ## Done
+
+- **Phase 2 (app shell):** design tokens + theme (light/dark/dynamic, contrast-tested); `AppKeyButton`, `Rocker`, `StatusPill`, `AppDialog`, `AppSheet` with golden tests; English ARB l10n; drift DB (`devices`, `shortcuts`, `app_usage`) + `DeviceRepository`; secure `IdentityStore`; `SettingsStore`; Riverpod providers + `SettingsController`; go_router with start-route logic and placeholder screens; `bootstrap` with error handlers, startup steps and a fallback screen; dev/prod flavors on Dart, Android and iOS; release network permissions.
 
 - Task 0.1: monorepo scaffold (Dart pub workspace: `app/` + `packages/atv_remote/`), lints, `tool/check.ps1`/`.sh`, CI.
 - Task 1.1: protobufs from androidtvremote2, generated Dart committed (`tool/gen_proto.ps1`/`.sh`).
@@ -27,7 +29,19 @@ _Nothing._
 
 1. **Real-TV smoke test (owner + Claude):** from `packages/atv_remote` run `dart run bin/atv_cli.dart pair <tv-ip>`, enter the code shown on the TV, then `key <tv-ip> home` and a 5-minute `watch <tv-ip>`. Use the checklist in `learnings.md` → "Unverified protocol behaviour"; record results there.
 2. Set `RemoteClient.idleTimeout` from the measured ping interval (decision #10).
-3. Write the detailed plan for Phase 2 (`superpowers:writing-plans`), then execute it.
+3. Execute Phase 3 (`docs/superpowers/plans/2026-10-25-phase-3-connect-flow.md`).
+
+## Carry-over from the Phase 2 reviews
+
+- `StatusPill`: the needsPairing label "Pair again" collides with the Pair-again action Phase 3 adds — rename the status label (e.g. "Needs pairing").
+- `IdentityStore` regenerates the identity on any read failure (even a transient keystore error), invalidating pairings; consider one retry (Phase 3).
+- drift opens lazily: a real DB open failure surfaces in the first query, not at startup; repository callers must handle errors.
+- `AppKeyButton`: dispose calls `onLongPressEnd` (keep handlers pure); semantic long-press fires start+end back to back (TalkBack hold keys, Phase 4); rocker keys and pill share `surfaceRaised` (Phase 4 visual separation).
+- Accessibility polish for the Phase 8 audit: `AppDialog` has no route semantic label; headers aren't marked as semantic headers; reduce-motion doesn't affect the ripple; `FittedBox` can shrink labels below 100%.
+- Onboarding: a storage write error leaves "Get started" dead (Phase 7 onboarding rework).
+- `StartupGate` build has no timeout (hung startup → blank screen); revisit when Phase 6 adds startup work.
+- Phase 6: `LoggingCrashReporter` logs raw errors — the Crashlytics reporter must scrub pairing codes/keys.
+- Phase 9: release is debug-signed — add `key.properties` signing before any store upload.
 
 ## Carry-over from the Phase 1 reviews (do these when the app wires the library)
 

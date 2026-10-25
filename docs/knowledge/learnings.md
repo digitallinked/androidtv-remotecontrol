@@ -4,6 +4,17 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Flutter app tooling in this workspace (Phase 2)
+- Run code generation with `flutter pub run build_runner build --delete-conflicting-outputs` from `app/`; `dart run build_runner` fails in this pub workspace. Then `dart format` the generated files.
+- Android builds need `kotlin.incremental=false` (set in `app/android/gradle.properties`): the pub cache is on C: and the project on D:, and incremental Kotlin fails with "different roots".
+- `tool/check.*` formats only `app/lib`, `app/test` and `packages/atv_remote/{lib,test,bin}`. A new Dart directory (e.g. `app/integration_test`) must be added to that list.
+- Golden tests are tagged `golden`, generated on Windows; Linux CI skips them and a Windows CI job runs them. Failed golden runs write `app/test/**/failures/` (git-ignored); never commit them.
+- Riverpod 3: `Override` and `ProviderException` come from `package:flutter_riverpod/misc.dart`.
+- freezed can't resolve alongside drift_dev ≥ 2.32 with this toolchain's `test`/analyzer pin; models are drift data classes or hand-written. drift is pinned to 2.34.0.
+- drift: `insertOnConflictUpdate(data)` skips null fields — use `data.toCompanion(false)` so an upsert can clear a nullable column. drift reads `DateTime` back as local time; `DeviceRepository` returns UTC.
+- `dynamic_color` 2.1.0 hands out `material_ui`'s `ColorScheme` (a different type from Flutter's); `app/lib/app/theme/dynamic_scheme.dart` converts it.
+- iOS flavors (6 build configurations, `dev`/`prod` schemes) are only structurally tested on Windows; the owner must run `flutter build ios --flavor dev|prod -t lib/main_<f>.dart --no-codesign` on a Mac.
+
 ### Unverified protocol behaviour — checklist for the real-TV smoke test
 All of these are (unverified) until the smoke test records an answer here:
 - How a TV rejects an **unpaired client cert** on 6466: TLS alert, clean close, or TCP reset? We map an alert or close before the first `RemoteConfigure` to `certificateRejected`, and a reset to `networkError` (rulings R4/R12).

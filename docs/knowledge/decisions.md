@@ -4,6 +4,14 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #12 — 2026-10-25 — Phase 2 app-shell choices
+- **Models:** no freezed (toolchain conflict); drift data classes + hand-written `AppSettings`. `SavedDevice.serverKeyPin` is nullable (null = no trusted key → pair).
+- **Start route:** first run → onboarding placeholder → `/discover`; a saved TV → `/remote`. The route is resolved before `runApp` through one `ProviderContainer` (single database).
+- **Theme:** dynamic colour is a separate on/off setting (default off). Contrast fixes: `dangerText` token (light `#B83A3A`), dark text on the accent is `#0F1115`.
+- **Startup failure:** a themed fallback screen with an accessible "Try again"; it is the only screen with hard-coded English (it must work when localisation fails).
+- **Flavors:** dev `com.digitallinked.atvremote.dev` "Remotely Dev", prod `com.digitallinked.atvremote` "Remotely for Android TV"; run with `flutter run --flavor dev -t lib/main_dev.dart`. Release is still debug-signed until Phase 9.
+- **Revisit:** if the toolchain moves to a Dart version that resolves freezed + newer drift.
+
 ### #11 — 2026-10-25 — TOFU: pin the TV key at pairing time
 - `PairingClient.serverPublicKeySha256` (SHA-256 over the TV cert's RSA modulus ‖ exponent) is stored as `SavedDevice.serverKeyPin` right after pairing. `TvConnection.verifyServerKey` checks it before reporting `connected`; on a mismatch → `needsPairing` with `serverKeyChanged`.
 - **Why:** the pairing code is a hash over the TV's modulus, so the key seen during pairing is the only authenticated one. Hashing the key (not the whole cert) survives cert re-issuance with the same key.
