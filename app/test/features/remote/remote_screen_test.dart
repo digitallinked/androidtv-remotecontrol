@@ -17,14 +17,17 @@ import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_remote_session.dart';
+import '../../helpers/in_memory_app_usage_repository.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
@@ -107,6 +110,34 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Connected'), findsOneWidget);
     expect(find.text('Reconnecting…'), findsNothing);
+  });
+
+  testWidgets('quick_row_shows_the_seeded_shortcuts', (t) async {
+    fake.emit(_connected);
+    await pumpRemote(t);
+    // No region: the "*" default row, in its order. The row is a lazy
+    // horizontal list, so the order is read from the widget it is given.
+    expect(
+      [
+        for (final a
+            in t.widget<QuickAccessBar>(find.byType(QuickAccessBar)).apps)
+          a.name,
+      ],
+      ['Netflix', 'YouTube', 'Prime Video', 'Disney+', 'Spotify', 'Apple TV'],
+    );
+    expect(find.bySemanticsLabel('Open Netflix'), findsOneWidget);
+  });
+
+  testWidgets('the_open_remote_counts_the_foreground_app', (t) async {
+    final usage = InMemoryAppUsageRepository();
+    fake.emit(_connected);
+    await pumpRemote(
+      t,
+      overrides: [appUsageRepositoryProvider.overrideWithValue(usage)],
+    );
+    fake.push(const CurrentAppChanged('com.netflix.ninja'));
+    await t.pumpAndSettle();
+    expect(usage.stats['com.netflix.ninja']?.seenCount, 1);
   });
 
   testWidgets('the_app_bar_names_the_tv', (t) async {

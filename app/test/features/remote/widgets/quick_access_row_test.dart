@@ -4,12 +4,21 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
-import 'package:tv_remote/features/apps/data/starter_apps.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 
 import '../../../helpers/key_input_recorder.dart';
 import '../../../helpers/pump_app.dart';
+
+/// The five apps the quick row tests show.
+const List<AppEntry> _apps = [
+  AppEntry(package: 'com.netflix.ninja', name: 'Netflix'),
+  AppEntry(package: 'com.google.android.youtube.tv', name: 'YouTube'),
+  AppEntry(package: 'com.amazon.amazonvideo.livingroom', name: 'Prime Video'),
+  AppEntry(package: 'com.disney.disneyplus', name: 'Disney+'),
+  AppEntry(package: 'com.spotify.tv.android', name: 'Spotify'),
+];
 
 /// Android 14's non-linear 200% font curve (its font scale converter): small
 /// sizes double, large ones grow less, so a line is not `size * 2`.
@@ -60,7 +69,7 @@ void main() {
       child: QuickAccessBar(
         variant: variant,
         input: rec,
-        apps: kStarterApps,
+        apps: _apps,
         currentApp: currentApp,
       ),
     ),
@@ -261,7 +270,7 @@ void main() {
           body: QuickAccessBar(
             variant: QuickAccessRow.apps,
             input: rec,
-            apps: kStarterApps,
+            apps: _apps,
           ),
         ),
       ),

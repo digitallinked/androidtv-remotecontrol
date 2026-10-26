@@ -7,7 +7,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
-import 'package:tv_remote/features/apps/data/starter_apps.dart';
+import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
@@ -35,7 +35,7 @@ class RemoteLayoutPage extends ConsumerWidget {
         (s) => (s.navigationStyle, s.quickAccessRow),
       ),
     );
-    final apps = ref.watch(quickAccessAppsProvider);
+    final apps = ref.watch(shortcutsProvider).value ?? const [];
     final controller = ref.read(settingsControllerProvider.notifier);
 
     return Scaffold(

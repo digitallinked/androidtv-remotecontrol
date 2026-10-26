@@ -17,6 +17,8 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
+import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
@@ -25,8 +27,11 @@ import 'fake_remote_client.dart';
 import 'fake_screen_services.dart';
 import 'fake_tv_discovery.dart';
 import 'fake_wake_on_lan.dart';
+import 'in_memory_app_usage_repository.dart';
+import 'in_memory_shortcut_repository.dart';
 import 'manual_session_signals.dart';
 import 'recording_haptics.dart';
+import 'test_catalogue.dart';
 import 'test_identity.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
@@ -89,6 +94,17 @@ Future<SettingsStore> pumpRouterApp(
         screenDimmerProvider.overrideWithValue(RecordingDimmer()),
         wakeOnLanServiceProvider.overrideWithValue(FakeWakeOnLan()),
         wakeOnLanAvailableProvider.overrideWithValue(true),
+        // Shortcuts and usage live in memory (drift's own streams leave
+        // timers behind); the catalogue is the real bundled file, and no
+        // region means the "*" default row.
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+        appUsageRepositoryProvider.overrideWithValue(
+          InMemoryAppUsageRepository(),
+        ),
+        catalogueProvider.overrideWith((ref) async => testCatalogue()),
+        deviceRegionProvider.overrideWithValue(null),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,

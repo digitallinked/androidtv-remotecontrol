@@ -73,4 +73,16 @@ void main() {
       (ThemePreference.system, true, QuickAccessRow.apps, null),
     );
   });
+
+  test('shortcuts_seeded_flag_round_trips_and_is_allow_listed', () async {
+    final a = await SettingsStore.open();
+    expect(a.shortcutsSeeded, isFalse);
+    expect(SettingsStore.keys, contains('apps.shortcuts_seeded'));
+    await a.setShortcutsSeeded(true);
+    expect((await SettingsStore.open()).shortcutsSeeded, isTrue);
+    await a.setShortcutsSeeded(false);
+    expect((await SettingsStore.open()).shortcutsSeeded, isFalse);
+    // It is app state, not a setting: the snapshot ignores it.
+    expect(a.snapshot(), AppSettings.defaults);
+  });
 }

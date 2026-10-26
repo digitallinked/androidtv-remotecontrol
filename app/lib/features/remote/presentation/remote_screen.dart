@@ -18,7 +18,7 @@ import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
-import 'package:tv_remote/features/apps/data/starter_apps.dart';
+import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
 import 'package:tv_remote/features/keyboard/keyboard_sheet.dart';
 import 'package:tv_remote/features/remote/application/ime_requests.dart';
@@ -322,6 +322,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final input = ref.watch(remoteActionsProvider);
     ref
       ..listen(powerControllerProvider, (_, _) {})
+      ..listen(appUsageTrackerProvider, (_, _) {})
       // Settings (a page on top of this one) changed the style.
       ..listen(
         settingsControllerProvider.select((s) => s.navigationStyle),
@@ -419,7 +420,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
                 input: input,
                 enabled: connected,
                 quickAccess: quickAccess,
-                apps: ref.watch(quickAccessAppsProvider),
+                apps: ref.watch(shortcutsProvider).value ?? const [],
                 currentApp: connected ? liveApp : null,
                 initialPage: initialPage,
                 onPageChanged: _onPageChanged,
