@@ -19,7 +19,6 @@ void main() {
 
   testWidgets('every_route_renders_its_titled_screen', (t) async {
     const titles = {
-      AppRoutes.remote: 'Remote',
       AppRoutes.apps: 'Apps',
       AppRoutes.devices: 'Devices',
       AppRoutes.settings: 'Settings',

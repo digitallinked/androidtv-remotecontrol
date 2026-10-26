@@ -21,6 +21,10 @@ void main() {
             children: [
               for (final s in ConnectionStatus.values) StatusPill(status: s),
               StatusPill(status: ConnectionStatus.offline, onReconnect: () {}),
+              StatusPill(
+                status: ConnectionStatus.needsPairing,
+                onPairAgain: () {},
+              ),
             ],
           ),
         ),

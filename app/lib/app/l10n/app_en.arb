@@ -16,9 +16,9 @@
   "@statusOffline": {
     "description": "Connection status pill: every reconnect attempt failed."
   },
-  "statusNeedsPairing": "Pair again",
+  "statusNeedsPairing": "Needs pairing",
   "@statusNeedsPairing": {
-    "description": "Connection status pill: the TV no longer accepts this phone and it must be paired again."
+    "description": "Connection status pill: the TV no longer accepts this phone, or its security key changed, so it must be paired again."
   },
   "statusDisconnected": "Not connected",
   "@statusDisconnected": {
@@ -105,5 +105,207 @@
   "routeNotFoundAction": "Back to TVs",
   "@routeNotFoundAction": {
     "description": "Button on the page-not-found screen that returns to the TV list."
+  },
+  "statusPairAgainAction": "Pair again",
+  "@statusPairAgainAction": {
+    "description": "Button inside the status pill that opens pairing for a TV that needs to be paired again."
+  },
+  "remoteNotConnected": "Not connected to your TV",
+  "@remoteNotConnected": {
+    "description": "Snackbar shown when a remote key is pressed while the TV is not connected."
+  },
+  "remoteSwitchTv": "Switch TV",
+  "@remoteSwitchTv": {
+    "description": "Tooltip of the TV name button on the remote screen, and title of the sheet that lists saved TVs."
+  },
+  "remoteAddTv": "Add a TV",
+  "@remoteAddTv": {
+    "description": "List item in the switch-TV sheet that opens discovery to add another TV."
+  },
+  "remoteNoTvTitle": "No TV selected",
+  "@remoteNoTvTitle": {
+    "description": "Heading of the remote screen when no TV has been chosen yet."
+  },
+  "remoteNoTvAction": "Choose a TV",
+  "@remoteNoTvAction": {
+    "description": "Button on the remote screen that opens discovery when no TV is selected."
+  },
+  "remoteIdentityChangedTitle": "This TV's identity changed",
+  "@remoteIdentityChangedTitle": {
+    "description": "Title of the dialog shown when a paired TV presents a different security key than before."
+  },
+  "remoteIdentityChangedMessage": "{tvName} presented a different security key than when you paired it. If the TV was reset or replaced, pair it again.",
+  "@remoteIdentityChangedMessage": {
+    "description": "Body of the identity-changed dialog.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "remoteNotNow": "Not now",
+  "@remoteNotNow": {
+    "description": "Dialog action that dismisses the identity-changed dialog without pairing again."
+  },
+  "remoteSessionErrorTitle": "Couldn't prepare a secure connection",
+  "@remoteSessionErrorTitle": {
+    "description": "Heading of the remote screen when this phone's security key could not be loaded."
+  },
+  "remoteSessionErrorBody": "Something went wrong while loading this phone's security key.",
+  "@remoteSessionErrorBody": {
+    "description": "Explanation under the secure-connection error heading."
+  },
+  "remoteRetry": "Try again",
+  "@remoteRetry": {
+    "description": "Button that retries preparing the connection after an error."
+  },
+  "demoTvName": "Demo TV",
+  "@demoTvName": {
+    "description": "Name shown for the simulated demo TV."
+  },
+  "volumeLabel": "VOL",
+  "@volumeLabel": {
+    "description": "Short caption between the volume up and down keys."
+  },
+  "keyNumber": "Number {digit}",
+  "@keyNumber": {
+    "description": "Screen-reader label of a digit key on the remote.",
+    "placeholders": {
+      "digit": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "keyUnknown": "Key {code}",
+  "@keyUnknown": {
+    "description": "Screen-reader label of a key without a specific name.",
+    "placeholders": {
+      "code": {
+        "type": "int",
+        "example": "999"
+      }
+    }
+  },
+  "keyUp": "Up",
+  "@keyUp": {
+    "description": "Screen-reader label of the d-pad up."
+  },
+  "keyDown": "Down",
+  "@keyDown": {
+    "description": "Screen-reader label of the d-pad down."
+  },
+  "keyLeft": "Left",
+  "@keyLeft": {
+    "description": "Screen-reader label of the d-pad left."
+  },
+  "keyRight": "Right",
+  "@keyRight": {
+    "description": "Screen-reader label of the d-pad right."
+  },
+  "keyOk": "OK",
+  "@keyOk": {
+    "description": "Screen-reader label of the select / OK key."
+  },
+  "keyBack": "Back",
+  "@keyBack": {
+    "description": "Screen-reader label of the back key."
+  },
+  "keyHome": "Home",
+  "@keyHome": {
+    "description": "Screen-reader label of the home key."
+  },
+  "keyMenu": "Menu",
+  "@keyMenu": {
+    "description": "Screen-reader label of the menu key."
+  },
+  "keyPower": "Power",
+  "@keyPower": {
+    "description": "Screen-reader label of the power key."
+  },
+  "keyVolumeUp": "Volume up",
+  "@keyVolumeUp": {
+    "description": "Screen-reader label of the volume up key."
+  },
+  "keyVolumeDown": "Volume down",
+  "@keyVolumeDown": {
+    "description": "Screen-reader label of the volume down key."
+  },
+  "keyMute": "Mute",
+  "@keyMute": {
+    "description": "Screen-reader label of the mute key."
+  },
+  "keyChannelUp": "Channel up",
+  "@keyChannelUp": {
+    "description": "Screen-reader label of the channel up key."
+  },
+  "keyChannelDown": "Channel down",
+  "@keyChannelDown": {
+    "description": "Screen-reader label of the channel down key."
+  },
+  "keyPlayPause": "Play or pause",
+  "@keyPlayPause": {
+    "description": "Screen-reader label of the play/pause media key."
+  },
+  "keyNext": "Next",
+  "@keyNext": {
+    "description": "Screen-reader label of the next media key."
+  },
+  "keyPrevious": "Previous",
+  "@keyPrevious": {
+    "description": "Screen-reader label of the previous media key."
+  },
+  "keyRewind": "Rewind",
+  "@keyRewind": {
+    "description": "Screen-reader label of the rewind media key."
+  },
+  "keyFastForward": "Fast forward",
+  "@keyFastForward": {
+    "description": "Screen-reader label of the fast forward media key."
+  },
+  "keyStop": "Stop",
+  "@keyStop": {
+    "description": "Screen-reader label of the stop media key."
+  },
+  "keyRed": "Red",
+  "@keyRed": {
+    "description": "Screen-reader label of the red colour key."
+  },
+  "keyGreen": "Green",
+  "@keyGreen": {
+    "description": "Screen-reader label of the green colour key."
+  },
+  "keyYellow": "Yellow",
+  "@keyYellow": {
+    "description": "Screen-reader label of the yellow colour key."
+  },
+  "keyBlue": "Blue",
+  "@keyBlue": {
+    "description": "Screen-reader label of the blue colour key."
+  },
+  "keyTvInput": "TV input",
+  "@keyTvInput": {
+    "description": "Screen-reader label of the tV input key."
+  },
+  "keySettings": "Settings",
+  "@keySettings": {
+    "description": "Screen-reader label of the settings key of the TV."
+  },
+  "keyGuide": "Guide",
+  "@keyGuide": {
+    "description": "Screen-reader label of the guide key."
+  },
+  "keyInfo": "Info",
+  "@keyInfo": {
+    "description": "Screen-reader label of the info key."
+  },
+  "keyCaptions": "Captions",
+  "@keyCaptions": {
+    "description": "Screen-reader label of the captions key."
+  },
+  "keySearch": "Search",
+  "@keySearch": {
+    "description": "Screen-reader label of the search key."
   }
 }

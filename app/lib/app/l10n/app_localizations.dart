@@ -118,10 +118,10 @@ abstract class AppLocalizations {
   /// **'Offline'**
   String get statusOffline;
 
-  /// Connection status pill: the TV no longer accepts this phone and it must be paired again.
+  /// Connection status pill: the TV no longer accepts this phone, or its security key changed, so it must be paired again.
   ///
   /// In en, this message translates to:
-  /// **'Pair again'**
+  /// **'Needs pairing'**
   String get statusNeedsPairing;
 
   /// Connection status pill: no connection and no attempt in progress.
@@ -243,6 +243,282 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to TVs'**
   String get routeNotFoundAction;
+
+  /// Button inside the status pill that opens pairing for a TV that needs to be paired again.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair again'**
+  String get statusPairAgainAction;
+
+  /// Snackbar shown when a remote key is pressed while the TV is not connected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected to your TV'**
+  String get remoteNotConnected;
+
+  /// Tooltip of the TV name button on the remote screen, and title of the sheet that lists saved TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch TV'**
+  String get remoteSwitchTv;
+
+  /// List item in the switch-TV sheet that opens discovery to add another TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a TV'**
+  String get remoteAddTv;
+
+  /// Heading of the remote screen when no TV has been chosen yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No TV selected'**
+  String get remoteNoTvTitle;
+
+  /// Button on the remote screen that opens discovery when no TV is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a TV'**
+  String get remoteNoTvAction;
+
+  /// Title of the dialog shown when a paired TV presents a different security key than before.
+  ///
+  /// In en, this message translates to:
+  /// **'This TV\'s identity changed'**
+  String get remoteIdentityChangedTitle;
+
+  /// Body of the identity-changed dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'{tvName} presented a different security key than when you paired it. If the TV was reset or replaced, pair it again.'**
+  String remoteIdentityChangedMessage(String tvName);
+
+  /// Dialog action that dismisses the identity-changed dialog without pairing again.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get remoteNotNow;
+
+  /// Heading of the remote screen when this phone's security key could not be loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t prepare a secure connection'**
+  String get remoteSessionErrorTitle;
+
+  /// Explanation under the secure-connection error heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while loading this phone\'s security key.'**
+  String get remoteSessionErrorBody;
+
+  /// Button that retries preparing the connection after an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get remoteRetry;
+
+  /// Name shown for the simulated demo TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo TV'**
+  String get demoTvName;
+
+  /// Short caption between the volume up and down keys.
+  ///
+  /// In en, this message translates to:
+  /// **'VOL'**
+  String get volumeLabel;
+
+  /// Screen-reader label of a digit key on the remote.
+  ///
+  /// In en, this message translates to:
+  /// **'Number {digit}'**
+  String keyNumber(int digit);
+
+  /// Screen-reader label of a key without a specific name.
+  ///
+  /// In en, this message translates to:
+  /// **'Key {code}'**
+  String keyUnknown(int code);
+
+  /// Screen-reader label of the d-pad up.
+  ///
+  /// In en, this message translates to:
+  /// **'Up'**
+  String get keyUp;
+
+  /// Screen-reader label of the d-pad down.
+  ///
+  /// In en, this message translates to:
+  /// **'Down'**
+  String get keyDown;
+
+  /// Screen-reader label of the d-pad left.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get keyLeft;
+
+  /// Screen-reader label of the d-pad right.
+  ///
+  /// In en, this message translates to:
+  /// **'Right'**
+  String get keyRight;
+
+  /// Screen-reader label of the select / OK key.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get keyOk;
+
+  /// Screen-reader label of the back key.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get keyBack;
+
+  /// Screen-reader label of the home key.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get keyHome;
+
+  /// Screen-reader label of the menu key.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
+  String get keyMenu;
+
+  /// Screen-reader label of the power key.
+  ///
+  /// In en, this message translates to:
+  /// **'Power'**
+  String get keyPower;
+
+  /// Screen-reader label of the volume up key.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume up'**
+  String get keyVolumeUp;
+
+  /// Screen-reader label of the volume down key.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume down'**
+  String get keyVolumeDown;
+
+  /// Screen-reader label of the mute key.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get keyMute;
+
+  /// Screen-reader label of the channel up key.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel up'**
+  String get keyChannelUp;
+
+  /// Screen-reader label of the channel down key.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel down'**
+  String get keyChannelDown;
+
+  /// Screen-reader label of the play/pause media key.
+  ///
+  /// In en, this message translates to:
+  /// **'Play or pause'**
+  String get keyPlayPause;
+
+  /// Screen-reader label of the next media key.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get keyNext;
+
+  /// Screen-reader label of the previous media key.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get keyPrevious;
+
+  /// Screen-reader label of the rewind media key.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewind'**
+  String get keyRewind;
+
+  /// Screen-reader label of the fast forward media key.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast forward'**
+  String get keyFastForward;
+
+  /// Screen-reader label of the stop media key.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get keyStop;
+
+  /// Screen-reader label of the red colour key.
+  ///
+  /// In en, this message translates to:
+  /// **'Red'**
+  String get keyRed;
+
+  /// Screen-reader label of the green colour key.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get keyGreen;
+
+  /// Screen-reader label of the yellow colour key.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get keyYellow;
+
+  /// Screen-reader label of the blue colour key.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get keyBlue;
+
+  /// Screen-reader label of the tV input key.
+  ///
+  /// In en, this message translates to:
+  /// **'TV input'**
+  String get keyTvInput;
+
+  /// Screen-reader label of the settings key of the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get keySettings;
+
+  /// Screen-reader label of the guide key.
+  ///
+  /// In en, this message translates to:
+  /// **'Guide'**
+  String get keyGuide;
+
+  /// Screen-reader label of the info key.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get keyInfo;
+
+  /// Screen-reader label of the captions key.
+  ///
+  /// In en, this message translates to:
+  /// **'Captions'**
+  String get keyCaptions;
+
+  /// Screen-reader label of the search key.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get keySearch;
 }
 
 class _AppLocalizationsDelegate

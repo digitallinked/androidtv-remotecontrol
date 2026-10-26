@@ -6,6 +6,7 @@ import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 
 part 'router.g.dart';
 
@@ -92,9 +93,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.remote,
-        builder: (context, _) => PlaceholderScreen(
-          title: AppLocalizations.of(context).pageTitleRemote,
-        ),
+        builder: (_, _) => const RemoteScreen(),
       ),
       GoRoute(
         path: AppRoutes.apps,
