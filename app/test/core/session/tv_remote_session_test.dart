@@ -8,6 +8,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/tv/host_resolver.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/core/tv/server_key_pin.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/test_devices.dart';
@@ -112,6 +113,23 @@ void main() {
     expect(clients.created, hasLength(1));
     expect(s.current.lastError, RemoteCloseReason.serverKeyChanged);
   });
+
+  test(
+    'identity_change_does_not_clear_a_pin_saved_by_a_newer_pairing',
+    () async {
+      // The session was built with the old pin (testPin); meanwhile the user
+      // re-paired, so the database holds a newer one.
+      final newer = serverKeyPinFromSha256(List<int>.filled(32, 5));
+      clients = FakeRemoteClients(serverKey: List<int>.filled(32, 9));
+      await repo.upsert(savedTv(pin: newer));
+      final s = session(savedTv());
+      await s.connect();
+      await until(s, ConnectionStatus.needsPairing);
+
+      expect(s.current.lastError, RemoteCloseReason.serverKeyChanged);
+      expect((await repo.find('Living Room TV 3'))!.serverKeyPin, newer);
+    },
+  );
 
   test('missing_pin_needs_pairing_without_connecting', () async {
     await repo.upsert(savedTv(noPin: true));

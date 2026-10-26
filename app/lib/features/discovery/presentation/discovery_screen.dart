@@ -100,7 +100,13 @@ class DiscoveryScreen extends ConsumerWidget {
     Set<String> pairedNames,
   ) {
     if (tv.isLegacyService) {
-      unawaited(showLegacyServiceSheet(context, tv.displayName));
+      unawaited(
+        showLegacyServiceSheet(
+          context,
+          tv.displayName,
+          onScanAgain: ref.read(discoveryControllerProvider.notifier).rescan,
+        ),
+      );
     } else if (pairedNames.contains(tv.serviceName)) {
       ref.read(activeTargetProvider.notifier).activateDevice(tv.serviceName);
       context.go(AppRoutes.remote);

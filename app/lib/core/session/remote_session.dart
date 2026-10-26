@@ -70,20 +70,23 @@ abstract interface class RemoteSession {
   /// Presses [keyCode] (see `KeyCodes`) on the TV; a tap unless [direction]
   /// says press-and-hold.
   ///
-  /// Throws `NotConnectedException` unless [current] is
-  /// [ConnectionStatus.connected].
+  /// Throws `NotConnectedException` unless the connection is up. [current]
+  /// can lag the socket, so enabled controls don't guarantee success: always
+  /// catch `NotConnectedException`.
   void sendKey(int keyCode, {KeyDirection direction = KeyDirection.short});
 
   /// Opens a deep link (or `market://launch?id=<package>`) on the TV.
   ///
-  /// Throws `NotConnectedException` unless [current] is
-  /// [ConnectionStatus.connected].
+  /// Throws `NotConnectedException` unless the connection is up. [current]
+  /// can lag the socket, so enabled controls don't guarantee success: always
+  /// catch `NotConnectedException`.
   void launchAppLink(String link);
 
   /// Types [text] into the TV's focused text field.
   ///
-  /// Throws `NotConnectedException` unless [current] is
-  /// [ConnectionStatus.connected].
+  /// Throws `NotConnectedException` unless the connection is up. [current]
+  /// can lag the socket, so enabled controls don't guarantee success: always
+  /// catch `NotConnectedException`.
   void sendText(String text);
 
   /// Closes the connection and the streams for good, when the remote screen

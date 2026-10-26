@@ -128,11 +128,20 @@ void main() {
       wolMac: const Value('AA:BB:CC:DD:EE:FF'),
     );
     await repo.upsert(a);
-    await repo.clearServerKeyPin('a');
+    await repo.clearServerKeyPin('a', distrustedPin: 'ab12');
     expect(
       await repo.find('a'),
       a.copyWith(serverKeyPin: const Value(null)),
     );
+  });
+
+  test('clear_server_key_pin_leaves_a_newer_pin_alone', () async {
+    await repo.upsert(dev('a', pin: 'bb22'));
+    await repo.clearServerKeyPin('a', distrustedPin: 'aa11');
+    expect((await repo.find('a'))!.serverKeyPin, 'bb22');
+
+    await repo.clearServerKeyPin('a', distrustedPin: 'bb22');
+    expect((await repo.find('a'))!.serverKeyPin, isNull);
   });
 
   test('updates_on_unknown_device_are_no_ops', () async {
@@ -142,7 +151,7 @@ void main() {
       host: '192.168.0.99',
       at: DateTime.utc(2027),
     );
-    await repo.clearServerKeyPin('zzz');
+    await repo.clearServerKeyPin('zzz', distrustedPin: 'ab12');
     expect(await repo.find('zzz'), isNull);
     expect(await repo.watchAll().first, [dev('a', pin: 'ab12')]);
   });

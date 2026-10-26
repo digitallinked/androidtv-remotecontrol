@@ -109,10 +109,13 @@ void main() {
     );
     expect(top(t).uri.path, AppRoutes.discover);
 
+    expect(discoveries.created, hasLength(1));
     await t.tap(find.text('Scan again'));
     await t.pumpAndSettle();
     expect(find.text('Update needed on this TV'), findsNothing);
     expect(top(t).uri.path, AppRoutes.discover);
+    // The button closes the sheet and starts a new browse.
+    expect(discoveries.created, hasLength(2));
   });
 
   testWidgets('empty_state_after_10s_shows_troubleshooting', (t) async {
@@ -299,6 +302,35 @@ void main() {
     expect(t.takeException(), isNull);
     expect(find.text('Update needed'), findsOneWidget);
     expect(find.text('Try demo'), findsOneWidget);
+  });
+
+  group('empty_state_icon_is_excluded_from_semantics', () {
+    void expectExcluded(WidgetTester t, IconData icon) {
+      final nearest = find
+          .ancestor(
+            of: find.byIcon(icon),
+            matching: find.byType(ExcludeSemantics),
+          )
+          .first;
+      final excluder = t.widget<ExcludeSemantics>(nearest);
+      expect(excluder.excluding, isTrue);
+      expect(excluder.child, isA<Icon>());
+    }
+
+    testWidgets('for_the_empty_state', (t) async {
+      await pumpDiscover(t);
+      await waitForTimeout(t);
+      expectExcluded(t, Icons.tv_outlined);
+    });
+
+    testWidgets('for_the_error_state', (t) async {
+      await pumpDiscover(t);
+      discoveries.created.single.fail(
+        NsdError(ErrorCause.securityIssue, 'denied'),
+      );
+      await t.pump();
+      expectExcluded(t, Icons.wifi_off);
+    });
   });
 
   test('the_empty_timeout_is_ten_seconds', () {

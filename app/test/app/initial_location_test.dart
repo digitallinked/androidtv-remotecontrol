@@ -32,7 +32,10 @@ class _ThrowingDevices implements DeviceRepository {
   }) async {}
 
   @override
-  Future<void> clearServerKeyPin(String serviceName) async {}
+  Future<void> clearServerKeyPin(
+    String serviceName, {
+    required String distrustedPin,
+  }) async {}
 }
 
 void main() {

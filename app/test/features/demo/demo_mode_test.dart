@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/demo/demo_providers.dart';
 import 'package:tv_remote/features/demo/presentation/demo_badge.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
@@ -28,6 +31,17 @@ Future<void> _connectDemo(WidgetTester t) async {
   await t.pump();
   await t.pump(const Duration(milliseconds: 700));
   await t.pumpAndSettle();
+}
+
+/// A navigator key whose `currentContext` can be replaced by [context].
+class _FlakyNavigatorKey extends LabeledGlobalKey<NavigatorState> {
+  _FlakyNavigatorKey() : super('flaky');
+
+  /// Holds the context returned instead of the navigator's own, while set.
+  final ValueNotifier<BuildContext?> context = ValueNotifier(null);
+
+  @override
+  BuildContext? get currentContext => context.value ?? super.currentContext;
 }
 
 void main() {
@@ -161,6 +175,40 @@ void main() {
     expect(find.text('Demo mode'), findsOneWidget);
     expect(find.text('TV preview'), findsOneWidget);
     expect(container.read(activeTargetProvider), const DemoTarget());
+  });
+
+  testWidgets('leave_stays_usable_after_the_dialog_fails_to_open', (t) async {
+    final navigatorKey = _FlakyNavigatorKey();
+    await pumpRouterApp(
+      t,
+      initialLocation: '/',
+      overrides: [
+        isDemoActiveProvider.overrideWithValue(true),
+        appRouterProvider.overrideWith(
+          (ref) => GoRouter(
+            navigatorKey: navigatorKey,
+            routes: [
+              GoRoute(path: '/', builder: (_, _) => const SizedBox.shrink()),
+            ],
+          ),
+        ),
+      ],
+    );
+    // A context without a navigator above it: showDialog throws.
+    navigatorKey.context.value = t.element(find.byType(ProviderScope));
+
+    final errors = <Object>[];
+    await runZonedGuarded(() async {
+      await t.tap(find.text('Leave'));
+      await t.pump();
+    }, (error, _) => errors.add(error));
+    expect(errors, hasLength(1));
+
+    navigatorKey.context.value = null;
+    await t.tap(find.text('Leave'));
+    await t.pumpAndSettle();
+
+    expect(find.text('Leave demo?'), findsOneWidget);
   });
 
   for (final brightness in Brightness.values) {

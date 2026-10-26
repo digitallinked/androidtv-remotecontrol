@@ -427,41 +427,66 @@ void main() {
       });
     });
 
-    test('leaving_while_the_tv_checks_the_code_saves_and_changes_nothing', () {
+    test('a_clock_set_back_never_shows_more_than_the_code_lifetime', () {
       fakeAsync((async) {
-        final hold = Completer<void>();
-        fakes.onCreate = (client) => client.holdSubmit = hold;
-        final repo = _MemoryRepository();
-        final c = ProviderContainer.test(
-          overrides: <Override>[
-            identityStoreProvider.overrideWithValue(testIdentityStore()),
-            pairingClientFactoryProvider.overrideWithValue(fakes.create),
-            deviceRepositoryProvider.overrideWithValue(repo),
-          ],
+        var skew = Duration.zero;
+        final shifted = Clock(
+          () => async.getClock(DateTime.utc(2026)).now().add(skew),
         );
-        final subscription = c.listen(
-          pairingControllerProvider(tv0),
-          (_, _) {},
-        );
-        async.flushMicrotasks();
-        unawaited(
-          c.read(pairingControllerProvider(tv0).notifier).submit('AB12CD'),
-        );
-        async.flushMicrotasks();
-        expect(
-          c.read(pairingControllerProvider(tv0)),
-          const PairingVerifying(),
-        );
-        subscription.close();
-        // Riverpod disposes an unwatched provider on a zero-length timer.
-        async.elapse(Duration.zero);
-        // The client was closed, which failed the pending submit.
-        expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
-        expect(repo.saved, isEmpty);
-        expect(c.read(activeTargetProvider), isNull);
-        expect(async.pendingTimers, isEmpty);
+        withClock(shifted, () {
+          final c = fakeAsyncContainer(_MemoryRepository());
+          async.flushMicrotasks();
+          // The user (or the network time) sets the clock back 30 s.
+          skew = const Duration(seconds: -30);
+          async.elapse(const Duration(seconds: 1));
+          final state = read(c);
+          expect(state, isA<PairingWaitingForCode>());
+          expect(
+            (state as PairingWaitingForCode).secondsLeft,
+            lessThanOrEqualTo(pairingCodeLifetime.inSeconds),
+          );
+        });
       });
     });
+
+    test(
+      'leaving_while_the_tv_checks_closes_the_client_and_saves_nothing',
+      () {
+        fakeAsync((async) {
+          final hold = Completer<void>();
+          fakes.onCreate = (client) => client.holdSubmit = hold;
+          final repo = _MemoryRepository();
+          final c = ProviderContainer.test(
+            overrides: <Override>[
+              identityStoreProvider.overrideWithValue(testIdentityStore()),
+              pairingClientFactoryProvider.overrideWithValue(fakes.create),
+              deviceRepositoryProvider.overrideWithValue(repo),
+            ],
+          );
+          final subscription = c.listen(
+            pairingControllerProvider(tv0),
+            (_, _) {},
+          );
+          async.flushMicrotasks();
+          unawaited(
+            c.read(pairingControllerProvider(tv0).notifier).submit('AB12CD'),
+          );
+          async.flushMicrotasks();
+          expect(
+            c.read(pairingControllerProvider(tv0)),
+            const PairingVerifying(),
+          );
+          subscription.close();
+          // Riverpod disposes an unwatched provider on a zero-length timer.
+          async.elapse(Duration.zero);
+          // The client was closed, which failed the pending submit.
+          expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+          expect(repo.saved, isEmpty);
+          expect(c.read(activeTargetProvider), isNull);
+          expect(async.pendingTimers, isEmpty);
+        });
+      },
+    );
   });
 
   group('abandoned_save', () {

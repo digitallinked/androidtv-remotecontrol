@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
@@ -189,10 +190,14 @@ class PairingController extends _$PairingController {
     }
   }
 
-  /// Whole seconds until [_deadline], rounded up, never below 0.
+  /// Whole seconds until [_deadline], rounded up, within
+  /// 0..[pairingCodeLifetime]: a clock set back cannot stretch the code's
+  /// life past what the TV allows.
   int _remaining() {
     final ms = _deadline.difference(clock.now()).inMilliseconds;
-    return ms <= 0 ? 0 : (ms + 999) ~/ 1000;
+    return ms <= 0
+        ? 0
+        : math.min((ms + 999) ~/ 1000, pairingCodeLifetime.inSeconds);
   }
 
   void _backToWaiting({required bool codeMismatch}) {

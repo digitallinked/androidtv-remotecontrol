@@ -173,7 +173,12 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
           currentName: _tvName(l10n, session),
           currentServiceName: session.pairingTarget?.serviceName,
           devices: ref.watch(savedDevicesProvider).value ?? const [],
-          onSelect: ref.read(activeTargetProvider.notifier).activateDevice,
+          onSelect: (name) {
+            // The current TV keeps its session: rebuilding would drop a
+            // working connection for nothing.
+            if (name == session.pairingTarget?.serviceName) return;
+            ref.read(activeTargetProvider.notifier).activateDevice(name);
+          },
           onAddTv: () => context.push(AppRoutes.discover),
         ),
         actions: [

@@ -73,20 +73,25 @@ class _DemoStripState extends ConsumerState<_DemoStrip> {
     if (navigatorContext == null) return;
     final l10n = AppLocalizations.of(context);
     _asking = true;
-    final leave = await showAppDialog<bool>(
-      context: navigatorContext,
-      title: l10n.demoLeaveTitle,
-      message: l10n.demoLeaveMessage,
-      actions: [
-        AppDialogAction(label: l10n.demoStay, value: false),
-        AppDialogAction(
-          label: l10n.demoLeaveConfirm,
-          value: true,
-          isPrimary: true,
-        ),
-      ],
-    );
-    _asking = false;
+    final bool? leave;
+    try {
+      leave = await showAppDialog<bool>(
+        context: navigatorContext,
+        title: l10n.demoLeaveTitle,
+        message: l10n.demoLeaveMessage,
+        actions: [
+          AppDialogAction(label: l10n.demoStay, value: false),
+          AppDialogAction(
+            label: l10n.demoLeaveConfirm,
+            value: true,
+            isPrimary: true,
+          ),
+        ],
+      );
+    } finally {
+      // Whatever happens to the dialog, Leave must work again.
+      _asking = false;
+    }
     if ((leave ?? false) && mounted) unawaited(leaveDemo(ref));
   }
 

@@ -1,4 +1,5 @@
 import 'package:atv_remote/atv_remote.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -7,15 +8,19 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
+import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
 
+import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
@@ -249,6 +254,42 @@ void main() {
       const DeviceTarget('Bedroom TV'),
     );
     expect(find.text('Bedroom TV'), findsNothing);
+  });
+
+  testWidgets('selecting_the_current_tv_keeps_the_session', (t) async {
+    final clients = FakeRemoteClients();
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await DriftDeviceRepository(db).upsert(savedTv());
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.remote,
+      database: db,
+      overrides: [
+        remoteClientFactoryProvider.overrideWithValue(clients.create),
+        savedDevicesProvider.overrideWith(
+          (ref) => Stream.value([savedTv()]),
+        ),
+      ],
+    );
+    final c = ProviderScope.containerOf(t.element(find.byType(RemoteScreen)));
+    final before = c.read(remoteSessionProvider).value;
+    expect(before, isNotNull);
+    expect(clients.created, hasLength(1));
+
+    await t.tap(find.byTooltip('Switch TV'));
+    await t.pumpAndSettle();
+    await t.tap(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Living Room TV 3'),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(c.read(remoteSessionProvider).value, same(before));
+    expect(clients.created, hasLength(1));
+    expect(find.text('Connected'), findsOneWidget);
   });
 
   testWidgets('device_switcher_add_tv_opens_discover', (t) async {

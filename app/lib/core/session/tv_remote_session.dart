@@ -202,7 +202,14 @@ class TvRemoteSession implements RemoteSession {
       case ConnectionStatus.needsPairing
           when state.lastError == RemoteCloseReason.serverKeyChanged:
         _pin = null;
-        _bestEffort(() => _devices.clearServerKeyPin(_device.serviceName));
+        // Clear only the pin this session was built with: the user may have
+        // paired again since, and that newer pin must survive.
+        _bestEffort(
+          () => _devices.clearServerKeyPin(
+            _device.serviceName,
+            distrustedPin: _device.serverKeyPin!,
+          ),
+        );
       case _:
         break;
     }

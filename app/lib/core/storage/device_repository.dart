@@ -27,8 +27,13 @@ abstract interface class DeviceRepository {
   });
 
   /// Forgets the trusted key of [serviceName] (it must be paired again),
-  /// leaving every other field alone. Does nothing for an unknown TV.
-  Future<void> clearServerKeyPin(String serviceName);
+  /// leaving every other field alone, but only while the stored pin is still
+  /// [distrustedPin]: a newer pairing's pin is kept. Does nothing for an
+  /// unknown TV.
+  Future<void> clearServerKeyPin(
+    String serviceName, {
+    required String distrustedPin,
+  });
 }
 
 /// [DeviceRepository] backed by the drift [AppDatabase].
@@ -94,9 +99,12 @@ class DriftDeviceRepository implements DeviceRepository {
   }
 
   @override
-  Future<void> clearServerKeyPin(String serviceName) async {
-    await _updateOne(
-      serviceName,
-    ).write(const DevicesCompanion(serverKeyPin: Value(null)));
+  Future<void> clearServerKeyPin(
+    String serviceName, {
+    required String distrustedPin,
+  }) async {
+    await (_updateOne(serviceName)
+          ..where((t) => t.serverKeyPin.equals(distrustedPin)))
+        .write(const DevicesCompanion(serverKeyPin: Value(null)));
   }
 }

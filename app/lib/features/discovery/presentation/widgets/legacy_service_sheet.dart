@@ -7,8 +7,13 @@ import 'package:tv_remote/app/widgets/app_sheet.dart';
 /// can't be controlled until it is updated.
 ///
 /// Discovery keeps running underneath, so the TV shows up as updated on its
-/// own; the button only closes the sheet.
-Future<void> showLegacyServiceSheet(BuildContext context, String tvName) {
+/// own; "Scan again" closes the sheet and then calls [onScanAgain] to browse
+/// afresh.
+Future<void> showLegacyServiceSheet(
+  BuildContext context,
+  String tvName, {
+  required VoidCallback onScanAgain,
+}) {
   final l10n = AppLocalizations.of(context);
   return showAppSheet<void>(
     context: context,
@@ -23,7 +28,10 @@ Future<void> showLegacyServiceSheet(BuildContext context, String tvName) {
           style: Theme.of(sheetContext).textTheme.bodyLarge,
         ),
         FilledButton(
-          onPressed: () => Navigator.of(sheetContext).pop(),
+          onPressed: () {
+            Navigator.of(sheetContext).pop();
+            onScanAgain();
+          },
           child: Text(l10n.discoverScanAgain),
         ),
       ],
