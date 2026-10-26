@@ -1,25 +1,25 @@
 # Project status
 
-_Last updated: 2026-10-26 by Claude (controller, subagent-driven run, Phase 3 merged)._
+_Last updated: 2026-10-27 by Claude (controller, subagent-driven run, Phase 4 merged)._
 
 ## Current phase
 
-**Phase 4: Full remote** (next; plan to be written from the master plan). Phases 0–3 are merged into `main`. The **Phase 3 exit criterion — a real-device run on the owner's phone + TV — is still open** (needs the owner); the library smoke test is part of it.
+**Phase 5: Apps, devices, settings, help** (next; plan to be written from the master plan). Phases 0–4 are merged into `main`. The **real-device run on the owner's phone + TV is still open** — it is the exit criterion for Phases 3 and 4 (needs the owner).
 
 ## Done
 
-- **Phase 3 (connect flow):**
-  - Library: `TvConnection.disconnect()`, public `host`, generation re-check after `verifyServerKey`, stale re-resolve can't overwrite `host`; Wake-on-LAN tries every target.
-  - NSD discovery (`NsdTvDiscovery`), host resolver, manual IP (`manual:<ip>`), iOS Bonjour + local-network keys.
-  - `RemoteSession` / `TvRemoteSession` (TOFU pin check, conditional pin clear), session providers (`ActiveTarget`, `remoteSessionProvider`, state providers with `noRetry`), `SessionSupervisor` (60 s grace, 500 ms debounce, iOS resync).
-  - Remote screen (status pill with Pair again / Reconnect, device switcher, basic controls fitting 320 dp, identity-changed dialog).
-  - Demo mode (simulated TV, badge, TV preview) from onboarding and discovery.
-  - Discovery screen (live list, manual IP sheet, legacy-service help, troubleshooting sheet, Try demo).
-  - Pairing wizard (code field, paste, deadline countdown, failure states, pin saved before activation).
-  - `WakeOnLanService` (limited + subnet + /24 broadcast); UI in Phase 4.
-  - End-to-end seam tests in `app/test/app/connect_flow_test.dart`. Decisions #13–#19.
-- **Phase 2 (app shell):** design tokens + theme (light/dark/dynamic, contrast-tested); `AppKeyButton`, `Rocker`, `StatusPill`, `AppDialog`, `AppSheet` with golden tests; English ARB l10n; drift DB (`devices`, `shortcuts`, `app_usage`) + `DeviceRepository`; secure `IdentityStore`; `SettingsStore`; Riverpod providers + `SettingsController`; go_router with start-route logic; `bootstrap` with error handlers, startup steps and a fallback screen; dev/prod flavors; release network permissions.
-- **Phase 1 (protocol library):** protobufs, varint framing, client identity + pairing secret, `FakeTvServer`, `PairingClient`, `RemoteClient` (ping echo, 15 s idle timeout), `TvConnection` state machine, Wake-on-LAN, discovery model, public API barrel, CLI. Final review fixes incl. TOFU hooks.
+- **Phase 4 (remote experience):**
+  - Library: `KeyCodes.enter`/`delete`, `KeyCodes.named`, `isSupportedKeyCode`; CLI `text` and `hold` commands for checking IME and long-press behaviour on the real TV.
+  - Input path: `KeyInput`/`RemoteInput` → `RemoteActions` (refusals, Smooth Press, 120 ms repeat, 15 s stuck-key guard, haptics, action listener); test fakes aligned with the real clients.
+  - Pad pager with Touchpad (steps, tap, hold, two-finger back), D-pad (wedge hit regions, holds) and Numbers; quick-access row (starter apps as letter tiles, colour keys, media keys, none); bottom cluster (volume/channel rockers, Mute, Keyboard, Back, Home); portrait and split layouts that fit 320 dp at 200% text.
+  - Keyboard sheet (debounced live typing, Enter, Clear, auto-open on the TV's IME request).
+  - Power key: tap hint, 600 ms hold → power key or Wake-on-LAN + reconnect; MAC setup sheet; iOS Wake-on-LAN gated off.
+  - Keep Screen Awake and Theater Mode.
+  - Carry-overs closed: supervisor seeded from visibility, live values cleared on drop, WoL limited broadcast first, previous remote kept during a TV switch, screen-reader-friendly holds, demo preview tests.
+  - End-to-end tests (`app/test/app/remote_flow_test.dart`) and accessibility guideline tests. Decisions #20–#26.
+- **Phase 3 (connect flow):** discovery (NSD + manual IP), pairing wizard with TOFU pin, `RemoteSession`/`TvRemoteSession`, session providers and `SessionSupervisor`, remote screen shell, demo mode, `WakeOnLanService`, connect-flow seam tests. Decisions #13–#19.
+- **Phase 2 (app shell):** design tokens + theme, base components with goldens, ARB l10n, drift DB + `DeviceRepository`, secure `IdentityStore`, `SettingsStore`, go_router, `bootstrap`, dev/prod flavors.
+- **Phase 1 (protocol library):** protobufs, framing, client identity + pairing secret, `FakeTvServer`, `PairingClient`, `RemoteClient`, `TvConnection`, Wake-on-LAN, discovery model, CLI.
 - **Phase 0:** monorepo scaffold, lints, `tool/check.ps1`/`.sh`, CI.
 
 ## In progress
@@ -28,39 +28,35 @@ _Nothing._
 
 ## Next up
 
-1. **Real-device run (owner + Claude)** — Phase 3 exit. Install the dev flavor on the Note10+, discover the TV, pair, use the remote, background >60 s and return, toggle Wi-Fi. Also record in `learnings.md`: does the TV present the same key on 6467 and 6466 (decision #11); the TV's ping interval (decision #10 → set `RemoteClient.idleTimeout`); does `_pickHost` get an IPv4 on the Note10+; time to reconnect after a DHCP/IP change. Use the checklist in `learnings.md` → "Unverified protocol behaviour".
-2. Execute the Phase 4 plan `docs/superpowers/plans/2026-10-26-phase-4-remote-experience.md` (12 tasks, rulings P4-R1..R20): 4.1 first alone; 4.2–4.8 parallel-safe (disjoint files); 4.9–4.12 sequential (all edit `remote_screen.dart`). Every carry-over below is mapped to a task (4.1 fakes, 4.2 supervisor/live values/WoL timing, 4.4 key button, 4.9 keep scaffold, 4.10 MAC source, 4.12 demo preview tests).
-
-## Carry-over to Phase 4
-- `SessionSupervisor` assumes foreground at construction; seed it from the current visibility (a session activated while backgrounded connects without a grace timer).
-- Keep the previous remote scaffold while the session reloads on a TV switch (the spinner currently replaces it; dependents show stale values with `isLoading`).
-- Volume / power / current-app values are never reset across reconnects; reset or replay them when the UI shows them.
-- Align test fakes with the real classes before `RemoteActions` (serverPublicKeySha256 before ready, push before ready, connect-after-close error type, unknown keycode).
-- Wake-on-LAN: send `255.255.255.255` immediately and the others after the 2 s lookup; test the OSError/sync-throw lookup and the provider; **nothing fills `SavedDevice.wolMac` yet** — the power button needs a MAC source.
-- Demo TV preview states (holding/released/opened/typed/screenOff) need tests once those buttons exist.
-- `AppKeyButton` (from Phase 2): dispose calls `onLongPressEnd`; semantic long-press fires start+end back to back (TalkBack hold keys); rocker keys and pill share `surfaceRaised`.
+1. **Real-device run (owner + Claude)** — exit for Phases 3 and 4. Install the dev flavor on the Note10+ (`flutter run --flavor dev -t lib/main_dev.dart`), discover the TV, pair, then use every control. Record answers in `learnings.md` → "Unverified protocol behaviour". Specifically: same key on 6467/6466 (decision #11); ping interval (decision #10); `_pickHost` gets IPv4; reconnect time after an IP change; hold feel and volume ramp; long OK; IME replace-field (`atv_cli text`); Search key on Google TV; which starter apps open; Theater dim/wake; keep-awake; landscape. **Ask before any Power test** (it turns the TV off); Wake-on-LAN needs the TV's Wi-Fi/Ethernet MAC.
+2. Execute the Phase 5 plan `docs/superpowers/plans/2026-10-27-phase-5-apps-devices-settings.md` (10 tasks, rulings P5-R1..R14): 5.1 first alone (all strings, routes, stubs, `BannerSlot`); 5.2/5.3/5.8 parallel-safe; 5.4 → 5.5 → 5.6 → 5.7 sequential (each edits `remote_screen.dart`); 5.9 parallel-safe with that chain; 5.10 last. Owner questions in the plan: support email + privacy/terms URLs (placeholders until then); real app icons (default: monograms, no third-party logos).
 
 ## Carry-over to Phase 5
-- Tapping a paired TV in discovery connects to the stored `lastHost`, not the freshly discovered host (slow recovery after an IP change); update `lastHost`.
-- `toDiscoveredTv()` passes the nickname as `displayName`, so re-pairing could overwrite the announced name once rename exists.
-- Re-resolve the host before "Pair again" (an mDNS TV whose IP changed shows "Can't reach").
-- Merge `manual:<ip>` entries with a later mDNS entry for the same TV.
+- Settings pages for the Phase 4 toggles (haptics, Smooth Press, keep awake, theater, keyboard auto-open, quick-access variant). Settings UI was deferred by P4-R18.
+- Replace `quickAccessAppsProvider`'s body with the catalogue; upper-case monograms for custom entries.
+- Edit-device screen: reuse `parseMac` and the MAC field; an over-long pasted MAC is currently dropped silently.
+- If the device run shows `replaceField` doesn't work, flip `kImeTextMode` to `appendOnly` and add grapheme tests (ZWJ, combining marks); appendOnly over-deletes after a partial failure.
+- From Phase 3: update `lastHost` when a paired TV is tapped in discovery; `toDiscoveredTv()` passes the nickname as `displayName`; re-resolve the host before "Pair again"; merge `manual:<ip>` entries with a later mDNS entry.
 
 ## Carry-over to Phase 6+
-- Phase 6: `LoggingCrashReporter` logs raw errors — the Crashlytics reporter must scrub pairing codes/keys. `StartupGate` build has no timeout.
-- Phase 7: onboarding storage write error leaves "Get started" dead.
-- Phase 8 (test/accessibility hardening): NSD `stop()` hang if never listened + no `onCancel`; real-time negative waits; coverage gaps from Tasks 3.2–3.6; 200% text TV name ellipsis; 48/56 dp + dark state tests; demo strip tappable under a modal; live regions (discovery results, demo preview); unawaited cancel/stop errors; pairing 320 dp / dark failure tests; Phase 2 a11y items (`AppDialog` route label, semantic headers, reduce-motion ripple, `FittedBox` shrinking labels).
-- Phase 9: release is debug-signed — add `key.properties` signing before any store upload. CLI hardening (atomic identity file, SIGINT, `cliKeyCodes` coverage) before sharing the CLI. Record the protoc download URL/version in the gen scripts.
+- Phase 6: `RemoteActions._report` swallows listener errors silently — add a debug-only log (no text/TV data) when analytics attaches to `remoteActionListenerProvider`. `LoggingCrashReporter` logs raw errors — the Crashlytics reporter must scrub pairing codes/keys. `StartupGate` build has no timeout.
+- Phase 7 (polish): heavy haptic fires before `needsMac`/`cannotWake`; app names ellipsize at 200% text in quick tiles; touchpad reach not updated from the up position; onboarding storage write error leaves "Get started" dead.
+- Phase 8 (test/accessibility hardening):
+  - Phase 4 tests: `KeyCodes.named` source-scan + `cliKeyCodes`↔`named`; `serverPublicKeySha256` at `RemoteReady`; second TV's first volume is null; provider-level background-seeded grace; platform haptics; transparent-key ripple; edge-glow + same-touch stale glow; D-pad clamp at 100×100, wedge-drag/hold-stays, `dpad_pressed_up_light` golden; Power drag-off cancel; a11y guidelines for the disconnected state, colour/media rows and theater palette; non-linear `TextScaler` across the layout matrix.
+  - Phase 4 code: D-pad `_holdStart` should use the pointer-down region (`_downRegion`) like taps do; D-pad explicit `OrdinalSortKey`; split layout uses `EdgeInsets.only` (wrong in RTL → `EdgeInsetsDirectional`); narrow screen-service catches to `PlatformException`/`MissingPluginException`; `ExcludeSemantics` while theater-dimmed (after a Voice Access / Switch Access device check).
+  - From Phase 3: NSD `stop()` hang if never listened + no `onCancel`; real-time negative waits; coverage gaps from Tasks 3.2–3.6; 200% TV name ellipsis; 48/56 dp + dark state tests; demo strip tappable under a modal; live regions; unawaited cancel/stop errors; pairing 320 dp / dark failure tests; Phase 2 a11y items.
+- Phase 9: release is debug-signed — add `key.properties` signing before any store upload. CLI hardening (atomic identity file, SIGINT, `cliKeyCodes` coverage, `hold` uncaught `StateError`). Record the protoc download URL/version in the gen scripts.
 - drift opens lazily: a real DB open failure surfaces in the first query; repository callers must handle errors.
-- An identity that can't be loaded surfaces as `networkError` in the library; the app shows "can't load identity" after one retry.
 
 ## Blocked / needs the owner
 
 - Real-device run (TV on, same Wi-Fi; read the pairing code to Claude).
-- Mac: build iOS flavors (`flutter build ios --flavor dev|prod -t lib/main_<f>.dart --no-codesign`); request Apple's multicast entitlement (`com.apple.developer.networking.multicast`) for Wake-on-LAN.
+- Mac: `pod install` and iOS flavor builds (`flutter build ios --flavor dev|prod -t lib/main_<f>.dart --no-codesign`) — Phase 4 added wakelock_plus, screen_brightness_ios and package_info_plus pods; check that iOS restores system brightness after Theater mode.
+- Apple's multicast entitlement (`com.apple.developer.networking.multicast`) for Wake-on-LAN on iOS.
 - Apple Developer account and Google Play Console account. A new personal Play account must run a closed test with **12 testers for 14 days** before production.
-- App name and bundle ID (placeholder: `Remotely for Android TV`, `com.digitallinked.atvremote`). **Must be final before the first Play closed-test upload** (the master plan starts the 14-day test after Phase 4; a Play package name can never change), and that upload needs an upload keystore earlier than Phase 9.
+- App name and bundle ID (placeholder: `Remotely for Android TV`, `com.digitallinked.atvremote`). **Must be final before the first Play closed-test upload** (a Play package name can never change), and that upload needs an upload keystore earlier than Phase 9.
 - Privacy policy and terms URLs.
+- Optional: delete stale git-ignored golden `failures/` folders under `app/test/`.
 
 ## Test hardware
 
@@ -72,4 +68,4 @@ _Nothing._
 - All checks: `powershell -File tool/check.ps1` (Windows) or `tool/check.sh`.
 - App: `flutter run --flavor dev -t lib/main_dev.dart` from `app/`.
 - Package tests: from `packages/atv_remote`, `flutter test` (not `dart test`; see learnings).
-- CLI: from `packages/atv_remote`, `dart run bin/atv_cli.dart <pair|key|watch> <host> ...`.
+- CLI: from `packages/atv_remote`, `dart run bin/atv_cli.dart <pair|key|watch|text|hold> <host> ...`.
