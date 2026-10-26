@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
-/// A shortcut to one TV app: a monogram on a raised square, with the app's
-/// name below.
+/// A shortcut to one TV app: its [AppIconSquare] (a monogram or the icon the
+/// user picked), with the app's name below.
 ///
-/// It draws the first letter of the name, never a logo. The tile is [width]
+/// It never draws a logo. The tile is [width]
 /// dp wide. When [isCurrent], an accent dot marks the square and the spoken
 /// label says the app is on the TV now.
 class QuickAppTile extends StatelessWidget {
@@ -22,7 +23,7 @@ class QuickAppTile extends StatelessWidget {
   static const double width = 72;
 
   /// Side of the monogram square.
-  static const double squareSize = 56;
+  static const double squareSize = kAppSquareSize;
 
   /// Diameter of the "now on TV" dot.
   static const double dotSize = 8;
@@ -54,7 +55,6 @@ class QuickAppTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = context.appColors;
     final text = Theme.of(context).textTheme;
-    final letter = app.name.isEmpty ? '' : app.name.characters.first;
 
     return Semantics(
       button: true,
@@ -74,23 +74,14 @@ class QuickAppTile extends StatelessWidget {
               dimension: squareSize,
               child: Stack(
                 children: [
+                  Positioned.fill(child: AppIconSquare(app: app)),
+                  // The ink of a tap draws over the square.
                   Positioned.fill(
                     child: Material(
-                      color: colors.surfaceRaised,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadii.key),
-                      ),
-                      clipBehavior: Clip.antiAlias,
+                      type: MaterialType.transparency,
                       child: InkWell(
                         onTap: onTap,
-                        child: Center(
-                          child: Text(
-                            letter,
-                            style: text.titleLarge?.copyWith(
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                        ),
+                        borderRadius: BorderRadius.circular(AppRadii.key),
                       ),
                     ),
                   ),

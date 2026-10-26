@@ -18,6 +18,7 @@ import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
@@ -485,6 +486,32 @@ void main() {
     await t.pageBack();
     await t.pumpAndSettle();
     expect(find.byType(RemoteBody), findsOneWidget);
+  });
+
+  testWidgets('all_apps_tile_opens_the_apps_screen', (t) async {
+    final handle = t.ensureSemantics();
+    fake.emit(_connected);
+    await pumpRemote(t);
+    // The last tile of the row: scroll it into view.
+    await t.drag(
+      find.descendant(
+        of: find.byType(QuickAccessBar),
+        matching: find.byType(ListView),
+      ),
+      const Offset(-1000, 0),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.bySemanticsLabel('All apps'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.apps);
+    expect(find.byType(AppsScreen), findsOneWidget);
+    // Nothing was sent to the TV, and Back returns to the remote.
+    expect(fake.sentLinks, isEmpty);
+    expect(fake.sentKeys, isEmpty);
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+    handle.dispose();
   });
 
   testWidgets('remote_app_bar_fits_320dp_at_200_percent_text', (t) async {

@@ -8,7 +8,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
-import 'package:tv_remote/app/widgets/status_pill.dart';
+import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
 import 'package:tv_remote/core/device/theater_mode.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
@@ -409,7 +409,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _StatusStrip(
+            StatusStrip(
               status: status,
               onReconnect: reloading ? null : session.reconnect,
               onPairAgain: canPairAgain ? () => _pairAgain(session) : null,
@@ -426,6 +426,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
                 onPageChanged: _onPageChanged,
                 volume: connected ? liveVolume : null,
                 onKeyboard: _openKeyboard,
+                onAllApps: () => unawaited(context.push(AppRoutes.apps)),
                 preview: session.isDemo ? const TvPreviewCard() : null,
               ),
             ),
@@ -442,38 +443,6 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     return KeepAwake(
       enabled: keepAwake,
       child: TheaterMode(enabled: theater, child: scaffold),
-    );
-  }
-}
-
-/// The row under the app bar that holds the connection pill: at least 48 dp
-/// high and start-aligned; the pill wraps at large text.
-class _StatusStrip extends StatelessWidget {
-  const _StatusStrip({
-    required this.status,
-    required this.onReconnect,
-    required this.onPairAgain,
-  });
-
-  final ConnectionStatus status;
-  final VoidCallback? onReconnect;
-  final VoidCallback? onPairAgain;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-        child: Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: StatusPill(
-            status: status,
-            onReconnect: onReconnect,
-            onPairAgain: onPairAgain,
-          ),
-        ),
-      ),
     );
   }
 }

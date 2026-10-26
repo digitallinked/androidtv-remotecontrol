@@ -61,6 +61,7 @@ void main() {
     double width = 360,
     double textScale = 1,
     String? currentApp,
+    VoidCallback? onAllApps,
     Brightness brightness = Brightness.light,
   }) => pumpApp(
     t,
@@ -71,6 +72,7 @@ void main() {
         input: rec,
         apps: _apps,
         currentApp: currentApp,
+        onAllApps: onAllApps,
       ),
     ),
     textScale: textScale,
@@ -331,5 +333,95 @@ void main() {
     await t.tap(find.bySemanticsLabel('Open Netflix'));
     expect(rec.calls, isEmpty);
     expect(rec.refused, 1);
+  });
+
+  testWidgets('all_apps_tile_calls_back_and_sends_nothing', (t) async {
+    final handle = t.ensureSemantics();
+    var opened = 0;
+    await pumpBar(t, QuickAccessRow.apps, onAllApps: () => opened++);
+    // The last tile: the row is a lazy list, so bring it into view.
+    await t.drag(find.byType(ListView), const Offset(-1000, 0));
+    await t.pumpAndSettle();
+    final all = find.bySemanticsLabel('All apps');
+    expect(all, findsOneWidget);
+    expect(
+      t.getSemantics(all),
+      isSemantics(isButton: true, hasTapAction: true),
+    );
+    await t.tap(all);
+    expect(opened, 1);
+    // Its caption is tappable too.
+    await t.tap(find.text('All apps'));
+    expect(opened, 2);
+    // It is not a TV command.
+    expect(rec.calls, isEmpty);
+    expect(rec.refused, 0);
+    handle.dispose();
+  });
+
+  testWidgets('all_apps_tile_is_the_last_tile_and_looks_like_a_tile', (
+    t,
+  ) async {
+    await pumpBar(t, QuickAccessRow.apps, onAllApps: () {});
+    // Scroll to the end of the row so the tile is built.
+    await t.drag(find.byType(ListView), const Offset(-1000, 0));
+    await t.pumpAndSettle();
+    final square = find.byKey(const ValueKey('quick_all_apps_square'));
+    expect(t.getSize(square), const Size(56, 56));
+    expect(
+      find.descendant(of: square, matching: find.byIcon(Icons.apps)),
+      findsOneWidget,
+    );
+    final material = t.widget<Material>(
+      find.descendant(of: square, matching: find.byType(Material)).first,
+    );
+    expect(material.color, AppColors.light.surface);
+    expect(
+      (material.shape! as RoundedRectangleBorder).side.color,
+      AppColors.light.outline,
+    );
+    // Right of the last app tile.
+    final spotify = t.getRect(find.byType(QuickAppTile).last);
+    expect(t.getRect(square).left, greaterThan(spotify.right));
+    expect(t.getSize(find.text('All apps')).height, greaterThan(0));
+  });
+
+  testWidgets('no_all_apps_tile_without_a_callback', (t) async {
+    await pumpBar(t, QuickAccessRow.apps);
+    await t.drag(find.byType(ListView), const Offset(-1000, 0));
+    await t.pumpAndSettle();
+    expect(find.bySemanticsLabel('All apps'), findsNothing);
+    expect(find.byKey(const ValueKey('quick_all_apps_square')), findsNothing);
+  });
+
+  testWidgets('the_all_apps_tile_is_only_in_the_apps_variant', (t) async {
+    for (final variant in [
+      QuickAccessRow.colourKeys,
+      QuickAccessRow.mediaKeys,
+      QuickAccessRow.none,
+    ]) {
+      await pumpBar(t, variant, onAllApps: () {});
+      expect(find.text('All apps'), findsNothing, reason: '$variant');
+    }
+  });
+
+  testWidgets('all_apps_tile_fits_320dp_at_200_percent_text', (t) async {
+    for (final b in Brightness.values) {
+      await pumpBar(
+        t,
+        QuickAccessRow.apps,
+        width: 288,
+        textScale: 2,
+        onAllApps: () {},
+        brightness: b,
+      );
+      await t.drag(find.byType(ListView), const Offset(-1500, 0));
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull, reason: b.name);
+      expect(
+        find.byKey(const ValueKey('quick_all_apps_square')),
+        findsOneWidget,
+      );
+    }
   });
 }

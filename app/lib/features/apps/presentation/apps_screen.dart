@@ -1,16 +1,344 @@
-import 'package:flutter/widgets.dart';
-import 'package:tv_remote/app/l10n/app_localizations.dart';
-import 'package:tv_remote/app/widgets/placeholder_screen.dart';
+import 'dart:async';
 
-/// The Apps screen: search and open the apps on the TV.
+import 'package:atv_remote/atv_remote.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/status_strip.dart';
+import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/session/remote_session.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/features/apps/application/shortcuts.dart';
+import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
+import 'package:tv_remote/features/remote/application/remote_actions.dart';
+
+/// The Apps screen: the user's shortcuts as a grid, with a search that also
+/// finds catalogue apps that are not on the list (Ruling P5-R7).
 ///
-/// A placeholder until its task builds the screen.
-class AppsScreen extends StatelessWidget {
+/// A tap opens the app on the TV and returns to the remote, since the next
+/// thing to do is navigate inside the app. A refused tap (the TV is not
+/// connected) says so in a snackbar and the screen stays. The screen has one
+/// banner slot at its bottom and no bottom-anchored control (Ruling P5-R3).
+class AppsScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const AppsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => PlaceholderScreen(
-    title: AppLocalizations.of(context).pageTitleApps,
-  );
+  ConsumerState<AppsScreen> createState() => _AppsScreenState();
+}
+
+class _AppsScreenState extends ConsumerState<AppsScreen> {
+  final TextEditingController _search = TextEditingController();
+
+  /// The "Not connected" snackbar on screen, if any: one is enough.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _notConnectedBar;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// The status the strip shows: the socket's state, never the saved one.
+  ConnectionStatus _statusOf(
+    AsyncValue<RemoteSession?> session,
+    AsyncValue<TvConnectionState> connection,
+  ) {
+    if (session.isLoading || connection.isLoading) {
+      return ConnectionStatus.connecting;
+    }
+    return connection.value?.status ?? ConnectionStatus.disconnected;
+  }
+
+  void _showNotConnected(RemoteSession? session, ConnectionStatus status) {
+    if (!mounted ||
+        _notConnectedBar != null ||
+        !(ModalRoute.isCurrentOf(context) ?? false)) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    final bar = ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.remoteNotConnected),
+        // Offline and needs-pairing have an action in the status strip; a
+        // closed connection has none, so offer it here.
+        action: session != null && status == ConnectionStatus.disconnected
+            ? SnackBarAction(
+                label: l10n.statusReconnectAction,
+                onPressed: session.reconnect,
+              )
+            : null,
+      ),
+    );
+    _notConnectedBar = bar;
+    unawaited(
+      bar.closed.then((_) {
+        if (identical(_notConnectedBar, bar)) _notConnectedBar = null;
+      }),
+    );
+  }
+
+  void _pairAgain(RemoteSession session) {
+    final target = session.pairingTarget;
+    if (target == null) return;
+    // No `extra`: the pairing screen looks the TV up again (Ruling P5-R10).
+    unawaited(context.push(AppRoutes.pair(target.serviceName)));
+  }
+
+  void _launch(AppEntry app) {
+    if (ref.read(remoteActionsProvider).launch(app)) {
+      context.go(AppRoutes.remote);
+    }
+  }
+
+  void _openEditApps() => unawaited(context.push(AppRoutes.manageApps));
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    // Watched, not read: the provider is autoDispose.
+    ref.watch(remoteActionsProvider);
+    final sessionState = ref.watch(remoteSessionProvider);
+    final connection = ref.watch(connectionStateProvider);
+    final session = sessionState.value;
+    final status = _statusOf(sessionState, connection);
+    ref.listen(
+      notConnectedNoticesProvider,
+      (_, _) => _showNotConnected(session, status),
+    );
+    final connected = status == ConnectionStatus.connected;
+    final currentApp = connected ? ref.watch(currentAppProvider).value : null;
+
+    final shortcuts = ref.watch(shortcutsProvider);
+    final catalogue = ref.watch(catalogueProvider).value;
+    final region = ref.watch(deviceRegionProvider);
+    final query = _search.text.trim();
+    final searching = query.isNotEmpty;
+
+    final mine = shortcuts.value ?? const <AppEntry>[];
+    final needle = query.toLowerCase();
+    final yourApps = searching
+        ? [
+            for (final app in mine)
+              if (app.name.toLowerCase().contains(needle)) app,
+          ]
+        : mine;
+    final listed = {for (final app in mine) app.package};
+    final moreApps = searching && catalogue != null
+        ? [
+            for (final app in catalogue.search(query, region: region))
+              if (!listed.contains(app.package)) app.toEntry(),
+          ]
+        : const <AppEntry>[];
+
+    final reloading = sessionState.isLoading;
+    final loadingList = shortcuts.isLoading && !shortcuts.hasValue;
+    final listEmpty = mine.isEmpty && !searching && !loadingList;
+
+    Widget slivers() => CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: StatusStrip(
+            status: status,
+            onReconnect: reloading || session == null
+                ? null
+                : session.reconnect,
+            onPairAgain: reloading || session?.pairingTarget == null
+                ? null
+                : () => _pairAgain(session!),
+          ),
+        ),
+        SliverToBoxAdapter(child: _searchField(l10n)),
+        if (loadingList)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (listEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _EmptyList(onAdd: _openEditApps),
+          )
+        else ...[
+          if (yourApps.isNotEmpty) ...[
+            _Header(l10n.appsYourApps),
+            _grid(yourApps, currentApp),
+          ],
+          if (moreApps.isNotEmpty) ...[
+            _Header(l10n.appsMoreApps),
+            _grid(moreApps, currentApp),
+          ],
+          if (searching && yourApps.isEmpty && moreApps.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+                child: Text(
+                  l10n.appsNoMatches(query),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+        ],
+        // The banner never covers the last row.
+        const SliverToBoxAdapter(
+          child: SizedBox(height: BannerSlot.clearance),
+        ),
+      ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.pageTitleApps),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: l10n.pageTitleManageApps,
+            style: IconButton.styleFrom(
+              minimumSize: const Size.square(AppSizes.touchMin),
+            ),
+            onPressed: _openEditApps,
+          ),
+        ],
+      ),
+      body: SafeArea(child: slivers()),
+      bottomNavigationBar: const SafeArea(
+        child: BannerSlot(placement: AdPlacement.apps),
+      ),
+    );
+  }
+
+  Widget _searchField(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.l,
+        AppSpacing.xs,
+        AppSpacing.l,
+        AppSpacing.s,
+      ),
+      child: TextField(
+        controller: _search,
+        autocorrect: false,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          labelText: l10n.appsSearchLabel,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadii.card),
+          ),
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _search.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: l10n.keyboardClear,
+                  constraints: const BoxConstraints.tightFor(
+                    width: AppSizes.touchMin,
+                    height: AppSizes.touchMin,
+                  ),
+                  onPressed: () => setState(_search.clear),
+                ),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+  }
+
+  Widget _grid(List<AppEntry> apps, String? currentApp) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 104,
+          mainAxisSpacing: AppSpacing.s,
+          crossAxisSpacing: AppSpacing.s,
+          // The tile's height at the current text scale.
+          mainAxisExtent: AppTile.heightOf(context),
+        ),
+        delegate: SliverChildBuilderDelegate(
+          childCount: apps.length,
+          (context, i) => AppTile(
+            key: ValueKey('app_tile_${apps[i].package}'),
+            app: apps[i],
+            isCurrent: apps[i].package == currentApp,
+            onTap: () => _launch(apps[i]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A section header of the Apps screen.
+class _Header extends StatelessWidget {
+  const _Header(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Semantics(
+        header: true,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.l,
+            AppSpacing.m,
+            AppSpacing.l,
+            AppSpacing.s,
+          ),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: context.appColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The message of an empty list, with the way to fill it.
+class _EmptyList extends StatelessWidget {
+  const _EmptyList({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: AppSpacing.m,
+          children: [
+            Text(
+              l10n.appsEmptyTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
+            ),
+            Text(
+              l10n.appsEmptyBody,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s),
+            FilledButton(onPressed: onAdd, child: Text(l10n.appsEmptyAction)),
+          ],
+        ),
+      ),
+    );
+  }
 }

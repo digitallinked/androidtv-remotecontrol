@@ -36,6 +36,7 @@ class QuickAccessBar extends StatelessWidget {
     required this.input,
     required this.apps,
     this.currentApp,
+    this.onAllApps,
     super.key,
   });
 
@@ -51,6 +52,10 @@ class QuickAccessBar extends StatelessWidget {
   /// The package of the app open on the TV, if known.
   final String? currentApp;
 
+  /// Called when the last tile of [QuickAccessRow.apps], All apps, is tapped.
+  /// `null` leaves that tile out. It opens a screen; it is not a TV command.
+  final VoidCallback? onAllApps;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -63,13 +68,15 @@ class QuickAccessBar extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: _gutter,
-            itemCount: apps.length,
+            itemCount: apps.length + (onAllApps == null ? 0 : 1),
             separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
-            itemBuilder: (context, i) => QuickAppTile(
-              app: apps[i],
-              isCurrent: apps[i].package == currentApp,
-              onTap: () => input.launch(apps[i]),
-            ),
+            itemBuilder: (context, i) => i == apps.length
+                ? _AllAppsTile(onTap: onAllApps!)
+                : QuickAppTile(
+                    app: apps[i],
+                    isCurrent: apps[i].package == currentApp,
+                    onTap: () => input.launch(apps[i]),
+                  ),
           ),
         ),
       ),
@@ -85,6 +92,67 @@ class QuickAccessBar extends StatelessWidget {
       ),
       QuickAccessRow.none => const SizedBox.shrink(),
     };
+  }
+}
+
+/// The last tile of the apps row: opens the Apps screen. It looks like an app
+/// tile but is not one (an outlined square, no monogram) and sends nothing to
+/// the TV.
+class _AllAppsTile extends StatelessWidget {
+  const _AllAppsTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = AppLocalizations.of(context).quickAccessAllApps;
+    final colors = context.appColors;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: SizedBox(
+        width: QuickAppTile.width,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: AppSpacing.xs,
+          children: [
+            SizedBox.square(
+              key: const ValueKey('quick_all_apps_square'),
+              dimension: QuickAppTile.squareSize,
+              child: Material(
+                color: colors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.key),
+                  side: BorderSide(color: colors.outline),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Center(
+                    child: Icon(Icons.apps, color: colors.textPrimary),
+                  ),
+                ),
+              ),
+            ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

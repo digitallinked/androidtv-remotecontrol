@@ -42,11 +42,19 @@ void main() {
                   apps: _apps,
                   currentApp: 'com.google.android.youtube.tv',
                 ),
+              // A short list, so the All apps tile after it is in view (with
+              // five apps it is the last thing in a scrolling row).
+              QuickAccessBar(
+                variant: QuickAccessRow.apps,
+                input: input,
+                apps: _apps.take(3).toList(),
+                onAllApps: () {},
+              ),
             ],
           ),
         ),
         brightness: b,
-        size: const Size(390, 300),
+        size: const Size(390, 380),
       );
       await expectLater(
         find.byKey(const ValueKey('rows')),

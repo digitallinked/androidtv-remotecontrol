@@ -44,6 +44,7 @@ class RemoteBody extends StatefulWidget {
     required this.onPageChanged,
     required this.volume,
     required this.onKeyboard,
+    this.onAllApps,
     this.preview,
     super.key,
   });
@@ -74,6 +75,10 @@ class RemoteBody extends StatefulWidget {
 
   /// Called when the Keyboard key is tapped.
   final VoidCallback onKeyboard;
+
+  /// Called when the All apps tile is tapped. `null` (the layout preview)
+  /// leaves the tile out.
+  final VoidCallback? onAllApps;
 
   /// A card under the status strip (portrait) or at the top of the right
   /// column (split); the demo TV's preview.
@@ -129,6 +134,7 @@ class _RemoteBodyState extends State<RemoteBody> {
       input: widget.input,
       apps: widget.apps,
       currentApp: widget.currentApp,
+      onAllApps: widget.onAllApps,
     ),
   );
 

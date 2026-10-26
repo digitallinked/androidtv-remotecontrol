@@ -1,0 +1,419 @@
+import 'dart:async';
+
+import 'package:atv_remote/atv_remote.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
+import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
+import 'package:tv_remote/features/remote/application/remote_actions.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
+
+import '../../helpers/fake_remote_session.dart';
+import '../../helpers/in_memory_shortcut_repository.dart';
+import '../../helpers/pump_router_app.dart';
+import '../../helpers/test_devices.dart';
+
+const _connected = TvConnectionState(status: ConnectionStatus.connected);
+const _offline = TvConnectionState(status: ConnectionStatus.offline);
+const _needsPairing = TvConnectionState(status: ConnectionStatus.needsPairing);
+
+void main() {
+  late FakeRemoteSession fake;
+
+  setUp(() {
+    fake = FakeRemoteSession(
+      pairingTarget: savedTv().toDiscoveredTv(),
+      initial: _connected,
+    );
+  });
+
+  Future<void> pumpApps(
+    WidgetTester t, {
+    List<Override> overrides = const [],
+    double textScale = 1,
+    Brightness brightness = Brightness.light,
+  }) => pumpRouterApp(
+    t,
+    initialLocation: AppRoutes.apps,
+    textScale: textScale,
+    brightness: brightness,
+    overrides: [
+      remoteSessionProvider.overrideWith((ref) async => fake),
+      ...overrides,
+    ],
+  );
+
+  /// The state of the screen on top: a pushed route is not in the router's
+  /// own location, so ask the topmost scaffold.
+  GoRouterState top(WidgetTester t) =>
+      GoRouterState.of(t.element(find.byType(Scaffold).last));
+
+  Future<void> search(WidgetTester t, String query) async {
+    await t.enterText(find.byType(TextField), query);
+    await t.pumpAndSettle();
+  }
+
+  testWidgets('shows_the_seeded_shortcuts_under_your_apps', (t) async {
+    await pumpApps(t);
+    expect(find.text('Your apps'), findsOneWidget);
+    expect(find.text('More apps'), findsNothing);
+    expect(
+      [
+        for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
+          tile.app.name,
+      ],
+      ['Netflix', 'YouTube', 'Prime Video', 'Disney+', 'Spotify', 'Apple TV'],
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Apps'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tile_launch_calls_remote_actions', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpApps(t);
+    await t.tap(find.bySemanticsLabel('Open YouTube'));
+    await t.pumpAndSettle();
+    expect(fake.sentLinks, [
+      'market://launch?id=com.google.android.youtube.tv',
+    ]);
+    // The next thing to do is navigate inside the app: back on the remote.
+    expect(find.byType(RemoteBody), findsOneWidget);
+    expect(find.byType(AppsScreen), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('launching_after_a_push_leaves_no_apps_page_behind', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpApps(t);
+    // Remote → Apps, as the All apps tile does.
+    GoRouter.of(t.element(find.byType(AppsScreen))).go(AppRoutes.remote);
+    await t.pumpAndSettle();
+    unawaited(
+      GoRouter.of(t.element(find.byType(RemoteBody))).push(AppRoutes.apps),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.bySemanticsLabel('Open Netflix'));
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+    expect(find.byType(AppsScreen), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('refused_launch_shows_not_connected_and_stays', (t) async {
+    final handle = t.ensureSemantics();
+    fake.emit(_offline);
+    await pumpApps(t);
+    await t.tap(find.bySemanticsLabel('Open Netflix'));
+    await t.pump();
+    expect(find.text('Not connected to your TV'), findsOneWidget);
+    expect(find.byType(AppsScreen), findsOneWidget);
+    expect(find.byType(RemoteBody), findsNothing);
+    expect(fake.sentLinks, isEmpty);
+    handle.dispose();
+  });
+
+  testWidgets('repeated_refusals_show_one_snackbar', (t) async {
+    final handle = t.ensureSemantics();
+    fake.emit(_offline);
+    await pumpApps(t);
+    await t.tap(find.bySemanticsLabel('Open Netflix'));
+    await t.pump();
+    await t.tap(find.bySemanticsLabel('Open YouTube'));
+    await t.pump();
+    await t.tap(find.bySemanticsLabel('Open Spotify'));
+    await t.pump();
+    expect(find.byType(SnackBar), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('no_snackbar_while_another_page_is_on_top', (t) async {
+    await pumpApps(t);
+    final container = ProviderScope.containerOf(
+      t.element(find.byType(AppsScreen)),
+    );
+    await t.tap(find.byTooltip('Edit apps'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.manageApps);
+    container.read(notConnectedNoticesProvider.notifier).notify();
+    await t.pump();
+    expect(find.text('Not connected to your TV'), findsNothing);
+  });
+
+  testWidgets('the_status_strip_offers_reconnect', (t) async {
+    fake.emit(_offline);
+    await pumpApps(t);
+    expect(find.text('Offline'), findsOneWidget);
+    await t.tap(find.text('Reconnect'));
+    await t.pump();
+    expect(fake.reconnectCalls, 1);
+  });
+
+  testWidgets('the_status_strip_offers_pair_again', (t) async {
+    fake.emit(_needsPairing);
+    await pumpApps(t);
+    await t.tap(find.text('Pair again'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
+    expect(top(t).extra, isNull);
+  });
+
+  testWidgets('search_filters_your_apps_and_shows_more_apps', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpApps(t);
+    await search(t, 'plex');
+    expect(find.bySemanticsLabel('Open Netflix'), findsNothing);
+    expect(find.text('Your apps'), findsNothing);
+    expect(find.text('More apps'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open Plex'), findsOneWidget);
+    await t.tap(find.bySemanticsLabel('Open Plex'));
+    await t.pumpAndSettle();
+    // Launched without being added to the list.
+    expect(fake.sentLinks, ['market://launch?id=com.plexapp.android']);
+    expect(find.byType(RemoteBody), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('search_matches_your_apps_ignoring_case', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpApps(t);
+    await search(t, 'NETFLIX');
+    expect(find.bySemanticsLabel('Open Netflix'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open YouTube'), findsNothing);
+    expect(find.text('Your apps'), findsOneWidget);
+    // Netflix is already a shortcut, so it is not offered a second time.
+    expect(find.byType(AppTile), findsOneWidget);
+    expect(find.text('More apps'), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('more_apps_never_repeat_your_apps_and_do_not_add_them', (
+    t,
+  ) async {
+    final repository = InMemoryShortcutRepository();
+    await pumpApps(
+      t,
+      overrides: [shortcutRepositoryProvider.overrideWithValue(repository)],
+    );
+    final before = [for (final a in repository.apps) a.package];
+    await search(t, 'plex');
+    await t.tap(find.text('Plex'));
+    await t.pumpAndSettle();
+    expect([for (final a in repository.apps) a.package], before);
+  });
+
+  testWidgets('no_match_says_so', (t) async {
+    await pumpApps(t);
+    await search(t, 'zzzz');
+    expect(find.text('No apps match "zzzz".'), findsOneWidget);
+    expect(find.byType(AppTile), findsNothing);
+    expect(find.text('Your apps'), findsNothing);
+  });
+
+  testWidgets('the_clear_button_restores_the_list', (t) async {
+    await pumpApps(t);
+    expect(find.byTooltip('Clear'), findsNothing);
+    await search(t, 'zzzz');
+    await t.tap(find.byTooltip('Clear'));
+    await t.pumpAndSettle();
+    expect(t.widget<TextField>(find.byType(TextField)).controller?.text, '');
+    expect(find.text('Your apps'), findsOneWidget);
+    expect(find.byType(AppTile), findsNWidgets(6));
+    expect(find.byTooltip('Clear'), findsNothing);
+  });
+
+  testWidgets('a_blank_query_is_not_a_search', (t) async {
+    await pumpApps(t);
+    await search(t, '   ');
+    expect(find.text('Your apps'), findsOneWidget);
+    expect(find.byType(AppTile), findsNWidgets(6));
+    expect(find.textContaining('No apps match'), findsNothing);
+  });
+
+  testWidgets('the_search_field_is_a_search_field', (t) async {
+    await pumpApps(t);
+    final field = t.widget<TextField>(find.byType(TextField));
+    expect(field.textInputAction, TextInputAction.search);
+    expect(find.text('Search apps'), findsOneWidget);
+    expect(find.byIcon(Icons.search), findsOneWidget);
+  });
+
+  testWidgets('empty_list_offers_add_apps', (t) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+      ],
+    );
+    expect(find.text('No apps yet'), findsOneWidget);
+    expect(
+      find.text('Add the apps you use on your TV to open them with one tap.'),
+      findsOneWidget,
+    );
+    expect(find.text('Your apps'), findsNothing);
+    await t.tap(find.widgetWithText(FilledButton, 'Add apps'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.manageApps);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Edit apps'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('an_empty_list_still_searches_the_catalogue', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+      ],
+    );
+    await search(t, 'plex');
+    expect(find.text('No apps yet'), findsNothing);
+    expect(find.text('Your apps'), findsNothing);
+    expect(find.text('More apps'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open Plex'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('edit_action_opens_edit_apps', (t) async {
+    await pumpApps(t);
+    final action = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byIcon(Icons.edit_outlined),
+    );
+    expect(action, findsOneWidget);
+    expect(t.getSize(find.byTooltip('Edit apps')).shortestSide, 48);
+    await t.tap(action);
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.manageApps);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Edit apps'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('current_app_is_marked', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpApps(t);
+    fake.push(const CurrentAppChanged('com.netflix.ninja'));
+    await t.pumpAndSettle();
+    expect(find.bySemanticsLabel('Netflix, now on TV'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open Netflix'), findsNothing);
+    expect(find.bySemanticsLabel('Open YouTube'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('the_current_app_is_not_marked_while_offline', (t) async {
+    final handle = t.ensureSemantics();
+    fake
+      ..push(const CurrentAppChanged('com.netflix.ninja'))
+      ..emit(_offline);
+    await pumpApps(t);
+    expect(find.bySemanticsLabel('Netflix, now on TV'), findsNothing);
+    expect(find.bySemanticsLabel('Open Netflix'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('apps_screen_has_one_banner_slot_and_no_fab', (t) async {
+    await pumpApps(t);
+    expect(find.byType(BannerSlot), findsOneWidget);
+    expect(find.byKey(const ValueKey('banner_slot_apps')), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    final scaffold = t.widget<Scaffold>(
+      find.descendant(
+        of: find.byType(AppsScreen),
+        matching: find.byType(Scaffold),
+      ),
+    );
+    expect(scaffold.bottomNavigationBar, isNotNull);
+    expect(scaffold.floatingActionButton, isNull);
+  });
+
+  testWidgets('the_list_ends_with_the_banner_clearance', (t) async {
+    t.view
+      ..physicalSize = const Size(360, 480)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpApps(t);
+    // Many matches: more than a screen of tiles.
+    await search(t, 'a');
+    final tiles = find.byType(AppTile);
+    final scrollable = t.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(scrollable.position.maxScrollExtent, greaterThan(200));
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await t.pumpAndSettle();
+    final viewport = t.getRect(find.byType(CustomScrollView));
+    var lowest = 0.0;
+    for (final e in tiles.evaluate()) {
+      final box = e.renderObject! as RenderBox;
+      final bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
+      if (bottom > lowest) lowest = bottom;
+    }
+    expect(lowest, lessThanOrEqualTo(viewport.bottom - BannerSlot.clearance));
+  });
+
+  for (final b in Brightness.values) {
+    testWidgets('apps_screen_fits_320dp_at_200_percent_text_${b.name}', (
+      t,
+    ) async {
+      t.view
+        ..physicalSize = const Size(320, 640)
+        ..devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      fake.push(const CurrentAppChanged('com.netflix.ninja'));
+      await pumpApps(t, textScale: 2, brightness: b);
+      expect(t.takeException(), isNull);
+      expect(find.byType(AppTile), findsWidgets);
+      await search(t, 'prime');
+      expect(t.takeException(), isNull);
+      await search(t, 'zzzz');
+      expect(t.takeException(), isNull);
+      expect(find.text('No apps match "zzzz".'), findsOneWidget);
+    });
+  }
+
+  testWidgets('every_tile_is_at_least_48dp', (t) async {
+    await pumpApps(t, textScale: 2);
+    for (final e in find.byType(AppTile).evaluate()) {
+      final size = (e.renderObject! as RenderBox).size;
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+    }
+  });
+}
