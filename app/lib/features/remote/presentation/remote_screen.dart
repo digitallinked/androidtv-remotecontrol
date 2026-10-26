@@ -20,10 +20,13 @@ import 'package:tv_remote/features/apps/data/starter_apps.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
 import 'package:tv_remote/features/keyboard/keyboard_sheet.dart';
 import 'package:tv_remote/features/remote/application/ime_requests.dart';
+import 'package:tv_remote/features/remote/application/power_controller.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/device_switcher.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/wol_setup_sheet.dart';
 
 /// The remote control for the active TV: the TV's name in the app bar, its
 /// live connection status in a strip under it, and the controls below.
@@ -154,6 +157,63 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     );
   }
 
+  /// Says [message] in a snackbar of its own. The "Not connected" snackbar
+  /// has its own controller, [_showNotConnected].
+  void _say(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// The power key was held (Ruling P4-R10): the controller powers the TV or
+  /// wakes it, and the outcome is said here. A refusal is already announced
+  /// by the "Not connected" notice.
+  Future<void> _power() async {
+    final l10n = AppLocalizations.of(context);
+    final controller = ref.read(powerControllerProvider);
+    final session = controller.session;
+    final tvName = session == null ? '' : _tvName(l10n, session);
+
+    final outcome = await controller.press();
+    if (!mounted) return;
+    if (outcome != PowerOutcome.needsMac) {
+      _sayPowerOutcome(l10n, outcome, tvName);
+      return;
+    }
+
+    PowerOutcome? afterSave;
+    await showWolSetupSheet(
+      context,
+      tvName: tvName,
+      onSave: (mac) async => afterSave = await controller.saveMacAndWake(mac),
+    );
+    // Said even when the sheet was dismissed while it was saving.
+    final saved = afterSave;
+    if (saved != null) _sayPowerOutcome(l10n, saved, tvName);
+  }
+
+  void _sayPowerOutcome(
+    AppLocalizations l10n,
+    PowerOutcome outcome,
+    String tvName,
+  ) {
+    switch (outcome) {
+      case PowerOutcome.waking:
+        _say(l10n.powerWaking(tvName));
+      case PowerOutcome.wakeFailed:
+        _say(l10n.powerWakeFailed);
+      case PowerOutcome.cannotWake:
+        _say(l10n.powerTurnOnWithTvRemote);
+      // The key press needs no message; a refusal has its own snackbar; the
+      // setup sheet is opened by the caller.
+      case PowerOutcome.sentPowerKey ||
+          PowerOutcome.notConnected ||
+          PowerOutcome.needsMac:
+        break;
+    }
+  }
+
   void _openKeyboard() {
     unawaited(
       showKeyboardSheet(context, input: ref.read(remoteActionsProvider)),
@@ -235,8 +295,10 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
           _onImeShowRequested();
         }
       });
-    // Watched, not read: the provider is autoDispose.
+    // Watched, not read: the provider is autoDispose. Listening keeps the
+    // power controller (which uses these actions) alive the same way.
     final input = ref.watch(remoteActionsProvider);
+    ref.listen(powerControllerProvider, (_, _) {});
     final (navigationStyle, quickAccess) = ref.watch(
       settingsControllerProvider.select(
         (s) => (s.navigationStyle, s.quickAccessRow),
@@ -289,6 +351,15 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
           },
           onAddTv: () => context.push(AppRoutes.discover),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.s),
+            child: PowerButton(
+              onHint: () => _say(l10n.powerHoldHint),
+              onPower: () => unawaited(_power()),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

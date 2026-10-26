@@ -26,6 +26,11 @@ abstract interface class DeviceRepository {
     required DateTime at,
   });
 
+  /// Sets the Wake-on-LAN MAC address of [serviceName] to [mac] (`null`
+  /// clears it), leaving every other field alone. Does nothing for an unknown
+  /// TV.
+  Future<void> setWolMac(String serviceName, String? mac);
+
   /// Forgets the trusted key of [serviceName] (it must be paired again),
   /// leaving every other field alone, but only while the stored pin is still
   /// [distrustedPin]: a newer pairing's pin is kept. Does nothing for an
@@ -96,6 +101,13 @@ class DriftDeviceRepository implements DeviceRepository {
     await _updateOne(serviceName).write(
       DevicesCompanion(lastHost: Value(host), lastConnectedAt: Value(at)),
     );
+  }
+
+  @override
+  Future<void> setWolMac(String serviceName, String? mac) async {
+    await _updateOne(
+      serviceName,
+    ).write(DevicesCompanion(wolMac: Value(mac)));
   }
 
   @override

@@ -15,12 +15,14 @@ import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
 import 'fake_tv_discovery.dart';
+import 'fake_wake_on_lan.dart';
 import 'manual_session_signals.dart';
 import 'recording_haptics.dart';
 import 'test_identity.dart';
@@ -81,6 +83,8 @@ Future<SettingsStore> pumpRouterApp(
         hostResolverProvider.overrideWithValue((_) async => null),
         sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
         hapticsProvider.overrideWithValue(RecordingHaptics()),
+        wakeOnLanServiceProvider.overrideWithValue(FakeWakeOnLan()),
+        wakeOnLanAvailableProvider.overrideWithValue(true),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,

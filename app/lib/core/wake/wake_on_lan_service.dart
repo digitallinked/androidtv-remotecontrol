@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
+import 'package:flutter/foundation.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -113,3 +114,15 @@ class WakeOnLanService {
 /// The app's [WakeOnLanService].
 @Riverpod(keepAlive: true)
 WakeOnLanService wakeOnLanService(Ref ref) => WakeOnLanService();
+
+/// Whether Wake-on-LAN is switched on for iOS. Off until Apple grants the
+/// `com.apple.developer.networking.multicast` entitlement, without which iOS
+/// drops broadcast packets: flip it (and add the entitlement) when it does.
+const bool kIosWakeOnLanEnabled = false;
+
+/// Whether this platform can send Wake-on-LAN packets: always on Android, and
+/// on iOS only when [kIosWakeOnLanEnabled] is set. Where it is `false` the
+/// power key explains how to turn the TV on by hand.
+@Riverpod(keepAlive: true)
+bool wakeOnLanAvailable(Ref ref) =>
+    defaultTargetPlatform != TargetPlatform.iOS || kIosWakeOnLanEnabled;

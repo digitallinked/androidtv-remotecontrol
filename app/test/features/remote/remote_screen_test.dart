@@ -359,8 +359,9 @@ void main() {
         await pumpRemote(t, textScale: scale);
         expect(t.takeException(), isNull);
         final keys = find.byType(AppKeyButton);
-        // The bottom cluster: two rockers (four keys) and the 2 x 2 grid.
-        expect(keys, findsNWidgets(8));
+        // The bottom cluster (two rockers, four keys, and the 2 x 2 grid)
+        // and the power key in the app bar.
+        expect(keys, findsNWidgets(9));
         for (final key in keys.evaluate()) {
           final size = t.getSize(find.byElementPredicate((e) => e == key));
           expect(size.width, greaterThanOrEqualTo(56));
