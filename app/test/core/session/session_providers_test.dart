@@ -230,6 +230,36 @@ void main() {
     },
   );
 
+  test(
+    'session_backed_providers_surface_the_identity_error_and_keep_it',
+    () async {
+      await repo.upsert(savedTv(name: 'a'));
+      final store = IdentityStore(
+        InMemorySecureKeyValueStore()
+          ..throwOnWrite = PlatformException(code: 'x'),
+        generate: () async => testIdentity(),
+      );
+      final c = makeContainer(identityStore: store)
+        ..listen(remoteSessionProvider, (_, _) {})
+        ..listen(connectionStateProvider, (_, _) {})
+        ..listen(volumeProvider, (_, _) {})
+        ..listen(powerStateProvider, (_, _) {})
+        ..listen(currentAppProvider, (_, _) {});
+      // Riverpod's default retry would re-run them from 200 ms on.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      for (final state in [
+        c.read(connectionStateProvider),
+        c.read(volumeProvider),
+        c.read(powerStateProvider),
+        c.read(currentAppProvider),
+      ]) {
+        expect(state.hasError, isTrue);
+        expect(state.error, isA<IdentityStoreException>());
+        expect(state.isLoading, isFalse);
+      }
+    },
+  );
+
   test('volume_power_and_current_app_follow_session_events', () async {
     await repo.upsert(savedTv(name: 'a'));
     final c = makeContainer()

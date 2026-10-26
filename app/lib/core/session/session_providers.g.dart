@@ -140,12 +140,26 @@ String _$remoteSessionHash() => r'7d71d3acb1e68bf44b7ffc2d3ad3fbabb3785724';
 
 /// The connection state of the active session; `disconnected` when there is
 /// none.
+///
+/// If the session can't be built (for example, an unusable client identity)
+/// this is an error, and it stays one: the providers below don't retry
+/// either. `.future` of [remoteSessionProvider] rejects with the raw
+/// exception, which Riverpod's default retry would re-run behind a loading
+/// state. The UI treats `isLoading` or `isReloading` on these providers as
+/// "not connected".
 
 @ProviderFor(connectionState)
 final connectionStateProvider = ConnectionStateProvider._();
 
 /// The connection state of the active session; `disconnected` when there is
 /// none.
+///
+/// If the session can't be built (for example, an unusable client identity)
+/// this is an error, and it stays one: the providers below don't retry
+/// either. `.future` of [remoteSessionProvider] rejects with the raw
+/// exception, which Riverpod's default retry would re-run behind a loading
+/// state. The UI treats `isLoading` or `isReloading` on these providers as
+/// "not connected".
 
 final class ConnectionStateProvider
     extends
@@ -159,11 +173,18 @@ final class ConnectionStateProvider
         $StreamProvider<TvConnectionState> {
   /// The connection state of the active session; `disconnected` when there is
   /// none.
+  ///
+  /// If the session can't be built (for example, an unusable client identity)
+  /// this is an error, and it stays one: the providers below don't retry
+  /// either. `.future` of [remoteSessionProvider] rejects with the raw
+  /// exception, which Riverpod's default retry would re-run behind a loading
+  /// state. The UI treats `isLoading` or `isReloading` on these providers as
+  /// "not connected".
   ConnectionStateProvider._()
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'connectionStateProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -185,7 +206,7 @@ final class ConnectionStateProvider
   }
 }
 
-String _$connectionStateHash() => r'00a8eae0f83c4c992d44ad53279bc8a73862c3af';
+String _$connectionStateHash() => r'4bcb75bf7d09473cefeef58b704fc36b808432d4';
 
 /// The TV's volume: the last known value, then every change. `null` while
 /// unknown or without a session.
@@ -210,7 +231,7 @@ final class VolumeProvider
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'volumeProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -232,7 +253,7 @@ final class VolumeProvider
   }
 }
 
-String _$volumeHash() => r'7cd0c3b5adde04f6a7d1ec57a3f7750b290ceb7c';
+String _$volumeHash() => r'5651ee189848641a8e56c496e9b08a70041716f8';
 
 /// Whether the TV's screen is on: the last known value, then every change.
 /// `null` while unknown or without a session.
@@ -252,7 +273,7 @@ final class PowerStateProvider
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'powerStateProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -273,7 +294,7 @@ final class PowerStateProvider
   }
 }
 
-String _$powerStateHash() => r'aab4968713d12cf83885490fcd41ca887d188a67';
+String _$powerStateHash() => r'a9a66c8b436f4c6b897471441d722742ff41481e';
 
 /// The package name of the TV's foreground app: the last known value, then
 /// every change. `null` while unknown or without a session.
@@ -293,7 +314,7 @@ final class CurrentAppProvider
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'currentAppProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -314,4 +335,4 @@ final class CurrentAppProvider
   }
 }
 
-String _$currentAppHash() => r'f28574a7247e7cad2ac371edb6b854ff19d976a2';
+String _$currentAppHash() => r'f2167a9c91911120d8811ac6656404d50d9aff9b';

@@ -95,7 +95,14 @@ Future<RemoteSession?> remoteSession(Ref ref) async {
 
 /// The connection state of the active session; `disconnected` when there is
 /// none.
-@riverpod
+///
+/// If the session can't be built (for example, an unusable client identity)
+/// this is an error, and it stays one: the providers below don't retry
+/// either. `.future` of [remoteSessionProvider] rejects with the raw
+/// exception, which Riverpod's default retry would re-run behind a loading
+/// state. The UI treats `isLoading` or `isReloading` on these providers as
+/// "not connected".
+@Riverpod(retry: noRetry)
 Stream<TvConnectionState> connectionState(Ref ref) async* {
   final session = await ref.watch(remoteSessionProvider.future);
   if (session == null) {
@@ -107,7 +114,7 @@ Stream<TvConnectionState> connectionState(Ref ref) async* {
 
 /// The TV's volume: the last known value, then every change. `null` while
 /// unknown or without a session.
-@riverpod
+@Riverpod(retry: noRetry)
 Stream<VolumeChanged?> volume(Ref ref) async* {
   final session = await ref.watch(remoteSessionProvider.future);
   if (session == null) {
@@ -123,7 +130,7 @@ Stream<VolumeChanged?> volume(Ref ref) async* {
 
 /// Whether the TV's screen is on: the last known value, then every change.
 /// `null` while unknown or without a session.
-@riverpod
+@Riverpod(retry: noRetry)
 Stream<bool?> powerState(Ref ref) async* {
   final session = await ref.watch(remoteSessionProvider.future);
   if (session == null) {
@@ -139,7 +146,7 @@ Stream<bool?> powerState(Ref ref) async* {
 
 /// The package name of the TV's foreground app: the last known value, then
 /// every change. `null` while unknown or without a session.
-@riverpod
+@Riverpod(retry: noRetry)
 Stream<String?> currentApp(Ref ref) async* {
   final session = await ref.watch(remoteSessionProvider.future);
   if (session == null) {
