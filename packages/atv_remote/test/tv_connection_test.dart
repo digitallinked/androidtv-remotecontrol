@@ -718,6 +718,31 @@ void main() {
       expect(c.current.status, ConnectionStatus.disconnected);
     });
 
+    test('disconnect_from_verify_server_key_ends_disconnected', () async {
+      late TvConnection c;
+      final rig = await _rig(
+        initialPushes: pushes,
+        verifyServerKey: (_) {
+          unawaited(c.disconnect());
+          return true;
+        },
+      );
+      c = rig.connection;
+      final seen = <ConnectionStatus>[];
+      final events = <RemoteEvent>[];
+      final stateSub = c.states.listen((s) => seen.add(s.status));
+      final eventSub = c.events.listen(events.add);
+      addTearDown(stateSub.cancel);
+      addTearDown(eventSub.cancel);
+
+      await c.connect();
+      await pumpEventQueue();
+
+      expect(seen, isNot(contains(ConnectionStatus.connected)));
+      expect(c.current.status, ConnectionStatus.disconnected);
+      expect(events, isEmpty);
+    });
+
     test('an_accepted_key_connects_as_before', () async {
       final keys = <Uint8List>[];
       final rig = await _rig(
@@ -847,6 +872,29 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
       expect(rig.clientsCreated, created);
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+    });
+
+    test('disconnect_during_re_resolve_discards_the_late_host', () async {
+      final resolving = Completer<String?>();
+      var started = false;
+      final rig = await _rig(
+        reResolveHost: () {
+          started = true;
+          return resolving.future;
+        },
+      );
+      await _connected(rig);
+      await rig.tv.dropConnections();
+      await _eventually(() => started);
+
+      await rig.connection.disconnect();
+      resolving.complete('localhost');
+      await _pump();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(rig.connection.host, '127.0.0.1');
+      expect(rig.clientsCreated, 1);
       expect(rig.connection.current.status, ConnectionStatus.disconnected);
     });
 

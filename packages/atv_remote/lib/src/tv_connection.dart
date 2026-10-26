@@ -282,8 +282,10 @@ class TvConnection {
       final resolve = _reResolveHost;
       if (resolve != null) {
         try {
-          final host = await resolve().timeout(_reResolveTimeout);
-          if (host != null) _host = host;
+          final resolved = await resolve().timeout(_reResolveTimeout);
+          // A disconnect() or dispose() meanwhile: the late address is stale.
+          if (generation != _generation) return;
+          if (resolved != null) _host = resolved;
         } on Object {
           // Keep the old host: the TV may simply be unreachable.
         }
