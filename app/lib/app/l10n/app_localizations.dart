@@ -454,10 +454,10 @@ abstract class AppLocalizations {
   /// **'Apps'**
   String get pageTitleApps;
 
-  /// Title of the saved TVs screen.
+  /// Title of `/devices` and its hub row (was "Devices").
   ///
   /// In en, this message translates to:
-  /// **'Devices'**
+  /// **'Your TVs'**
   String get pageTitleDevices;
 
   /// Title of the settings screen.
@@ -1161,6 +1161,1062 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Screen dimmed. Touch to brighten.'**
   String get theaterWakeLabel;
+
+  /// Dismiss action of confirmation dialogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get commonCancel;
+
+  /// Save buttons (Edit TV, shortcut editor).
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get commonSave;
+
+  /// Snackbar action after removing an app.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get commonUndo;
+
+  /// Row in the TV switcher sheet → Your TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage TVs'**
+  String get remoteManageTvs;
+
+  /// Last tile of the quick row → Apps screen.
+  ///
+  /// In en, this message translates to:
+  /// **'All apps'**
+  String get quickAccessAllApps;
+
+  /// Title of `/apps/manage`; Apps screen action.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit apps'**
+  String get pageTitleManageApps;
+
+  /// Edit TV title while loading or when the TV isn't found.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit TV'**
+  String get pageTitleEditDevice;
+
+  /// Page title and hub row.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get pageTitleAppearance;
+
+  /// Page title and hub row.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote layout'**
+  String get pageTitleRemoteLayout;
+
+  /// Page title and hub row.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote behaviour'**
+  String get pageTitleRemoteBehaviour;
+
+  /// Page title and hub row.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get pageTitleHelp;
+
+  /// Page title and hub row.
+  ///
+  /// In en, this message translates to:
+  /// **'About this app'**
+  String get pageTitleAbout;
+
+  /// Label of the Apps screen search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search apps'**
+  String get appsSearchLabel;
+
+  /// Header of the shortcuts grid.
+  ///
+  /// In en, this message translates to:
+  /// **'Your apps'**
+  String get appsYourApps;
+
+  /// Header of catalogue matches while searching.
+  ///
+  /// In en, this message translates to:
+  /// **'More apps'**
+  String get appsMoreApps;
+
+  /// Search with no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps match \"{query}\".'**
+  String appsNoMatches(String query);
+
+  /// Empty Apps screen.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps yet'**
+  String get appsEmptyTitle;
+
+  /// Empty Apps screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the apps you use on your TV to open them with one tap.'**
+  String get appsEmptyBody;
+
+  /// Empty Apps screen button → Edit apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Add apps'**
+  String get appsEmptyAction;
+
+  /// App bar action of Edit apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Add app'**
+  String get manageAppsAdd;
+
+  /// Overflow menu item.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to suggested apps'**
+  String get manageAppsReset;
+
+  /// Reset confirmation title.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset your apps?'**
+  String get manageAppsResetTitle;
+
+  /// Reset confirmation body.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list goes back to the suggested apps for your region. Shortcuts you added or changed are removed.'**
+  String get manageAppsResetBody;
+
+  /// Destructive reset action.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get manageAppsResetConfirm;
+
+  /// Hint above the list.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the handle to change the order. The remote shows your apps in this order.'**
+  String get manageAppsReorderHint;
+
+  /// Semantics label of a row's drag handle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder {app}'**
+  String manageAppsDragHandle(String app);
+
+  /// Semantic custom action.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get manageAppsMoveUp;
+
+  /// Semantic custom action.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get manageAppsMoveDown;
+
+  /// Tooltip of a row's edit button.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {app}'**
+  String manageAppsEdit(String app);
+
+  /// Tooltip of a row's remove button.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {app}'**
+  String manageAppsRemove(String app);
+
+  /// Snackbar after removing (with Undo).
+  ///
+  /// In en, this message translates to:
+  /// **'{app} removed'**
+  String manageAppsRemoved(String app);
+
+  /// Empty Edit apps list.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps on your list. Add one to see it on the remote.'**
+  String get manageAppsEmpty;
+
+  /// Any shortcut write failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save your apps. Try again.'**
+  String get manageAppsSaveFailed;
+
+  /// Add sheet title.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an app'**
+  String get addAppTitle;
+
+  /// Add sheet search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search apps or enter an app ID'**
+  String get addAppSearchLabel;
+
+  /// First row of the add sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a custom shortcut'**
+  String get addAppCustom;
+
+  /// Section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently used on your TV'**
+  String get addAppRecentTitle;
+
+  /// Empty recent section.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps you open on your TV show up here.'**
+  String get addAppRecentEmpty;
+
+  /// Section header (catalogue for the region).
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested apps'**
+  String get addAppPopularTitle;
+
+  /// Search with no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps found. If you know the app\'s ID, type it to add it.'**
+  String get addAppNoResults;
+
+  /// Row that adds a typed package name.
+  ///
+  /// In en, this message translates to:
+  /// **'Add app ID \"{package}\"'**
+  String addAppById(String package);
+
+  /// Snackbar after adding.
+  ///
+  /// In en, this message translates to:
+  /// **'{app} added'**
+  String addAppAdded(String app);
+
+  /// Subtitle of a disabled row.
+  ///
+  /// In en, this message translates to:
+  /// **'Already on your list'**
+  String get addAppAlreadyAdded;
+
+  /// Editor title (create).
+  ///
+  /// In en, this message translates to:
+  /// **'New shortcut'**
+  String get shortcutNewTitle;
+
+  /// Editor title (edit).
+  ///
+  /// In en, this message translates to:
+  /// **'Edit shortcut'**
+  String get shortcutEditTitle;
+
+  /// Editor field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get shortcutNameLabel;
+
+  /// Editor validation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name of up to 30 characters.'**
+  String get shortcutNameError;
+
+  /// Editor field.
+  ///
+  /// In en, this message translates to:
+  /// **'App ID'**
+  String get shortcutPackageLabel;
+
+  /// Editor field hint.
+  ///
+  /// In en, this message translates to:
+  /// **'com.example.app'**
+  String get shortcutPackageHint;
+
+  /// Editor helper text.
+  ///
+  /// In en, this message translates to:
+  /// **'The app\'s ID on the TV. It\'s in the app\'s Play Store web address, after \"id=\".'**
+  String get shortcutPackageHelp;
+
+  /// Editor validation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an app ID like com.example.app.'**
+  String get shortcutPackageError;
+
+  /// Editor validation.
+  ///
+  /// In en, this message translates to:
+  /// **'This app is already on your list.'**
+  String get shortcutPackageTaken;
+
+  /// Editor group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Tile colour'**
+  String get shortcutColourLabel;
+
+  /// Colour choice: no custom colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get shortcutColourDefault;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Slate'**
+  String get shortcutColourSlate;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get shortcutColourBlue;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Teal'**
+  String get shortcutColourTeal;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get shortcutColourGreen;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Amber'**
+  String get shortcutColourAmber;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Orange'**
+  String get shortcutColourOrange;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Red'**
+  String get shortcutColourRed;
+
+  /// Colour swatch name (semantics).
+  ///
+  /// In en, this message translates to:
+  /// **'Purple'**
+  String get shortcutColourPurple;
+
+  /// Editor group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon'**
+  String get shortcutIconLabel;
+
+  /// Icon choice: monogram.
+  ///
+  /// In en, this message translates to:
+  /// **'First letter'**
+  String get shortcutIconLetter;
+
+  /// Generic icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get shortcutIconApp;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies'**
+  String get shortcutIconMovies;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Live TV'**
+  String get shortcutIconLive;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Sports'**
+  String get shortcutIconSports;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get shortcutIconMusic;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Kids'**
+  String get shortcutIconKids;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'News'**
+  String get shortcutIconNews;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Games'**
+  String get shortcutIconGames;
+
+  /// Icon name.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get shortcutIconLearning;
+
+  /// Label of the live preview tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get shortcutPreview;
+
+  /// Snackbar after editing.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut saved'**
+  String get shortcutSaved;
+
+  /// Empty Your TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'No TVs yet'**
+  String get devicesEmptyTitle;
+
+  /// Empty Your TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair a TV to control it from this phone.'**
+  String get devicesEmptyBody;
+
+  /// Marker on the session's TV.
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get devicesInUse;
+
+  /// Semantics/tooltip of a TV row.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {tvName}'**
+  String devicesEditTv(String tvName);
+
+  /// Nickname field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name on this phone'**
+  String get editDeviceNameLabel;
+
+  /// Nickname helper.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty to use the TV\'s own name, {tvName}.'**
+  String editDeviceNameHelp(String tvName);
+
+  /// Nickname validation.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 40 characters or fewer.'**
+  String get editDeviceNameError;
+
+  /// MAC section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on from your phone'**
+  String get editDeviceWolTitle;
+
+  /// MAC section text.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the TV\'s MAC address so the power key can wake it from standby.'**
+  String get editDeviceWolBody;
+
+  /// Link → MAC help sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Where do I find it?'**
+  String get editDeviceWolHelp;
+
+  /// IOS without the entitlement.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning the TV on from an iPhone isn\'t available yet. You can still save the address.'**
+  String get editDeviceWolUnavailable;
+
+  /// MAC field: over-long input.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s longer than a MAC address. Check what you pasted.'**
+  String get wolMacTooLong;
+
+  /// MAC help sheet title.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the TV\'s MAC address'**
+  String get wolHelpTitle;
+
+  /// Edit TV info line.
+  ///
+  /// In en, this message translates to:
+  /// **'Last address: {host}'**
+  String editDeviceLastAddress(String host);
+
+  /// Snackbar after saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get editDeviceSaved;
+
+  /// Snackbar on write failure.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save. Try again.'**
+  String get editDeviceSaveFailed;
+
+  /// Destructive button.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove TV'**
+  String get editDeviceRemove;
+
+  /// Confirmation title.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {tvName}?'**
+  String editDeviceRemoveTitle(String tvName);
+
+  /// Confirmation body.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone forgets the TV and its settings. To use it again, pair it with a new code. The TV may still list this phone.'**
+  String get editDeviceRemoveBody;
+
+  /// Destructive confirm action.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get editDeviceRemoveConfirm;
+
+  /// Snackbar after removing.
+  ///
+  /// In en, this message translates to:
+  /// **'{tvName} removed'**
+  String editDeviceRemoved(String tvName);
+
+  /// Edit TV for an unknown name.
+  ///
+  /// In en, this message translates to:
+  /// **'This TV isn\'t saved on this phone anymore.'**
+  String get editDeviceNotFound;
+
+  /// Action on the not-found state.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to your TVs'**
+  String get editDeviceBackToTvs;
+
+  /// Discovery: a merge or host update failed hard.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this TV. Try again.'**
+  String get discoverOpenFailed;
+
+  /// Hub section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote'**
+  String get settingsSectionRemote;
+
+  /// Hub section header.
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get settingsSectionApp;
+
+  /// Hub section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Help and feedback'**
+  String get settingsSectionSupport;
+
+  /// Hub section header.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsSectionAbout;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Touchpad or D-pad, and the row of keys above it'**
+  String get settingsRemoteLayoutSubtitle;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibration, Smooth Press, screen and keyboard'**
+  String get settingsRemoteBehaviourSubtitle;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose and order your app shortcuts'**
+  String get settingsAppsSubtitle;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename, remove, or turn on from your phone'**
+  String get settingsDevicesSubtitle;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme and language'**
+  String get settingsAppearanceSubtitle;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Common questions and troubleshooting'**
+  String get settingsHelpSubtitle;
+
+  /// Hub row; Help page button.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get settingsFeedback;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Write to us by email'**
+  String get settingsFeedbackSubtitle;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Version and licences'**
+  String get settingsAboutSubtitle;
+
+  /// Hub row (external link).
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get settingsPrivacy;
+
+  /// Hub row (external link).
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use'**
+  String get settingsTerms;
+
+  /// Semantics hint of external-link rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens in your browser'**
+  String get settingsOpensInBrowser;
+
+  /// Link failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the page. Check your internet connection and try again.'**
+  String get settingsLinkFailed;
+
+  /// Group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get appearanceTheme;
+
+  /// Theme choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as phone'**
+  String get appearanceThemeSystem;
+
+  /// Theme choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get appearanceThemeLight;
+
+  /// Theme choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get appearanceThemeDark;
+
+  /// Switch title.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours from wallpaper'**
+  String get appearanceDynamicColour;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your phone\'s wallpaper colours in the app.'**
+  String get appearanceDynamicColourSubtitle;
+
+  /// Group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get appearanceLanguage;
+
+  /// Language choice: follow the system.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as phone'**
+  String get appearanceLanguageSystem;
+
+  /// Header over the preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get layoutPreviewTitle;
+
+  /// Semantics label of the preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview of the remote with these choices'**
+  String get layoutPreviewSemantics;
+
+  /// Group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation'**
+  String get layoutNavigation;
+
+  /// Under Touchpad (title reuses `remotePadTouchpad`).
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to move, tap to select.'**
+  String get layoutTouchpadSubtitle;
+
+  /// Under D-pad (title reuses `remotePadDpad`).
+  ///
+  /// In en, this message translates to:
+  /// **'Arrow keys around an OK button, like a TV remote.'**
+  String get layoutDpadSubtitle;
+
+  /// Group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Row above the pad'**
+  String get layoutQuickAccess;
+
+  /// Choice title.
+  ///
+  /// In en, this message translates to:
+  /// **'App shortcuts'**
+  String get layoutQuickApps;
+
+  /// Choice subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your TV apps with one tap.'**
+  String get layoutQuickAppsSubtitle;
+
+  /// Under Colour keys (title reuses `quickAccessColourLabel`).
+  ///
+  /// In en, this message translates to:
+  /// **'Red, green, yellow and blue keys.'**
+  String get layoutQuickColourSubtitle;
+
+  /// Under Media keys (title reuses `quickAccessMediaLabel`).
+  ///
+  /// In en, this message translates to:
+  /// **'Previous, rewind, play or pause, fast-forward and next.'**
+  String get layoutQuickMediaSubtitle;
+
+  /// Choice title.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing'**
+  String get layoutQuickNone;
+
+  /// Choice subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'More room for the touchpad or D-pad.'**
+  String get layoutQuickNoneSubtitle;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrate on key press'**
+  String get behaviourHaptics;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A short vibration when a key reaches the TV.'**
+  String get behaviourHapticsSubtitle;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Smooth Press'**
+  String get behaviourSmoothPress;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.'**
+  String get behaviourSmoothPressSubtitle;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep screen on'**
+  String get behaviourKeepAwake;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone\'s screen stays on while the remote is open.'**
+  String get behaviourKeepAwakeSubtitle;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Theater mode'**
+  String get behaviourTheater;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dims your phone after 30 seconds without a touch. The first touch only brightens it.'**
+  String get behaviourTheaterSubtitle;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Open keyboard automatically'**
+  String get behaviourAutoKeyboard;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens the keyboard when the TV asks for text, like in a search box.'**
+  String get behaviourAutoKeyboardSubtitle;
+
+  /// Help card title.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t connect?'**
+  String get helpCantConnectTitle;
+
+  /// Help card text.
+  ///
+  /// In en, this message translates to:
+  /// **'Go through the checks one at a time. Most problems come from the Wi-Fi network or the TV\'s remote service.'**
+  String get helpCantConnectBody;
+
+  /// Opens the troubleshooting sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Show troubleshooting steps'**
+  String get helpTroubleshootingAction;
+
+  /// FAQ header.
+  ///
+  /// In en, this message translates to:
+  /// **'Common questions'**
+  String get helpFaqTitle;
+
+  /// Header above Send feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Still stuck?'**
+  String get helpStillStuck;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'Which TVs does this app work with?'**
+  String get faqTvsQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can\'t be controlled by this app.'**
+  String get faqTvsA;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'My TV isn\'t in the list.'**
+  String get faqNotFoundQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure the TV is on and connected to the same Wi-Fi as your phone, and that \"Android TV Remote Service\" is up to date on the TV. You can also add the TV by its IP address. The troubleshooting steps go through each check.'**
+  String get faqNotFoundA;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'Why does the TV ask for a code again?'**
+  String get faqCodeQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing makes the TV and this phone trust each other. Clearing the app\'s data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.'**
+  String get faqCodeA;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'Why can\'t the app turn my TV on?'**
+  String get faqPowerQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'A TV that is fully off can\'t hear the app. The app can send a wake-up signal if you add the TV\'s MAC address under Settings → Your TVs, but some TVs ignore it in deep standby. On iPhone this isn\'t available yet.'**
+  String get faqPowerA;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'What I type doesn\'t show up on the TV.'**
+  String get faqTypingQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a text field on the TV first, such as a search box. When the TV asks for text, the keyboard opens on your phone by itself.'**
+  String get faqTypingA;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'An app shortcut doesn\'t open.'**
+  String get faqAppQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.'**
+  String get faqAppA;
+
+  /// FAQ question.
+  ///
+  /// In en, this message translates to:
+  /// **'What does the app keep about my TV?'**
+  String get faqPrivacyQ;
+
+  /// FAQ answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app doesn\'t send them to us.'**
+  String get faqPrivacyA;
+
+  /// About page.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} ({build})'**
+  String aboutVersion(String version, String build);
+
+  /// About page when package info fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Version unavailable'**
+  String get aboutVersionUnknown;
+
+  /// About row → `showLicensePage`.
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source licences'**
+  String get aboutLicences;
+
+  /// About page credit.
+  ///
+  /// In en, this message translates to:
+  /// **'Talks to your TV over Wi-Fi with the Android TV Remote protocol. Its message formats come from the open-source androidtvremote2 project.'**
+  String get aboutProtocol;
+
+  /// About page disclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Android TV and Google TV are trademarks of Google LLC. This app isn\'t made or endorsed by Google.'**
+  String get aboutTrademark;
+
+  /// Feedback dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback?'**
+  String get feedbackTitle;
+
+  /// Feedback dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email app opens with a message to us. It includes the app version and your phone\'s system version, and nothing about your TV.'**
+  String get feedbackBody;
+
+  /// Feedback dialog primary action.
+  ///
+  /// In en, this message translates to:
+  /// **'Write email'**
+  String get feedbackConfirm;
+
+  /// Email subject.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback on {appName} {version}'**
+  String feedbackSubject(String appName, String version);
+
+  /// First line of the email body.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your message here.'**
+  String get feedbackPrompt;
+
+  /// Snackbar when mailto can't open.
+  ///
+  /// In en, this message translates to:
+  /// **'No email app found. Write to us at {email}.'**
+  String feedbackNoEmailApp(String email);
 }
 
 class _AppLocalizationsDelegate

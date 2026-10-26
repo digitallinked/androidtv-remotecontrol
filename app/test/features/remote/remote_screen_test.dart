@@ -18,6 +18,7 @@ import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_client.dart';
@@ -406,4 +407,48 @@ void main() {
       expect(find.byType(AppDialog<bool>), findsNothing);
     },
   );
+
+  testWidgets('settings_button_opens_settings_and_back_returns', (t) async {
+    fake.emit(_connected);
+    await pumpRemote(t);
+    await t.tap(find.byTooltip('Settings'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.settings);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Settings'),
+      ),
+      findsOneWidget,
+    );
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+  });
+
+  testWidgets('remote_app_bar_fits_320dp_at_200_percent_text', (t) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    fake.emit(_connected);
+    await pumpRemote(t, textScale: 2);
+    expect(t.takeException(), isNull);
+    final bar = t.getRect(find.byType(AppBar));
+    final settings = find.byTooltip('Settings');
+    final switcher = find.byTooltip('Switch TV');
+    final power = find.byType(PowerButton);
+    for (final f in [settings, switcher, power]) {
+      expect(f, findsOneWidget);
+      final rect = t.getRect(f);
+      expect(bar.contains(rect.topLeft), isTrue, reason: '$f');
+      expect(bar.contains(rect.bottomRight), isTrue, reason: '$f');
+      expect(f.hitTestable(), findsOneWidget, reason: '$f');
+    }
+    final rect = t.getRect(settings);
+    expect(rect.width, greaterThanOrEqualTo(48));
+    expect(rect.height, greaterThanOrEqualTo(48));
+    expect(rect.right, lessThanOrEqualTo(t.getRect(switcher).left));
+    expect(t.getRect(switcher).right, lessThanOrEqualTo(t.getRect(power).left));
+  });
 }

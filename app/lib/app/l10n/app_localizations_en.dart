@@ -214,7 +214,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pageTitleApps => 'Apps';
 
   @override
-  String get pageTitleDevices => 'Devices';
+  String get pageTitleDevices => 'Your TVs';
 
   @override
   String get pageTitleSettings => 'Settings';
@@ -610,4 +610,597 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get theaterWakeLabel => 'Screen dimmed. Touch to brighten.';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonSave => 'Save';
+
+  @override
+  String get commonUndo => 'Undo';
+
+  @override
+  String get remoteManageTvs => 'Manage TVs';
+
+  @override
+  String get quickAccessAllApps => 'All apps';
+
+  @override
+  String get pageTitleManageApps => 'Edit apps';
+
+  @override
+  String get pageTitleEditDevice => 'Edit TV';
+
+  @override
+  String get pageTitleAppearance => 'Appearance';
+
+  @override
+  String get pageTitleRemoteLayout => 'Remote layout';
+
+  @override
+  String get pageTitleRemoteBehaviour => 'Remote behaviour';
+
+  @override
+  String get pageTitleHelp => 'Help';
+
+  @override
+  String get pageTitleAbout => 'About this app';
+
+  @override
+  String get appsSearchLabel => 'Search apps';
+
+  @override
+  String get appsYourApps => 'Your apps';
+
+  @override
+  String get appsMoreApps => 'More apps';
+
+  @override
+  String appsNoMatches(String query) {
+    return 'No apps match \"$query\".';
+  }
+
+  @override
+  String get appsEmptyTitle => 'No apps yet';
+
+  @override
+  String get appsEmptyBody =>
+      'Add the apps you use on your TV to open them with one tap.';
+
+  @override
+  String get appsEmptyAction => 'Add apps';
+
+  @override
+  String get manageAppsAdd => 'Add app';
+
+  @override
+  String get manageAppsReset => 'Reset to suggested apps';
+
+  @override
+  String get manageAppsResetTitle => 'Reset your apps?';
+
+  @override
+  String get manageAppsResetBody =>
+      'Your list goes back to the suggested apps for your region. Shortcuts you added or changed are removed.';
+
+  @override
+  String get manageAppsResetConfirm => 'Reset';
+
+  @override
+  String get manageAppsReorderHint =>
+      'Drag the handle to change the order. The remote shows your apps in this order.';
+
+  @override
+  String manageAppsDragHandle(String app) {
+    return 'Reorder $app';
+  }
+
+  @override
+  String get manageAppsMoveUp => 'Move up';
+
+  @override
+  String get manageAppsMoveDown => 'Move down';
+
+  @override
+  String manageAppsEdit(String app) {
+    return 'Edit $app';
+  }
+
+  @override
+  String manageAppsRemove(String app) {
+    return 'Remove $app';
+  }
+
+  @override
+  String manageAppsRemoved(String app) {
+    return '$app removed';
+  }
+
+  @override
+  String get manageAppsEmpty =>
+      'No apps on your list. Add one to see it on the remote.';
+
+  @override
+  String get manageAppsSaveFailed => 'Couldn\'t save your apps. Try again.';
+
+  @override
+  String get addAppTitle => 'Add an app';
+
+  @override
+  String get addAppSearchLabel => 'Search apps or enter an app ID';
+
+  @override
+  String get addAppCustom => 'Create a custom shortcut';
+
+  @override
+  String get addAppRecentTitle => 'Recently used on your TV';
+
+  @override
+  String get addAppRecentEmpty => 'Apps you open on your TV show up here.';
+
+  @override
+  String get addAppPopularTitle => 'Suggested apps';
+
+  @override
+  String get addAppNoResults =>
+      'No apps found. If you know the app\'s ID, type it to add it.';
+
+  @override
+  String addAppById(String package) {
+    return 'Add app ID \"$package\"';
+  }
+
+  @override
+  String addAppAdded(String app) {
+    return '$app added';
+  }
+
+  @override
+  String get addAppAlreadyAdded => 'Already on your list';
+
+  @override
+  String get shortcutNewTitle => 'New shortcut';
+
+  @override
+  String get shortcutEditTitle => 'Edit shortcut';
+
+  @override
+  String get shortcutNameLabel => 'Name';
+
+  @override
+  String get shortcutNameError => 'Enter a name of up to 30 characters.';
+
+  @override
+  String get shortcutPackageLabel => 'App ID';
+
+  @override
+  String get shortcutPackageHint => 'com.example.app';
+
+  @override
+  String get shortcutPackageHelp =>
+      'The app\'s ID on the TV. It\'s in the app\'s Play Store web address, after \"id=\".';
+
+  @override
+  String get shortcutPackageError => 'Enter an app ID like com.example.app.';
+
+  @override
+  String get shortcutPackageTaken => 'This app is already on your list.';
+
+  @override
+  String get shortcutColourLabel => 'Tile colour';
+
+  @override
+  String get shortcutColourDefault => 'Default';
+
+  @override
+  String get shortcutColourSlate => 'Slate';
+
+  @override
+  String get shortcutColourBlue => 'Blue';
+
+  @override
+  String get shortcutColourTeal => 'Teal';
+
+  @override
+  String get shortcutColourGreen => 'Green';
+
+  @override
+  String get shortcutColourAmber => 'Amber';
+
+  @override
+  String get shortcutColourOrange => 'Orange';
+
+  @override
+  String get shortcutColourRed => 'Red';
+
+  @override
+  String get shortcutColourPurple => 'Purple';
+
+  @override
+  String get shortcutIconLabel => 'Icon';
+
+  @override
+  String get shortcutIconLetter => 'First letter';
+
+  @override
+  String get shortcutIconApp => 'App';
+
+  @override
+  String get shortcutIconMovies => 'Movies';
+
+  @override
+  String get shortcutIconLive => 'Live TV';
+
+  @override
+  String get shortcutIconSports => 'Sports';
+
+  @override
+  String get shortcutIconMusic => 'Music';
+
+  @override
+  String get shortcutIconKids => 'Kids';
+
+  @override
+  String get shortcutIconNews => 'News';
+
+  @override
+  String get shortcutIconGames => 'Games';
+
+  @override
+  String get shortcutIconLearning => 'Learning';
+
+  @override
+  String get shortcutPreview => 'Preview';
+
+  @override
+  String get shortcutSaved => 'Shortcut saved';
+
+  @override
+  String get devicesEmptyTitle => 'No TVs yet';
+
+  @override
+  String get devicesEmptyBody => 'Pair a TV to control it from this phone.';
+
+  @override
+  String get devicesInUse => 'In use';
+
+  @override
+  String devicesEditTv(String tvName) {
+    return 'Edit $tvName';
+  }
+
+  @override
+  String get editDeviceNameLabel => 'Name on this phone';
+
+  @override
+  String editDeviceNameHelp(String tvName) {
+    return 'Leave empty to use the TV\'s own name, $tvName.';
+  }
+
+  @override
+  String get editDeviceNameError => 'Use 40 characters or fewer.';
+
+  @override
+  String get editDeviceWolTitle => 'Turn on from your phone';
+
+  @override
+  String get editDeviceWolBody =>
+      'Add the TV\'s MAC address so the power key can wake it from standby.';
+
+  @override
+  String get editDeviceWolHelp => 'Where do I find it?';
+
+  @override
+  String get editDeviceWolUnavailable =>
+      'Turning the TV on from an iPhone isn\'t available yet. You can still save the address.';
+
+  @override
+  String get wolMacTooLong =>
+      'That\'s longer than a MAC address. Check what you pasted.';
+
+  @override
+  String get wolHelpTitle => 'Find the TV\'s MAC address';
+
+  @override
+  String editDeviceLastAddress(String host) {
+    return 'Last address: $host';
+  }
+
+  @override
+  String get editDeviceSaved => 'Saved';
+
+  @override
+  String get editDeviceSaveFailed => 'Couldn\'t save. Try again.';
+
+  @override
+  String get editDeviceRemove => 'Remove TV';
+
+  @override
+  String editDeviceRemoveTitle(String tvName) {
+    return 'Remove $tvName?';
+  }
+
+  @override
+  String get editDeviceRemoveBody =>
+      'This phone forgets the TV and its settings. To use it again, pair it with a new code. The TV may still list this phone.';
+
+  @override
+  String get editDeviceRemoveConfirm => 'Remove';
+
+  @override
+  String editDeviceRemoved(String tvName) {
+    return '$tvName removed';
+  }
+
+  @override
+  String get editDeviceNotFound =>
+      'This TV isn\'t saved on this phone anymore.';
+
+  @override
+  String get editDeviceBackToTvs => 'Back to your TVs';
+
+  @override
+  String get discoverOpenFailed => 'Couldn\'t open this TV. Try again.';
+
+  @override
+  String get settingsSectionRemote => 'Remote';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
+  String get settingsSectionSupport => 'Help and feedback';
+
+  @override
+  String get settingsSectionAbout => 'About';
+
+  @override
+  String get settingsRemoteLayoutSubtitle =>
+      'Touchpad or D-pad, and the row of keys above it';
+
+  @override
+  String get settingsRemoteBehaviourSubtitle =>
+      'Vibration, Smooth Press, screen and keyboard';
+
+  @override
+  String get settingsAppsSubtitle => 'Choose and order your app shortcuts';
+
+  @override
+  String get settingsDevicesSubtitle =>
+      'Rename, remove, or turn on from your phone';
+
+  @override
+  String get settingsAppearanceSubtitle => 'Theme and language';
+
+  @override
+  String get settingsHelpSubtitle => 'Common questions and troubleshooting';
+
+  @override
+  String get settingsFeedback => 'Send feedback';
+
+  @override
+  String get settingsFeedbackSubtitle => 'Write to us by email';
+
+  @override
+  String get settingsAboutSubtitle => 'Version and licences';
+
+  @override
+  String get settingsPrivacy => 'Privacy policy';
+
+  @override
+  String get settingsTerms => 'Terms of use';
+
+  @override
+  String get settingsOpensInBrowser => 'Opens in your browser';
+
+  @override
+  String get settingsLinkFailed =>
+      'Couldn\'t open the page. Check your internet connection and try again.';
+
+  @override
+  String get appearanceTheme => 'Theme';
+
+  @override
+  String get appearanceThemeSystem => 'Same as phone';
+
+  @override
+  String get appearanceThemeLight => 'Light';
+
+  @override
+  String get appearanceThemeDark => 'Dark';
+
+  @override
+  String get appearanceDynamicColour => 'Colours from wallpaper';
+
+  @override
+  String get appearanceDynamicColourSubtitle =>
+      'Use your phone\'s wallpaper colours in the app.';
+
+  @override
+  String get appearanceLanguage => 'Language';
+
+  @override
+  String get appearanceLanguageSystem => 'Same as phone';
+
+  @override
+  String get layoutPreviewTitle => 'Preview';
+
+  @override
+  String get layoutPreviewSemantics =>
+      'Preview of the remote with these choices';
+
+  @override
+  String get layoutNavigation => 'Navigation';
+
+  @override
+  String get layoutTouchpadSubtitle => 'Swipe to move, tap to select.';
+
+  @override
+  String get layoutDpadSubtitle =>
+      'Arrow keys around an OK button, like a TV remote.';
+
+  @override
+  String get layoutQuickAccess => 'Row above the pad';
+
+  @override
+  String get layoutQuickApps => 'App shortcuts';
+
+  @override
+  String get layoutQuickAppsSubtitle => 'Open your TV apps with one tap.';
+
+  @override
+  String get layoutQuickColourSubtitle => 'Red, green, yellow and blue keys.';
+
+  @override
+  String get layoutQuickMediaSubtitle =>
+      'Previous, rewind, play or pause, fast-forward and next.';
+
+  @override
+  String get layoutQuickNone => 'Nothing';
+
+  @override
+  String get layoutQuickNoneSubtitle => 'More room for the touchpad or D-pad.';
+
+  @override
+  String get behaviourHaptics => 'Vibrate on key press';
+
+  @override
+  String get behaviourHapticsSubtitle =>
+      'A short vibration when a key reaches the TV.';
+
+  @override
+  String get behaviourSmoothPress => 'Smooth Press';
+
+  @override
+  String get behaviourSmoothPressSubtitle =>
+      'Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.';
+
+  @override
+  String get behaviourKeepAwake => 'Keep screen on';
+
+  @override
+  String get behaviourKeepAwakeSubtitle =>
+      'Your phone\'s screen stays on while the remote is open.';
+
+  @override
+  String get behaviourTheater => 'Theater mode';
+
+  @override
+  String get behaviourTheaterSubtitle =>
+      'Dims your phone after 30 seconds without a touch. The first touch only brightens it.';
+
+  @override
+  String get behaviourAutoKeyboard => 'Open keyboard automatically';
+
+  @override
+  String get behaviourAutoKeyboardSubtitle =>
+      'Opens the keyboard when the TV asks for text, like in a search box.';
+
+  @override
+  String get helpCantConnectTitle => 'Can\'t connect?';
+
+  @override
+  String get helpCantConnectBody =>
+      'Go through the checks one at a time. Most problems come from the Wi-Fi network or the TV\'s remote service.';
+
+  @override
+  String get helpTroubleshootingAction => 'Show troubleshooting steps';
+
+  @override
+  String get helpFaqTitle => 'Common questions';
+
+  @override
+  String get helpStillStuck => 'Still stuck?';
+
+  @override
+  String get faqTvsQ => 'Which TVs does this app work with?';
+
+  @override
+  String get faqTvsA =>
+      'TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can\'t be controlled by this app.';
+
+  @override
+  String get faqNotFoundQ => 'My TV isn\'t in the list.';
+
+  @override
+  String get faqNotFoundA =>
+      'Make sure the TV is on and connected to the same Wi-Fi as your phone, and that \"Android TV Remote Service\" is up to date on the TV. You can also add the TV by its IP address. The troubleshooting steps go through each check.';
+
+  @override
+  String get faqCodeQ => 'Why does the TV ask for a code again?';
+
+  @override
+  String get faqCodeA =>
+      'Pairing makes the TV and this phone trust each other. Clearing the app\'s data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.';
+
+  @override
+  String get faqPowerQ => 'Why can\'t the app turn my TV on?';
+
+  @override
+  String get faqPowerA =>
+      'A TV that is fully off can\'t hear the app. The app can send a wake-up signal if you add the TV\'s MAC address under Settings → Your TVs, but some TVs ignore it in deep standby. On iPhone this isn\'t available yet.';
+
+  @override
+  String get faqTypingQ => 'What I type doesn\'t show up on the TV.';
+
+  @override
+  String get faqTypingA =>
+      'Select a text field on the TV first, such as a search box. When the TV asks for text, the keyboard opens on your phone by itself.';
+
+  @override
+  String get faqAppQ => 'An app shortcut doesn\'t open.';
+
+  @override
+  String get faqAppA =>
+      'The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.';
+
+  @override
+  String get faqPrivacyQ => 'What does the app keep about my TV?';
+
+  @override
+  String get faqPrivacyA =>
+      'Your TV\'s name, network address and MAC address stay on this phone. The app doesn\'t send them to us.';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version ($build)';
+  }
+
+  @override
+  String get aboutVersionUnknown => 'Version unavailable';
+
+  @override
+  String get aboutLicences => 'Open-source licences';
+
+  @override
+  String get aboutProtocol =>
+      'Talks to your TV over Wi-Fi with the Android TV Remote protocol. Its message formats come from the open-source androidtvremote2 project.';
+
+  @override
+  String get aboutTrademark =>
+      'Android TV and Google TV are trademarks of Google LLC. This app isn\'t made or endorsed by Google.';
+
+  @override
+  String get feedbackTitle => 'Send feedback?';
+
+  @override
+  String get feedbackBody =>
+      'Your email app opens with a message to us. It includes the app version and your phone\'s system version, and nothing about your TV.';
+
+  @override
+  String get feedbackConfirm => 'Write email';
+
+  @override
+  String feedbackSubject(String appName, String version) {
+    return 'Feedback on $appName $version';
+  }
+
+  @override
+  String get feedbackPrompt => 'Write your message here.';
+
+  @override
+  String feedbackNoEmailApp(String email) {
+    return 'No email app found. Write to us at $email.';
+  }
 }

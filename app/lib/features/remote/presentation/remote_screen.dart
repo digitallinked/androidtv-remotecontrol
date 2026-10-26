@@ -351,6 +351,15 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         toolbarHeight: 64,
+        leadingWidth: 56,
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: l10n.pageTitleSettings,
+          style: IconButton.styleFrom(
+            minimumSize: const Size.square(AppSizes.touchMin),
+          ),
+          onPressed: () => unawaited(context.push(AppRoutes.settings)),
+        ),
         titleSpacing: AppSpacing.s,
         title: DeviceSwitcher(
           currentName: tvName,
