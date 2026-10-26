@@ -378,4 +378,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keySearch => 'Search';
+
+  @override
+  String pairStarting(String tvName) {
+    return 'Connecting to $tvName…';
+  }
+
+  @override
+  String pairEnterCode(String tvName) {
+    return 'Enter the code shown on $tvName';
+  }
+
+  @override
+  String get pairCodeLabel => 'Pairing code';
+
+  @override
+  String pairExpiresIn(int seconds) {
+    return 'Code expires in $seconds s';
+  }
+
+  @override
+  String get pairPaste => 'Paste code';
+
+  @override
+  String get pairNothingToPaste =>
+      'There\'s no 6-character code on the clipboard.';
+
+  @override
+  String get pairCodeMismatch =>
+      'That code doesn\'t match. Check the code on your TV and enter it again.';
+
+  @override
+  String get pairVerifying => 'Checking the code…';
+
+  @override
+  String get pairExpiredTitle => 'The code expired';
+
+  @override
+  String get pairExpiredBody =>
+      'Ask the TV for a new code and enter it within 60 seconds.';
+
+  @override
+  String get pairNewCode => 'Get a new code';
+
+  @override
+  String get pairTryAgain => 'Try again';
+
+  @override
+  String get pairTroubleshooting => 'Troubleshooting';
+
+  @override
+  String pairCantReachTitle(String tvName) {
+    return 'Can\'t reach $tvName';
+  }
+
+  @override
+  String get pairCantReachBody =>
+      'Make sure the TV is on and on the same Wi-Fi network as your phone.';
+
+  @override
+  String pairNoResponseTitle(String tvName) {
+    return '$tvName didn\'t respond';
+  }
+
+  @override
+  String get pairRejectedTitle => 'The TV didn\'t accept the code';
+
+  @override
+  String get pairRejectedBody =>
+      'Get a new code and enter it exactly as shown.';
+
+  @override
+  String get pairErrorTitle => 'Pairing didn\'t work';
+
+  @override
+  String get pairErrorBody => 'Something unexpected happened. Try again.';
+
+  @override
+  String get pairIdentityTitle => 'Couldn\'t prepare a secure connection';
+
+  @override
+  String get pairSaveFailedTitle => 'Couldn\'t save this TV';
+
+  @override
+  String get pairNotFoundTitle => 'We couldn\'t find this TV';
+
+  @override
+  String get pairNotFoundBody =>
+      'Go back to the list of TVs and choose it again.';
 }

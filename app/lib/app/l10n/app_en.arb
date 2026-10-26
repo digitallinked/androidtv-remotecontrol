@@ -521,5 +521,131 @@
   "keySearch": "Search",
   "@keySearch": {
     "description": "Screen-reader label of the search key."
+  },
+  "pairStarting": "Connecting to {tvName}…",
+  "@pairStarting": {
+    "description": "Shown while the app connects to the TV to start pairing.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "pairEnterCode": "Enter the code shown on {tvName}",
+  "@pairEnterCode": {
+    "description": "Instruction above the pairing code field.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "pairCodeLabel": "Pairing code",
+  "@pairCodeLabel": {
+    "description": "Label of the pairing code field."
+  },
+  "pairExpiresIn": "Code expires in {seconds} s",
+  "@pairExpiresIn": {
+    "description": "Countdown under the pairing code field.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "pairPaste": "Paste code",
+  "@pairPaste": {
+    "description": "Button that fills the pairing code field from the clipboard."
+  },
+  "pairNothingToPaste": "There's no 6-character code on the clipboard.",
+  "@pairNothingToPaste": {
+    "description": "Message shown when Paste code finds no pairing code on the clipboard."
+  },
+  "pairCodeMismatch": "That code doesn't match. Check the code on your TV and enter it again.",
+  "@pairCodeMismatch": {
+    "description": "Error under the pairing code field when the code fails its checksum."
+  },
+  "pairVerifying": "Checking the code…",
+  "@pairVerifying": {
+    "description": "Shown while the TV checks the pairing code."
+  },
+  "pairExpiredTitle": "The code expired",
+  "@pairExpiredTitle": {
+    "description": "Title shown when the pairing code timed out."
+  },
+  "pairExpiredBody": "Ask the TV for a new code and enter it within 60 seconds.",
+  "@pairExpiredBody": {
+    "description": "Explanation shown when the pairing code timed out."
+  },
+  "pairNewCode": "Get a new code",
+  "@pairNewCode": {
+    "description": "Button that starts pairing again to get a fresh code from the TV."
+  },
+  "pairTryAgain": "Try again",
+  "@pairTryAgain": {
+    "description": "Button that starts pairing again after an error."
+  },
+  "pairTroubleshooting": "Troubleshooting",
+  "@pairTroubleshooting": {
+    "description": "Button on the pairing error screen that opens the troubleshooting steps."
+  },
+  "pairCantReachTitle": "Can't reach {tvName}",
+  "@pairCantReachTitle": {
+    "description": "Title shown when the TV could not be reached for pairing.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "pairCantReachBody": "Make sure the TV is on and on the same Wi-Fi network as your phone.",
+  "@pairCantReachBody": {
+    "description": "Explanation shown when the TV could not be reached or did not answer."
+  },
+  "pairNoResponseTitle": "{tvName} didn't respond",
+  "@pairNoResponseTitle": {
+    "description": "Title shown when the TV stopped answering during pairing.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "pairRejectedTitle": "The TV didn't accept the code",
+  "@pairRejectedTitle": {
+    "description": "Title shown when the TV rejected the pairing code."
+  },
+  "pairRejectedBody": "Get a new code and enter it exactly as shown.",
+  "@pairRejectedBody": {
+    "description": "Explanation shown when the TV rejected the pairing code."
+  },
+  "pairErrorTitle": "Pairing didn't work",
+  "@pairErrorTitle": {
+    "description": "Title shown for an unexpected pairing error."
+  },
+  "pairErrorBody": "Something unexpected happened. Try again.",
+  "@pairErrorBody": {
+    "description": "Explanation shown for an unexpected pairing error."
+  },
+  "pairIdentityTitle": "Couldn't prepare a secure connection",
+  "@pairIdentityTitle": {
+    "description": "Title shown when the phone could not prepare its secure identity for pairing."
+  },
+  "pairSaveFailedTitle": "Couldn't save this TV",
+  "@pairSaveFailedTitle": {
+    "description": "Title shown when pairing worked but the TV could not be saved."
+  },
+  "pairNotFoundTitle": "We couldn't find this TV",
+  "@pairNotFoundTitle": {
+    "description": "Title shown when the pairing screen is opened for a TV that is not known."
+  },
+  "pairNotFoundBody": "Go back to the list of TVs and choose it again.",
+  "@pairNotFoundBody": {
+    "description": "Explanation shown when the pairing screen is opened for a TV that is not known."
   }
 }

@@ -15,7 +15,9 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
+import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
 import 'fake_tv_discovery.dart';
 import 'manual_session_signals.dart';
@@ -62,6 +64,9 @@ Future<SettingsStore> pumpRouterApp(
         identityStoreProvider.overrideWithValue(testIdentityStore()),
         remoteClientFactoryProvider.overrideWithValue(
           FakeRemoteClients().create,
+        ),
+        pairingClientFactoryProvider.overrideWithValue(
+          FakePairingClients().create,
         ),
         hostResolverProvider.overrideWithValue((_) async => null),
         sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),

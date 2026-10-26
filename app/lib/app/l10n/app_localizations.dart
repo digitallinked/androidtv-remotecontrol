@@ -771,6 +771,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search'**
   String get keySearch;
+
+  /// Shown while the app connects to the TV to start pairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting to {tvName}…'**
+  String pairStarting(String tvName);
+
+  /// Instruction above the pairing code field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code shown on {tvName}'**
+  String pairEnterCode(String tvName);
+
+  /// Label of the pairing code field.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing code'**
+  String get pairCodeLabel;
+
+  /// Countdown under the pairing code field.
+  ///
+  /// In en, this message translates to:
+  /// **'Code expires in {seconds} s'**
+  String pairExpiresIn(int seconds);
+
+  /// Button that fills the pairing code field from the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste code'**
+  String get pairPaste;
+
+  /// Message shown when Paste code finds no pairing code on the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no 6-character code on the clipboard.'**
+  String get pairNothingToPaste;
+
+  /// Error under the pairing code field when the code fails its checksum.
+  ///
+  /// In en, this message translates to:
+  /// **'That code doesn\'t match. Check the code on your TV and enter it again.'**
+  String get pairCodeMismatch;
+
+  /// Shown while the TV checks the pairing code.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the code…'**
+  String get pairVerifying;
+
+  /// Title shown when the pairing code timed out.
+  ///
+  /// In en, this message translates to:
+  /// **'The code expired'**
+  String get pairExpiredTitle;
+
+  /// Explanation shown when the pairing code timed out.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the TV for a new code and enter it within 60 seconds.'**
+  String get pairExpiredBody;
+
+  /// Button that starts pairing again to get a fresh code from the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a new code'**
+  String get pairNewCode;
+
+  /// Button that starts pairing again after an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get pairTryAgain;
+
+  /// Button on the pairing error screen that opens the troubleshooting steps.
+  ///
+  /// In en, this message translates to:
+  /// **'Troubleshooting'**
+  String get pairTroubleshooting;
+
+  /// Title shown when the TV could not be reached for pairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach {tvName}'**
+  String pairCantReachTitle(String tvName);
+
+  /// Explanation shown when the TV could not be reached or did not answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure the TV is on and on the same Wi-Fi network as your phone.'**
+  String get pairCantReachBody;
+
+  /// Title shown when the TV stopped answering during pairing.
+  ///
+  /// In en, this message translates to:
+  /// **'{tvName} didn\'t respond'**
+  String pairNoResponseTitle(String tvName);
+
+  /// Title shown when the TV rejected the pairing code.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV didn\'t accept the code'**
+  String get pairRejectedTitle;
+
+  /// Explanation shown when the TV rejected the pairing code.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a new code and enter it exactly as shown.'**
+  String get pairRejectedBody;
+
+  /// Title shown for an unexpected pairing error.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing didn\'t work'**
+  String get pairErrorTitle;
+
+  /// Explanation shown for an unexpected pairing error.
+  ///
+  /// In en, this message translates to:
+  /// **'Something unexpected happened. Try again.'**
+  String get pairErrorBody;
+
+  /// Title shown when the phone could not prepare its secure identity for pairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t prepare a secure connection'**
+  String get pairIdentityTitle;
+
+  /// Title shown when pairing worked but the TV could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save this TV'**
+  String get pairSaveFailedTitle;
+
+  /// Title shown when the pairing screen is opened for a TV that is not known.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find this TV'**
+  String get pairNotFoundTitle;
+
+  /// Explanation shown when the pairing screen is opened for a TV that is not known.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back to the list of TVs and choose it again.'**
+  String get pairNotFoundBody;
 }
 
 class _AppLocalizationsDelegate
