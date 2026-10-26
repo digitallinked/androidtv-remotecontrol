@@ -146,4 +146,51 @@ void main() {
     final strip = t.getRect(find.byType(SegmentedButton<PadPage>));
     expect(strip.width, lessThanOrEqualTo(288));
   });
+
+  PageView pageView(WidgetTester t) =>
+      t.widget<PageView>(find.byType(PageView));
+
+  testWidgets('a_drag_past_halfway_changes_nothing_until_it_settles', (
+    t,
+  ) async {
+    await pumpPager(t, initial: PadPage.dpad);
+    expect(pageView(t).physics, isA<PageScrollPhysics>());
+    final g = await t.startGesture(t.getCenter(find.byType(Dpad)));
+    // The drag starts at the first move: 200 of 288 dp is past halfway.
+    for (var i = 0; i < 3; i++) {
+      await g.moveBy(const Offset(-100, 0));
+    }
+    await t.pump();
+    for (var i = 0; i < 3; i++) {
+      await g.moveBy(const Offset(100, 0)); // And back.
+    }
+    await t.pump(const Duration(milliseconds: 300));
+    await g.up();
+    await t.pumpAndSettle();
+    expect(find.byType(Dpad), findsOneWidget);
+    expect(reported, isEmpty);
+
+    // Dragging to the touchpad past halfway keeps the drag alive.
+    final h = await t.startGesture(t.getCenter(find.byType(Dpad)));
+    for (var i = 0; i < 3; i++) {
+      await h.moveBy(const Offset(100, 0));
+    }
+    await t.pump(const Duration(milliseconds: 300));
+    expect(pageView(t).physics, isA<PageScrollPhysics>());
+    await h.up();
+    await t.pumpAndSettle();
+    expect(find.byType(Touchpad), findsOneWidget);
+    expect(reported, [PadPage.touchpad]);
+    expect(pageView(t).physics, isA<NeverScrollableScrollPhysics>());
+  });
+
+  testWidgets('overlapping_tab_taps_report_only_the_last_page', (t) async {
+    await pumpPager(t);
+    await t.tap(find.text('D-pad'));
+    await t.pump(const Duration(milliseconds: 60));
+    await t.tap(find.text('Numbers'));
+    await t.pumpAndSettle();
+    expect(find.byType(NumberPad), findsOneWidget);
+    expect(reported, [PadPage.numbers]);
+  });
 }

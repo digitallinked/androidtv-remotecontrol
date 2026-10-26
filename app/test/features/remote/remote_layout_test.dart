@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -12,6 +13,7 @@ import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/keyboard/keyboard_sheet.dart';
+import 'package:tv_remote/features/remote/application/ime_requests.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/bottom_cluster.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
@@ -507,6 +509,87 @@ void main() {
     fake.push(const ImeShowRequested());
     await t.pumpAndSettle();
     expect(find.byType(KeyboardSheet), findsOneWidget);
+  });
+
+  testWidgets('offline_touchpad_swipe_shows_one_not_connected_snackbar', (
+    t,
+  ) async {
+    fake.emit(_offline);
+    await pumpRemote(t);
+    // About seven steps, all refused.
+    await t.fling(find.byType(Touchpad), const Offset(-300, 0), 1500);
+    await t.pump();
+    expect(find.text('Not connected to your TV'), findsOneWidget);
+    // The first one is gone after 4 s and its exit; a backlog would show the
+    // next one then.
+    for (var ms = 500; ms <= 12000; ms += 500) {
+      await t.pump(const Duration(milliseconds: 500));
+      if (ms >= 5000) {
+        expect(
+          find.text('Not connected to your TV'),
+          findsNothing,
+          reason: '$ms ms',
+        );
+      }
+    }
+    // A later press shows it again.
+    await t.tapAt(t.getCenter(find.byType(Touchpad)));
+    await t.pump();
+    expect(find.text('Not connected to your TV'), findsOneWidget);
+  });
+
+  testWidgets('refused_typing_with_the_keyboard_open_queues_no_snackbar', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    fake.emit(_offline);
+    await pumpRemote(t);
+    await t.tap(find.bySemanticsLabel('Keyboard'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField), 'abc');
+    await t.pump(const Duration(milliseconds: 300));
+    await t.enterText(find.byType(TextField), 'abcd');
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.text('Not connected to your TV'), findsNothing);
+    // Closing the sheet leaves nothing queued behind it.
+    await t.tapAt(const Offset(195, 20));
+    await t.pumpAndSettle();
+    await t.pump(const Duration(seconds: 5));
+    expect(find.text('Not connected to your TV'), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('a_stale_ime_request_is_ignored', (t) async {
+    // Riverpod can hand a listener a value that arrived while the remote was
+    // covered by another page, long after the TV asked.
+    final signals = StreamController<ImeShowSignal>();
+    addTearDown(signals.close);
+    await pumpRemote(
+      t,
+      overrides: [
+        imeShowRequestsProvider.overrideWith((ref) => signals.stream),
+      ],
+    );
+    signals.add(
+      ImeShowSignal(at: clock.now().subtract(const Duration(seconds: 10))),
+    );
+    await t.pumpAndSettle();
+    expect(find.byType(KeyboardSheet), findsNothing);
+    signals.add(ImeShowSignal());
+    await t.pumpAndSettle();
+    expect(find.byType(KeyboardSheet), findsOneWidget);
+  });
+
+  testWidgets('pages_keep_160dp_at_200_percent_text', (t) async {
+    for (final size in const [Size(320, 568), Size(320, 420), Size(844, 348)]) {
+      await pumpRemote(t, size: size, textScale: 2);
+      expect(
+        t.getSize(find.byType(PageView)).height,
+        greaterThanOrEqualTo(RemoteBody.padMinHeight),
+        reason: '$size',
+      );
+      expect(t.takeException(), isNull, reason: '$size');
+    }
   });
 
   testWidgets('status_pill_sits_in_a_strip_under_the_app_bar', (t) async {

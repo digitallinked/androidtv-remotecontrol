@@ -103,22 +103,21 @@ class _RemoteBodyState extends State<RemoteBody> {
 
   /// Space under the status strip.
   static const double _top = AppSpacing.xs;
-  static const double _tabsBlock = PadPager.tabHeight + _gap;
 
   /// Space for the preview card, which is only measured when it is built.
   static const double _previewHeight = 120;
 
   Widget _pad({required bool fixedHeight}) {
-    final pager = PadPager(
+    return PadPager(
       key: _padKey,
       input: widget.input,
       initialPage: widget.initialPage,
       onPageChanged: widget.onPageChanged,
       enabled: widget.enabled,
+      // Scrolling layouts give the pages their minimum, whatever the tabs
+      // measure at this text size.
+      pageHeight: fixedHeight ? RemoteBody.padMinHeight : null,
     );
-    return fixedHeight
-        ? SizedBox(height: _tabsBlock + RemoteBody.padMinHeight, child: pager)
-        : pager;
   }
 
   Widget _faded(Widget child) =>
@@ -172,6 +171,7 @@ class _RemoteBodyState extends State<RemoteBody> {
               BottomCluster.height + 18 * (scale - 1).clamp(0.0, 1.0),
           previewHeight: _previewHeight * math.max(1, scale),
           hasQuick: widget.quickAccess != QuickAccessRow.none,
+          tabsHeight: PadPager.tabHeightFor(scale),
         );
         return split
             ? _buildSplit(constraints.maxWidth, metrics)
@@ -285,6 +285,7 @@ class _Metrics {
     required this.quickHeight,
     required this.clusterHeight,
     required this.previewHeight,
+    required this.tabsHeight,
   });
 
   final double height;
@@ -293,6 +294,7 @@ class _Metrics {
   final double quickHeight;
   final double clusterHeight;
   final double previewHeight;
+  final double tabsHeight;
 
   static const double _gap = AppSpacing.s;
   static const double _top = AppSpacing.xs;
@@ -306,7 +308,7 @@ class _Metrics {
       _top -
       _previewBlock -
       (withQuick ? _quickBlock : 0) -
-      (PadPager.tabHeight + _gap) -
+      (tabsHeight + _gap) -
       AppSpacing.m -
       clusterHeight -
       AppSpacing.l;
@@ -317,7 +319,7 @@ class _Metrics {
   bool portraitScrolls({required bool showQuick}) =>
       _portraitPad(withQuick: showQuick) < RemoteBody.padMinHeight;
 
-  double get _splitPad => height - (PadPager.tabHeight + _gap) - AppSpacing.l;
+  double get _splitPad => height - _top - (tabsHeight + _gap) - AppSpacing.l;
 
   /// Height of the right column in split.
   double _splitRight({required bool withQuick}) =>

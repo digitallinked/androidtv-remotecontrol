@@ -46,6 +46,10 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// The session the identity-changed dialog was last shown for.
   RemoteSession? _askedAboutIdentityFor;
 
+  /// The "Not connected" snackbar on screen, if any. One is enough: a swipe
+  /// on the touchpad refuses several steps at once.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _notConnectedBar;
+
   @override
   void initState() {
     super.initState();
@@ -116,28 +120,38 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// Says why a press did nothing (Ruling P4-R3): one snackbar per refused
   /// command, with Reconnect when the connection is closed.
   void _showNotConnected() {
-    if (!mounted) return;
+    // A sheet or dialog on top (the keyboard) explains it itself.
+    if (!mounted ||
+        _notConnectedBar != null ||
+        !(ModalRoute.isCurrentOf(context) ?? false)) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     final sessionState = ref.read(remoteSessionProvider);
     final session = sessionState.value;
     final status = sessionState.isLoading
         ? ConnectionStatus.connecting
         : _statusOf(ref.read(connectionStateProvider));
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(l10n.remoteNotConnected),
-          // Offline and needs-pairing have an action in the status pill;
-          // a closed connection has none, so offer it here.
-          action: session != null && status == ConnectionStatus.disconnected
-              ? SnackBarAction(
-                  label: l10n.statusReconnectAction,
-                  onPressed: session.reconnect,
-                )
-              : null,
-        ),
-      );
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    final bar = messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.remoteNotConnected),
+        // Offline and needs-pairing have an action in the status pill;
+        // a closed connection has none, so offer it here.
+        action: session != null && status == ConnectionStatus.disconnected
+            ? SnackBarAction(
+                label: l10n.statusReconnectAction,
+                onPressed: session.reconnect,
+              )
+            : null,
+      ),
+    );
+    _notConnectedBar = bar;
+    unawaited(
+      bar.closed.then((_) {
+        if (identical(_notConnectedBar, bar)) _notConnectedBar = null;
+      }),
+    );
   }
 
   void _openKeyboard() {
@@ -217,7 +231,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     ref
       ..listen(notConnectedNoticesProvider, (_, _) => _showNotConnected())
       ..listen(imeShowRequestsProvider, (_, next) {
-        if (next is AsyncData<ImeShowSignal>) _onImeShowRequested();
+        if (next is AsyncData<ImeShowSignal> && next.value.isFresh) {
+          _onImeShowRequested();
+        }
       });
     // Watched, not read: the provider is autoDispose.
     final input = ref.watch(remoteActionsProvider);
