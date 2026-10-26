@@ -139,6 +139,35 @@ void main() {
     });
   });
 
+  test('search_key_asks_for_the_keyboard', () {
+    _whenConnected((session, async) {
+      final events = <RemoteEvent>[];
+      session.events.listen(events.add);
+
+      session.sendKey(KeyCodes.search);
+      async.flushMicrotasks();
+
+      // Like a TV that opens its search box: the remote's keyboard follows.
+      expect(events, [const ImeShowRequested()]);
+      expect(
+        session.lastAction,
+        const DemoKeyPressed(KeyCodes.search, KeyDirection.short),
+      );
+    });
+  });
+
+  test('search_held_does_not_ask_for_the_keyboard_twice', () {
+    _whenConnected((session, async) {
+      final events = <RemoteEvent>[];
+      session.events.listen(events.add);
+
+      session.sendKey(KeyCodes.search, direction: KeyDirection.endLong);
+      async.flushMicrotasks();
+
+      expect(events, isEmpty);
+    });
+  });
+
   test('launch_app_link_sets_current_app', () {
     _whenConnected((session, async) {
       final events = <RemoteEvent>[];
