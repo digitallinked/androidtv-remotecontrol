@@ -20,6 +20,19 @@ class _ThrowingDevices implements DeviceRepository {
 
   @override
   Future<SavedDevice?> lastUsed() => Future.error(StateError('db is broken'));
+
+  @override
+  Future<SavedDevice?> find(String serviceName) async => null;
+
+  @override
+  Future<void> markConnected(
+    String serviceName, {
+    required String host,
+    required DateTime at,
+  }) async {}
+
+  @override
+  Future<void> clearServerKeyPin(String serviceName) async {}
 }
 
 void main() {

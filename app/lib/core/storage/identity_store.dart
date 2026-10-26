@@ -29,9 +29,14 @@ class IdentityStore {
   /// [generate] makes a new identity; it defaults to running
   /// [ClientIdentity.generate] on a separate isolate, because RSA-2048 key
   /// generation would otherwise freeze the UI.
+  ///
+  /// A read that throws is tried once more after `readRetryDelay` before
+  /// the identity counts as missing: secure storage can fail transiently,
+  /// and regenerating would make every paired TV ask to pair again.
   IdentityStore(
     SecureKeyValueStore storage, {
     Future<ClientIdentity> Function()? generate,
+    this._readRetryDelay = const Duration(milliseconds: 200),
   }) : _storage = storage,
        _generate = generate ?? _generateOffUiIsolate;
 
@@ -43,6 +48,7 @@ class IdentityStore {
 
   final SecureKeyValueStore _storage;
   final Future<ClientIdentity> Function() _generate;
+  final Duration _readRetryDelay;
   Future<ClientIdentity>? _pending;
 
   static Future<ClientIdentity> _generateOffUiIsolate() =>
@@ -69,15 +75,24 @@ class IdentityStore {
     }
   }
 
+  Future<(String?, String?)> _readPems() async => (
+    await _storage.read(certificateKey),
+    await _storage.read(privateKeyKey),
+  );
+
   Future<ClientIdentity?> _loadStored() async {
-    final String? certificate;
-    final String? privateKey;
+    (String?, String?) pems;
     try {
-      certificate = await _storage.read(certificateKey);
-      privateKey = await _storage.read(privateKeyKey);
+      pems = await _readPems();
     } on Object {
-      return null;
+      await Future<void>.delayed(_readRetryDelay);
+      try {
+        pems = await _readPems();
+      } on Object {
+        return null;
+      }
     }
+    final (certificate, privateKey) = pems;
     if (certificate == null || privateKey == null) return null;
     try {
       return ClientIdentity.fromPem(

@@ -94,4 +94,56 @@ void main() {
       isTrue,
     );
   });
+
+  test('find_returns_device_or_null', () async {
+    expect(await repo.find('a'), isNull);
+    final a = dev('a', pin: 'ab12');
+    await repo.upsert(a);
+    await repo.upsert(dev('b'));
+    expect(await repo.find('a'), a);
+    expect((await repo.find('a'))!.lastConnectedAt.isUtc, isTrue);
+    expect(await repo.find('zzz'), isNull);
+  });
+
+  test('mark_connected_updates_only_host_and_time', () async {
+    final a = dev('a', pin: 'ab12').copyWith(
+      nickname: const Value('Lounge'),
+      wolMac: const Value('AA:BB:CC:DD:EE:FF'),
+    );
+    await repo.upsert(a);
+    final at = DateTime.utc(2026, 10, 26, 8, 30);
+    await repo.markConnected('a', host: '192.168.0.99', at: at);
+    final read = (await repo.find('a'))!;
+    expect(read.lastHost, '192.168.0.99');
+    expect(read.lastConnectedAt, at);
+    expect(
+      read,
+      a.copyWith(lastHost: '192.168.0.99', lastConnectedAt: at),
+    );
+  });
+
+  test('clear_server_key_pin_keeps_other_fields', () async {
+    final a = dev('a', pin: 'ab12').copyWith(
+      nickname: const Value('Lounge'),
+      wolMac: const Value('AA:BB:CC:DD:EE:FF'),
+    );
+    await repo.upsert(a);
+    await repo.clearServerKeyPin('a');
+    expect(
+      await repo.find('a'),
+      a.copyWith(serverKeyPin: const Value(null)),
+    );
+  });
+
+  test('updates_on_unknown_device_are_no_ops', () async {
+    await repo.upsert(dev('a', pin: 'ab12'));
+    await repo.markConnected(
+      'zzz',
+      host: '192.168.0.99',
+      at: DateTime.utc(2027),
+    );
+    await repo.clearServerKeyPin('zzz');
+    expect(await repo.find('zzz'), isNull);
+    expect(await repo.watchAll().first, [dev('a', pin: 'ab12')]);
+  });
 }
