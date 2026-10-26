@@ -154,21 +154,27 @@ class SettingsChoiceGroup<T> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SettingsSectionHeader(label),
-        RadioGroup<T>(
-          groupValue: value,
-          onChanged: (picked) {
-            // A nullable T can be chosen as null; a non-null T never is.
-            if (picked is T) onChanged(picked);
-          },
-          child: Column(
-            children: [
-              for (final (choice, title, subtitle) in choices)
-                RadioListTile<T>(
-                  value: choice,
-                  title: Text(title),
-                  subtitle: subtitle == null ? null : Text(subtitle),
-                ),
-            ],
+        // The label is on the group, so a screen reader names the group
+        // when it enters it.
+        Semantics(
+          container: true,
+          label: label,
+          child: RadioGroup<T>(
+            groupValue: value,
+            onChanged: (picked) {
+              // A nullable T can be chosen as null; a non-null T never is.
+              if (picked is T) onChanged(picked);
+            },
+            child: Column(
+              children: [
+                for (final (choice, title, subtitle) in choices)
+                  RadioListTile<T>(
+                    value: choice,
+                    title: Text(title),
+                    subtitle: subtitle == null ? null : Text(subtitle),
+                  ),
+              ],
+            ),
           ),
         ),
       ],

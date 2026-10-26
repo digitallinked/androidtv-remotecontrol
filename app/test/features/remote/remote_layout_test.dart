@@ -18,6 +18,7 @@ import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/bottom_cluster.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/number_pad.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
@@ -439,6 +440,43 @@ void main() {
     reload.complete(fake);
     await t.pumpAndSettle();
     expect(find.byType(NumberPad), findsOneWidget);
+  });
+
+  testWidgets('a_navigation_style_chosen_in_settings_reaches_the_open_remote', (
+    t,
+  ) async {
+    await pumpRemote(t);
+    expect(find.byType(Dpad), findsNothing);
+    final router = ProviderScope.containerOf(
+      t.element(find.byType(RemoteBody)),
+    ).read(appRouterProvider);
+
+    unawaited(router.push(AppRoutes.settingsRemoteLayout));
+    await t.pumpAndSettle();
+    await t.tap(
+      find.descendant(
+        of: find.byType(RadioListTile<NavigationStyle>),
+        matching: find.text('D-pad'),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.pageBack();
+    await t.pumpAndSettle();
+
+    expect(find.byType(Dpad), findsOneWidget);
+    expect(find.byType(Touchpad), findsNothing);
+  });
+
+  testWidgets('swiping_between_pad_pages_never_rebuilds_the_pager', (t) async {
+    final store = await pumpRemote(t);
+    final before = t.state(find.byType(PadPager));
+
+    await t.tap(find.text('D-pad'));
+    await t.pumpAndSettle();
+
+    expect(find.byType(Dpad), findsOneWidget);
+    expect(store.navigationStyle, NavigationStyle.dpad);
+    expect(identical(t.state(find.byType(PadPager)), before), isTrue);
   });
 
   testWidgets('the_pad_page_survives_a_rotation', (t) async {

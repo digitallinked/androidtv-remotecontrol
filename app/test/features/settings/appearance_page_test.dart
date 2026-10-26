@@ -111,6 +111,27 @@ void main() {
     }
   });
 
+  testWidgets('each_choice_group_is_a_labelled_semantics_container', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpAppearance(t);
+
+    Finder group(Finder radios, String label) => find.ancestor(
+      of: radios,
+      matching: find.byWidgetPredicate(
+        (w) => w is Semantics && w.container && w.properties.label == label,
+      ),
+    );
+    expect(
+      group(find.byType(RadioGroup<ThemePreference>), 'Theme'),
+      findsOneWidget,
+    );
+    expect(
+      t.getSemantics(group(find.byType(RadioGroup<String?>), 'Language')).label,
+      'Language',
+    );
+    handle.dispose();
+  });
+
   testWidgets('choosing_a_theme_writes_the_store', (t) async {
     final store = await pumpAppearance(t);
 

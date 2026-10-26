@@ -189,6 +189,18 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('preview_buttons_cannot_take_focus', (t) async {
+    await pumpLayout(t);
+
+    expect(
+      find.descendant(
+        of: find.byKey(_previewKey),
+        matching: find.byType(ExcludeFocus),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('preview_is_drawn_at_a_phone_size_whatever_the_text_scale', (
     t,
   ) async {

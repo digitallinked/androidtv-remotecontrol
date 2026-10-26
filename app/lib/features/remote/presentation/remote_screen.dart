@@ -58,9 +58,19 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// A power action is in flight (see [_power]).
   bool _powering = false;
 
+  /// The navigation style the pad area shows or last showed. The pager reads
+  /// its first page once, so a style that settings changes to something else
+  /// is applied by giving the body a new key ([_bodyEpoch]); the user's own
+  /// swipes update this first and so never rebuild the pager.
+  late NavigationStyle _shownStyle;
+
+  /// Changes when the body must start afresh on the stored style.
+  int _bodyEpoch = 0;
+
   @override
   void initState() {
     super.initState();
+    _shownStyle = ref.read(settingsControllerProvider).navigationStyle;
     // Also fires for a state that is already there when the screen opens.
     ref.listenManual(
       connectionStateProvider,
@@ -253,10 +263,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       PadPage.dpad => NavigationStyle.dpad,
       PadPage.numbers => null,
     };
-    if (style == null ||
-        ref.read(settingsControllerProvider).navigationStyle == style) {
-      return;
-    }
+    if (style == null) return;
+    _shownStyle = style;
+    if (ref.read(settingsControllerProvider).navigationStyle == style) return;
     unawaited(
       ref
           .read(settingsControllerProvider.notifier)
@@ -311,7 +320,20 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     // Watched, not read: the provider is autoDispose. Listening keeps the
     // power controller (which uses these actions) alive the same way.
     final input = ref.watch(remoteActionsProvider);
-    ref.listen(powerControllerProvider, (_, _) {});
+    ref
+      ..listen(powerControllerProvider, (_, _) {})
+      // Settings (a page on top of this one) changed the style.
+      ..listen(
+        settingsControllerProvider.select((s) => s.navigationStyle),
+        (_, next) {
+          if (next != _shownStyle) {
+            setState(() {
+              _shownStyle = next;
+              _bodyEpoch++;
+            });
+          }
+        },
+      );
     final (navigationStyle, quickAccess) = ref.watch(
       settingsControllerProvider.select(
         (s) => (s.navigationStyle, s.quickAccessRow),
@@ -393,6 +415,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             ),
             Expanded(
               child: RemoteBody(
+                key: ValueKey(_bodyEpoch),
                 input: input,
                 enabled: connected,
                 quickAccess: quickAccess,

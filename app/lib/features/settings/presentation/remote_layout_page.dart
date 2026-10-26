@@ -130,41 +130,44 @@ class _Preview extends StatelessWidget {
             label: AppLocalizations.of(context).layoutPreviewSemantics,
             image: true,
             child: ExcludeSemantics(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.bg,
-                    border: Border.all(color: colors.outline),
-                    borderRadius: BorderRadius.circular(AppRadii.card),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadii.card),
-                    child: FittedBox(
-                      child: SizedBox.fromSize(
-                        size: _previewLayoutSize,
-                        child: MediaQuery(
-                          data: media.copyWith(
-                            size: _previewLayoutSize,
-                            padding: EdgeInsets.zero,
-                            viewPadding: EdgeInsets.zero,
-                            viewInsets: EdgeInsets.zero,
-                            textScaler: TextScaler.noScaling,
-                            disableAnimations: true,
-                            accessibleNavigation: false,
-                          ),
-                          child: RemoteBody(
-                            key: ValueKey((navigation, quick)),
-                            input: const _NoInput(),
-                            enabled: true,
-                            quickAccess: quick,
-                            apps: apps,
-                            currentApp: null,
-                            initialPage: navigation == NavigationStyle.dpad
-                                ? PadPage.dpad
-                                : PadPage.touchpad,
-                            onPageChanged: (_) {},
-                            volume: const VolumeChanged(12, 100, false),
-                            onKeyboard: () {},
+              // A picture: no taps, and no focus for a keyboard or switch.
+              child: ExcludeFocus(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.bg,
+                      border: Border.all(color: colors.outline),
+                      borderRadius: BorderRadius.circular(AppRadii.card),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadii.card),
+                      child: FittedBox(
+                        child: SizedBox.fromSize(
+                          size: _previewLayoutSize,
+                          child: MediaQuery(
+                            data: media.copyWith(
+                              size: _previewLayoutSize,
+                              padding: EdgeInsets.zero,
+                              viewPadding: EdgeInsets.zero,
+                              viewInsets: EdgeInsets.zero,
+                              textScaler: TextScaler.noScaling,
+                              disableAnimations: true,
+                              accessibleNavigation: false,
+                            ),
+                            child: RemoteBody(
+                              key: ValueKey((navigation, quick)),
+                              input: const _NoInput(),
+                              enabled: true,
+                              quickAccess: quick,
+                              apps: apps,
+                              currentApp: null,
+                              initialPage: navigation == NavigationStyle.dpad
+                                  ? PadPage.dpad
+                                  : PadPage.touchpad,
+                              onPageChanged: (_) {},
+                              volume: const VolumeChanged(12, 100, false),
+                              onKeyboard: () {},
+                            ),
                           ),
                         ),
                       ),

@@ -134,19 +134,17 @@ void main() {
     );
     await t.pumpAndSettle();
 
+    ThemeData theme() => Theme.of(t.element(find.text('Appearance').first));
+
     await t.tap(find.text('Dark'));
     await t.pump();
-    expect(
-      Theme.of(t.element(find.text('Appearance').first)).brightness,
-      Brightness.dark,
-    );
+    expect(theme().brightness, Brightness.dark);
+    expect(theme().scaffoldBackgroundColor, AppColors.dark.bg);
 
     await t.tap(find.text('Light'));
     await t.pump();
-    expect(
-      Theme.of(t.element(find.text('Appearance').first)).brightness,
-      Brightness.light,
-    );
+    expect(theme().brightness, Brightness.light);
+    expect(theme().scaffoldBackgroundColor, AppColors.light.bg);
   });
 
   test('locale_from_code_maps_unsupported_values_to_null', () {

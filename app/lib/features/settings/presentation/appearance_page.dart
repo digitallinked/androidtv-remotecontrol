@@ -45,22 +45,28 @@ class AppearancePage extends ConsumerWidget {
               (ThemePreference.dark, l10n.appearanceThemeDark, null),
             ],
             onChanged: (value) => unawaited(
-              controller.update((store) => store.setThemePreference(value)),
+              controller.update(
+                (store) => store.setThemePreference(value),
+              ),
             ),
           ),
+          // `App` asks at start, so the answer is normally here before this
+          // page opens and the switch doesn't pop in late.
           if (dynamicSupported)
             SettingsSwitchTile(
               title: l10n.appearanceDynamicColour,
               subtitle: l10n.appearanceDynamicColourSubtitle,
               value: settings.dynamicColor,
               onChanged: (value) => unawaited(
-                controller.update((store) => store.setDynamicColor(value)),
+                controller.update(
+                  (store) => store.setDynamicColor(value),
+                ),
               ),
             ),
           SettingsChoiceGroup<String?>(
             label: l10n.appearanceLanguage,
-            // A stored code the app no longer has is shown as "Same as phone",
-            // which is what the app does with it.
+            // A stored code the app has no translation for shows as
+            // "Same as phone", which is what the app does with it.
             value: localeFromCode(settings.localeCode)?.languageCode,
             choices: [
               (null, l10n.appearanceLanguageSystem, null),
