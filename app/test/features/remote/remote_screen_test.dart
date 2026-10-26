@@ -63,6 +63,7 @@ void main() {
   Future<void> pumpRemote(
     WidgetTester t, {
     RemoteSession? session,
+    List<SavedDevice>? devices,
     List<Override> overrides = const [],
     double textScale = 1,
   }) async {
@@ -74,10 +75,13 @@ void main() {
       overrides: [
         remoteSessionProvider.overrideWith((ref) async => s),
         savedDevicesProvider.overrideWith(
-          (ref) => Stream.value([
-            savedTv(),
-            savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
-          ]),
+          (ref) => Stream.value(
+            devices ??
+                [
+                  savedTv(),
+                  savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
+                ],
+          ),
         ),
         ...overrides,
       ],
@@ -224,6 +228,39 @@ void main() {
     fake.emit(_identityChanged);
     await t.pumpAndSettle();
     expect(find.byType(AppDialog<bool>), findsNothing);
+  });
+
+  testWidgets('a_renamed_tv_shows_its_saved_label_everywhere', (t) async {
+    fake.emit(_connected);
+    await pumpRemote(
+      t,
+      devices: [
+        savedTv(nickname: 'Lounge'),
+        savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
+      ],
+    );
+    // The session carries the TV's own name; the title and the switcher
+    // show the nickname, without a new session.
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Lounge'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Living Room TV 3'), findsNothing);
+    await t.tap(find.byTooltip('Switch TV'));
+    await t.pumpAndSettle();
+    expect(find.text('Lounge'), findsWidgets);
+    await t.tapAt(const Offset(10, 10));
+    await t.pumpAndSettle();
+
+    fake.emit(_identityChanged);
+    await t.pumpAndSettle();
+    expect(
+      find.textContaining('Lounge presented a different security'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('identity_changed_not_now_keeps_the_remote', (t) async {

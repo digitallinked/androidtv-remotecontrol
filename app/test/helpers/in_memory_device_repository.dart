@@ -101,6 +101,12 @@ class InMemoryDeviceRepository implements DeviceRepository {
   }
 
   @override
+  Future<void> setNickname(String serviceName, String? nickname) async {
+    _beginWrite();
+    _update(serviceName, (d) => d.copyWith(nickname: Value(nickname)));
+  }
+
+  @override
   Future<void> setWolMac(String serviceName, String? mac) async {
     _beginWrite();
     _update(serviceName, (d) => d.copyWith(wolMac: Value(mac)));

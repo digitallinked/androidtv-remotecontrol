@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/core/tv/mac_address.dart';
+import 'package:tv_remote/features/devices/presentation/widgets/mac_address_field.dart';
 
 /// Opens the sheet that asks for [tvName]'s MAC address, so the phone can wake
 /// the TV (Ruling P4-R11).
@@ -53,9 +53,14 @@ class _WolSetupFormState extends State<WolSetupForm> {
     if (_saving) return;
     final l10n = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
+    // Unlike on Edit TV, an empty field is wrong here: the sheet exists to
+    // get an address.
     final mac = parseMac(_controller.text);
     if (mac == null) {
-      setState(() => _error = l10n.wolMacError);
+      setState(
+        () =>
+            _error = macFieldError(l10n, _controller.text) ?? l10n.wolMacError,
+      );
       return;
     }
     setState(() {
@@ -100,24 +105,9 @@ class _WolSetupFormState extends State<WolSetupForm> {
             color: colors.textSecondary,
           ),
         ),
-        TextField(
+        MacAddressField(
           controller: _controller,
-          // A plain ASCII keyboard without suggestions or auto-correct.
-          keyboardType: TextInputType.visiblePassword,
-          textCapitalization: TextCapitalization.characters,
-          autocorrect: false,
-          enableSuggestions: false,
-          textInputAction: TextInputAction.done,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9A-Fa-f:.\- ]')),
-            const _MaxTrimmedLength(17),
-          ],
-          decoration: InputDecoration(
-            labelText: l10n.wolMacLabel,
-            hintText: l10n.wolMacHint,
-            errorText: _error,
-            errorMaxLines: 4,
-          ),
+          errorText: _error,
           // Typing again takes the old complaint away.
           onChanged: (_) {
             if (_error != null) setState(() => _error = null);
@@ -134,18 +124,4 @@ class _WolSetupFormState extends State<WolSetupForm> {
       ],
     );
   }
-}
-
-/// Refuses an edit that would make the text longer than [max] characters once
-/// trimmed (a MAC address is 17 with colons).
-class _MaxTrimmedLength extends TextInputFormatter {
-  const _MaxTrimmedLength(this.max);
-
-  final int max;
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) => newValue.text.trim().length > max ? oldValue : newValue;
 }

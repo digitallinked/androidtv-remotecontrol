@@ -86,24 +86,42 @@ void main() {
     expect(field.decoration!.hintText, 'AA:BB:CC:DD:EE:FF');
   });
 
-  testWidgets('the_field_keeps_only_mac_characters_up_to_17', (t) async {
+  testWidgets('the_field_keeps_whatever_is_typed_or_pasted', (t) async {
     await openSheet(t);
+    String text() =>
+        t.widget<TextField>(find.byType(TextField)).controller!.text;
     await t.enterText(find.byType(TextField), 'zq-aa:bb?');
-    expect(
-      t.widget<TextField>(find.byType(TextField)).controller!.text,
-      '-aa:bb',
-    );
+    expect(text(), 'zq-aa:bb?');
     await t.enterText(find.byType(TextField), 'AA:BB:CC:DD:EE:FF');
+    expect(text(), 'AA:BB:CC:DD:EE:FF');
+    // One more character is not refused: it is reported when saving.
+    await t.enterText(find.byType(TextField), 'AA:BB:CC:DD:EE:FF0');
+    expect(text(), 'AA:BB:CC:DD:EE:FF0');
+  });
+
+  testWidgets('setup_sheet_over_long_paste_shows_an_error', (t) async {
+    await openSheet(t);
+    await save(t, 'AA:BB:CC:DD:EE:FF:00');
+    expect(
+      find.text("That's longer than a MAC address. Check what you pasted."),
+      findsOneWidget,
+    );
+    // The paste is still there to be fixed, and nothing was saved.
     expect(
       t.widget<TextField>(find.byType(TextField)).controller!.text,
-      'AA:BB:CC:DD:EE:FF',
+      'AA:BB:CC:DD:EE:FF:00',
     );
-    // One more character is refused: the field keeps what it had.
-    await t.enterText(find.byType(TextField), 'AA:BB:CC:DD:EE:FF0');
-    expect(
-      t.widget<TextField>(find.byType(TextField)).controller!.text.length,
-      lessThanOrEqualTo(17),
-    );
+    expect(saved, isEmpty);
+    // Fixing it works.
+    await save(t, 'AA:BB:CC:DD:EE:FF');
+    expect(saved, ['AA:BB:CC:DD:EE:FF']);
+  });
+
+  testWidgets('an_empty_field_is_an_error_here', (t) async {
+    await openSheet(t);
+    await save(t, '  ');
+    expect(find.textContaining('Enter 6 pairs'), findsOneWidget);
+    expect(saved, isEmpty);
   });
 
   testWidgets('an_invalid_address_shows_an_error_and_saves_nothing', (t) async {

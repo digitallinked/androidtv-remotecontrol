@@ -15,6 +15,7 @@ class DeviceSwitcher extends StatelessWidget {
     required this.devices,
     required this.onSelect,
     required this.onAddTv,
+    required this.onManageTvs,
     super.key,
   });
 
@@ -34,6 +35,9 @@ class DeviceSwitcher extends StatelessWidget {
 
   /// Called after the sheet has closed, when the user chose "Add a TV".
   final VoidCallback onAddTv;
+
+  /// Called after the sheet has closed, when the user chose "Manage TVs".
+  final VoidCallback onManageTvs;
 
   Future<void> _open(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
@@ -57,6 +61,12 @@ class DeviceSwitcher extends StatelessWidget {
             ),
           ListTile(
             minTileHeight: AppSizes.touchMin,
+            leading: const Icon(Icons.tune),
+            title: Text(l10n.remoteManageTvs),
+            onTap: () => Navigator.of(sheetContext).pop(const _ManageTvs()),
+          ),
+          ListTile(
+            minTileHeight: AppSizes.touchMin,
             leading: const Icon(Icons.add),
             title: Text(l10n.remoteAddTv),
             onTap: () => Navigator.of(sheetContext).pop(const _AddTv()),
@@ -70,6 +80,8 @@ class DeviceSwitcher extends StatelessWidget {
         onSelect(serviceName);
       case _AddTv():
         onAddTv();
+      case _ManageTvs():
+        onManageTvs();
       case null:
         break;
     }
@@ -122,4 +134,8 @@ final class _Select extends _Choice {
 
 final class _AddTv extends _Choice {
   const _AddTv();
+}
+
+final class _ManageTvs extends _Choice {
+  const _ManageTvs();
 }

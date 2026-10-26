@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,6 +46,10 @@ class _FailingRepository implements DeviceRepository {
   }) => Future<bool>.error(Exception('disk full'));
 
   @override
+  Future<void> setNickname(String serviceName, String? nickname) =>
+      Future<void>.error(Exception('disk full'));
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -78,6 +83,14 @@ class _MemoryRepository implements DeviceRepository {
     required String manualServiceName,
     required DiscoveredTv tv,
   }) async => false;
+
+  @override
+  Future<void> setNickname(String serviceName, String? nickname) async {
+    final current = saved[serviceName];
+    if (current != null) {
+      saved[serviceName] = current.copyWith(nickname: Value(nickname));
+    }
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

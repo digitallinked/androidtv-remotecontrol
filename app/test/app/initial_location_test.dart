@@ -42,6 +42,9 @@ class _ThrowingDevices implements DeviceRepository {
   }) async => false;
 
   @override
+  Future<void> setNickname(String serviceName, String? nickname) async {}
+
+  @override
   Future<void> setWolMac(String serviceName, String? mac) async {}
 
   @override

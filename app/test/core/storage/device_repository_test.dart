@@ -171,6 +171,23 @@ void main() {
     expect(await repo.find('a'), a);
   });
 
+  test('set_nickname_updates_only_the_nickname', () async {
+    final a = dev(
+      'a',
+      pin: 'ab12',
+    ).copyWith(wolMac: const Value('AA:BB:CC:DD:EE:F0'));
+    await repo.upsert(a);
+    await repo.upsert(dev('b'));
+    await repo.setNickname('a', 'Bedroom');
+    expect(await repo.find('a'), a.copyWith(nickname: const Value('Bedroom')));
+    expect(await repo.find('b'), dev('b'));
+    await repo.setNickname('a', null);
+    expect(await repo.find('a'), a);
+    // An unknown TV is left alone, and nothing is created.
+    await repo.setNickname('zzz', 'Ghost');
+    expect(await repo.find('zzz'), isNull);
+  });
+
   test('set_wol_mac_on_unknown_device_is_a_no_op', () async {
     await repo.upsert(dev('a'));
     await repo.setWolMac('zzz', 'AA:BB:CC:DD:EE:F0');

@@ -14,6 +14,7 @@ import 'package:tv_remote/core/device/theater_mode.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/app_database.dart' show SavedDevice;
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -86,8 +87,25 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     return state.value?.status ?? ConnectionStatus.disconnected;
   }
 
-  String _tvName(AppLocalizations l10n, RemoteSession session) =>
-      session.isDemo ? l10n.demoTvName : session.tvName;
+  /// The name to show for [session]'s TV: the saved label (so a rename shows
+  /// at once, without rebuilding the session), else the name the session
+  /// carries (Ruling P5-R9).
+  String _label(
+    AppLocalizations l10n,
+    RemoteSession session,
+    List<SavedDevice> devices,
+  ) {
+    if (session.isDemo) return l10n.demoTvName;
+    final serviceName = session.pairingTarget?.serviceName;
+    for (final device in devices) {
+      if (device.serviceName == serviceName) return device.label;
+    }
+    return session.tvName;
+  }
+
+  /// The saved TVs as last emitted; empty while loading.
+  List<SavedDevice> get _savedDevices =>
+      ref.read(savedDevicesProvider).value ?? const [];
 
   void _onConnectionState(
     AsyncValue<TvConnectionState>? previous,
@@ -114,7 +132,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final pairAgain = await showAppDialog<bool>(
       context: context,
       title: l10n.remoteIdentityChangedTitle,
-      message: l10n.remoteIdentityChangedMessage(_tvName(l10n, session)),
+      message: l10n.remoteIdentityChangedMessage(
+        _label(l10n, session, _savedDevices),
+      ),
       actions: [
         AppDialogAction(label: l10n.remoteNotNow, value: false),
         AppDialogAction(
@@ -193,7 +213,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       final l10n = AppLocalizations.of(context);
       final controller = ref.read(powerControllerProvider);
       final session = controller.session;
-      final tvName = session == null ? '' : _tvName(l10n, session);
+      final tvName = session == null
+          ? ''
+          : _label(l10n, session, _savedDevices);
 
       final outcome = await controller.press();
       if (!mounted) return;
@@ -352,7 +374,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final connected = status == ConnectionStatus.connected;
     final canPairAgain = !reloading && session.pairingTarget != null;
 
-    var tvName = _tvName(l10n, session);
+    var tvName = _label(l10n, session, devices);
     var serviceName = session.pairingTarget?.serviceName;
     if (reloading && target is DeviceTarget) {
       serviceName = target.serviceName;
@@ -395,6 +417,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             ref.read(activeTargetProvider.notifier).activateDevice(name);
           },
           onAddTv: () => context.push(AppRoutes.discover),
+          onManageTvs: () => context.push(AppRoutes.devices),
         ),
         actions: [
           Padding(

@@ -45,6 +45,11 @@ abstract interface class DeviceRepository {
     required DiscoveredTv tv,
   });
 
+  /// Sets the nickname of [serviceName] to [nickname] (`null` shows the TV's
+  /// own name again), leaving every other field alone. Does nothing for an
+  /// unknown TV.
+  Future<void> setNickname(String serviceName, String? nickname);
+
   /// Sets the Wake-on-LAN MAC address of [serviceName] to [mac] (`null`
   /// clears it), leaving every other field alone. Does nothing for an unknown
   /// TV.
@@ -153,6 +158,13 @@ class DriftDeviceRepository implements DeviceRepository {
     await delete(manualServiceName);
     return true;
   });
+
+  @override
+  Future<void> setNickname(String serviceName, String? nickname) async {
+    await _updateOne(
+      serviceName,
+    ).write(DevicesCompanion(nickname: Value(nickname)));
+  }
 
   @override
   Future<void> setWolMac(String serviceName, String? mac) async {
