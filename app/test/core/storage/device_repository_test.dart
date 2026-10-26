@@ -1,8 +1,11 @@
+import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
+
+import '../../helpers/test_devices.dart';
 
 SavedDevice dev(String name, {int minute = 0, String? pin}) => SavedDevice(
   serviceName: name,
@@ -172,6 +175,87 @@ void main() {
     await repo.upsert(dev('a'));
     await repo.setWolMac('zzz', 'AA:BB:CC:DD:EE:F0');
     expect(await repo.find('zzz'), isNull);
+    expect(await repo.watchAll().first, [dev('a')]);
+  });
+
+  test('set_last_host_updates_only_the_host', () async {
+    final a = dev('a', pin: 'ab12').copyWith(
+      nickname: const Value('Lounge'),
+      wolMac: const Value('AA:BB:CC:DD:EE:FF'),
+    );
+    await repo.upsert(a);
+    await repo.setLastHost('a', '192.168.0.33');
+    final read = (await repo.find('a'))!;
+    expect(read.lastHost, '192.168.0.33');
+    expect(read, a.copyWith(lastHost: '192.168.0.33'));
+    expect(read.lastConnectedAt, a.lastConnectedAt);
+  });
+
+  test('set_last_host_on_unknown_device_is_a_no_op', () async {
+    await repo.upsert(dev('a'));
+    await repo.setLastHost('zzz', '192.168.0.33');
+    expect(await repo.find('zzz'), isNull);
+    expect(await repo.watchAll().first, [dev('a')]);
+  });
+
+  const mdnsTv = DiscoveredTv(
+    serviceName: 'Living Room TV 3',
+    displayName: 'Living Room TV 3',
+    host: '192.168.0.20',
+    port: 6466,
+    isLegacyService: false,
+  );
+
+  test('adopt_manual_device_moves_trust_to_the_mdns_name', () async {
+    await repo.upsert(
+      savedTv(
+        name: 'manual:192.168.0.20',
+        nickname: 'Den',
+        wolMac: 'AA:BB:CC:DD:EE:F0',
+      ),
+    );
+    final ok = await repo.adoptManualDevice(
+      manualServiceName: 'manual:192.168.0.20',
+      tv: mdnsTv,
+    );
+    expect(ok, isTrue);
+    expect(await repo.find('manual:192.168.0.20'), isNull);
+    final moved = (await repo.find('Living Room TV 3'))!;
+    expect(
+      (moved.nickname, moved.wolMac, moved.serverKeyPin, moved.displayName),
+      ('Den', 'AA:BB:CC:DD:EE:F0', testPin, 'Living Room TV 3'),
+    );
+    expect(moved.lastHost, '192.168.0.20');
+    expect(moved.port, 6466);
+    expect(moved.lastConnectedAt, DateTime.utc(2026, 10, 25));
+    expect(await repo.watchAll().first, hasLength(1));
+  });
+
+  test(
+    'adopt_manual_device_refuses_when_the_mdns_name_is_already_saved',
+    () async {
+      final manual = savedTv(name: 'manual:192.168.0.20', nickname: 'Den');
+      final named = savedTv(pin: 'other-pin');
+      await repo.upsert(manual);
+      await repo.upsert(named);
+      final ok = await repo.adoptManualDevice(
+        manualServiceName: 'manual:192.168.0.20',
+        tv: mdnsTv,
+      );
+      expect(ok, isFalse);
+      expect(await repo.find('manual:192.168.0.20'), manual);
+      expect(await repo.find('Living Room TV 3'), named);
+    },
+  );
+
+  test('adopt_manual_device_is_a_no_op_for_unknown_rows', () async {
+    await repo.upsert(dev('a'));
+    final ok = await repo.adoptManualDevice(
+      manualServiceName: 'manual:192.168.0.99',
+      tv: mdnsTv,
+    );
+    expect(ok, isFalse);
+    expect(await repo.find('Living Room TV 3'), isNull);
     expect(await repo.watchAll().first, [dev('a')]);
   });
 }

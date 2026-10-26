@@ -17,12 +17,15 @@ import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_remote_session.dart';
+import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
 
@@ -140,7 +143,33 @@ void main() {
     await t.tap(find.text('Pair again'));
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
-    expect(top(t).extra, savedTv().toDiscoveredTv());
+    // No `extra`: the pairing screen re-resolves the TV's address.
+    expect(top(t).extra, isNull);
+  });
+
+  testWidgets('pair_again_resolves_the_tv_before_pairing', (t) async {
+    final resolved = <String>[];
+    fake.emit(_needsPairing);
+    await pumpRemote(
+      t,
+      overrides: [
+        deviceRepositoryProvider.overrideWithValue(
+          InMemoryDeviceRepository([savedTv()]),
+        ),
+        hostResolverProvider.overrideWithValue((name) async {
+          resolved.add(name);
+          return '192.168.0.33';
+        }),
+      ],
+    );
+
+    await t.tap(find.text('Pair again'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+
+    expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
+    expect(t.widget<PairingScreen>(find.byType(PairingScreen)).tv, isNull);
+    expect(resolved, ['Living Room TV 3']);
   });
 
   testWidgets('identity_changed_routes_to_pairing', (t) async {
@@ -157,7 +186,8 @@ void main() {
     await t.tap(inDialog(find.text('Pair again')));
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
-    expect(top(t).extra, savedTv().toDiscoveredTv());
+    // No `extra`: the pairing screen re-resolves the TV's address.
+    expect(top(t).extra, isNull);
     // The same state again asks nothing more.
     fake.emit(_identityChanged);
     await t.pumpAndSettle();

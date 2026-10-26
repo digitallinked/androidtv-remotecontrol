@@ -43,6 +43,14 @@ void main() {
   Future<void> pairWithCode(WidgetTester t) async {
     await t.pump();
     await t.pump(const Duration(milliseconds: 400));
+    // "Pair again" opens the screen without the TV, so it looks the TV up in
+    // the database first, which takes real (not fake-clock) time.
+    for (var i = 0; i < 50 && find.byType(TextField).evaluate().isEmpty; i++) {
+      await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      await t.pump(const Duration(milliseconds: 50));
+    }
     await t.enterText(find.byType(TextField), 'AB12CD');
     await t.pumpAndSettle();
   }

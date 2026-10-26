@@ -1,3 +1,4 @@
+import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 
@@ -24,6 +25,24 @@ abstract interface class DeviceRepository {
     String serviceName, {
     required String host,
     required DateTime at,
+  });
+
+  /// Records [host] as where [serviceName] was last seen, leaving every other
+  /// field alone. A no-op for unknown TVs.
+  Future<void> setLastHost(String serviceName, String host);
+
+  /// Moves the saved TV [manualServiceName] (a `manual:<ip>` entry) to [tv]'s
+  /// mDNS identity in one transaction (Ruling P5-R10 d): a row named
+  /// `tv.serviceName` takes the discovered name, host and port, and the manual
+  /// row's nickname, Wake-on-LAN MAC, trusted key pin and last connection;
+  /// then the manual row is deleted. The pin moves unchanged, so a different
+  /// TV at that address still fails the key check on connect.
+  ///
+  /// Returns `false`, and changes nothing, when the manual row is missing or
+  /// a row named `tv.serviceName` already exists.
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
   });
 
   /// Sets the Wake-on-LAN MAC address of [serviceName] to [mac] (`null`
@@ -102,6 +121,38 @@ class DriftDeviceRepository implements DeviceRepository {
       DevicesCompanion(lastHost: Value(host), lastConnectedAt: Value(at)),
     );
   }
+
+  @override
+  Future<void> setLastHost(String serviceName, String host) async {
+    await _updateOne(
+      serviceName,
+    ).write(DevicesCompanion(lastHost: Value(host)));
+  }
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) => _db.transaction(() async {
+    final manual = await find(manualServiceName);
+    if (manual == null || await find(tv.serviceName) != null) return false;
+    await _db
+        .into(_db.devices)
+        .insert(
+          SavedDevice(
+            serviceName: tv.serviceName,
+            displayName: tv.displayName,
+            lastHost: tv.host,
+            port: tv.port,
+            nickname: manual.nickname,
+            wolMac: manual.wolMac,
+            serverKeyPin: manual.serverKeyPin,
+            lastConnectedAt: manual.lastConnectedAt,
+          ),
+        );
+    await delete(manualServiceName);
+    return true;
+  });
 
   @override
   Future<void> setWolMac(String serviceName, String? mac) async {

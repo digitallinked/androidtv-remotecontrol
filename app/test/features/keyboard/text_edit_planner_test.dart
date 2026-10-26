@@ -83,6 +83,18 @@ void main() {
     );
   });
 
+  test('append_mode_counts_zwj_sequences_flags_and_combining_marks_as_one', () {
+    // A family (ZWJ sequence), a flag (two regional indicators), an e with a
+    // combining accent, and a letter with a precomposed accent.
+    for (final g in ['👨‍👩‍👧', '🇲🇾', 'é', 'é']) {
+      expect(
+        planTextEdit(sent: 'a$g', next: 'a', mode: ImeTextMode.appendOnly),
+        [const DeleteChars(1)],
+        reason: g,
+      );
+    }
+  });
+
   test('append_mode_rewrites_from_the_first_changed_grapheme', () {
     expect(
       planTextEdit(sent: 'hello', next: 'hallo', mode: ImeTextMode.appendOnly),

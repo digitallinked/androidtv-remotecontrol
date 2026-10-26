@@ -8,10 +8,11 @@ extension SavedDeviceX on SavedDevice {
   String get label => nickname ?? displayName;
 
   /// This TV as a discovery record at its last known address, for pairing
-  /// it again.
+  /// it again. It carries the name the TV announced, never the nickname, so
+  /// pairing again can't overwrite [displayName] with the nickname.
   DiscoveredTv toDiscoveredTv() => DiscoveredTv(
     serviceName: serviceName,
-    displayName: label,
+    displayName: displayName,
     host: lastHost,
     port: port,
     isLegacyService: false,

@@ -13,6 +13,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/pairing/application/pairing_controller.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
@@ -32,6 +33,16 @@ class _FailingRepository implements DeviceRepository {
   @override
   Future<void> upsert(SavedDevice device) =>
       Future<void>.error(Exception('disk full'));
+
+  @override
+  Future<void> setLastHost(String serviceName, String host) =>
+      Future<void>.error(Exception('disk full'));
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) => Future<bool>.error(Exception('disk full'));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -55,6 +66,18 @@ class _MemoryRepository implements DeviceRepository {
   Future<void> upsert(SavedDevice device) async {
     saved[device.serviceName] = device;
   }
+
+  @override
+  Future<void> setLastHost(String serviceName, String host) async {
+    final current = saved[serviceName];
+    if (current != null) saved[serviceName] = current.copyWith(lastHost: host);
+  }
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) async => false;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -200,6 +223,32 @@ void main() {
     expect(saved?.nickname, 'Lounge');
     expect(saved?.wolMac, 'AA:BB:CC:DD:EE:FF');
     expect(saved?.serverKeyPin, testPin);
+  });
+
+  test('re_pairing_a_renamed_tv_keeps_its_name_and_nickname', () async {
+    final repo = DriftDeviceRepository(db);
+    await repo.upsert(savedTv(nickname: 'Bedroom', pin: 'old'));
+    // "Pair again" from a saved TV: its record carries the announced name,
+    // never the nickname.
+    final target = savedTv(nickname: 'Bedroom').toDiscoveredTv();
+    final c = ProviderContainer.test(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        identityStoreProvider.overrideWithValue(testIdentityStore()),
+        pairingClientFactoryProvider.overrideWithValue(fakes.create),
+      ],
+    )..listen(pairingControllerProvider(target), (_, _) {});
+    final controller = pairingControllerProvider(target);
+    for (var i = 0; i < 200; i++) {
+      if (c.read(controller) is PairingWaitingForCode) break;
+      await Future<void>.delayed(Duration.zero);
+    }
+    await c.read(controller.notifier).submit('AB12CD');
+
+    final saved = (await repo.find('Living Room TV 3'))!;
+    expect(saved.displayName, 'Living Room TV 3');
+    expect(saved.nickname, 'Bedroom');
+    expect(saved.serverKeyPin, testPin);
   });
 
   test('code_expires_after_60s_and_closes_the_client', () {

@@ -120,9 +120,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   void _pairAgain(RemoteSession session) {
     final target = session.pairingTarget;
     if (!mounted || target == null) return;
-    unawaited(
-      context.push(AppRoutes.pair(target.serviceName), extra: target),
-    );
+    // No `extra`: the pairing screen looks the TV up again, because its
+    // address may have changed since it was saved (Ruling P5-R10 c).
+    unawaited(context.push(AppRoutes.pair(target.serviceName)));
   }
 
   /// Says why a press did nothing (Ruling P4-R3): one snackbar per refused

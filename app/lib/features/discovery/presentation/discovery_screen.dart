@@ -8,7 +8,9 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/manual_tv.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/presentation/manual_ip_sheet.dart';
 import 'package:tv_remote/features/discovery/presentation/widgets/discovery_empty_state.dart';
@@ -18,12 +20,20 @@ import 'package:tv_remote/features/discovery/presentation/widgets/tv_list_tile.d
 
 /// Lists the TVs on the network, with ways in when none shows up: scan again,
 /// troubleshooting, an IP address, or the demo TV.
-class DiscoveryScreen extends ConsumerWidget {
+class DiscoveryScreen extends ConsumerStatefulWidget {
   /// Creates the discovery screen.
   const DiscoveryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DiscoveryScreen> createState() => _DiscoveryScreenState();
+}
+
+class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
+  /// A tap on a paired TV is being handled; further taps wait for it.
+  bool _opening = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(discoveryControllerProvider);
     final controller = ref.read(discoveryControllerProvider.notifier);
@@ -34,6 +44,23 @@ class DiscoveryScreen extends ConsumerWidget {
         for (final device in saved)
           if (device.serverKeyPin != null) device.serviceName,
     };
+    final savedNames = {
+      if (saved != null)
+        for (final device in saved) device.serviceName,
+    };
+    // A TV added by IP address that mDNS now shows under its own name: same
+    // address, a pinned key, and no row under the mDNS name yet (Ruling
+    // P5-R10 d). Tapping it moves the saved entry (and its pin) over.
+    final manualMatches = <String, SavedDevice>{
+      if (saved != null)
+        for (final tv in state.tvs)
+          if (!tv.isLegacyService && !savedNames.contains(tv.serviceName))
+            for (final device in saved)
+              if (isManualServiceName(device.serviceName) &&
+                  device.serverKeyPin != null &&
+                  device.lastHost == tv.host)
+                tv.serviceName: device,
+    };
 
     final Widget body;
     if (state.tvs.isNotEmpty) {
@@ -43,8 +70,10 @@ class DiscoveryScreen extends ConsumerWidget {
           final tv = state.tvs[index];
           return TvListTile(
             tv: tv,
-            isPaired: pairedNames.contains(tv.serviceName),
-            onTap: () => _open(context, ref, tv, pairedNames),
+            isPaired:
+                pairedNames.contains(tv.serviceName) ||
+                manualMatches.containsKey(tv.serviceName),
+            onTap: () => unawaited(_open(tv, pairedNames, manualMatches)),
           );
         },
       );
@@ -74,7 +103,7 @@ class DiscoveryScreen extends ConsumerWidget {
                 spacing: AppSpacing.s,
                 children: [
                   TextButton(
-                    onPressed: () => unawaited(_enterIp(context)),
+                    onPressed: () => unawaited(_enterIp()),
                     child: Text(l10n.discoverEnterIp),
                   ),
                   TextButton(
@@ -93,12 +122,12 @@ class DiscoveryScreen extends ConsumerWidget {
     );
   }
 
-  void _open(
-    BuildContext context,
-    WidgetRef ref,
+  Future<void> _open(
     DiscoveredTv tv,
     Set<String> pairedNames,
-  ) {
+    Map<String, SavedDevice> manualMatches,
+  ) async {
+    if (_opening) return;
     if (tv.isLegacyService) {
       unawaited(
         showLegacyServiceSheet(
@@ -107,17 +136,60 @@ class DiscoveryScreen extends ConsumerWidget {
           onScanAgain: ref.read(discoveryControllerProvider.notifier).rescan,
         ),
       );
-    } else if (pairedNames.contains(tv.serviceName)) {
-      ref.read(activeTargetProvider.notifier).activateDevice(tv.serviceName);
-      context.go(AppRoutes.remote);
-    } else {
+      return;
+    }
+    final paired = pairedNames.contains(tv.serviceName);
+    final manual = manualMatches[tv.serviceName];
+    if (!paired && manual == null) {
       unawaited(context.push(AppRoutes.pair(tv.serviceName), extra: tv));
+      return;
+    }
+
+    // Read before the first await: the screen may go away meanwhile.
+    final devices = ref.read(deviceRepositoryProvider);
+    final target = ref.read(activeTargetProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final failed = AppLocalizations.of(context).discoverOpenFailed;
+    _opening = true;
+    try {
+      if (paired) {
+        // Remember where the TV is now, so the connection doesn't start from
+        // an old address. Failing to save is not a reason to stay out.
+        try {
+          await devices.setLastHost(tv.serviceName, tv.host);
+        } on Object {
+          // Connecting with the old address still works if it hasn't moved.
+        }
+      } else {
+        // The saved pin moves with the row, so a different TV at this address
+        // still fails the key check on connect.
+        final bool adopted;
+        try {
+          adopted = await devices.adoptManualDevice(
+            manualServiceName: manual!.serviceName,
+            tv: tv,
+          );
+        } on Object {
+          messenger.showSnackBar(SnackBar(content: Text(failed)));
+          return;
+        }
+        if (!adopted) {
+          messenger.showSnackBar(SnackBar(content: Text(failed)));
+          return;
+        }
+      }
+      if (!mounted) return;
+      target.activateDevice(tv.serviceName);
+      router.go(AppRoutes.remote);
+    } finally {
+      _opening = false;
     }
   }
 
-  Future<void> _enterIp(BuildContext context) async {
+  Future<void> _enterIp() async {
     final tv = await showManualIpSheet(context);
-    if (tv == null || !context.mounted) return;
+    if (tv == null || !mounted) return;
     unawaited(context.push(AppRoutes.pair(tv.serviceName), extra: tv));
   }
 }
