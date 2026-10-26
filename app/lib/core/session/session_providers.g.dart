@@ -256,7 +256,7 @@ final class VolumeProvider
   }
 }
 
-String _$volumeHash() => r'5651ee189848641a8e56c496e9b08a70041716f8';
+String _$volumeHash() => r'8adfaccde8b7493b8f7b39f47f9696b684f323c0';
 
 /// Whether the TV's screen is on: the last known value, then every change.
 /// `null` while unknown or without a session.
@@ -297,7 +297,7 @@ final class PowerStateProvider
   }
 }
 
-String _$powerStateHash() => r'a9a66c8b436f4c6b897471441d722742ff41481e';
+String _$powerStateHash() => r'03b53a62e96d3c5e3ebebb8ffc76ca3214906423';
 
 /// The package name of the TV's foreground app: the last known value, then
 /// every change. `null` while unknown or without a session.
@@ -338,4 +338,4 @@ final class CurrentAppProvider
   }
 }
 
-String _$currentAppHash() => r'f2167a9c91911120d8811ac6656404d50d9aff9b';
+String _$currentAppHash() => r'9ef72fe87e1c865e92b793fa1deb73cae75f22a4';

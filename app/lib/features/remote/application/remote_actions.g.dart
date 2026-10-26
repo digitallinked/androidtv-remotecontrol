@@ -129,6 +129,10 @@ abstract class _$NotConnectedNotices extends $Notifier<int> {
 
 /// The [RemoteActions] for the active TV and the current settings.
 ///
+/// This provider is autoDispose: callers must watch it to keep it alive. A
+/// disposed instance refuses silently (returns `false`, no notice), so code
+/// that holds an instance across an async gap must use the return value.
+///
 /// Rebuilt when the session, Smooth Press or haptics change; the old instance
 /// is disposed, which releases an active hold, so a settings change or a TV
 /// switch in the middle of a hold never leaves a key stuck.
@@ -138,6 +142,10 @@ final remoteActionsProvider = RemoteActionsProvider._();
 
 /// The [RemoteActions] for the active TV and the current settings.
 ///
+/// This provider is autoDispose: callers must watch it to keep it alive. A
+/// disposed instance refuses silently (returns `false`, no notice), so code
+/// that holds an instance across an async gap must use the return value.
+///
 /// Rebuilt when the session, Smooth Press or haptics change; the old instance
 /// is disposed, which releases an active hold, so a settings change or a TV
 /// switch in the middle of a hold never leaves a key stuck.
@@ -146,6 +154,10 @@ final class RemoteActionsProvider
     extends $FunctionalProvider<RemoteActions, RemoteActions, RemoteActions>
     with $Provider<RemoteActions> {
   /// The [RemoteActions] for the active TV and the current settings.
+  ///
+  /// This provider is autoDispose: callers must watch it to keep it alive. A
+  /// disposed instance refuses silently (returns `false`, no notice), so code
+  /// that holds an instance across an async gap must use the return value.
   ///
   /// Rebuilt when the session, Smooth Press or haptics change; the old instance
   /// is disposed, which releases an active hold, so a settings change or a TV
@@ -183,4 +195,4 @@ final class RemoteActionsProvider
   }
 }
 
-String _$remoteActionsHash() => r'60ab01e80e653fd1525efbdee6ecbde495c6eafb';
+String _$remoteActionsHash() => r'8c8e15688068fd78b485224752a06956d10ebdf2';
