@@ -167,6 +167,9 @@ class _Preview extends StatelessWidget {
                               onPageChanged: (_) {},
                               volume: const VolumeChanged(12, 100, false),
                               onKeyboard: () {},
+                              // Pinned like the real row, so the picture
+                              // matches it; the preview ignores taps.
+                              onAllApps: () {},
                             ),
                           ),
                         ),

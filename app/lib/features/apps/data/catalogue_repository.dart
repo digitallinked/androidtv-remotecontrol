@@ -13,7 +13,10 @@ const String kCatalogueAsset = 'assets/catalogue/apps_v1.json';
 ///
 /// The file stays under 40 KB: `rootBundle.loadString` decodes bigger strings
 /// in an isolate, which never completes inside `testWidgets`.
-@Riverpod(keepAlive: true)
+///
+/// A bundled file never fixes itself, so a failed read is not retried (the
+/// catalogue waits on this provider, and would wait through every retry).
+@Riverpod(keepAlive: true, retry: noRetry)
 Future<String> catalogueSource(Ref ref) =>
     rootBundle.loadString(kCatalogueAsset);
 

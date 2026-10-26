@@ -621,6 +621,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonUndo => 'Undo';
 
   @override
+  String get commonRetry => 'Try again';
+
+  @override
   String get remoteManageTvs => 'Manage TVs';
 
   @override
@@ -665,6 +668,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appsEmptyTitle => 'No apps yet';
 
   @override
+  String get appsLoadFailed => 'Couldn\'t load your apps.';
+
+  @override
   String get appsEmptyBody =>
       'Add the apps you use on your TV to open them with one tap.';
 
@@ -695,12 +701,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String manageAppsDragHandle(String app) {
     return 'Reorder $app';
   }
-
-  @override
-  String get manageAppsMoveUp => 'Move up';
-
-  @override
-  String get manageAppsMoveDown => 'Move down';
 
   @override
   String manageAppsEdit(String app) {
@@ -860,6 +860,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get devicesEmptyTitle => 'No TVs yet';
 
   @override
+  String get devicesLoadFailed => 'Couldn\'t load your TVs.';
+
+  @override
   String get devicesEmptyBody => 'Pair a TV to control it from this phone.';
 
   @override
@@ -915,6 +918,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editDeviceRemove => 'Remove TV';
+
+  @override
+  String get editDeviceRemoveFailed => 'Couldn\'t remove this TV. Try again.';
 
   @override
   String editDeviceRemoveTitle(String tvName) {

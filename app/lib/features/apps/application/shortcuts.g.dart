@@ -65,7 +65,7 @@ final class ShortcutsSeedProvider
   }
 }
 
-String _$shortcutsSeedHash() => r'c73cb39364778db2e8f9f007e2f0d6eccaae5efd';
+String _$shortcutsSeedHash() => r'9217a8770e36bbc323d84e0b3c3ce2abd1d4f963';
 
 /// The user's shortcuts by position, once the first-run seeding is done.
 
@@ -249,7 +249,7 @@ final class RecommendedAppsProvider
   }
 }
 
-String _$recommendedAppsHash() => r'ba0f822b3d6485a3c29c2ebb563f6d611b68122c';
+String _$recommendedAppsHash() => r'21a7bf2829c38c881d1a8716c0e0361d801c7050';
 
 /// Counts each app that comes to the TV's foreground (Ruling P5-R6).
 ///

@@ -529,15 +529,7 @@ void main() {
     final handle = t.ensureSemantics();
     fake.emit(_connected);
     await pumpRemote(t);
-    // The last tile of the row: scroll it into view.
-    await t.drag(
-      find.descendant(
-        of: find.byType(QuickAccessBar),
-        matching: find.byType(ListView),
-      ),
-      const Offset(-1000, 0),
-    );
-    await t.pumpAndSettle();
+    // Pinned after the apps: no scrolling to find it.
     await t.tap(find.bySemanticsLabel('All apps'));
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.apps);

@@ -1180,6 +1180,12 @@ abstract class AppLocalizations {
   /// **'Undo'**
   String get commonUndo;
 
+  /// Button that retries loading a list that couldn't be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get commonRetry;
+
   /// Row in the TV switcher sheet → Your TVs.
   ///
   /// In en, this message translates to:
@@ -1264,6 +1270,12 @@ abstract class AppLocalizations {
   /// **'No apps yet'**
   String get appsEmptyTitle;
 
+  /// Apps screen, when the saved shortcuts can't be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your apps.'**
+  String get appsLoadFailed;
+
   /// Empty Apps screen.
   ///
   /// In en, this message translates to:
@@ -1317,18 +1329,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reorder {app}'**
   String manageAppsDragHandle(String app);
-
-  /// Semantic custom action.
-  ///
-  /// In en, this message translates to:
-  /// **'Move up'**
-  String get manageAppsMoveUp;
-
-  /// Semantic custom action.
-  ///
-  /// In en, this message translates to:
-  /// **'Move down'**
-  String get manageAppsMoveDown;
 
   /// Tooltip of a row's edit button.
   ///
@@ -1618,6 +1618,12 @@ abstract class AppLocalizations {
   /// **'No TVs yet'**
   String get devicesEmptyTitle;
 
+  /// Your TVs and Edit TV, when the saved TVs can't be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your TVs.'**
+  String get devicesLoadFailed;
+
   /// Empty Your TVs.
   ///
   /// In en, this message translates to:
@@ -1713,6 +1719,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove TV'**
   String get editDeviceRemove;
+
+  /// Snackbar when removing a TV fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove this TV. Try again.'**
+  String get editDeviceRemoveFailed;
 
   /// Confirmation title.
   ///

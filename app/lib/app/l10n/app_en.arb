@@ -864,6 +864,10 @@
   "@commonUndo": {
     "description": "Snackbar action after removing an app."
   },
+  "commonRetry": "Try again",
+  "@commonRetry": {
+    "description": "Button that retries loading a list that couldn't be read."
+  },
   "remoteManageTvs": "Manage TVs",
   "@remoteManageTvs": {
     "description": "Row in the TV switcher sheet → Your TVs."
@@ -926,6 +930,10 @@
   "@appsEmptyTitle": {
     "description": "Empty Apps screen."
   },
+  "appsLoadFailed": "Couldn't load your apps.",
+  "@appsLoadFailed": {
+    "description": "Apps screen, when the saved shortcuts can't be read."
+  },
   "appsEmptyBody": "Add the apps you use on your TV to open them with one tap.",
   "@appsEmptyBody": {
     "description": "Empty Apps screen."
@@ -967,14 +975,6 @@
         "example": "YouTube"
       }
     }
-  },
-  "manageAppsMoveUp": "Move up",
-  "@manageAppsMoveUp": {
-    "description": "Semantic custom action."
-  },
-  "manageAppsMoveDown": "Move down",
-  "@manageAppsMoveDown": {
-    "description": "Semantic custom action."
   },
   "manageAppsEdit": "Edit {app}",
   "@manageAppsEdit": {
@@ -1198,6 +1198,10 @@
   "@devicesEmptyTitle": {
     "description": "Empty Your TVs."
   },
+  "devicesLoadFailed": "Couldn't load your TVs.",
+  "@devicesLoadFailed": {
+    "description": "Your TVs and Edit TV, when the saved TVs can't be read."
+  },
   "devicesEmptyBody": "Pair a TV to control it from this phone.",
   "@devicesEmptyBody": {
     "description": "Empty Your TVs."
@@ -1279,6 +1283,10 @@
   "editDeviceRemove": "Remove TV",
   "@editDeviceRemove": {
     "description": "Destructive button."
+  },
+  "editDeviceRemoveFailed": "Couldn't remove this TV. Try again.",
+  "@editDeviceRemoveFailed": {
+    "description": "Snackbar when removing a TV fails."
   },
   "editDeviceRemoveTitle": "Remove {tvName}?",
   "@editDeviceRemoveTitle": {

@@ -42,8 +42,7 @@ void main() {
                   apps: _apps,
                   currentApp: 'com.google.android.youtube.tv',
                 ),
-              // A short list, so the All apps tile after it is in view (with
-              // five apps it is the last thing in a scrolling row).
+              // A short list, so the All apps tile has room beside it.
               QuickAccessBar(
                 variant: QuickAccessRow.apps,
                 input: input,

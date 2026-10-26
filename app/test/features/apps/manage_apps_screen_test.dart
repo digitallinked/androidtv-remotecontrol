@@ -272,6 +272,28 @@ void main() {
     ]);
   });
 
+  testWidgets('undo_works_when_nothing_else_listens_to_the_list', (t) async {
+    // Settings → Edit apps: nothing else on screen watches the shortcuts, so
+    // after leaving, Undo reads them with no listener.
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.settings,
+      overrides: [shortcutRepositoryProvider.overrideWithValue(repo)],
+    );
+    await t.tap(find.text('Apps'));
+    await t.pumpAndSettle();
+    expect(find.byType(ManageAppsScreen), findsOneWidget);
+    await t.tap(find.byTooltip('Remove Spotify'));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Back'));
+    await t.pumpAndSettle();
+    expect(find.byType(ManageAppsScreen), findsNothing);
+    await t.tap(find.text('Undo'));
+    await t.pumpAndSettle();
+    expect(stored(), _star);
+    expect(find.text("Couldn't save your apps. Try again."), findsNothing);
+  });
+
   testWidgets('removing_twice_offers_undo_for_the_last_removal', (t) async {
     await pumpManage(t);
     await t.tap(find.byTooltip('Remove Netflix'));

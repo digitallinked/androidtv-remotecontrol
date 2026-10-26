@@ -9,15 +9,6 @@ import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/key_labels.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 
-const Color _darkLabel = Color(0xFF0F1115);
-
-/// The label colour for a TV colour key filled with [key]: the dark ink or
-/// white, whichever has the higher WCAG contrast with [key].
-Color colourKeyLabelColor(Color key) =>
-    contrastRatio(_darkLabel, key) >= contrastRatio(Colors.white, key)
-    ? _darkLabel
-    : Colors.white;
-
 const double _pillMinWidth = 64;
 const double _rowHeight = AppSizes.keyMin;
 const EdgeInsets _gutter = EdgeInsets.symmetric(horizontal: AppSpacing.l);
@@ -52,8 +43,9 @@ class QuickAccessBar extends StatelessWidget {
   /// The package of the app open on the TV, if known.
   final String? currentApp;
 
-  /// Called when the last tile of [QuickAccessRow.apps], All apps, is tapped.
-  /// `null` leaves that tile out. It opens a screen; it is not a TV command.
+  /// Called when the All apps tile of [QuickAccessRow.apps] is tapped. The
+  /// tile is pinned after the scrolling list, so it is always in view. `null`
+  /// leaves it out. It opens a screen; it is not a TV command.
   final VoidCallback? onAllApps;
 
   @override
@@ -65,18 +57,35 @@ class QuickAccessBar extends StatelessWidget {
         label: l10n.quickAccessAppsLabel,
         child: SizedBox(
           height: QuickAppTile.heightOf(context),
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: _gutter,
-            itemCount: apps.length + (onAllApps == null ? 0 : 1),
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
-            itemBuilder: (context, i) => i == apps.length
-                ? _AllAppsTile(onTap: onAllApps!)
-                : QuickAppTile(
+          child: Row(
+            children: [
+              Expanded(
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  // With All apps pinned after the list, the list ends where
+                  // the gap before that tile begins.
+                  padding: EdgeInsetsDirectional.only(
+                    start: AppSpacing.l,
+                    end: onAllApps == null ? AppSpacing.l : 0,
+                  ),
+                  itemCount: apps.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppSpacing.s),
+                  itemBuilder: (context, i) => QuickAppTile(
                     app: apps[i],
                     isCurrent: apps[i].package == currentApp,
                     onTap: () => input.launch(apps[i]),
                   ),
+                ),
+              ),
+              if (onAllApps != null) ...[
+                // Also keeps a tile that is clipped at the list's edge 8 dp
+                // away from the pinned one.
+                const SizedBox(width: AppSpacing.s),
+                _AllAppsTile(onTap: onAllApps!),
+                const SizedBox(width: AppSpacing.l),
+              ],
+            ],
           ),
         ),
       ),
@@ -108,6 +117,9 @@ class _AllAppsTile extends StatelessWidget {
     final label = AppLocalizations.of(context).quickAccessAllApps;
     final colors = context.appColors;
     return Semantics(
+      // Its own node: next to the scrolling list it would otherwise merge
+      // into the row's label.
+      container: true,
       button: true,
       label: label,
       excludeSemantics: true,

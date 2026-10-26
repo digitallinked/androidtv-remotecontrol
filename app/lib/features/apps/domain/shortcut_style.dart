@@ -5,7 +5,8 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 /// are offered: Slate, Blue, Teal, Green, Amber, Orange, Red, Purple.
 ///
 /// Our own palette, not any app's brand colours (Ruling P5-R4). The ink on
-/// each is chosen by `colourKeyLabelColor` and reaches 4.5:1 contrast.
+/// each is chosen by `colourKeyLabelColor` (in `tokens.dart`) and reaches
+/// 4.5:1 contrast.
 const List<Color> kShortcutColors = [
   Color(0xFF475569),
   Color(0xFF2563EB),

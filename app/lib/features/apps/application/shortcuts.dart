@@ -24,15 +24,20 @@ part 'shortcuts.g.dart';
 Future<void> shortcutsSeed(Ref ref) async {
   final store = ref.watch(settingsStoreProvider);
   final repository = ref.watch(shortcutRepositoryProvider);
+  // Seeded already (every start after the first): the catalogue is not even
+  // read.
+  if (store.shortcutsSeeded) return;
   // Watched before the first await. `ignore` keeps a catalogue error that
   // this run never awaits from surfacing as an unhandled one.
   final catalogueFuture = ref.watch(catalogueProvider.future)..ignore();
   final region = ref.watch(deviceRegionProvider);
   try {
-    if (store.shortcutsSeeded) return;
+    // A crash after the write left rows behind: only the flag is missing.
     if (await repository.count() == 0) {
       final catalogue = await catalogueFuture;
-      await repository.replaceAll(catalogue.defaultShortcutsFor(region));
+      // One transaction that checks again: a row added while the catalogue
+      // loaded is never overwritten.
+      await repository.seedIfEmpty(catalogue.defaultShortcutsFor(region));
     }
     await store.setShortcutsSeeded(true);
   } on Object {
@@ -103,8 +108,10 @@ Stream<List<AppUsageStat>> appUsage(Ref ref) =>
 @riverpod
 Future<List<AppEntry>> recommendedApps(Ref ref) async {
   final usageFuture = ref.watch(appUsageProvider.future);
-  final shortcutsFuture = ref.watch(shortcutsProvider.future);
-  final catalogueFuture = ref.watch(catalogueProvider.future);
+  // `ignore`: when one of them fails first, the others are never awaited, and
+  // their own failure must not surface as an unhandled error.
+  final shortcutsFuture = ref.watch(shortcutsProvider.future)..ignore();
+  final catalogueFuture = ref.watch(catalogueProvider.future)..ignore();
   final usage = await usageFuture;
   final shortcuts = await shortcutsFuture;
   final catalogue = await catalogueFuture;

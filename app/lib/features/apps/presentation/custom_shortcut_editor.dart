@@ -10,7 +10,6 @@ import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/package_names.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 
 /// The longest name a shortcut may have, in characters.
 const int kShortcutNameMaxLength = 30;

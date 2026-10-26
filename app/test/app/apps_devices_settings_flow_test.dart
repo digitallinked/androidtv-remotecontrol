@@ -22,7 +22,6 @@ import 'package:tv_remote/features/devices/presentation/devices_screen.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
@@ -106,16 +105,8 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  /// Opens the Apps screen from the last tile of the remote's quick row.
+  /// Opens the Apps screen from the All apps tile of the remote's quick row.
   Future<void> openAllApps(WidgetTester t) async {
-    await t.drag(
-      find.descendant(
-        of: find.byType(QuickAccessBar),
-        matching: find.byType(ListView),
-      ),
-      const Offset(-1000, 0),
-    );
-    await t.pumpAndSettle();
     await t.tap(find.text('All apps'));
     await t.pumpAndSettle();
     expect(find.byType(AppsScreen), findsOneWidget);

@@ -12,6 +12,9 @@ part of 'catalogue_repository.dart';
 ///
 /// The file stays under 40 KB: `rootBundle.loadString` decodes bigger strings
 /// in an isolate, which never completes inside `testWidgets`.
+///
+/// A bundled file never fixes itself, so a failed read is not retried (the
+/// catalogue waits on this provider, and would wait through every retry).
 
 @ProviderFor(catalogueSource)
 final catalogueSourceProvider = CatalogueSourceProvider._();
@@ -20,6 +23,9 @@ final catalogueSourceProvider = CatalogueSourceProvider._();
 ///
 /// The file stays under 40 KB: `rootBundle.loadString` decodes bigger strings
 /// in an isolate, which never completes inside `testWidgets`.
+///
+/// A bundled file never fixes itself, so a failed read is not retried (the
+/// catalogue waits on this provider, and would wait through every retry).
 
 final class CatalogueSourceProvider
     extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
@@ -28,11 +34,14 @@ final class CatalogueSourceProvider
   ///
   /// The file stays under 40 KB: `rootBundle.loadString` decodes bigger strings
   /// in an isolate, which never completes inside `testWidgets`.
+  ///
+  /// A bundled file never fixes itself, so a failed read is not retried (the
+  /// catalogue waits on this provider, and would wait through every retry).
   CatalogueSourceProvider._()
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'catalogueSourceProvider',
         isAutoDispose: false,
         dependencies: null,
@@ -53,7 +62,7 @@ final class CatalogueSourceProvider
   }
 }
 
-String _$catalogueSourceHash() => r'24051bfd4ee48b679fbea237002a3c6cb052718e';
+String _$catalogueSourceHash() => r'42dff0047d09446fd6d5184b06066d99abbffa1b';
 
 /// The app catalogue, parsed once from [catalogueSourceProvider]. A corrupt
 /// file surfaces as an error state at once (a bundled file never fixes

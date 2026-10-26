@@ -11,6 +11,8 @@ import 'package:tv_remote/core/ads/banner_slot.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
@@ -24,6 +26,17 @@ import '../../helpers/test_devices.dart';
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
 const _offline = TvConnectionState(status: ConnectionStatus.offline);
 const _needsPairing = TvConnectionState(status: ConnectionStatus.needsPairing);
+
+/// A shortcut store whose stream fails until [broken] is cleared.
+class _FlakyShortcuts extends InMemoryShortcutRepository {
+  _FlakyShortcuts(super.initial);
+
+  bool broken = true;
+
+  @override
+  Stream<List<AppEntry>> watchAll() =>
+      broken ? Stream.error(StateError('disk')) : super.watchAll();
+}
 
 void main() {
   late FakeRemoteSession fake;
@@ -300,6 +313,73 @@ void main() {
     expect(find.bySemanticsLabel('Open Plex'), findsOneWidget);
     handle.dispose();
   });
+
+  testWidgets('unreadable_shortcuts_show_an_error_with_retry', (t) async {
+    final repository = _FlakyShortcuts([
+      const AppEntry(package: 'com.netflix.ninja', name: 'Netflix'),
+    ]);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    expect(find.text("Couldn't load your apps."), findsOneWidget);
+    expect(find.text('No apps yet'), findsNothing);
+    expect(find.text('Your apps'), findsNothing);
+    final retry = find.widgetWithText(FilledButton, 'Try again');
+    expect(retry, findsOneWidget);
+    expect(t.getSize(retry).height, greaterThanOrEqualTo(48));
+
+    // Retry with a stream that works again shows the grid.
+    repository.broken = false;
+    await t.tap(retry);
+    await t.pumpAndSettle();
+    expect(find.text("Couldn't load your apps."), findsNothing);
+    expect(find.text('Your apps'), findsOneWidget);
+    expect(find.byType(AppTile), findsOneWidget);
+  });
+
+  testWidgets('search_finds_an_app_by_its_package', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpApps(t);
+    await search(t, 'ninja');
+    expect(find.text('Your apps'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open Netflix'), findsOneWidget);
+    expect(find.byType(AppTile), findsOneWidget);
+    handle.dispose();
+  });
+
+  // Catalogue order puts Disney+ Hotstar first; in India JioHotstar leads.
+  for (final (region, expected) in [
+    (null, ['Disney+ Hotstar', 'JioHotstar']),
+    ('IN', ['JioHotstar', 'Disney+ Hotstar']),
+  ]) {
+    testWidgets('search_ranks_the_phones_region_first_${region ?? 'none'}', (
+      t,
+    ) async {
+      await pumpRouterApp(
+        t,
+        initialLocation: AppRoutes.apps,
+        prepareSettings: (store) => store.setShortcutsSeeded(true),
+        overrides: [
+          remoteSessionProvider.overrideWith((ref) async => fake),
+          shortcutRepositoryProvider.overrideWithValue(
+            InMemoryShortcutRepository(),
+          ),
+          deviceRegionProvider.overrideWithValue(region),
+        ],
+      );
+      await search(t, 'hotstar');
+      expect([
+        for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
+          tile.app.name,
+      ], expected);
+    });
+  }
 
   testWidgets('edit_action_opens_edit_apps', (t) async {
     await pumpApps(t);

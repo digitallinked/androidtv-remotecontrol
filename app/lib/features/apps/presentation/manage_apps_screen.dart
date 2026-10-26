@@ -160,8 +160,12 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       return;
     }
     // This screen is gone: the list may have changed since, so read it again.
+    // The provider is autoDispose and nothing listens to it any more, so a
+    // bare read of its future would end with a disposed-provider error. A
+    // listener keeps it alive for this one read.
+    final sub = container.listen(shortcutsProvider.future, (_, _) {});
     try {
-      final base = await container.read(shortcutsProvider.future);
+      final base = await sub.read();
       final restored = _withApp(base, app, index);
       if (restored == null) return;
       await container.read(shortcutActionsProvider).replaceAll(restored);
@@ -169,6 +173,8 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.manageAppsSaveFailed)),
       );
+    } finally {
+      sub.close();
     }
   }
 

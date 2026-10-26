@@ -105,6 +105,13 @@ class InMemoryShortcutRepository implements ShortcutRepository {
   }
 
   @override
+  Future<bool> seedIfEmpty(List<AppEntry> seed) async {
+    if (apps.isNotEmpty) return false;
+    await replaceAll(seed);
+    return true;
+  }
+
+  @override
   Future<void> replaceAll(List<AppEntry> next) async {
     _beginWrite();
     final seen = <String>{};

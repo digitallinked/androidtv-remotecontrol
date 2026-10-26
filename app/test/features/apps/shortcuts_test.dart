@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -121,6 +123,42 @@ void main() {
       expect(store.shortcutsSeeded, isTrue);
     });
 
+    test('once_the_flag_is_set_the_seed_never_reads_the_catalogue', () async {
+      await store.setShortcutsSeeded(true);
+      var builds = 0;
+      final c = makeContainer(
+        overrides: [
+          catalogueProvider.overrideWith((ref) async {
+            builds++;
+            throw StateError('the catalogue must not be read');
+          }),
+        ],
+      );
+      expect(await c.read(shortcutsProvider.future), isEmpty);
+      await c.read(shortcutsSeedProvider.future);
+      expect(builds, 0);
+      expect(shortcutRepo.writes, 0);
+    });
+
+    test('seeding_never_overwrites_rows_added_while_it_waited', () async {
+      // The user adds an app while the catalogue is still being read.
+      final catalogue = Completer<void>();
+      final c = makeContainer(
+        overrides: [
+          catalogueProvider.overrideWith((ref) async {
+            await catalogue.future;
+            return testCatalogue();
+          }),
+        ],
+      );
+      final first = c.read(shortcutsProvider.future);
+      await pumpEventQueue();
+      await shortcutRepo.add(_netflix);
+      catalogue.complete();
+      expect(await first, [_netflix]);
+      expect(store.shortcutsSeeded, isTrue);
+    });
+
     test('a_failed_seed_retries_next_time', () async {
       shortcutRepo.failNextWrite = StateError('disk full');
       final c = makeContainer();
@@ -218,6 +256,35 @@ void main() {
       // Netflix is a shortcut (MY row), `android` is a system package.
       expect(_packages(apps), ['com.example.tvapp']);
       expect(apps.single.customIcon, 'app');
+    });
+  });
+
+  group('recommendation failures', () {
+    test('usage_and_catalogue_both_failing_leave_no_unhandled_error', () async {
+      // Seeded already, so the seed does not touch the catalogue itself.
+      await store.setShortcutsSeeded(true);
+      // The catalogue fails after the usage did: nothing awaits it by then.
+      final catalogueFails = Completer<void>();
+      final c = makeContainer(
+        overrides: [
+          appUsageProvider.overrideWith(
+            (ref) => Stream<List<AppUsageStat>>.error(StateError('usage')),
+          ),
+          catalogueProvider.overrideWith((ref) async {
+            await catalogueFails.future;
+            throw const FormatException('corrupt');
+          }),
+        ],
+      )..listen(recommendedAppsProvider, (_, _) {});
+      await expectLater(
+        c.read(recommendedAppsProvider.future),
+        throwsA(isA<StateError>()),
+      );
+      catalogueFails.complete();
+      // An unwaited failure must not surface as an unhandled error (it would
+      // fail this test).
+      await pumpEventQueue();
+      expect(c.read(recommendedAppsProvider).hasError, isTrue);
     });
   });
 

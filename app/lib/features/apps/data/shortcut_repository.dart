@@ -36,6 +36,12 @@ abstract interface class ShortcutRepository {
   /// Replaces the whole list with [apps] in one transaction. A package that
   /// repeats is dropped after its first occurrence.
   Future<void> replaceAll(List<AppEntry> apps);
+
+  /// Inserts [apps] (a repeated package is dropped after its first
+  /// occurrence, positions 0..n-1) only if there are no shortcuts, in one
+  /// transaction. Returns whether it inserted them. First-run seeding uses it,
+  /// so rows added in the meantime are never overwritten.
+  Future<bool> seedIfEmpty(List<AppEntry> apps);
 }
 
 /// [ShortcutRepository] backed by the drift [AppDatabase].
@@ -146,11 +152,22 @@ class DriftShortcutRepository implements ShortcutRepository {
   @override
   Future<void> replaceAll(List<AppEntry> apps) => _db.transaction(() async {
     await _db.delete(_db.shortcuts).go();
+    await _insertAll(apps);
+  });
+
+  @override
+  Future<bool> seedIfEmpty(List<AppEntry> apps) => _db.transaction(() async {
+    if (await count() > 0) return false;
+    await _insertAll(apps);
+    return true;
+  });
+
+  Future<void> _insertAll(List<AppEntry> apps) async {
     final seen = <String>{};
     var position = 0;
     for (final app in apps) {
       if (!seen.add(app.package)) continue;
       await _db.into(_db.shortcuts).insert(_insertion(app, position++));
     }
-  });
+  }
 }

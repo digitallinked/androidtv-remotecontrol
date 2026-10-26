@@ -16,137 +16,167 @@ List<String> _packages(List<AppEntry> apps) => [
   for (final a in apps) a.package,
 ];
 
-void contract(String name, ShortcutRepository Function() make) =>
-    group(name, () {
-      late ShortcutRepository repo;
-      setUp(() => repo = make());
+void contract(String name, ShortcutRepository Function() make) => group(
+  name,
+  () {
+    late ShortcutRepository repo;
+    setUp(() => repo = make());
 
-      test('add_appends_and_rejects_a_duplicate_package', () async {
-        expect(await repo.add(_a), isTrue);
-        expect(await repo.add(_b), isTrue);
-        expect(
-          await repo.add(const AppEntry(package: 'com.a.app', name: 'Other')),
-          isFalse,
-        );
-        expect(await repo.all(), [_a, _b]);
-        expect(await repo.count(), 2);
-      });
+    test('add_appends_and_rejects_a_duplicate_package', () async {
+      expect(await repo.add(_a), isTrue);
+      expect(await repo.add(_b), isTrue);
+      expect(
+        await repo.add(const AppEntry(package: 'com.a.app', name: 'Other')),
+        isFalse,
+      );
+      expect(await repo.all(), [_a, _b]);
+      expect(await repo.count(), 2);
+    });
 
-      test('reorder_persists', () async {
-        await repo.add(_a);
-        await repo.add(_b);
-        await repo.add(_c);
-        await repo.reorder([_c.package, _a.package]);
-        expect(_packages(await repo.all()), [
-          'com.c.app',
-          'com.a.app',
-          'com.b.app',
-        ]);
-        // A fresh read gives the same order, unknown packages are ignored.
-        await repo.reorder(['com.zzz.none', _b.package, _b.package]);
-        expect(_packages(await repo.all()), [
-          'com.b.app',
-          'com.c.app',
-          'com.a.app',
-        ]);
-      });
+    test('reorder_persists', () async {
+      await repo.add(_a);
+      await repo.add(_b);
+      await repo.add(_c);
+      await repo.reorder([_c.package, _a.package]);
+      expect(_packages(await repo.all()), [
+        'com.c.app',
+        'com.a.app',
+        'com.b.app',
+      ]);
+      // A fresh read gives the same order, unknown packages are ignored.
+      await repo.reorder(['com.zzz.none', _b.package, _b.package]);
+      expect(_packages(await repo.all()), [
+        'com.b.app',
+        'com.c.app',
+        'com.a.app',
+      ]);
+    });
 
-      test('replace_all_rewrites_positions_densely', () async {
-        await repo.add(_a);
-        await repo.add(_b);
-        await repo.replaceAll([
-          _c,
+    test('replace_all_rewrites_positions_densely', () async {
+      await repo.add(_a);
+      await repo.add(_b);
+      await repo.replaceAll([
+        _c,
+        _a,
+        const AppEntry(package: 'com.c.app', name: 'C again'),
+        _b,
+      ]);
+      expect(await repo.all(), [_c, _a, _b]);
+      await repo.replaceAll(const []);
+      expect(await repo.all(), isEmpty);
+    });
+
+    test('seed_if_empty_keeps_existing_rows', () async {
+      // Empty: the apps go in, deduped, in order.
+      expect(
+        await repo.seedIfEmpty([
           _a,
-          const AppEntry(package: 'com.c.app', name: 'C again'),
           _b,
-        ]);
-        expect(await repo.all(), [_c, _a, _b]);
-        await repo.replaceAll(const []);
-        expect(await repo.all(), isEmpty);
-      });
+          const AppEntry(package: 'com.a.app', name: 'A again'),
+          _c,
+        ]),
+        isTrue,
+      );
+      expect(await repo.all(), [_a, _b, _c]);
 
-      test('update_changes_name_colour_and_icon_only', () async {
-        await repo.add(
-          const AppEntry(
-            package: 'com.a.app',
-            name: 'A',
-            iconUrl: 'https://example.com/a.png',
-          ),
-        );
-        await repo.add(_b);
-        await repo.update(
-          const AppEntry(
-            package: 'com.a.app',
-            name: 'Renamed',
-            launchLink: 'market://launch?id=other',
-            iconUrl: 'ignored',
-            isCustom: true,
-            customColor: Color(0xFF2563EB),
-            customIcon: 'movie',
-          ),
-        );
-        // No shortcut with this package: nothing happens.
-        await repo.update(const AppEntry(package: 'com.none.app', name: 'X'));
-        final all = await repo.all();
-        expect(all, hasLength(2));
-        expect(all.first.name, 'Renamed');
-        expect(all.first.launchLink, 'market://launch?id=other');
-        expect(all.first.iconUrl, 'https://example.com/a.png');
-        expect(all.first.isCustom, isTrue);
-        expect(all.first.customColor, const Color(0xFF2563EB));
-        expect(all.first.customIcon, 'movie');
-        expect(all.last, _b);
+      // Not empty: nothing is touched, whatever is offered.
+      await repo.remove(_b.package);
+      expect(
+        await repo.seedIfEmpty([_b, const AppEntry(package: 'x.y', name: 'Z')]),
+        isFalse,
+      );
+      expect(await repo.all(), [_a, _c]);
 
-        // The colour and icon can be cleared again.
-        await repo.update(const AppEntry(package: 'com.a.app', name: 'A'));
-        expect((await repo.all()).first.customColor, isNull);
-        expect((await repo.all()).first.customIcon, isNull);
-      });
+      // A list the user emptied is empty again, so it would be seeded: the
+      // caller's flag is what stops that.
+      await repo.replaceAll(const []);
+      expect(await repo.seedIfEmpty([_b]), isTrue);
+      expect(await repo.all(), [_b]);
+    });
 
-      test('remove_deletes_one', () async {
-        await repo.add(_a);
-        await repo.add(_b);
-        await repo.add(_c);
-        await repo.remove(_b.package);
-        await repo.remove('com.none.app');
-        expect(await repo.all(), [_a, _c]);
-        // Appending after a removal keeps the order.
-        await repo.add(_b);
-        expect(await repo.all(), [_a, _c, _b]);
-      });
-
-      test('custom_colour_round_trips', () async {
-        const app = AppEntry(
+    test('update_changes_name_colour_and_icon_only', () async {
+      await repo.add(
+        const AppEntry(
           package: 'com.a.app',
           name: 'A',
+          iconUrl: 'https://example.com/a.png',
+        ),
+      );
+      await repo.add(_b);
+      await repo.update(
+        const AppEntry(
+          package: 'com.a.app',
+          name: 'Renamed',
+          launchLink: 'market://launch?id=other',
+          iconUrl: 'ignored',
           isCustom: true,
           customColor: Color(0xFF2563EB),
-          customIcon: 'tv',
-        );
-        await repo.add(app);
-        expect((await repo.all()).single, app);
-      });
+          customIcon: 'movie',
+        ),
+      );
+      // No shortcut with this package: nothing happens.
+      await repo.update(const AppEntry(package: 'com.none.app', name: 'X'));
+      final all = await repo.all();
+      expect(all, hasLength(2));
+      expect(all.first.name, 'Renamed');
+      expect(all.first.launchLink, 'market://launch?id=other');
+      expect(all.first.iconUrl, 'https://example.com/a.png');
+      expect(all.first.isCustom, isTrue);
+      expect(all.first.customColor, const Color(0xFF2563EB));
+      expect(all.first.customIcon, 'movie');
+      expect(all.last, _b);
 
-      test('watch_replays_then_follows_changes', () async {
-        await repo.add(_a);
-        final seen = <List<String>>[];
-        final sub = repo.watchAll().listen((l) => seen.add(_packages(l)));
-        await pumpEventQueue();
-        expect(seen, [
-          ['com.a.app'],
-        ]);
-        await repo.add(_b);
-        await pumpEventQueue();
-        await repo.reorder([_b.package]);
-        await pumpEventQueue();
-        expect(seen.last, ['com.b.app', 'com.a.app']);
-        expect(seen.first, ['com.a.app']);
-        await repo.remove(_a.package);
-        await pumpEventQueue();
-        expect(seen.last, ['com.b.app']);
-        await sub.cancel();
-      });
+      // The colour and icon can be cleared again.
+      await repo.update(const AppEntry(package: 'com.a.app', name: 'A'));
+      expect((await repo.all()).first.customColor, isNull);
+      expect((await repo.all()).first.customIcon, isNull);
     });
+
+    test('remove_deletes_one', () async {
+      await repo.add(_a);
+      await repo.add(_b);
+      await repo.add(_c);
+      await repo.remove(_b.package);
+      await repo.remove('com.none.app');
+      expect(await repo.all(), [_a, _c]);
+      // Appending after a removal keeps the order.
+      await repo.add(_b);
+      expect(await repo.all(), [_a, _c, _b]);
+    });
+
+    test('custom_colour_round_trips', () async {
+      const app = AppEntry(
+        package: 'com.a.app',
+        name: 'A',
+        isCustom: true,
+        customColor: Color(0xFF2563EB),
+        customIcon: 'tv',
+      );
+      await repo.add(app);
+      expect((await repo.all()).single, app);
+    });
+
+    test('watch_replays_then_follows_changes', () async {
+      await repo.add(_a);
+      final seen = <List<String>>[];
+      final sub = repo.watchAll().listen((l) => seen.add(_packages(l)));
+      await pumpEventQueue();
+      expect(seen, [
+        ['com.a.app'],
+      ]);
+      await repo.add(_b);
+      await pumpEventQueue();
+      await repo.reorder([_b.package]);
+      await pumpEventQueue();
+      expect(seen.last, ['com.b.app', 'com.a.app']);
+      expect(seen.first, ['com.a.app']);
+      await repo.remove(_a.package);
+      await pumpEventQueue();
+      expect(seen.last, ['com.b.app']);
+      await sub.cancel();
+    });
+  },
+);
 
 void main() {
   contract('drift', () {
@@ -183,6 +213,9 @@ void main() {
       expect(await positions(), [0, 1, 2]);
       await repo.replaceAll([_b, _a]);
       expect(await positions(), [0, 1]);
+      await repo.replaceAll(const []);
+      await repo.seedIfEmpty([_a, _b, _c]);
+      expect(await positions(), [0, 1, 2]);
     });
   });
 }

@@ -76,8 +76,8 @@ class RemoteBody extends StatefulWidget {
   /// Called when the Keyboard key is tapped.
   final VoidCallback onKeyboard;
 
-  /// Called when the All apps tile is tapped. `null` (the layout preview)
-  /// leaves the tile out.
+  /// Called when the All apps tile, pinned after the apps row, is tapped.
+  /// `null` leaves the tile out.
   final VoidCallback? onAllApps;
 
   /// A card under the status strip (portrait) or at the top of the right

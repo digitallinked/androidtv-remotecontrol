@@ -125,7 +125,9 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
     final yourApps = searching
         ? [
             for (final app in mine)
-              if (app.name.toLowerCase().contains(needle)) app,
+              if (app.name.toLowerCase().contains(needle) ||
+                  app.package.toLowerCase().contains(needle))
+                app,
           ]
         : mine;
     final listed = {for (final app in mine) app.package};
@@ -138,7 +140,10 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
 
     final reloading = sessionState.isLoading;
     final loadingList = shortcuts.isLoading && !shortcuts.hasValue;
-    final listEmpty = mine.isEmpty && !searching && !loadingList;
+    // The saved list couldn't be read: say so, instead of "No apps yet".
+    final loadFailed =
+        shortcuts.hasError && !shortcuts.hasValue && !shortcuts.isLoading;
+    final listEmpty = mine.isEmpty && !searching && !loadingList && !loadFailed;
 
     Widget slivers() => CustomScrollView(
       slivers: [
@@ -158,6 +163,13 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
           const SliverFillRemaining(
             hasScrollBody: false,
             child: Center(child: CircularProgressIndicator()),
+          )
+        else if (loadFailed)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _LoadFailed(
+              onRetry: () => ref.invalidate(shortcutsProvider),
+            ),
           )
         else if (listEmpty)
           SliverFillRemaining(
@@ -299,6 +311,35 @@ class _Header extends StatelessWidget {
               color: context.appColors.textSecondary,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The message shown when the saved shortcuts can't be read, with Try again.
+class _LoadFailed extends StatelessWidget {
+  const _LoadFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: AppSpacing.m,
+          children: [
+            Text(
+              l10n.appsLoadFailed,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            FilledButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
+          ],
         ),
       ),
     );

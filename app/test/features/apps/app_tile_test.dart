@@ -6,7 +6,6 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 
 import '../../helpers/pump_app.dart';
 

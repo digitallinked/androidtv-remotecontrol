@@ -3,7 +3,6 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 
 /// The side of the square on every app tile, in dp.
 const double kAppSquareSize = 56;
