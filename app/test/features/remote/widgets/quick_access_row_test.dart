@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/apps/data/starter_apps.dart';
@@ -8,6 +10,36 @@ import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.da
 
 import '../../../helpers/key_input_recorder.dart';
 import '../../../helpers/pump_app.dart';
+
+/// Android 14's non-linear 200% font curve (its font scale converter): small
+/// sizes double, large ones grow less, so a line is not `size * 2`.
+class _NonlinearTwoX extends TextScaler {
+  const _NonlinearTwoX();
+
+  static const List<double> _from = [8, 10, 12, 14, 18, 20, 24, 30, 100];
+  static const List<double> _to = [16, 20, 24, 26, 30, 34, 36, 38, 100];
+
+  @override
+  double scale(double fontSize) {
+    if (fontSize <= _from.first) return fontSize * 2;
+    for (var i = 1; i < _from.length; i++) {
+      if (fontSize <= _from[i]) {
+        final f = (fontSize - _from[i - 1]) / (_from[i] - _from[i - 1]);
+        return _to[i - 1] + f * (_to[i] - _to[i - 1]);
+      }
+    }
+    return fontSize;
+  }
+
+  @override
+  double get textScaleFactor => 2;
+
+  @override
+  bool operator ==(Object other) => other is _NonlinearTwoX;
+
+  @override
+  int get hashCode => 2;
+}
 
 void main() {
   late KeyInputRecorder rec;
@@ -190,7 +222,13 @@ void main() {
       expect(size.width, greaterThanOrEqualTo(56), reason: name);
     }
     await pumpBar(t, QuickAccessRow.mediaKeys);
-    for (final name in ['Previous', 'Rewind', 'Play or pause', 'Next']) {
+    for (final name in [
+      'Previous',
+      'Rewind',
+      'Play or pause',
+      'Fast forward',
+      'Next',
+    ]) {
       final size = t.getSize(find.bySemanticsLabel(name));
       expect(size.width, greaterThanOrEqualTo(56), reason: name);
       expect(size.height, greaterThanOrEqualTo(56), reason: name);
@@ -199,6 +237,83 @@ void main() {
         t.getTopLeft(find.bySemanticsLabel('Rewind')).dx -
         t.getTopRight(find.bySemanticsLabel('Previous')).dx;
     expect(gap, greaterThanOrEqualTo(8));
+  });
+
+  testWidgets('app_tiles_fit_under_a_non_linear_200_percent_font_curve', (
+    t,
+  ) async {
+    t.view
+      ..physicalSize = const Size(320, 700)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: buildAppTheme(brightness: Brightness.light),
+        builder: (context, app) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const _NonlinearTwoX()),
+          child: app!,
+        ),
+        home: Scaffold(
+          body: QuickAccessBar(
+            variant: QuickAccessRow.apps,
+            input: rec,
+            apps: kStarterApps,
+          ),
+        ),
+      ),
+    );
+    expect(t.takeException(), isNull);
+    final bar = t.getRect(find.byType(ListView));
+    final tile = find.byType(QuickAppTile).first;
+    final name = t.getRect(
+      find.descendant(of: tile, matching: find.text('Netflix')),
+    );
+    expect(name.bottom, lessThanOrEqualTo(bar.bottom));
+    // The bar is the tile's height: a square, a gap and the name's line.
+    expect(
+      bar.height,
+      moreOrLessEquals(
+        QuickAppTile.squareSize + AppSpacing.xs + name.height,
+        epsilon: 1,
+      ),
+    );
+  });
+
+  testWidgets('scrolling_rows_keep_their_gutter_inside_the_list', (t) async {
+    for (final variant in [
+      QuickAccessRow.colourKeys,
+      QuickAccessRow.mediaKeys,
+    ]) {
+      await pumpBar(t, variant, width: 288);
+      final bar = t.getRect(find.byType(QuickAccessBar));
+      final list = find.byType(ListView);
+      // The list spans the whole row, so the keys scroll under its edges and
+      // are clipped there instead of painting outside the row.
+      expect(t.getRect(list), bar, reason: '$variant');
+      expect(
+        t.widget<ListView>(list).clipBehavior,
+        isNot(Clip.none),
+        reason: '$variant',
+      );
+      final first = variant == QuickAccessRow.mediaKeys ? 'Previous' : 'Red';
+      final last = variant == QuickAccessRow.mediaKeys ? 'Next' : 'Blue';
+      expect(
+        t.getTopLeft(find.bySemanticsLabel(first)).dx,
+        bar.left + AppSpacing.l,
+        reason: '$variant starts after the gutter',
+      );
+
+      // The last key can be scrolled into view, with the gutter after it.
+      await t.drag(list, const Offset(-600, 0));
+      await t.pumpAndSettle();
+      final key = t.getRect(find.bySemanticsLabel(last));
+      expect(key.right, bar.right - AppSpacing.l, reason: '$variant ends');
+      expect(key.left, greaterThanOrEqualTo(bar.left), reason: '$variant');
+    }
   });
 
   testWidgets('refused_launch_records_nothing', (t) async {

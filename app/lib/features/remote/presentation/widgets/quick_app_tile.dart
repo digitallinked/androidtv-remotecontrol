@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
@@ -42,9 +40,13 @@ class QuickAppTile extends StatelessWidget {
   /// tiles can give itself a bounded height.
   static double heightOf(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall!;
-    final line = (style.fontSize ?? 11) * (style.height ?? 1.5);
-    final scaled = MediaQuery.textScalerOf(context).scale(line);
-    return squareSize + AppSpacing.xs + math.max(scaled, line).ceilToDouble();
+    // Scale the font size, then apply the line height: that is what the
+    // text does. Scaling the finished line would be wrong for a non-linear
+    // scaler (Android 14's curve grows small sizes more than large ones).
+    final line =
+        MediaQuery.textScalerOf(context).scale(style.fontSize ?? 11) *
+        (style.height ?? 1.5);
+    return squareSize + AppSpacing.xs + line.ceilToDouble();
   }
 
   @override

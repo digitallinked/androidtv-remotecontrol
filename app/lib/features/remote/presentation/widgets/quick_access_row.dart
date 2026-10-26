@@ -20,6 +20,7 @@ Color colourKeyLabelColor(Color key) =>
 
 const double _pillMinWidth = 64;
 const double _rowHeight = AppSizes.keyMin;
+const EdgeInsets _gutter = EdgeInsets.symmetric(horizontal: AppSpacing.l);
 
 /// The row under the remote's status strip: app shortcuts, the TV's colour
 /// keys, or media keys, as chosen by the `quickAccessRow` setting.
@@ -61,7 +62,7 @@ class QuickAccessBar extends StatelessWidget {
           height: QuickAppTile.heightOf(context),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+            padding: _gutter,
             itemCount: apps.length,
             separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
             itemBuilder: (context, i) => QuickAppTile(
@@ -113,32 +114,34 @@ class _ColourKeys extends StatelessWidget {
 
     return SizedBox(
       height: _rowHeight,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth >= fitWidth) {
-              return Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The gutter is inside the width this check sees.
+          if (constraints.maxWidth - 2 * AppSpacing.l >= fitWidth) {
+            return Padding(
+              padding: _gutter,
+              child: Row(
                 spacing: AppSizes.keyGap,
                 children: [
                   for (final (code, fill) in keys)
                     Expanded(child: pill(code, fill)),
                 ],
-              );
-            }
-            return ListView.separated(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              itemCount: keys.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(width: AppSizes.keyGap),
-              itemBuilder: (_, i) => SizedBox(
-                width: _pillMinWidth,
-                child: pill(keys[i].$1, keys[i].$2),
               ),
             );
-          },
-        ),
+          }
+          // The list spans the whole row and carries the gutter as padding,
+          // so keys scroll under the edges and are clipped there.
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: _gutter,
+            itemCount: keys.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSizes.keyGap),
+            itemBuilder: (_, i) => SizedBox(
+              width: _pillMinWidth,
+              child: pill(keys[i].$1, keys[i].$2),
+            ),
+          );
+        },
       ),
     );
   }
@@ -215,27 +218,27 @@ class _MediaKeys extends StatelessWidget {
 
     return SizedBox(
       height: _rowHeight,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth >= fitWidth) {
-              return Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The gutter is inside the width this check sees.
+          if (constraints.maxWidth - 2 * AppSpacing.l >= fitWidth) {
+            return Padding(
+              padding: _gutter,
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 spacing: AppSizes.keyGap,
                 children: [for (final (code, icon) in keys) key(code, icon)],
-              );
-            }
-            return ListView.separated(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              itemCount: keys.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(width: AppSizes.keyGap),
-              itemBuilder: (_, i) => key(keys[i].$1, keys[i].$2),
+              ),
             );
-          },
-        ),
+          }
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: _gutter,
+            itemCount: keys.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSizes.keyGap),
+            itemBuilder: (_, i) => key(keys[i].$1, keys[i].$2),
+          );
+        },
       ),
     );
   }

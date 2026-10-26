@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/device/page_route_observer.dart';
 import 'package:tv_remote/core/device/screen_services.dart';
 
 /// Keeps the screen on while its [child] is the top page (Ruling P4-R14).

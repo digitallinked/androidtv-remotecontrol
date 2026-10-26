@@ -560,8 +560,10 @@ void main() {
   });
 
   testWidgets('a_stale_ime_request_is_ignored', (t) async {
-    // Riverpod can hand a listener a value that arrived while the remote was
-    // covered by another page, long after the TV asked.
+    // A listener can still be handed a late signal long after the TV asked
+    // (`ref.listen` is not paused while another page covers the remote, in
+    // flutter_riverpod 3.3.2 only `watch` is; a frame-delayed rebuild can
+    // deliver one late). The age check is defensive.
     final signals = StreamController<ImeShowSignal>();
     addTearDown(signals.close);
     await pumpRemote(

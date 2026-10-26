@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
+import 'package:tv_remote/core/device/page_route_observer.dart';
 import 'package:tv_remote/core/device/screen_services.dart';
 
 import '../../helpers/fake_screen_services.dart';

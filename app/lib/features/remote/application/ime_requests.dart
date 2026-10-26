@@ -11,9 +11,11 @@ part 'ime_requests.g.dart';
 /// a value that equals the previous one, and all `ImeShowRequested` events are
 /// equal, so a second request would be dropped. Every signal is a new object.
 ///
-/// It also says when it was made: a listener can be handed a signal late (it
-/// is paused while another page covers the screen), and a request that old no
-/// longer means "the TV is waiting for text".
+/// It also says when it was made, as a defensive check: a listener can still
+/// be handed a signal late (`ref.listen` is not paused while a page covers
+/// the screen, since flutter_riverpod 3.3.2 pauses only `watch`, but a
+/// frame-delayed rebuild can still deliver one after the fact), and a request
+/// that old no longer means "the TV is waiting for text".
 final class ImeShowSignal {
   /// Creates a signal for now, or for [at] (tests).
   ImeShowSignal({DateTime? at}) : at = at ?? clock.now();
