@@ -174,6 +174,50 @@ void main() {
     expect(dimmer.level, 0.05);
   });
 
+  testWidgets('a_finger_held_down_keeps_the_screen_bright', (t) async {
+    await pumpHome(t);
+    final g = await t.startGesture(t.getCenter(find.text('Key')));
+    await idle(t, 35);
+    expect(dimmer.level, isNull);
+    expect(colors(t), AppColors.light);
+    await g.up();
+    await t.pump();
+    await idle(t, 29);
+    expect(dimmer.level, isNull);
+    await idle(t, 1);
+    expect(dimmer.level, 0.05);
+  });
+
+  testWidgets('a_cancelled_touch_also_starts_the_idle_time', (t) async {
+    await pumpHome(t);
+    final g = await t.startGesture(t.getCenter(find.text('Key')));
+    await idle(t, 35);
+    await g.cancel();
+    await t.pump();
+    await idle(t, 29);
+    expect(dimmer.level, isNull);
+    await idle(t, 1);
+    expect(dimmer.level, 0.05);
+  });
+
+  testWidgets('with_two_fingers_the_idle_time_waits_for_the_last_one', (
+    t,
+  ) async {
+    await pumpHome(t);
+    final a = await t.startGesture(t.getCenter(find.text('Key')));
+    final b = await t.startGesture(
+      t.getCenter(find.text('Key')) + const Offset(20, 0),
+    );
+    await idle(t, 31);
+    await a.up();
+    await idle(t, 31);
+    expect(dimmer.level, isNull, reason: 'one finger is still down');
+    await b.up();
+    await t.pump();
+    await idle(t, 30);
+    expect(dimmer.level, 0.05);
+  });
+
   testWidgets('dims_again_30_seconds_after_waking', (t) async {
     await pumpHome(t);
     await idle(t, 30);

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -161,6 +165,73 @@ void main() {
     expect(fake.reconnectCalls, 1);
     expect(haptics.events, ['heavy']);
     expect(fake.sentPresses, isEmpty);
+  });
+
+  testWidgets('a_second_hold_while_waking_is_ignored', (t) async {
+    fake.emit(_offline);
+    final gate = Completer<void>();
+    wol.gate = gate.future;
+    await pumpRemote(t, wolMac: _mac);
+    final onPower = t.widget<PowerButton>(power).onPower;
+
+    onPower();
+    await t.pump(const Duration(milliseconds: 100));
+    onPower();
+    await t.pump(const Duration(milliseconds: 100));
+    gate.complete();
+    await t.pumpAndSettle();
+
+    expect(wol.wakes, hasLength(1));
+    expect(fake.reconnectCalls, 1);
+    expect(haptics.events, ['heavy']);
+    expect(find.text('Waking Living Room TV 3…'), findsOneWidget);
+  });
+
+  testWidgets('a_second_hold_while_the_setup_sheet_is_open_is_ignored', (
+    t,
+  ) async {
+    fake.emit(_offline);
+    await pumpRemote(t);
+    final onPower = t.widget<PowerButton>(power).onPower;
+
+    onPower();
+    await t.pumpAndSettle();
+    onPower();
+    await t.pumpAndSettle();
+
+    expect(find.byType(TextField), findsOneWidget);
+    // Closing the one sheet leaves nothing behind.
+    await t.tap(find.byTooltip('Close'));
+    await t.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(haptics.events, ['heavy']);
+  });
+
+  testWidgets('power_works_again_after_the_first_action_finished', (t) async {
+    fake.emit(_offline);
+    await pumpRemote(t, wolMac: _mac);
+    await holdPower(t);
+    await holdPower(t);
+    expect(wol.wakes, hasLength(2));
+  });
+
+  testWidgets('wake_on_lan_is_available_on_android_but_not_ios', (t) async {
+    // The provider is not autoDispose: each platform gets its own container.
+    bool availableOn(TargetPlatform platform) {
+      debugDefaultTargetPlatformOverride = platform;
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      return container.read(wakeOnLanAvailableProvider);
+    }
+
+    expect(kIosWakeOnLanEnabled, isFalse);
+    try {
+      expect(availableOn(TargetPlatform.android), isTrue);
+      expect(availableOn(TargetPlatform.iOS), isFalse);
+    } finally {
+      // Before the test ends: the framework checks the variable first.
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('wake_failure_says_so', (t) async {

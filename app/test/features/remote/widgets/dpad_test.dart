@@ -103,6 +103,20 @@ void main() {
     ]);
   });
 
+  testWidgets('a_tap_sends_the_region_that_was_tinted_at_pointer_down', (
+    t,
+  ) async {
+    await pumpPad(t);
+    // 5 dp on the Up side of the Up/Right diagonal...
+    final g = await t.startGesture(centre(t) + const Offset(70, -75));
+    await t.pump();
+    // ...released 10 dp further right, on the Right side (within tap slop).
+    await g.moveTo(centre(t) + const Offset(80, -75));
+    await g.up();
+    await t.pump();
+    expect(rec.calls, ['tap:${KeyCodes.dpadUp}']);
+  });
+
   testWidgets('holding_a_direction_holds_its_key', (t) async {
     await pumpPad(t);
     final g = await t.startGesture(centre(t) + up);

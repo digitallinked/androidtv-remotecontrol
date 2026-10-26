@@ -90,6 +90,11 @@ class _DpadState extends State<Dpad> {
   DpadRegion? _pressed;
   int? _pressedPointer;
 
+  /// The region that was tinted when the finger went down: what a tap sends,
+  /// even if the finger slid across a boundary before lifting. Kept after the
+  /// pointer-up (which clears the tint) because the tap callback follows it.
+  DpadRegion? _downRegion;
+
   /// The region whose key is being held, and the input that started it.
   DpadRegion? _held;
   KeyInput? _holdInput;
@@ -109,7 +114,7 @@ class _DpadState extends State<Dpad> {
   }
 
   void _tapUp(TapUpDetails details) {
-    final region = _regionAt(details.localPosition);
+    final region = _downRegion;
     if (region != null) widget.input.tap(dpadKeyCode(region));
   }
 
@@ -136,7 +141,8 @@ class _DpadState extends State<Dpad> {
   void _down(PointerDownEvent e) {
     if (_pressedPointer != null) return;
     _pressedPointer = e.pointer;
-    _setPressed(_regionAt(e.localPosition));
+    _downRegion = _regionAt(e.localPosition);
+    _setPressed(_downRegion);
   }
 
   void _release(PointerEvent e) {

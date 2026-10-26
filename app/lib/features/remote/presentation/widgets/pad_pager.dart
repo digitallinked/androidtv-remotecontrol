@@ -123,7 +123,9 @@ class _PadPagerState extends State<PadPager> {
     setState(() {
       _shown = page;
       _settled = page;
-      if (_target == page) _target = null;
+      // Whatever the pager came to rest on is where it is: a tab's target
+      // that a finger cut short must not outlive the animation.
+      _target = null;
     });
     if (page != _reported) {
       _reported = page;

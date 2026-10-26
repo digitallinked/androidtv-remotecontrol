@@ -48,6 +48,11 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
   ThemeData? _theaterTheme;
 
   Timer? _timer;
+
+  /// The pointers that are down on the bright screen. The screen never dims
+  /// under a finger (a long press, a hold, a drag), and counts its idle time
+  /// from the last one that lifts.
+  final Set<int> _pointers = {};
   bool _dimmed = false;
   bool _resumed = true;
   bool _routeCurrent = true;
@@ -60,6 +65,8 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) {
         _resumed = _isResumed(state);
+        // A touch cut off by the app going away may never report its end.
+        _pointers.clear();
         // Not in a build: a change may dim or restore, which repaints.
         setState(_update);
       },
@@ -103,6 +110,11 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
     _timer = Timer(widget.idle, () {
       _timer = null;
       if (!mounted || !_shouldRun) return;
+      if (_pointers.isNotEmpty) {
+        // Still being touched: not idle.
+        _startTimer();
+        return;
+      }
       setState(() => _dimmed = true);
       unawaited(_dimmer.dim(widget.dimLevel));
     });
@@ -129,7 +141,19 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
   }
 
   /// A touch on the bright screen: the idle time starts over.
-  void _onTouch(PointerDownEvent _) {
+  void _onTouch(PointerDownEvent event) {
+    _pointers.add(event.pointer);
+    _restartTimer();
+  }
+
+  /// A finger lifted or was cancelled: the idle time starts over once the
+  /// last one is gone.
+  void _onTouchEnd(PointerEvent event) {
+    if (!_pointers.remove(event.pointer) || _pointers.isNotEmpty) return;
+    _restartTimer();
+  }
+
+  void _restartTimer() {
     if (_timer == null) return;
     _stopTimer();
     _startTimer();
@@ -157,6 +181,8 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
         Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: _onTouch,
+          onPointerUp: _onTouchEnd,
+          onPointerCancel: _onTouchEnd,
           child: Theme(
             data: _dimmed
                 ? (_theaterTheme ??= buildTheaterTheme())

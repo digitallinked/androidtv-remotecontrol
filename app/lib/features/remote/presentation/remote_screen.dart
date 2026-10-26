@@ -55,6 +55,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// on the touchpad refuses several steps at once.
   ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _notConnectedBar;
 
+  /// A power action is in flight (see [_power]).
+  bool _powering = false;
+
   @override
   void initState() {
     super.initState();
@@ -172,27 +175,35 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// wakes it, and the outcome is said here. A refusal is already announced
   /// by the "Not connected" notice.
   Future<void> _power() async {
-    final l10n = AppLocalizations.of(context);
-    final controller = ref.read(powerControllerProvider);
-    final session = controller.session;
-    final tvName = session == null ? '' : _tvName(l10n, session);
+    // A second hold while the first is still waking the TV or asking for
+    // the MAC would wake twice, buzz twice or stack a second sheet.
+    if (_powering) return;
+    _powering = true;
+    try {
+      final l10n = AppLocalizations.of(context);
+      final controller = ref.read(powerControllerProvider);
+      final session = controller.session;
+      final tvName = session == null ? '' : _tvName(l10n, session);
 
-    final outcome = await controller.press();
-    if (!mounted) return;
-    if (outcome != PowerOutcome.needsMac) {
-      _sayPowerOutcome(l10n, outcome, tvName);
-      return;
+      final outcome = await controller.press();
+      if (!mounted) return;
+      if (outcome != PowerOutcome.needsMac) {
+        _sayPowerOutcome(l10n, outcome, tvName);
+        return;
+      }
+
+      PowerOutcome? afterSave;
+      await showWolSetupSheet(
+        context,
+        tvName: tvName,
+        onSave: (mac) async => afterSave = await controller.saveMacAndWake(mac),
+      );
+      // Said even when the sheet was dismissed while it was saving.
+      final saved = afterSave;
+      if (saved != null) _sayPowerOutcome(l10n, saved, tvName);
+    } finally {
+      _powering = false;
     }
-
-    PowerOutcome? afterSave;
-    await showWolSetupSheet(
-      context,
-      tvName: tvName,
-      onSave: (mac) async => afterSave = await controller.saveMacAndWake(mac),
-    );
-    // Said even when the sheet was dismissed while it was saving.
-    final saved = afterSave;
-    if (saved != null) _sayPowerOutcome(l10n, saved, tvName);
   }
 
   void _sayPowerOutcome(

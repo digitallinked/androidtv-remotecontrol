@@ -9,9 +9,13 @@ class FakeWakeOnLan implements WakeOnLanService {
   /// What [wake] returns: whether a packet "went out".
   bool result = true;
 
+  /// When set, [wake] waits for it before it returns (a slow lookup).
+  Future<void>? gate;
+
   @override
   Future<bool> wake({required String mac, String? tvHost}) async {
     wakes.add((mac, tvHost));
+    await gate;
     return result;
   }
 }

@@ -184,6 +184,47 @@ void main() {
     expect(pageView(t).physics, isA<NeverScrollableScrollPhysics>());
   });
 
+  testWidgets('a_touch_in_the_middle_of_a_tab_animation_ends_consistent', (
+    t,
+  ) async {
+    await pumpPager(t, initial: PadPage.numbers);
+    // Part way across, two pages are built: the one under the middle shows.
+    PadPage shownPage() =>
+        PadPage.values[t
+            .widget<PageView>(find.byType(PageView))
+            .controller!
+            .page!
+            .round()];
+    void expectConsistent(String when) {
+      final shown = shownPage();
+      final tabs = t.widget<SegmentedButton<PadPage>>(
+        find.byType(SegmentedButton<PadPage>),
+      );
+      expect(tabs.selected, {shown}, reason: '$when: the highlight follows');
+      // Numbers is where the pager began; it has nothing to report.
+      expect(
+        reported.isEmpty ? PadPage.numbers : reported.last,
+        shown,
+        reason: '$when: the last report is the page that shows',
+      );
+    }
+
+    await t.tap(find.text('Touchpad'));
+    await t.pump();
+    // Part way through the animation, a finger stops the pager.
+    await t.pump(const Duration(milliseconds: 100));
+    final g = await t.startGesture(t.getCenter(find.byType(PageView)));
+    await t.pump();
+    expectConsistent('finger just down');
+    await t.pump(const Duration(milliseconds: 50));
+    expectConsistent('finger down');
+    await g.up();
+    await t.pump();
+    expectConsistent('released');
+    await t.pumpAndSettle();
+    expectConsistent('settled');
+  });
+
   testWidgets('overlapping_tab_taps_report_only_the_last_page', (t) async {
     await pumpPager(t);
     await t.tap(find.text('D-pad'));
