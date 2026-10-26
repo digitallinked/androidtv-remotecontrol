@@ -14,7 +14,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/demo/demo_providers.dart';
 import 'package:tv_remote/features/demo/presentation/demo_badge.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
@@ -87,7 +87,15 @@ void main() {
 
     await t.tap(find.bySemanticsLabel('Mute'));
     await t.pump();
-    expect(find.text('Muted'), findsOneWidget);
+    // The preview card and the volume rocker both say so.
+    expect(
+      find.descendant(
+        of: find.byType(TvPreviewCard),
+        matching: find.text('Muted'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Muted'), findsNWidgets(2));
     expect(find.textContaining('Volume 9 of 20'), findsNothing);
     handle.dispose();
   });
@@ -251,7 +259,7 @@ void main() {
       expect(find.text('Demo mode'), findsOneWidget);
       for (final finder in [
         find.byType(TvPreviewCard),
-        find.byType(BasicControls),
+        find.byType(RemoteBody),
       ]) {
         final rect = t.getRect(finder);
         expect(rect.left, greaterThanOrEqualTo(0));

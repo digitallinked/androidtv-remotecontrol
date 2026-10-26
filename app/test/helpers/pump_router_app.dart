@@ -39,6 +39,11 @@ import 'test_identity.dart';
 /// pumped in one test without reusing a router. [overrides] are applied after
 /// the defaults: an override of a provider that has a default replaces it.
 ///
+/// [prepareSettings] runs after the store has opened and before the app is
+/// pumped, to write the settings a test starts with. [accessibleNavigation]
+/// turns on the screen-reader flag of the `MediaQuery` that [textScale] is
+/// applied in.
+///
 /// With [settle] false it pumps one frame instead of waiting for the app to
 /// go idle: a screen with a running progress indicator never goes idle, and
 /// `pumpAndSettle` would then run the fake clock forward until the screen
@@ -51,10 +56,13 @@ Future<SettingsStore> pumpRouterApp(
   Brightness brightness = Brightness.light,
   double textScale = 1,
   bool settle = true,
+  Future<void> Function(SettingsStore store)? prepareSettings,
+  bool accessibleNavigation = false,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
   final store = await SettingsStore.open();
+  if (prepareSettings != null) await prepareSettings(store);
   final db = database ?? AppDatabase(NativeDatabase.memory());
   if (database == null) addTearDown(db.close);
   await tester.pumpWidget(
@@ -90,9 +98,10 @@ Future<SettingsStore> pumpRouterApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, app) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+              accessibleNavigation: accessibleNavigation,
+            ),
             child: buildAppShell(context, app),
           ),
           routerConfig: ref.watch(appRouterProvider),

@@ -167,6 +167,9 @@ class _DpadState extends State<Dpad> {
             dimension: side,
             child: RawGestureDetector(
               behavior: HitTestBehavior.opaque,
+              // The five buttons below describe the pad; the detector's own
+              // unlabeled tap node would only confuse a screen reader.
+              excludeFromSemantics: true,
               gestures: {
                 TapGestureRecognizer:
                     GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
