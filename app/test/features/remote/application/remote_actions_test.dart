@@ -217,11 +217,72 @@ void main() {
   test('repeat_hold_auto_releases_after_15s', () {
     fakeAsync((a) {
       actions(smooth: false).holdStart(KeyCodes.dpadUp);
-      a.elapse(const Duration(seconds: 16));
-      final count = session.sentPresses.length;
+      a.elapse(const Duration(seconds: 15));
+      // The first send plus one per 120 ms tick; the guard fires first at 15 s,
+      // so the tick due at the same instant never runs.
+      expect(session.sentPresses, hasLength(125));
       a.elapse(const Duration(seconds: 5));
-      expect(session.sentPresses, hasLength(count));
+      expect(session.sentPresses, hasLength(125));
+      expect(session.sentPresses.map((p) => p.$2).toSet(), {
+        KeyDirection.short,
+      });
       expect(a.pendingTimers, isEmpty);
+    });
+  });
+
+  test('a_throwing_listener_does_not_disarm_the_hold_guard', () {
+    fakeAsync((a) {
+      final x = RemoteActions(
+        session: session,
+        smoothPress: true,
+        hapticsEnabled: true,
+        haptics: h,
+        onRefused: () => refused++,
+        onSent: (_) => throw StateError('analytics failed'),
+      )..holdStart(KeyCodes.volumeUp);
+      a.elapse(const Duration(seconds: 15));
+      expect(session.sentPresses, [
+        (KeyCodes.volumeUp, KeyDirection.startLong),
+        (KeyCodes.volumeUp, KeyDirection.endLong),
+      ]);
+      expect(a.pendingTimers, isEmpty);
+      x.dispose();
+    });
+  });
+
+  test('a_throwing_listener_does_not_break_repeat_or_tap', () {
+    fakeAsync((a) {
+      final x = RemoteActions(
+        session: session,
+        smoothPress: false,
+        hapticsEnabled: true,
+        haptics: h,
+        onRefused: () => refused++,
+        onSent: (_) => throw StateError('analytics failed'),
+      );
+      expect(x.tap(KeyCodes.home), isTrue);
+      expect(
+        x.launch(const AppEntry(package: 'p', name: 'P')),
+        isTrue,
+      );
+      expect(x.typeText('a'), isTrue);
+      x.holdStart(KeyCodes.dpadDown);
+      a.elapse(const Duration(milliseconds: 240));
+      expect(
+        session.sentPresses.where((p) => p.$1 == KeyCodes.dpadDown),
+        hasLength(3),
+      );
+      x.holdEnd(KeyCodes.dpadDown);
+      expect(refused, 0);
+      expect(a.pendingTimers, isEmpty);
+    });
+  });
+
+  test('unsupported_key_code_throws_even_when_not_connected', () {
+    fakeAsync((a) {
+      goOffline();
+      expect(() => actions().tap(9999), throwsArgumentError);
+      expect(refused, 0);
     });
   });
 

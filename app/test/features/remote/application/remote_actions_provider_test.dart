@@ -112,6 +112,29 @@ void main() {
     },
   );
 
+  test('a_failed_session_load_refuses_commands', () async {
+    var calls = 0;
+    final c = ProviderContainer.test(
+      overrides: [
+        settingsStoreProvider.overrideWithValue(store),
+        hapticsProvider.overrideWithValue(haptic),
+        remoteSessionProvider.overrideWith((ref) async {
+          if (calls++ == 0) return a;
+          throw StateError('identity unusable');
+        }),
+      ],
+    )..listen(remoteActionsProvider, (_, _) {});
+    await c.read(remoteSessionProvider.future);
+    await c.pump();
+    c.invalidate(remoteSessionProvider);
+    await expectLater(c.read(remoteSessionProvider.future), throwsStateError);
+    await c.pump();
+
+    expect(c.read(remoteActionsProvider).tap(KeyCodes.home), isFalse);
+    expect(a.sentPresses, isEmpty);
+    expect(c.read(notConnectedNoticesProvider), 1);
+  });
+
   test('refusals_bump_the_not_connected_notices', () async {
     a.emit(const TvConnectionState(status: ConnectionStatus.offline));
     final c = makeContainer();

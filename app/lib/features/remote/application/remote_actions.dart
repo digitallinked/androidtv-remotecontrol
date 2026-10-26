@@ -178,7 +178,7 @@ class RemoteActions implements RemoteInput {
     } else {
       _light();
     }
-    _onSent?.call(KeySent(keyCode, KeyDirection.short));
+    _report(KeySent(keyCode, KeyDirection.short));
     return true;
   }
 
@@ -194,13 +194,14 @@ class RemoteActions implements RemoteInput {
     if (_activeHold != null) holdEnd(_activeHold!);
     final direction = smooth ? KeyDirection.startLong : KeyDirection.short;
     if (!_sendKey(keyCode, direction)) return;
+    // Arm the guards before anything else can fail: the key is down on the TV.
     _activeHold = keyCode;
-    _medium();
-    _onSent?.call(KeySent(keyCode, direction));
     _maxHoldTimer = Timer(_maxHold, () => holdEnd(keyCode));
     if (!smooth) {
       _repeatTimer = Timer.periodic(_repeatInterval, (_) => _repeat(keyCode));
     }
+    _medium();
+    _report(KeySent(keyCode, direction));
   }
 
   @override
@@ -219,14 +220,14 @@ class RemoteActions implements RemoteInput {
   bool launch(AppEntry app) {
     if (!_guard(() => _session!.launchAppLink(app.launchLink))) return false;
     _light();
-    _onSent?.call(AppLaunched(app.package));
+    _report(AppLaunched(app.package));
     return true;
   }
 
   @override
   bool typeText(String text) {
     if (!_guard(() => _session!.sendText(text))) return false;
-    _onSent?.call(TextSent(text.length));
+    _report(TextSent(text.length));
     return true;
   }
 
@@ -256,8 +257,22 @@ class RemoteActions implements RemoteInput {
     _activeHold = null;
   }
 
-  bool _sendKey(int keyCode, KeyDirection direction) =>
-      _guard(() => _session!.sendKey(keyCode, direction: direction));
+  bool _sendKey(int keyCode, KeyDirection direction) {
+    // A programming error even while offline (Ruling P4-R3).
+    if (!_disposed && !isSupportedKeyCode(keyCode)) {
+      throw ArgumentError.value(keyCode, 'keyCode', 'Unknown Android key code');
+    }
+    return _guard(() => _session!.sendKey(keyCode, direction: direction));
+  }
+
+  /// Tells the listener; its failure must not undo a command that was sent.
+  void _report(RemoteActionEvent event) {
+    try {
+      _onSent?.call(event);
+    } on Object {
+      // Analytics and counters are best effort.
+    }
+  }
 
   /// Runs [send] unless disposed or not connected; a refusal (also one that
   /// only the send itself notices) calls `onRefused` and returns `false`.
@@ -293,13 +308,19 @@ class RemoteActions implements RemoteInput {
 
 /// The [RemoteActions] for the active TV and the current settings.
 ///
+/// This provider is autoDispose: callers must watch it to keep it alive. A
+/// disposed instance refuses silently (returns `false`, no notice), so code
+/// that holds an instance across an async gap must use the return value.
+///
 /// Rebuilt when the session, Smooth Press or haptics change; the old instance
 /// is disposed, which releases an active hold, so a settings change or a TV
 /// switch in the middle of a hold never leaves a key stuck.
 @riverpod
 RemoteActions remoteActions(Ref ref) {
   final session = ref.watch(
-    remoteSessionProvider.select((s) => s.isLoading ? null : s.value),
+    remoteSessionProvider.select(
+      (s) => s.isLoading || s.hasError ? null : s.value,
+    ),
   );
   final (smoothPress, hapticsEnabled) = ref.watch(
     settingsControllerProvider.select(
