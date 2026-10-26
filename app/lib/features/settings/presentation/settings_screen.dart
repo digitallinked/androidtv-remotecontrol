@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/features/settings/application/feedback.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
 
 /// The settings hub: the pages that hold every setting, grouped (Ruling
@@ -11,24 +16,12 @@ import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.
 /// The banner slot sits at the bottom and the list ends with
 /// [BannerSlot.clearance] of space, so an ad never covers a row. There is no
 /// bottom-anchored control.
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   /// Creates the screen.
   const SettingsScreen({super.key});
 
-  // The mail and web links are wired in the help and about task; until then
-  // they say the page can't be opened.
-  void _linkUnavailable(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).settingsLinkFailed),
-        ),
-      );
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.pageTitleSettings)),
@@ -77,7 +70,7 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.mail_outline,
             title: l10n.settingsFeedback,
             subtitle: l10n.settingsFeedbackSubtitle,
-            onTap: () => _linkUnavailable(context),
+            onTap: () => unawaited(sendFeedback(context, ref)),
           ),
           SettingsSectionHeader(l10n.settingsSectionAbout),
           SettingsNavTile(
@@ -90,13 +83,15 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.privacy_tip_outlined,
             title: l10n.settingsPrivacy,
             external: true,
-            onTap: () => _linkUnavailable(context),
+            onTap: () => unawaited(
+              openExternal(context, ref, AppLinks.privacyPolicy),
+            ),
           ),
           SettingsNavTile(
             icon: Icons.description_outlined,
             title: l10n.settingsTerms,
             external: true,
-            onTap: () => _linkUnavailable(context),
+            onTap: () => unawaited(openExternal(context, ref, AppLinks.terms)),
           ),
           const SizedBox(height: BannerSlot.clearance),
         ],

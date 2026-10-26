@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:tv_remote/app/app.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/app/licenses.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -233,6 +234,7 @@ Future<void> bootstrap(Flavor flavor) async {
   );
   const reporter = LoggingCrashReporter();
   installErrorHandlers(reporter);
+  registerAppLicenses();
   runApp(
     StartupGate(
       reporter: reporter,
