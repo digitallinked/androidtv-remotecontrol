@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -339,9 +341,100 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(TextButton, 'Remove'));
     await t.pumpAndSettle();
-    expect(find.text("Couldn't save. Try again."), findsOneWidget);
+    expect(find.text("Couldn't remove this TV. Try again."), findsOneWidget);
     expect(find.byType(EditDeviceScreen), findsOneWidget);
     expect(repo.saved.keys, contains(_name));
+  });
+
+  testWidgets('a_failed_remove_says_so_and_remove_works_again', (t) async {
+    await pumpEdit(t);
+    await openEdit(t);
+    Future<void> tryRemove() async {
+      await t.tap(find.text('Remove TV'));
+      await t.pumpAndSettle();
+      await t.tap(find.widgetWithText(TextButton, 'Remove'));
+      await t.pumpAndSettle();
+    }
+
+    repo.failNextWrite = StateError('disk full');
+    await tryRemove();
+    expect(find.text("Couldn't remove this TV. Try again."), findsOneWidget);
+    expect(find.text("Couldn't save. Try again."), findsNothing);
+    // The button is enabled again.
+    final remove = find.widgetWithText(TextButton, 'Remove TV');
+    expect(t.widget<TextButton>(remove).onPressed, isNotNull);
+    // And a second try succeeds, closing the page.
+    await tryRemove();
+    expect(repo.saved.keys, isNot(contains(_name)));
+    expect(find.byType(EditDeviceScreen), findsNothing);
+    expect(find.byType(DevicesScreen), findsOneWidget);
+  });
+
+  testWidgets('a_failed_remove_keeps_the_tv_on_screen_while_the_list_updates', (
+    t,
+  ) async {
+    await pumpEdit(t);
+    await openEdit(t);
+    repo.failNextWrite = StateError('disk full');
+    await t.tap(find.text('Remove TV'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+    await t.pumpAndSettle();
+    // Removed elsewhere afterwards: the page must say so, not keep a ghost.
+    await repo.delete(_name);
+    await t.pumpAndSettle();
+    expect(
+      find.text("This TV isn't saved on this phone anymore."),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('saving_a_padded_name_shows_it_trimmed', (t) async {
+    await pumpEdit(t);
+    await openEdit(t);
+    await t.enterText(field('Name on this phone'), '  Den  ');
+    await tapSave(t);
+    expect(repo.saved[_name]!.nickname, 'Den');
+    expect(
+      t.widget<TextField>(field('Name on this phone')).controller!.text,
+      'Den',
+    );
+  });
+
+  testWidgets('a_read_error_shows_try_again_not_not_found', (t) async {
+    repo.watchError = StateError('disk');
+    await pumpEdit(t, location: AppRoutes.editDevice(_name));
+    expect(find.text("Couldn't load your TVs."), findsOneWidget);
+    expect(
+      find.text("This TV isn't saved on this phone anymore."),
+      findsNothing,
+    );
+    repo.watchError = null;
+    await t.tap(find.widgetWithText(FilledButton, 'Try again'));
+    await t.pumpAndSettle();
+    expect(find.text("Couldn't load your TVs."), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Save'), findsOneWidget);
+  });
+
+  testWidgets('not_found_returns_to_the_page_underneath_not_a_fresh_stack', (
+    t,
+  ) async {
+    await pumpEdit(t, location: AppRoutes.remote);
+    // Remote → Your TVs → Edit TV, all pushed.
+    unawaited(
+      GoRouter.of(t.element(find.byType(RemoteScreen))).push(AppRoutes.devices),
+    );
+    await t.pumpAndSettle();
+    await openEdit(t, 'Bedroom TV');
+    await repo.delete('Bedroom TV');
+    await t.pumpAndSettle();
+    await t.tap(find.text('Back to your TVs'));
+    await t.pumpAndSettle();
+    expect(find.byType(DevicesScreen), findsOneWidget);
+    // The remote is still underneath: Back leads to it.
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteScreen), findsOneWidget);
   });
 
   testWidgets('pair_again_from_edit_screen_resolves_the_host', (t) async {

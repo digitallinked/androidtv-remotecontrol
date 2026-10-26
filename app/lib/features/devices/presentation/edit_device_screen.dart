@@ -13,6 +13,7 @@ import 'package:tv_remote/core/tv/mac_address.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
 import 'package:tv_remote/features/devices/application/device_actions.dart';
+import 'package:tv_remote/features/devices/presentation/widgets/devices_load_failed.dart';
 import 'package:tv_remote/features/devices/presentation/widgets/mac_address_field.dart';
 import 'package:tv_remote/features/devices/presentation/widgets/wol_mac_help_sheet.dart';
 
@@ -54,6 +55,16 @@ class _EditDeviceScreenState extends ConsumerState<EditDeviceScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+    if (saved.hasError && devices == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.pageTitleEditDevice)),
+        body: SafeArea(
+          child: DevicesLoadFailed(
+            onRetry: () => ref.invalidate(savedDevicesProvider),
+          ),
+        ),
+      );
+    }
     SavedDevice? device;
     for (final candidate in devices ?? const <SavedDevice>[]) {
       if (candidate.serviceName == widget.serviceName) device = candidate;
@@ -61,9 +72,22 @@ class _EditDeviceScreenState extends ConsumerState<EditDeviceScreen> {
     if (device != null) _last = device;
     device ??= _removing ? _last : null;
     if (device == null) {
-      return _NotFound(onBack: () => context.go(AppRoutes.devices));
+      return _NotFound(
+        onBack: () {
+          // Back to the page underneath; never `go` to Your TVs, which would
+          // drop the remote from the stack (and iOS has no back button).
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(AppRoutes.remote);
+          }
+        },
+      );
     }
-    return _EditForm(device: device, onRemoving: () => _removing = true);
+    return _EditForm(
+      device: device,
+      onRemovingChanged: (removing) => _removing = removing,
+    );
   }
 }
 
@@ -105,12 +129,13 @@ class _NotFound extends StatelessWidget {
 }
 
 class _EditForm extends ConsumerStatefulWidget {
-  const _EditForm({required this.device, required this.onRemoving});
+  const _EditForm({required this.device, required this.onRemovingChanged});
 
   final SavedDevice device;
 
-  /// Called when the removal of the TV starts.
-  final VoidCallback onRemoving;
+  /// Called with `true` when the removal of the TV starts, and with `false`
+  /// if it failed.
+  final ValueChanged<bool> onRemovingChanged;
 
   @override
   ConsumerState<_EditForm> createState() => _EditFormState();
@@ -184,7 +209,8 @@ class _EditFormState extends ConsumerState<_EditForm> {
       return;
     }
     if (!mounted) return;
-    // Show the address as it was stored.
+    // Show the name and address as they were stored (trimmed).
+    _name.text = nickname ?? '';
     if (mac != null) _mac.text = mac;
     setState(() => _busy = false);
     _say(l10n.editDeviceSaved);
@@ -215,20 +241,22 @@ class _EditFormState extends ConsumerState<_EditForm> {
     final router = GoRouter.of(context);
     final removed = l10n.editDeviceRemoved(label);
     setState(() => _busy = true);
-    widget.onRemoving();
+    widget.onRemovingChanged(true);
     try {
       await ref.read(deviceActionsProvider).delete(device.serviceName);
     } on Object {
+      // The TV stays: the page must follow the saved list again.
+      widget.onRemovingChanged(false);
       if (mounted) {
         setState(() => _busy = false);
-        _say(l10n.editDeviceSaveFailed);
+        _say(l10n.editDeviceRemoveFailed);
       }
       return;
     }
     if (router.canPop()) {
       router.pop();
     } else {
-      router.go(AppRoutes.devices);
+      router.go(AppRoutes.remote);
     }
     messenger
       ..hideCurrentSnackBar()

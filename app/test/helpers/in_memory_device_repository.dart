@@ -51,12 +51,19 @@ class InMemoryDeviceRepository implements DeviceRepository {
     if (!_changes.isClosed) _changes.add(_newestFirst);
   }
 
+  /// When set, `watchAll` fails with it (the list can't be read).
+  Object? watchError;
+
   @override
-  Stream<List<SavedDevice>> watchAll() => Stream.multi((controller) {
-    controller.add(_newestFirst);
-    final sub = _changes.stream.listen(controller.add);
-    controller.onCancel = sub.cancel;
-  });
+  Stream<List<SavedDevice>> watchAll() {
+    final error = watchError;
+    if (error != null) return Stream<List<SavedDevice>>.error(error);
+    return Stream.multi((controller) {
+      controller.add(_newestFirst);
+      final sub = _changes.stream.listen(controller.add);
+      controller.onCancel = sub.cancel;
+    });
+  }
 
   @override
   Future<void> upsert(SavedDevice device) async {

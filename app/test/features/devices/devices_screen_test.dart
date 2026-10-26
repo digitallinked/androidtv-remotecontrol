@@ -143,6 +143,24 @@ void main() {
     expect(find.byType(DiscoveryScreen), findsOneWidget);
   });
 
+  testWidgets('unreadable_tvs_show_an_error_with_retry_not_an_empty_list', (
+    t,
+  ) async {
+    repo.watchError = StateError('disk');
+    await pumpDevices(t);
+    expect(find.text("Couldn't load your TVs."), findsOneWidget);
+    expect(find.text('No TVs yet'), findsNothing);
+    final retry = find.widgetWithText(FilledButton, 'Try again');
+    expect(retry, findsOneWidget);
+    expect(t.getSize(retry).height, greaterThanOrEqualTo(48));
+
+    repo.watchError = null;
+    await t.tap(retry);
+    await t.pumpAndSettle();
+    expect(find.text("Couldn't load your TVs."), findsNothing);
+    expect(find.text('Lounge'), findsOneWidget);
+  });
+
   testWidgets('manage_tvs_in_switcher_opens_your_tvs', (t) async {
     await pumpDevices(t, location: AppRoutes.remote);
     await t.tap(find.byTooltip('Switch TV'));

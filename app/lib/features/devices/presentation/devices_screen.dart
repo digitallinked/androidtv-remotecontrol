@@ -10,6 +10,7 @@ import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/devices/presentation/widgets/devices_load_failed.dart';
 
 /// Your TVs: the TVs saved on this phone, most recently used first.
 ///
@@ -34,8 +35,11 @@ class DevicesScreen extends ConsumerWidget {
     final Widget body;
     if (devices == null && saved.isLoading) {
       body = const Center(child: CircularProgressIndicator());
+    } else if (saved.hasError && devices == null) {
+      body = DevicesLoadFailed(
+        onRetry: () => ref.invalidate(savedDevicesProvider),
+      );
     } else if (devices == null || devices.isEmpty) {
-      // A failed read looks like an empty list: the way out is the same.
       body = _Empty(onAdd: () => unawaited(context.push(AppRoutes.discover)));
     } else {
       body = ListView.separated(

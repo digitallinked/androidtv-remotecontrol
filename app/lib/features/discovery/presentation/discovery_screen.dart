@@ -8,6 +8,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/manual_tv.dart';
@@ -148,6 +149,10 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     // Read before the first await: the screen may go away meanwhile.
     final devices = ref.read(deviceRepositoryProvider);
     final target = ref.read(activeTargetProvider.notifier);
+    // Whether the remote follows the manual row that the merge removes.
+    final followedManualRow =
+        manual != null &&
+        ref.read(activeTargetProvider) == DeviceTarget(manual.serviceName);
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final failed = AppLocalizations.of(context).discoverOpenFailed;
@@ -179,9 +184,11 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
           return;
         }
       }
-      if (!mounted) return;
-      target.activateDevice(tv.serviceName);
-      router.go(AppRoutes.remote);
+      // The user may have left meanwhile. The remote must not keep following
+      // a row that the merge just removed, so it moves to the merged TV; but
+      // nobody who went elsewhere is pulled back to the remote.
+      if (mounted || followedManualRow) target.activateDevice(tv.serviceName);
+      if (mounted) router.go(AppRoutes.remote);
     } finally {
       _opening = false;
     }

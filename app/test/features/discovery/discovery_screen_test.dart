@@ -14,6 +14,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_tv_discovery.dart';
@@ -43,6 +44,25 @@ class _SlowHostRepository extends InMemoryDeviceRepository {
   Future<void> setLastHost(String serviceName, String host) async {
     await release.future;
     await super.setLastHost(serviceName, host);
+  }
+}
+
+/// A repository whose manual → mDNS merge waits until [release] completes.
+class _SlowAdoptRepository extends InMemoryDeviceRepository {
+  _SlowAdoptRepository(super.initial);
+
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) async {
+    await release.future;
+    return super.adoptManualDevice(
+      manualServiceName: manualServiceName,
+      tv: tv,
+    );
   }
 }
 
@@ -311,6 +331,44 @@ void main() {
       containerOf(t).read(activeTargetProvider),
       const DeviceTarget('Living Room TV 3'),
     );
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('a_merge_finished_after_leaving_discovery_moves_the_session', (
+    t,
+  ) async {
+    const manual = 'manual:192.168.0.20';
+    final repo = _SlowAdoptRepository([savedTv(name: manual, nickname: 'Den')]);
+    await pumpDiscover(
+      t,
+      overrides: [
+        deviceRepositoryProvider.overrideWithValue(repo),
+        savedDevicesProvider.overrideWith((ref) => repo.watchAll()),
+      ],
+    );
+    // The remote is following the manual row.
+    containerOf(t).read(activeTargetProvider.notifier).activateDevice(manual);
+    await found(t, [tv('Living Room TV 3')]);
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pump();
+
+    // The user leaves discovery while the merge is still running.
+    GoRouter.of(t.element(find.byType(Scaffold).last)).go(AppRoutes.remote);
+    await t.pumpAndSettle();
+    expect(find.byType(DiscoveryScreen), findsNothing);
+
+    repo.release.complete();
+    await t.pumpAndSettle();
+
+    expect(repo.saved.keys, ['Living Room TV 3']);
+    expect(
+      containerOf(t).read(activeTargetProvider),
+      const DeviceTarget('Living Room TV 3'),
+    );
+    // No session is left on the manual row that no longer exists.
+    final session = await containerOf(t).read(remoteSessionProvider.future);
+    expect(session?.pairingTarget?.serviceName, 'Living Room TV 3');
+    // The user stays where they went.
     expect(top(t).uri.path, AppRoutes.remote);
   });
 
