@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_key_button.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -13,6 +14,7 @@ import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
 
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
@@ -302,4 +304,63 @@ void main() {
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
   });
+
+  for (final width in [360.0, 320.0]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('controls_fit_${width.toInt()}dp_at_${scale}x_text', (
+        t,
+      ) async {
+        t.view
+          ..physicalSize = Size(width, 640)
+          ..devicePixelRatio = 1;
+        addTearDown(t.view.reset);
+        fake.emit(_connected);
+        await pumpRemote(t, textScale: scale);
+        expect(t.takeException(), isNull);
+        final keys = find.byType(AppKeyButton);
+        expect(keys, findsNWidgets(10));
+        for (final key in keys.evaluate()) {
+          final size = t.getSize(find.byElementPredicate((e) => e == key));
+          expect(size.width, greaterThanOrEqualTo(56));
+          expect(size.height, greaterThanOrEqualTo(56));
+        }
+        final controls = t.getRect(find.byType(BasicControls));
+        expect(controls.left, greaterThanOrEqualTo(0));
+        expect(controls.right, lessThanOrEqualTo(width));
+      });
+    }
+  }
+
+  testWidgets('disconnected_key_press_offers_reconnect', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpRemote(t);
+    await t.tap(find.bySemanticsLabel('Home'));
+    await t.pump();
+    expect(fake.sentKeys, isEmpty);
+    await t.pump(const Duration(milliseconds: 500));
+    expect(find.text('Not connected to your TV'), findsOneWidget);
+    await t.tap(find.widgetWithText(SnackBarAction, 'Reconnect'));
+    await t.pump();
+    expect(fake.reconnectCalls, 1);
+    handle.dispose();
+  });
+
+  testWidgets(
+    'identity_changed_dialog_shows_when_the_screen_opens_in_that_state',
+    (
+      t,
+    ) async {
+      fake.emit(_identityChanged);
+      await pumpRemote(t);
+      expect(find.text("This TV's identity changed"), findsOneWidget);
+      await t.tap(find.text('Not now'));
+      await t.pumpAndSettle();
+      expect(find.byType(AppDialog<bool>), findsNothing);
+      fake.emit(_offline);
+      await t.pumpAndSettle();
+      fake.emit(_identityChanged);
+      await t.pumpAndSettle();
+      expect(find.byType(AppDialog<bool>), findsNothing);
+    },
+  );
 }

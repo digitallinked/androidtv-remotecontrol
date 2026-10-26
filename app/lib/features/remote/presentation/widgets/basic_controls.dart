@@ -21,7 +21,9 @@ class BasicControls extends StatelessWidget {
   /// Called with the key code of a tapped key.
   final ValueChanged<int> onKey;
 
-  static const double _padKey = 72;
+  /// Width of the controls: D-pad (3 keys and 2 gaps), a gap, the rocker.
+  /// It fits a 320 dp phone with 16 dp of padding at each side.
+  static const double _padKey = 64;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +77,7 @@ class BasicControls extends StatelessWidget {
       opacity: enabled ? 1 : 0.4,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: AppSpacing.xl,
+        spacing: AppSpacing.l,
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,

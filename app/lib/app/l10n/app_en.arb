@@ -286,7 +286,7 @@
   },
   "keyTvInput": "TV input",
   "@keyTvInput": {
-    "description": "Screen-reader label of the tV input key."
+    "description": "Screen-reader label of the TV input key."
   },
   "keySettings": "Settings",
   "@keySettings": {

@@ -33,6 +33,17 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// The session the identity-changed dialog was last shown for.
   RemoteSession? _askedAboutIdentityFor;
 
+  @override
+  void initState() {
+    super.initState();
+    // Also fires for a state that is already there when the screen opens.
+    ref.listenManual(
+      connectionStateProvider,
+      _onConnectionState,
+      fireImmediately: true,
+    );
+  }
+
   /// The status the controls and the pill show: the socket's state, never the
   /// saved one. Loading and errors count as not connected.
   ConnectionStatus _statusOf(AsyncValue<TvConnectionState> state) {
@@ -57,7 +68,10 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final session = ref.read(remoteSessionProvider).value;
     if (session == null || identical(session, _askedAboutIdentityFor)) return;
     _askedAboutIdentityFor = session;
-    unawaited(_askToPairAgain(session));
+    // After the frame: this may run while the screen is still being built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_askToPairAgain(session));
+    });
   }
 
   Future<void> _askToPairAgain(RemoteSession session) async {
@@ -87,10 +101,8 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   }
 
   void _press(RemoteSession session, int code) {
-    final connected =
-        _statusOf(ref.read(connectionStateProvider)) ==
-        ConnectionStatus.connected;
-    if (connected) {
+    final status = _statusOf(ref.read(connectionStateProvider));
+    if (status == ConnectionStatus.connected) {
       try {
         session.sendKey(code);
         return;
@@ -98,11 +110,20 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         // The state lags the socket by a microtask: fall through.
       }
     }
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).remoteNotConnected),
+          content: Text(l10n.remoteNotConnected),
+          // Offline and needs-pairing have an action in the status pill;
+          // a closed connection has none, so offer it here.
+          action: status == ConnectionStatus.disconnected
+              ? SnackBarAction(
+                  label: l10n.statusReconnectAction,
+                  onPressed: session.reconnect,
+                )
+              : null,
         ),
       );
   }
@@ -112,10 +133,6 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final l10n = AppLocalizations.of(context);
     final sessionState = ref.watch(remoteSessionProvider);
     final connection = ref.watch(connectionStateProvider);
-    ref.listen<AsyncValue<TvConnectionState>>(
-      connectionStateProvider,
-      _onConnectionState,
-    );
 
     if (sessionState.isLoading) {
       return Scaffold(
@@ -181,7 +198,10 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         // they don't fit (landscape, large text).
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.xl),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.l,
+              vertical: AppSpacing.xl,
+            ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: constraints.maxHeight - 2 * AppSpacing.xl,

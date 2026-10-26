@@ -484,7 +484,7 @@ abstract class AppLocalizations {
   /// **'Blue'**
   String get keyBlue;
 
-  /// Screen-reader label of the tV input key.
+  /// Screen-reader label of the TV input key.
   ///
   /// In en, this message translates to:
   /// **'TV input'**

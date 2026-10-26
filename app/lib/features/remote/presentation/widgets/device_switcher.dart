@@ -64,6 +64,7 @@ class DeviceSwitcher extends StatelessWidget {
         ],
       ),
     );
+    if (!context.mounted) return;
     switch (picked) {
       case _Select(:final serviceName):
         onSelect(serviceName);
