@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/features/pairing/domain/pairing_code.dart';
 
+/// Largest text scale the code itself is shown at.
+const double _maxCodeScale = 1.3;
+
 /// The text field for the 6-character pairing code.
 ///
 /// It shows only upper-case hex characters and calls [onCompleted] once each
@@ -86,33 +89,45 @@ class PairingCodeFieldState extends State<PairingCodeField> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final style = Theme.of(context).textTheme.displaySmall?.copyWith(
-      fontFamily: 'monospace',
-      fontFamilyFallback: const ['Menlo', 'Courier New', 'Roboto Mono'],
-      letterSpacing: 6,
-    );
+    final base = Theme.of(context).textTheme.displaySmall;
+    final fontSize = base?.fontSize;
     // The code is large display text already; at 200% six characters would
-    // no longer fit a phone's width.
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 1.3,
-      child: TextField(
-        controller: _controller,
-        focusNode: _focus,
-        enabled: widget.enabled,
-        autofocus: true,
-        inputFormatters: [PairingCodeFormatter()],
-        textCapitalization: TextCapitalization.characters,
-        keyboardType: TextInputType.visiblePassword,
-        autocorrect: false,
-        enableSuggestions: false,
-        textAlign: TextAlign.center,
-        style: style,
-        decoration: InputDecoration(
-          labelText: l10n.pairCodeLabel,
-          errorText: widget.errorText,
-          errorMaxLines: 4,
-          border: const OutlineInputBorder(),
-        ),
+    // no longer fit a phone's width. Shrink the code's own font so that, once
+    // the field applies the user's text scale, it ends up at most
+    // [_maxCodeScale] times its size. The label and the error keep the full
+    // text size.
+    var codeFontSize = fontSize;
+    if (fontSize != null && fontSize > 0) {
+      final scale = MediaQuery.textScalerOf(context).scale(fontSize) / fontSize;
+      if (scale > _maxCodeScale) {
+        codeFontSize = fontSize * _maxCodeScale / scale;
+      }
+    }
+    return TextField(
+      controller: _controller,
+      focusNode: _focus,
+      enabled: widget.enabled,
+      autofocus: true,
+      inputFormatters: [PairingCodeFormatter()],
+      textCapitalization: TextCapitalization.characters,
+      keyboardType: TextInputType.visiblePassword,
+      autocorrect: false,
+      enableSuggestions: false,
+      // The code is a one-time secret: keep it out of the keyboard's
+      // learned words.
+      enableIMEPersonalizedLearning: false,
+      textAlign: TextAlign.center,
+      style: base?.copyWith(
+        fontFamily: 'monospace',
+        fontFamilyFallback: const ['Menlo', 'Courier New', 'Roboto Mono'],
+        letterSpacing: 6,
+        fontSize: codeFontSize,
+      ),
+      decoration: InputDecoration(
+        labelText: l10n.pairCodeLabel,
+        errorText: widget.errorText,
+        errorMaxLines: 4,
+        border: const OutlineInputBorder(),
       ),
     );
   }

@@ -54,8 +54,13 @@ class FakePairingClient implements PairingClient {
   /// Every code passed to [submitCode], in order.
   final List<String> submittedCodes = [];
 
-  /// Whether [close] was called, or the session ended by itself.
+  /// Whether the session is over: [close] was called, or it ended by itself
+  /// (a failure, or a code the TV accepted).
   bool closed = false;
+
+  /// How often [close] was called. Unlike [closed], only [close] sets it, so
+  /// it shows that the code under test released the client.
+  int closeCalls = 0;
 
   bool _started = false;
 
@@ -95,7 +100,15 @@ class FakePairingClient implements PairingClient {
 
   @override
   Future<void> close() async {
+    closeCalls++;
     closed = true;
+    // Like the real client: a submit still waiting for the TV fails.
+    final hold = holdSubmit;
+    if (hold != null && !hold.isCompleted) {
+      hold.completeError(
+        const PairingException(PairingFailure.connectionFailed, 'closed'),
+      );
+    }
   }
 }
 

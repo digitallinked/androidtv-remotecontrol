@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
+import 'package:clock/clock.dart';
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -16,6 +18,7 @@ import 'package:tv_remote/features/pairing/application/pairing_state.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import '../../helpers/fake_pairing_client.dart';
+import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/test_devices.dart';
@@ -29,6 +32,29 @@ class _FailingRepository implements DeviceRepository {
   @override
   Future<void> upsert(SavedDevice device) =>
       Future<void>.error(Exception('disk full'));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A repository in memory (no database, so it works under `fakeAsync`) whose
+/// `find` can be held back.
+class _MemoryRepository implements DeviceRepository {
+  final Map<String, SavedDevice> saved = {};
+
+  /// When set, `find` waits for it.
+  Completer<void>? holdFind;
+
+  @override
+  Future<SavedDevice?> find(String serviceName) async {
+    await holdFind?.future;
+    return saved[serviceName];
+  }
+
+  @override
+  Future<void> upsert(SavedDevice device) async {
+    saved[device.serviceName] = device;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -161,7 +187,7 @@ void main() {
           .having((s) => s.device.serviceName, 'serviceName', tv0.serviceName)
           .having((s) => s.device.serverKeyPin, 'pin', testPin),
     );
-    expect(fakes.created.single.closed, isTrue);
+    expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
   });
 
   test('re_pairing_keeps_nickname_and_wol_mac', () async {
@@ -186,7 +212,8 @@ void main() {
       expect(fakes.created.single.closed, isFalse);
       async.elapse(const Duration(seconds: 1));
       expect(read(c), const PairingCodeExpired());
-      expect(fakes.created.single.closed, isTrue);
+      expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+      expect(async.pendingTimers, isEmpty);
     });
   });
 
@@ -201,8 +228,9 @@ void main() {
       expect(read(c), const PairingStarting());
       async.flushMicrotasks();
       expect(fakes.created, hasLength(2));
-      expect(fakes.created.first.closed, isTrue);
+      expect(fakes.created.first.closeCalls, greaterThanOrEqualTo(1));
       expect(read(c), const PairingWaitingForCode(secondsLeft: 60));
+      expect(async.pendingTimers, hasLength(1)); // The new countdown only.
     });
   });
 
@@ -236,6 +264,7 @@ void main() {
       final c = makeContainer();
       await until(c, (s) => s is PairingFailed || s is PairingWaitingForCode);
       if (onSubmit != null) await notifier(c).submit('AB12CD');
+      expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
       return read(c);
     }
 
@@ -263,7 +292,6 @@ void main() {
       await failWith(onSubmit: PairingFailure.timeout),
       const PairingFailed(PairingErrorKind.tvDidNotRespond),
     );
-    expect(fakes.created.single.closed, isTrue);
   });
 
   test('a_failed_start_closes_the_client', () async {
@@ -271,7 +299,7 @@ void main() {
         client.startError = const PairingException(PairingFailure.timeout);
     final c = makeContainer();
     await until(c, (s) => s is PairingFailed);
-    expect(fakes.created.single.closed, isTrue);
+    expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
   });
 
   test('identity_failure_offers_try_again', () async {
@@ -309,11 +337,199 @@ void main() {
     expect(fakes.created, hasLength(1));
     subscription.close();
     await Future<void>.delayed(Duration.zero);
-    expect(fakes.created.single.closed, isTrue);
+    expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
     hold.complete();
     await Future<void>.delayed(Duration.zero);
     await Future<void>.delayed(Duration.zero);
     // No error escaped and no second client appeared.
     expect(fakes.created, hasLength(1));
+  });
+
+  group('releasing_resources', () {
+    ProviderContainer fakeAsyncContainer(_MemoryRepository repo) =>
+        ProviderContainer.test(
+          overrides: <Override>[
+            identityStoreProvider.overrideWithValue(testIdentityStore()),
+            pairingClientFactoryProvider.overrideWithValue(fakes.create),
+            deviceRepositoryProvider.overrideWithValue(repo),
+          ],
+        )..listen(pairingControllerProvider(tv0), (_, _) {});
+
+    test('an_error_after_the_code_was_sent_stops_the_countdown', () {
+      fakeAsync((async) {
+        fakes.onCreate = (client) =>
+            client.submitError = const PairingException(
+              PairingFailure.badSecret,
+            );
+        final c = fakeAsyncContainer(_MemoryRepository());
+        async.flushMicrotasks();
+        expect(async.pendingTimers, hasLength(1));
+        unawaited(notifier(c).submit('AB12CD'));
+        async.flushMicrotasks();
+        expect(read(c), const PairingFailed(PairingErrorKind.codeRejectedByTv));
+        expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+
+    test('success_stops_the_countdown_and_closes_the_client', () {
+      fakeAsync((async) {
+        final c = fakeAsyncContainer(_MemoryRepository());
+        async.flushMicrotasks();
+        unawaited(notifier(c).submit('AB12CD'));
+        async.flushMicrotasks();
+        expect(read(c), isA<PairingSucceeded>());
+        expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+
+    test('leaving_stops_the_countdown_and_closes_the_client', () {
+      fakeAsync((async) {
+        final c = ProviderContainer.test(
+          overrides: <Override>[
+            identityStoreProvider.overrideWithValue(testIdentityStore()),
+            pairingClientFactoryProvider.overrideWithValue(fakes.create),
+          ],
+        );
+        final subscription = c.listen(
+          pairingControllerProvider(tv0),
+          (_, _) {},
+        );
+        async.flushMicrotasks();
+        expect(async.pendingTimers, hasLength(1));
+        subscription.close();
+        // Riverpod disposes an unwatched provider on a zero-length timer.
+        async.elapse(Duration.zero);
+        expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+
+    test('a_suspended_timer_still_shows_the_time_that_passed', () {
+      fakeAsync((async) {
+        var skew = Duration.zero;
+        // The wall clock runs ahead of the timers, as after an iOS suspend.
+        final shifted = Clock(
+          () => async.getClock(DateTime.utc(2026)).now().add(skew),
+        );
+        withClock(shifted, () {
+          final c = fakeAsyncContainer(_MemoryRepository());
+          async.flushMicrotasks();
+          skew = const Duration(seconds: 45);
+          async.elapse(const Duration(seconds: 1));
+          expect(read(c), const PairingWaitingForCode(secondsLeft: 14));
+          skew = const Duration(seconds: 100);
+          async.elapse(const Duration(seconds: 1));
+          expect(read(c), const PairingCodeExpired());
+          expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+        });
+      });
+    });
+
+    test('leaving_while_the_tv_checks_the_code_saves_and_changes_nothing', () {
+      fakeAsync((async) {
+        final hold = Completer<void>();
+        fakes.onCreate = (client) => client.holdSubmit = hold;
+        final repo = _MemoryRepository();
+        final c = ProviderContainer.test(
+          overrides: <Override>[
+            identityStoreProvider.overrideWithValue(testIdentityStore()),
+            pairingClientFactoryProvider.overrideWithValue(fakes.create),
+            deviceRepositoryProvider.overrideWithValue(repo),
+          ],
+        );
+        final subscription = c.listen(
+          pairingControllerProvider(tv0),
+          (_, _) {},
+        );
+        async.flushMicrotasks();
+        unawaited(
+          c.read(pairingControllerProvider(tv0).notifier).submit('AB12CD'),
+        );
+        async.flushMicrotasks();
+        expect(
+          c.read(pairingControllerProvider(tv0)),
+          const PairingVerifying(),
+        );
+        subscription.close();
+        // Riverpod disposes an unwatched provider on a zero-length timer.
+        async.elapse(Duration.zero);
+        // The client was closed, which failed the pending submit.
+        expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
+        expect(repo.saved, isEmpty);
+        expect(c.read(activeTargetProvider), isNull);
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+  });
+
+  group('abandoned_save', () {
+    // The TV accepted the code, then the user left while the TV was being
+    // saved.
+    Future<(_MemoryRepository, ProviderContainer)> abandon({
+      String? activeBefore,
+    }) async {
+      final repo = _MemoryRepository()..holdFind = Completer<void>();
+      final c = ProviderContainer.test(
+        overrides: <Override>[
+          identityStoreProvider.overrideWithValue(testIdentityStore()),
+          pairingClientFactoryProvider.overrideWithValue(fakes.create),
+          deviceRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      if (activeBefore != null) {
+        c.read(activeTargetProvider.notifier).activateDevice(activeBefore);
+      }
+      final subscription = c.listen(pairingControllerProvider(tv0), (_, _) {});
+      await until(c, (s) => s is PairingWaitingForCode);
+      final done = notifier(c).submit('AB12CD');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      subscription.close();
+      await Future<void>.delayed(Duration.zero);
+      repo.holdFind!.complete();
+      await done;
+      return (repo, c);
+    }
+
+    test('the_pin_is_saved_and_the_idle_session_follows_the_tv', () async {
+      final (repo, c) = await abandon();
+      expect(repo.saved[tv0.serviceName]?.serverKeyPin, testPin);
+      expect(c.read(activeTargetProvider), DeviceTarget(tv0.serviceName));
+    });
+
+    test('another_active_tv_is_left_alone', () async {
+      final (repo, c) = await abandon(activeBefore: 'Bedroom');
+      expect(repo.saved[tv0.serviceName]?.serverKeyPin, testPin);
+      expect(c.read(activeTargetProvider), const DeviceTarget('Bedroom'));
+    });
+  });
+
+  test('re_pairing_the_active_tv_replaces_its_session', () async {
+    var built = 0;
+    final c = ProviderContainer.test(
+      overrides: <Override>[
+        appDatabaseProvider.overrideWithValue(db),
+        identityStoreProvider.overrideWithValue(testIdentityStore()),
+        pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        remoteSessionProvider.overrideWith((ref) async {
+          built++;
+          return FakeRemoteSession();
+        }),
+      ],
+    );
+    c.read(activeTargetProvider.notifier).activateDevice(tv0.serviceName);
+    final before = await c.read(remoteSessionProvider.future);
+    expect(built, 1);
+
+    c.listen(pairingControllerProvider(tv0), (_, _) {});
+    await until(c, (s) => s is PairingWaitingForCode);
+    await notifier(c).submit('AB12CD');
+    expect(read(c), isA<PairingSucceeded>());
+
+    final after = await c.read(remoteSessionProvider.future);
+    expect(built, 2);
+    expect(after, isNot(same(before)));
   });
 }

@@ -11,6 +11,7 @@ resolution: workspace
 dependencies:
   atv_remote:
     path: ../packages/atv_remote
+  clock: 1.1.2
   connectivity_plus: 7.3.2
   drift: 2.34.0
   drift_flutter: 0.3.1

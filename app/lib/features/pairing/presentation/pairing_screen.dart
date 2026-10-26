@@ -8,12 +8,22 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/core/tv/manual_tv.dart';
 import 'package:tv_remote/features/discovery/presentation/widgets/troubleshooting_sheet.dart';
 import 'package:tv_remote/features/pairing/application/pairing_controller.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 import 'package:tv_remote/features/pairing/domain/pairing_code.dart';
 import 'package:tv_remote/features/pairing/presentation/widgets/pairing_code_field.dart';
+
+/// The name to show for a TV known only by its service name: a TV added by
+/// IP address shows the address without the internal `manual:` prefix.
+String _displayName(String serviceName) {
+  final name = serviceName.trim();
+  return isManualServiceName(name)
+      ? name.substring(manualServiceNamePrefix.length)
+      : name;
+}
 
 /// Pairs the phone with a TV: the TV shows a code and the user types it in.
 ///
@@ -40,7 +50,9 @@ class PairingScreen extends ConsumerWidget {
     if (resolved != null) return _PairingBody(tv: resolved);
     if (target.isLoading && !target.hasError) {
       return _Page(
-        child: _Message(progressLabel: l10n.pairStarting(serviceName.trim())),
+        child: _Message(
+          progressLabel: l10n.pairStarting(_displayName(serviceName)),
+        ),
       );
     }
     // Not found, or the look-up failed: the way out is the same.
@@ -206,10 +218,14 @@ class _Message extends StatelessWidget {
           ),
         ],
         if (heading != null)
-          Text(
-            heading,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge,
+          // Read out when it appears: the screen changed under the user.
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              heading,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
+            ),
           ),
         if (text != null)
           Text(
@@ -272,10 +288,12 @@ class _CodeEntryState extends State<_CodeEntry> {
     final messenger = ScaffoldMessenger.of(context);
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     if (!mounted) return;
-    final raw = data?.text ?? '';
-    // Prose with a few hex letters in it must not become a code.
-    final looksLikeCode = RegExp(r'^[0-9A-Fa-f\s-]+$').hasMatch(raw);
-    final code = looksLikeCode ? normalizePairingCode(raw) : '';
+    // Exactly six hex digits once spaces and dashes are gone: anything longer
+    // is not a code (prose, a longer hex string) and is not cut down to one.
+    final compact = (data?.text ?? '').replaceAll(RegExp(r'[\s-]'), '');
+    final code = RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(compact)
+        ? normalizePairingCode(compact)
+        : '';
     if (isCompletePairingCode(code)) {
       // Completing the text submits it, like typing the last character.
       _field.currentState?.setCode(code);

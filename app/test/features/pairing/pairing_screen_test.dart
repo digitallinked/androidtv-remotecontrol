@@ -147,7 +147,14 @@ void main() {
   });
 
   testWidgets('clipboard_text_that_is_not_a_code_shows_a_message', (t) async {
-    for (final clipboard in ['hello', 'The code is AB12CD', 'AB12C', null]) {
+    for (final clipboard in [
+      'hello',
+      'The code is AB12CD',
+      'AB12C',
+      'AB12CD9F', // Longer than a code: never cut down to one.
+      'AB 12 CD 9F',
+      null,
+    ]) {
       mockClipboard(t, clipboard);
       await openPairing(t);
       await t.tap(find.text('Paste code'));
@@ -396,5 +403,86 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
     expect(find.text('Troubleshooting'), findsOneWidget);
     expect(t.takeException(), isNull);
+  });
+
+  for (final width in [320.0, 360.0]) {
+    testWidgets(
+      'mismatch_error_reflows_at_200_percent_text_${width.toInt()}_dp',
+      (
+        t,
+      ) async {
+        t.view
+          ..physicalSize = Size(width, 640)
+          ..devicePixelRatio = 1;
+        addTearDown(t.view.reset);
+        await openPairing(t, textScale: 2);
+        await t.enterText(find.byType(TextField), '000000');
+        await t.pump();
+        await t.pump();
+
+        final error = find.textContaining("That code doesn't match");
+        expect(error, findsOneWidget);
+        // The feedback keeps the user's full text size ...
+        expect(MediaQuery.textScalerOf(t.element(error)).scale(10), 20);
+        // ... and only the code itself is held to 130%.
+        final base = Theme.of(
+          t.element(find.byType(TextField)),
+        ).textTheme.displaySmall!.fontSize!;
+        final editable = t.widget<EditableText>(find.byType(EditableText));
+        expect(
+          MediaQuery.textScalerOf(
+            t.element(find.byType(EditableText)),
+          ).scale(editable.style.fontSize!),
+          closeTo(base * 1.3, 0.01),
+        );
+        expect(t.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('the_code_keeps_the_keyboard_from_learning_it', (t) async {
+    await openPairing(t);
+    expect(
+      t.widget<TextField>(find.byType(TextField)).enableIMEPersonalizedLearning,
+      isFalse,
+    );
+  });
+
+  testWidgets('a_tv_added_by_ip_shows_the_address_while_loading', (t) async {
+    await openPairingByName(
+      t,
+      'manual:192.168.1.30',
+      more: [
+        pairingTargetProvider(
+          'manual:192.168.1.30',
+        ).overrideWith((ref) => Completer<DiscoveredTv?>().future),
+      ],
+    );
+    expect(find.text('Connecting to 192.168.1.30…'), findsOneWidget);
+    expect(find.textContaining('manual:'), findsNothing);
+  });
+
+  testWidgets('screen_changes_are_announced_as_live_regions', (t) async {
+    Finder liveRegionAround(String title) => find.ancestor(
+      of: find.text(title),
+      matching: find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.liveRegion == true,
+      ),
+    );
+
+    await openPairing(t);
+    await t.pump(const Duration(seconds: 60));
+    expect(liveRegionAround('The code expired'), findsOneWidget);
+
+    fakes.onCreate = (client) => client.startError = const PairingException(
+      PairingFailure.timeout,
+    );
+    await t.tap(find.text('Get a new code'));
+    await t.pump();
+    await t.pump();
+    expect(liveRegionAround("$name didn't respond"), findsOneWidget);
+
+    await openPairingByName(t, 'Den');
+    expect(liveRegionAround("We couldn't find this TV"), findsOneWidget);
   });
 }
