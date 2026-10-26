@@ -352,6 +352,13 @@ void main() {
       nudgeDebounce: Duration(milliseconds: 5),
     );
 
+    /// Waits until [session] reports `disconnected`. Event-driven, so it does
+    /// not depend on how long the machine takes; the timeout only bounds a
+    /// failing run.
+    Future<void> untilDisconnected(RemoteSession session) => session.states
+        .firstWhere((s) => s.status == ConnectionStatus.disconnected)
+        .timeout(const Duration(seconds: 5));
+
     test('session_disconnects_after_background_grace', () async {
       await repo.upsert(savedTv(name: 'a'));
       final c = makeContainer(timing: quick)
@@ -360,7 +367,7 @@ void main() {
       await untilConnected(session);
 
       signals.background();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await untilDisconnected(session);
 
       expect(clients.created.single.closed, isTrue);
       expect(session.current.status, ConnectionStatus.disconnected);
@@ -373,13 +380,13 @@ void main() {
       final session = (await c.read(remoteSessionProvider.future))!;
       await untilConnected(session);
       signals.background();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(session.current.status, ConnectionStatus.disconnected);
+      await untilDisconnected(session);
 
       signals.foreground();
       await untilConnected(session);
 
       expect(clients.created, hasLength(2));
+      expect(clients.created.first.closed, isTrue);
       expect(clients.created.last.closed, isFalse);
     });
 
@@ -389,16 +396,23 @@ void main() {
         ..listen(remoteSessionProvider, (_, _) {});
       final first = (await c.read(remoteSessionProvider.future))!;
       await untilConnected(first);
+      expect(
+        (signals.visibilityListeners, signals.networkListeners),
+        (1, 1),
+      );
+
       c.read(activeTargetProvider.notifier).activateDevice('a');
       final second = (await c.read(remoteSessionProvider.future))!;
       await untilConnected(second);
 
+      // The old supervisor was disposed with its session: only one remains.
+      expect(
+        (signals.visibilityListeners, signals.networkListeners),
+        (1, 1),
+      );
       signals.background();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      // Only the new session reacts; the old one was disposed with its client.
+      await untilDisconnected(second);
       expect(first.current.status, isNot(ConnectionStatus.connected));
-      expect(second.current.status, ConnectionStatus.disconnected);
       expect(clients.created.where((x) => !x.closed), isEmpty);
     });
 

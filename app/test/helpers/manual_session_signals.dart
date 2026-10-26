@@ -11,6 +11,12 @@ class ManualSessionSignals implements SessionSignals {
     sync: true,
   );
 
+  /// How many listeners [visibility] has right now.
+  int visibilityListeners = 0;
+
+  /// How many listeners [networkChanges] has right now.
+  int networkListeners = 0;
+
   /// Delivers [AppVisibility.background].
   void background() => _visibility.add(AppVisibility.background);
 
@@ -21,8 +27,24 @@ class ManualSessionSignals implements SessionSignals {
   void networkChanged() => _network.add(null);
 
   @override
-  Stream<AppVisibility> get visibility => _visibility.stream;
+  Stream<AppVisibility> get visibility =>
+      _counted(_visibility.stream, (delta) => visibilityListeners += delta);
 
   @override
-  Stream<void> get networkChanges => _network.stream;
+  Stream<void> get networkChanges =>
+      _counted(_network.stream, (delta) => networkListeners += delta);
+
+  Stream<T> _counted<T>(Stream<T> source, void Function(int delta) count) =>
+      Stream<T>.multi((listener) {
+        count(1);
+        final subscription = source.listen(
+          listener.addSync,
+          onError: listener.addErrorSync,
+          onDone: listener.closeSync,
+        );
+        listener.onCancel = () {
+          count(-1);
+          return subscription.cancel();
+        };
+      }, isBroadcast: true);
 }

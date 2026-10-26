@@ -66,6 +66,26 @@ void main() {
     expect(events, hasLength(1));
   });
 
+  test('resync_replaces_the_baseline_so_a_return_to_it_is_a_change', () async {
+    source.add([ConnectivityResult.wifi]);
+    await pumpEventQueue();
+    observer.resync([ConnectivityResult.mobile]);
+    source.add([ConnectivityResult.wifi]);
+    await pumpEventQueue();
+    expect(events, hasLength(1));
+  });
+
+  test('resync_to_the_same_value_emits_nothing', () async {
+    source.add([ConnectivityResult.wifi]);
+    await pumpEventQueue();
+    observer.resync([ConnectivityResult.wifi]);
+    await pumpEventQueue();
+    expect(events, isEmpty);
+    source.add([ConnectivityResult.wifi]);
+    await pumpEventQueue();
+    expect(events, isEmpty);
+  });
+
   test('nothing_is_emitted_after_dispose', () async {
     source.add([ConnectivityResult.wifi]);
     await pumpEventQueue();

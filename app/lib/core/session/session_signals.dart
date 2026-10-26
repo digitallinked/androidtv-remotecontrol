@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -16,21 +18,49 @@ abstract interface class SessionSignals {
   Stream<void> get networkChanges;
 }
 
+/// Reads the phone's current connectivity once.
+typedef ConnectivityChecker = Future<List<ConnectivityResult>> Function();
+
 /// [SessionSignals] from the platform: the app lifecycle and
 /// `connectivity_plus`.
+///
+/// Each return to the foreground re-baselines the connectivity observer with
+/// a fresh reading, because iOS drops connectivity events while the app is in
+/// the background.
 class PlatformSessionSignals implements SessionSignals {
-  /// Creates the signals; [lifecycle] and [connectivity] default to the real
-  /// platform ones.
+  /// Creates the signals; [lifecycle], [connectivity] and [checkConnectivity]
+  /// default to the real platform ones.
   PlatformSessionSignals({
     LifecycleObserver? lifecycle,
     ConnectivityObserver? connectivity,
+    ConnectivityChecker? checkConnectivity,
   }) : _lifecycle = lifecycle ?? LifecycleObserver(),
        _connectivity =
            connectivity ??
-           ConnectivityObserver(Connectivity().onConnectivityChanged);
+           ConnectivityObserver(Connectivity().onConnectivityChanged),
+       _check = checkConnectivity ?? Connectivity().checkConnectivity {
+    _foregroundSubscription = _lifecycle.changes
+        .where((v) => v == AppVisibility.foreground)
+        .listen((_) => unawaited(_resync()));
+  }
 
   final LifecycleObserver _lifecycle;
   final ConnectivityObserver _connectivity;
+  final ConnectivityChecker _check;
+  late final StreamSubscription<AppVisibility> _foregroundSubscription;
+  bool _disposed = false;
+
+  Future<void> _resync() async {
+    final seen = _connectivity.eventCount;
+    try {
+      final results = await _check();
+      // A live event that arrived meanwhile is newer than this reading.
+      if (_disposed || _connectivity.eventCount != seen) return;
+      _connectivity.resync(results);
+    } on Object {
+      // Keep the old baseline; the next event corrects it.
+    }
+  }
 
   @override
   Stream<AppVisibility> get visibility => _lifecycle.changes;
@@ -40,6 +70,8 @@ class PlatformSessionSignals implements SessionSignals {
 
   /// Stops both observers.
   void dispose() {
+    _disposed = true;
+    unawaited(_foregroundSubscription.cancel());
     _lifecycle.dispose();
     _connectivity.dispose();
   }
