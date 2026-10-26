@@ -33,7 +33,12 @@ import 'test_identity.dart';
 ///
 /// Every call gets a fresh `ProviderScope`, so several locations can be
 /// pumped in one test without reusing a router. [overrides] are applied after
-/// the defaults.
+/// the defaults: an override of a provider that has a default replaces it.
+///
+/// With [settle] false it pumps one frame instead of waiting for the app to
+/// go idle: a screen with a running progress indicator never goes idle, and
+/// `pumpAndSettle` would then run the fake clock forward until the screen
+/// changes.
 Future<SettingsStore> pumpRouterApp(
   WidgetTester tester, {
   required String initialLocation,
@@ -41,6 +46,7 @@ Future<SettingsStore> pumpRouterApp(
   List<Override> overrides = const [],
   Brightness brightness = Brightness.light,
   double textScale = 1,
+  bool settle = true,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
@@ -50,7 +56,7 @@ Future<SettingsStore> pumpRouterApp(
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
-      overrides: [
+      overrides: _withDefaults([
         settingsStoreProvider.overrideWithValue(store),
         appDatabaseProvider.overrideWithValue(db),
         identityStoreProvider.overrideWithValue(testIdentityStore()),
@@ -63,8 +69,12 @@ Future<SettingsStore> pumpRouterApp(
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,
         ),
-        ...overrides,
-      ],
+        // The database's own stream leaves a timer behind when it is
+        // disposed, which fails the test.
+        savedDevicesProvider.overrideWith(
+          (ref) => Stream.value(const <SavedDevice>[]),
+        ),
+      ], overrides),
       child: Consumer(
         builder: (_, ref, _) => MaterialApp.router(
           debugShowCheckedModeBanner: false,
@@ -82,6 +92,24 @@ Future<SettingsStore> pumpRouterApp(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
   return store;
+}
+
+/// [defaults] followed by [overrides]; an override replaces the default of the
+/// same provider, because a container rejects two overrides of one provider.
+List<Override> _withDefaults(
+  List<Override> defaults,
+  List<Override> overrides,
+) {
+  final replaced = {for (final o in overrides) o.origin};
+  return [
+    for (final o in defaults)
+      if (!replaced.contains(o.origin)) o,
+    ...overrides,
+  ];
 }

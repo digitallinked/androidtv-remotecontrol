@@ -292,6 +292,150 @@ abstract class AppLocalizations {
   /// **'Make sure your phone and TV are on the same Wi-Fi network and the TV is turned on.'**
   String get discoverEmptyBody;
 
+  /// Shown with a spinner while the app searches the network for TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for TVs on this Wi-Fi…'**
+  String get discoverSearching;
+
+  /// Button that restarts the search for TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get discoverScanAgain;
+
+  /// Button on the discovery screen that opens the sheet for adding a TV by its IP address.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter IP address'**
+  String get discoverEnterIp;
+
+  /// Button on the discovery screen that opens the remote with a simulated TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Try demo'**
+  String get discoverTryDemo;
+
+  /// Button on the empty discovery screen that opens the troubleshooting steps.
+  ///
+  /// In en, this message translates to:
+  /// **'Troubleshooting'**
+  String get discoverTroubleshooting;
+
+  /// Label on a TV in the discovery list that this phone is already paired with.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired'**
+  String get discoverPaired;
+
+  /// Label on a TV in the discovery list whose remote service is too old to control.
+  ///
+  /// In en, this message translates to:
+  /// **'Update needed'**
+  String get discoverUpdateNeeded;
+
+  /// Heading of the discovery screen when the search failed to start.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search for TVs'**
+  String get discoverErrorTitle;
+
+  /// Hint under the search-failed heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Check that Wi-Fi is on, then scan again.'**
+  String get discoverErrorBody;
+
+  /// Title of the sheet with steps for when no TV is found.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t find your TV?'**
+  String get troubleshootTitle;
+
+  /// Troubleshooting step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your phone and TV to the same Wi-Fi network (not a guest network).'**
+  String get troubleshootSameWifi;
+
+  /// Troubleshooting step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the TV on. Some TVs can\'t be found while in standby.'**
+  String get troubleshootTvOn;
+
+  /// Troubleshooting step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'On the TV, make sure \"Android TV Remote Service\" is installed and up to date in the Play Store.'**
+  String get troubleshootRemoteService;
+
+  /// Troubleshooting step shown on iPhone only.
+  ///
+  /// In en, this message translates to:
+  /// **'On iPhone, allow Local Network access for this app in Settings → Privacy & Security → Local Network.'**
+  String get troubleshootLocalNetwork;
+
+  /// Troubleshooting step.
+  ///
+  /// In en, this message translates to:
+  /// **'Still nothing? Restart the TV and your router, then scan again.'**
+  String get troubleshootRestart;
+
+  /// Last troubleshooting step.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also enter the TV\'s IP address. Find it on the TV under Settings → Network & Internet.'**
+  String get troubleshootManualIp;
+
+  /// Title of the sheet explaining that a TV runs an old remote service.
+  ///
+  /// In en, this message translates to:
+  /// **'Update needed on this TV'**
+  String get legacyTitle;
+
+  /// Body of the legacy-service sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'{tvName} uses an older remote service. On the TV, open the Play Store, search for \"Android TV Remote Service\", update it, then scan again.'**
+  String legacyBody(String tvName);
+
+  /// Title of the sheet for adding a TV by its IP address.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter IP address'**
+  String get manualIpTitle;
+
+  /// Label of the IP address field.
+  ///
+  /// In en, this message translates to:
+  /// **'TV IP address'**
+  String get manualIpLabel;
+
+  /// Example shown in the empty IP address field.
+  ///
+  /// In en, this message translates to:
+  /// **'192.168.1.20'**
+  String get manualIpHint;
+
+  /// Help text under the IP address field.
+  ///
+  /// In en, this message translates to:
+  /// **'Find it on the TV under Settings → Network & Internet → your network.'**
+  String get manualIpHelp;
+
+  /// Error under the IP address field when the text is not a valid IPv4 address.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an address like 192.168.1.20'**
+  String get manualIpError;
+
+  /// Button that accepts the IP address and continues to pairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get manualIpContinue;
+
   /// Title of the pairing screen.
   ///
   /// In en, this message translates to:

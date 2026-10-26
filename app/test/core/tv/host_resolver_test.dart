@@ -1,23 +1,10 @@
 import 'dart:async';
 
-import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/tv/host_resolver.dart';
 
 import '../../helpers/fake_tv_discovery.dart';
-
-DiscoveredTv tv(
-  String name, {
-  String host = '192.168.0.20',
-  bool legacy = false,
-}) => DiscoveredTv(
-  serviceName: name,
-  displayName: name,
-  host: host,
-  port: 6466,
-  isLegacyService: legacy,
-);
 
 void main() {
   test('returns_host_of_matching_service', () async {

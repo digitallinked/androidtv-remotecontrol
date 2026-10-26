@@ -124,6 +124,87 @@ class AppLocalizationsEn extends AppLocalizations {
       'Make sure your phone and TV are on the same Wi-Fi network and the TV is turned on.';
 
   @override
+  String get discoverSearching => 'Looking for TVs on this Wi-Fi…';
+
+  @override
+  String get discoverScanAgain => 'Scan again';
+
+  @override
+  String get discoverEnterIp => 'Enter IP address';
+
+  @override
+  String get discoverTryDemo => 'Try demo';
+
+  @override
+  String get discoverTroubleshooting => 'Troubleshooting';
+
+  @override
+  String get discoverPaired => 'Paired';
+
+  @override
+  String get discoverUpdateNeeded => 'Update needed';
+
+  @override
+  String get discoverErrorTitle => 'Couldn\'t search for TVs';
+
+  @override
+  String get discoverErrorBody => 'Check that Wi-Fi is on, then scan again.';
+
+  @override
+  String get troubleshootTitle => 'Can\'t find your TV?';
+
+  @override
+  String get troubleshootSameWifi =>
+      'Connect your phone and TV to the same Wi-Fi network (not a guest network).';
+
+  @override
+  String get troubleshootTvOn =>
+      'Turn the TV on. Some TVs can\'t be found while in standby.';
+
+  @override
+  String get troubleshootRemoteService =>
+      'On the TV, make sure \"Android TV Remote Service\" is installed and up to date in the Play Store.';
+
+  @override
+  String get troubleshootLocalNetwork =>
+      'On iPhone, allow Local Network access for this app in Settings → Privacy & Security → Local Network.';
+
+  @override
+  String get troubleshootRestart =>
+      'Still nothing? Restart the TV and your router, then scan again.';
+
+  @override
+  String get troubleshootManualIp =>
+      'You can also enter the TV\'s IP address. Find it on the TV under Settings → Network & Internet.';
+
+  @override
+  String get legacyTitle => 'Update needed on this TV';
+
+  @override
+  String legacyBody(String tvName) {
+    return '$tvName uses an older remote service. On the TV, open the Play Store, search for \"Android TV Remote Service\", update it, then scan again.';
+  }
+
+  @override
+  String get manualIpTitle => 'Enter IP address';
+
+  @override
+  String get manualIpLabel => 'TV IP address';
+
+  @override
+  String get manualIpHint => '192.168.1.20';
+
+  @override
+  String get manualIpHelp =>
+      'Find it on the TV under Settings → Network & Internet → your network.';
+
+  @override
+  String get manualIpError => 'Enter an address like 192.168.1.20';
+
+  @override
+  String get manualIpContinue => 'Continue';
+
+  @override
   String get pageTitlePair => 'Pair your TV';
 
   @override

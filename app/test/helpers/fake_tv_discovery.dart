@@ -2,6 +2,20 @@ import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
 
+/// A discovered TV for tests: [name] is both the service and the display
+/// name.
+DiscoveredTv tv(
+  String name, {
+  String host = '192.168.0.20',
+  bool legacy = false,
+}) => DiscoveredTv(
+  serviceName: name,
+  displayName: name,
+  host: host,
+  port: 6466,
+  isLegacyService: legacy,
+);
+
 /// A [TvDiscovery] that tests drive by hand.
 class FakeTvDiscovery implements TvDiscovery {
   final StreamController<List<DiscoveredTv>> _controller =

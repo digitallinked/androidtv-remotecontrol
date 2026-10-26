@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show appFlavor;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:tv_remote/app/app.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
@@ -53,6 +54,7 @@ Future<Widget> buildRootWidget({
   List<StartupStep> startupSteps = const [],
   Future<SettingsStore> Function() openSettings = SettingsStore.open,
   AppDatabase Function() openDatabase = AppDatabase.open,
+  @visibleForTesting List<Override> overrides = const [],
 }) async {
   await runStartupSteps(startupSteps, reporter: crashReporter);
   final settings = await openSettings();
@@ -70,6 +72,7 @@ Future<Widget> buildRootWidget({
       }),
       // Read only after the line below has set it.
       initialLocationProvider.overrideWith((ref) => location!),
+      ...overrides,
     ],
   );
   try {
