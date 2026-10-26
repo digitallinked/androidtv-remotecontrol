@@ -1,7 +1,7 @@
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 
@@ -251,10 +251,105 @@ void main() {
     expect(rec.calls, ['tap:${KeyCodes.dpadUp}', 'tap:${KeyCodes.dpadUp}']);
   });
 
+  testWidgets('second_finger_mid_hold_is_ignored_and_the_hold_ends_once', (
+    t,
+  ) async {
+    await pumpPad(t);
+    final g1 = await t.startGesture(centre(t));
+    await t.pump(kLongPressTimeout);
+    final g2 = await t.startGesture(centre(t) + const Offset(0, 60));
+    await g2.up();
+    expect(rec.calls, ['holdStart:${KeyCodes.dpadCenter}']);
+    await g1.up();
+    expect(rec.calls, [
+      'holdStart:${KeyCodes.dpadCenter}',
+      'holdEnd:${KeyCodes.dpadCenter}',
+    ]);
+  });
+
+  testWidgets('second_finger_after_a_dead_zone_move_sends_nothing', (t) async {
+    await pumpPad(t);
+    final g1 = await t.startGesture(centre(t) - const Offset(30, 0));
+    await g1.moveBy(const Offset(20, 0)); // past the touch slop, no step
+    final g2 = await t.startGesture(centre(t) + const Offset(30, 0));
+    await g1.up();
+    await g2.up();
+    expect(rec.calls, isEmpty);
+  });
+
+  testWidgets('trail_follows_only_the_first_finger', (t) async {
+    await pumpPad(t);
+    final g1 = await t.startGesture(centre(t) - const Offset(30, 0));
+    final g2 = await t.startGesture(centre(t) + const Offset(30, 0));
+    await g2.moveBy(const Offset(0, 5));
+    await g2.moveBy(const Offset(0, 5));
+    await t.pump();
+    expect(find.byKey(Touchpad.trailKey), paintsNothing);
+    await g1.up();
+    await g2.up();
+  });
+
+  testWidgets('trail_forgets_old_points_after_an_idle_pause', (t) async {
+    await pumpPad(t);
+    final first = await t.startGesture(centre(t) - const Offset(100, 0));
+    await first.moveBy(const Offset(10, 0));
+    await first.up();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+
+    final start = centre(t) + const Offset(0, -60);
+    final second = await t.startGesture(start);
+    final downPoint = t.getTopLeft(find.byType(Touchpad)) + Offset.zero;
+    final local = start - downPoint;
+    for (var i = 0; i < 12; i++) {
+      await second.moveBy(const Offset(1, 0));
+      await t.pump(const Duration(milliseconds: 40));
+    }
+    // 480 ms after the touch went down its point is no longer part of the
+    // trail, so no segment starts at it.
+    expect(find.byKey(Touchpad.trailKey), paints..line());
+    expect(
+      find.byKey(Touchpad.trailKey),
+      paints..everything((method, args) {
+        if (method != #drawLine) return true;
+        return ((args[0] as Offset) - local).distance > 0.01;
+      }),
+    );
+    await second.up();
+  });
+
+  testWidgets('edge_glow_fades_in_200ms_even_after_an_idle_pause', (t) async {
+    await pumpPad(t);
+    final first = await t.startGesture(centre(t));
+    await first.moveBy(const Offset(30, 0));
+    await first.up();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(Touchpad.trailKey), paintsNothing);
+
+    final second = await t.startGesture(centre(t));
+    await second.moveBy(const Offset(30, 0));
+    await second.up();
+    await t.pump();
+    expect(find.byKey(Touchpad.trailKey), paints..rect());
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(Touchpad.trailKey), paintsNothing);
+  });
+
+  testWidgets('touchpad_needs_bounded_constraints', (t) async {
+    await t.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SingleChildScrollView(child: Touchpad(input: rec)),
+      ),
+    );
+    expect(t.takeException(), isA<AssertionError>());
+  });
+
   testWidgets('touchpad_exposes_semantic_actions', (t) async {
     final handle = t.ensureSemantics();
     await pumpPad(t);
-    final node = t.getSemantics(find.byType(Touchpad));
+    final node = t.getSemantics(find.bySemanticsLabel('Touchpad'));
     final data = node.getSemanticsData();
     expect(data.label, 'Touchpad');
     expect(data.hint, contains('Swipe to move'));
@@ -319,9 +414,15 @@ void main() {
       expect(t.takeException(), isNull);
       expect(t.getSize(find.byType(Touchpad)), const Size(320, 320));
       // The idle hint is decorative (the semantics node carries the full
-      // hint) and the test font is Ahem, one em per glyph, so how many lines
-      // it takes here says nothing about a real font.
-      expect(find.text('Swipe to move · Tap to select'), findsOneWidget);
+      // hint). The test font is Ahem, one em per glyph, so the cap binds here
+      // where a real font would fit: this proves the cap is 2 lines and the
+      // text ends in an ellipsis rather than overflowing.
+      final hint = find.text('Swipe to move · Tap to select');
+      expect(hint, findsOneWidget);
+      final text = t.widget<Text>(hint);
+      expect(text.maxLines, 2);
+      expect(text.overflow, TextOverflow.ellipsis);
+      expect(t.renderObject<RenderParagraph>(hint).didExceedMaxLines, isTrue);
     }
   });
 }

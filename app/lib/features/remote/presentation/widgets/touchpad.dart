@@ -47,12 +47,16 @@ class Touchpad extends StatefulWidget {
 
 class _TouchpadState extends State<Touchpad>
     with SingleTickerProviderStateMixin {
-  late final _PadGestures _gestures = _PadGestures(
-    input: () => widget.input,
-    onStep: _onStep,
-  );
-  late final _Feedback _feedback = _Feedback(createTicker);
+  late final _PadGestures _gestures;
+  late final _Feedback _feedback;
   bool _reduceMotion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _gestures = _PadGestures(input: () => widget.input, onStep: _onStep);
+    _feedback = _Feedback(createTicker);
+  }
 
   @override
   void didChangeDependencies() {
@@ -73,7 +77,9 @@ class _TouchpadState extends State<Touchpad>
   }
 
   void _trace(PointerEvent e) {
-    if (!_reduceMotion) _feedback.touch(e.localPosition);
+    if (!_reduceMotion && e.pointer == _gestures.primary) {
+      _feedback.touch(e.localPosition);
+    }
   }
 
   void _down(PointerDownEvent e) {
@@ -92,6 +98,19 @@ class _TouchpadState extends State<Touchpad>
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        assert(
+          constraints.hasBoundedWidth && constraints.hasBoundedHeight,
+          'Touchpad needs bounded constraints; wrap it in Expanded or a '
+          'SizedBox.',
+        );
+        return _pad(context);
+      },
+    );
+  }
+
+  Widget _pad(BuildContext context) {
     final colors = context.appColors;
     final l10n = AppLocalizations.of(context);
     final radius = BorderRadius.circular(AppRadii.key * 1.5);
@@ -109,8 +128,6 @@ class _TouchpadState extends State<Touchpad>
     };
 
     return Semantics(
-      container: true,
-      explicitChildNodes: true,
       excludeSemantics: true,
       label: l10n.touchpadLabel,
       hint: l10n.touchpadHint,
@@ -192,6 +209,9 @@ class _PadGestures {
 
   final Map<int, _Touch> _touches = {};
   int? _primary;
+
+  /// The pointer that started the session, which drives steps, tap and hold.
+  int? get primary => _primary;
   int _seen = 0;
   bool _dead = false;
   bool _twoFingers = false;
@@ -214,7 +234,8 @@ class _PadGestures {
     _seen++;
     if (_dead || _holding != null || _steps > 0) return; // ignored pointer
     _holdTimer?.cancel();
-    if (_seen == 2) {
+    final moved = _touches[_primary]?.reach ?? 0;
+    if (_seen == 2 && moved < kTouchSlop) {
       _twoFingers = true;
     } else {
       _dead = true;
@@ -270,7 +291,10 @@ class _PadGestures {
   void _startHold() {
     if (_dead || _twoFingers || _steps > 0 || _touches.isEmpty) return;
     _holdFired = true;
-    _holding = input()..holdStart(KeyCodes.dpadCenter);
+    // Armed before reporting, so the release can't be lost.
+    final held = input();
+    _holding = held;
+    held.holdStart(KeyCodes.dpadCenter);
   }
 
   void _endHold() {
@@ -379,13 +403,21 @@ class _Feedback extends ChangeNotifier {
   Duration now = Duration.zero;
 
   void touch(Offset position) {
+    _restartClock();
     points.add(_Point(position, now));
     _wake();
   }
 
   void glow(int keyCode) {
+    _restartClock();
     glows.add(_Glow(keyCode, now));
     _wake();
+  }
+
+  /// The ticker's clock restarts at zero, so an entry added while it is idle
+  /// must be stamped on the new clock, not on the stale time it stopped at.
+  void _restartClock() {
+    if (!_ticker.isActive) now = Duration.zero;
   }
 
   void clear() {
@@ -396,10 +428,7 @@ class _Feedback extends ChangeNotifier {
   }
 
   void _wake() {
-    if (!_ticker.isActive) {
-      now = Duration.zero;
-      unawaited(_ticker.start());
-    }
+    if (!_ticker.isActive) unawaited(_ticker.start());
     notifyListeners();
   }
 
