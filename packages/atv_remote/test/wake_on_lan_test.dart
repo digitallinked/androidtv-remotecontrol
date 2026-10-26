@@ -73,11 +73,95 @@ void main() {
       expect(data.length, 102);
     });
 
+    test('still_reaches_a_good_address_after_a_failing_one', () async {
+      final listener = await RawDatagramSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      addTearDown(listener.close);
+      final received = Completer<Uint8List>();
+      listener.listen((event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = listener.receive();
+          if (datagram != null && !received.isCompleted) {
+            received.complete(datagram.data);
+          }
+        }
+      });
+
+      // An IPv6 address cannot be sent to from the IPv4 socket (send returns
+      // 0), so the first send fails.
+      await sendWakeOnLan(
+        'AA:BB:CC:DD:EE:FF',
+        broadcastAddresses: [
+          InternetAddress.loopbackIPv6,
+          InternetAddress.loopbackIPv4,
+        ],
+        port: listener.port,
+      );
+
+      final data = await received.future.timeout(const Duration(seconds: 5));
+      expect(data, buildMagicPacket('AA:BB:CC:DD:EE:FF'));
+    });
+
     test('throws FormatException for a bad MAC without sending', () {
       expect(
         () => sendWakeOnLan('nope'),
         throwsA(isA<FormatException>()),
       );
+    });
+  });
+
+  group('sendToEachTarget', () {
+    final a = InternetAddress('255.255.255.255');
+    final b = InternetAddress('192.168.0.255');
+    final c = InternetAddress('10.0.0.255');
+
+    test('tries_every_target_after_one_fails_and_does_not_throw', () {
+      final tried = <String>[];
+      sendToEachTarget([1, 2, 3], [a, b, c], 9, (buffer, address, port) {
+        tried.add(address.address);
+        if (address == a) throw const SocketException('unreachable');
+        return buffer.length;
+      });
+
+      expect(tried, [a.address, b.address, c.address]);
+    });
+
+    test('a_zero_byte_send_counts_as_a_failure_for_that_target', () {
+      final tried = <String>[];
+      sendToEachTarget([1], [a, b], 9, (buffer, address, port) {
+        tried.add(address.address);
+        return address == a ? 0 : buffer.length;
+      });
+
+      expect(tried, [a.address, b.address]);
+    });
+
+    test('rethrows_the_first_error_when_every_target_fails', () {
+      final errors = [
+        const SocketException('first'),
+        const SocketException('second'),
+      ];
+      var call = 0;
+      expect(
+        () => sendToEachTarget([1], [a, b], 9, (_, _, _) {
+          throw errors[call++];
+        }),
+        throwsA(same(errors.first)),
+      );
+      expect(call, 2);
+    });
+
+    test('all_targets_returning_zero_throws_socket_exception', () {
+      expect(
+        () => sendToEachTarget([1], [a, b], 9, (_, _, _) => 0),
+        throwsA(isA<SocketException>()),
+      );
+    });
+
+    test('no_targets_sends_nothing_and_does_not_throw', () {
+      sendToEachTarget([1], [], 9, (_, _, _) => fail('must not send'));
     });
   });
 }

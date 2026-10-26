@@ -63,6 +63,8 @@ class WakeOnLanService {
 
   /// Sends the magic packet for [mac] to the limited broadcast, the Wi-Fi
   /// subnet broadcast and the `/24` of [tvHost] (the TV's last known IP).
+  /// [tvHost] is a bare IPv4 host such as `192.168.0.20`, not a service name
+  /// like `manual:192.168.0.20`; anything else is ignored.
   ///
   /// Returns `true` once sent and `false` if the network refused it. Throws a
   /// [FormatException] for a malformed [mac], before anything is sent.

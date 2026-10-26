@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
@@ -122,6 +123,46 @@ void main() {
         expect(_addresses(sentTargets), ['255.255.255.255', '192.168.5.255']);
       });
     });
+
+    test(
+      'real_sender_still_reaches_later_targets_when_the_first_fails',
+      () async {
+        final listener = await RawDatagramSocket.bind(
+          InternetAddress.loopbackIPv4,
+          0,
+        );
+        addTearDown(listener.close);
+        final received = Completer<List<int>>();
+        listener.listen((event) {
+          final datagram = event == RawSocketEvent.read
+              ? listener.receive()
+              : null;
+          if (datagram != null && !received.isCompleted) {
+            received.complete(datagram.data);
+          }
+        });
+        // The real sender, aimed at the loopback listener. The first target
+        // is an IPv6 address the IPv4 socket can't send to, so it fails; the
+        // second must still be tried and wake() must report success.
+        final service = WakeOnLanService(
+          subnetBroadcast: () async => null,
+          send: (mac, {broadcastAddresses, port = 9}) => sendWakeOnLan(
+            mac,
+            broadcastAddresses: [
+              InternetAddress.loopbackIPv6,
+              InternetAddress.loopbackIPv4,
+            ],
+            port: listener.port,
+          ),
+        );
+
+        expect(await service.wake(mac: _mac), isTrue);
+        expect(
+          await received.future.timeout(const Duration(seconds: 5)),
+          buildMagicPacket(_mac),
+        );
+      },
+    );
 
     test('send_failure_returns_false', () async {
       final service = WakeOnLanService(
