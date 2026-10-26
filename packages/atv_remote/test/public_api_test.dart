@@ -25,6 +25,7 @@ void main() {
       RemoteClient,
       DeviceInfo,
       KeyCodes.home,
+      isSupportedKeyCode,
       KeyDirection.short,
       RemoteEvent,
       RemoteReady,

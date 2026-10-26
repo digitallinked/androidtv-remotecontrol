@@ -1,3 +1,5 @@
+import 'package:atv_remote/src/proto/remotemessage.pbenum.dart';
+
 /// Android `KeyEvent` key codes the remote UI sends to the TV.
 ///
 /// Values follow android.view.KeyEvent and `protocol-reference.md`. Any other
@@ -94,6 +96,49 @@ abstract final class KeyCodes {
   /// SEARCH.
   static const int search = 84;
 
+  /// ENTER (confirms text entry).
+  static const int enter = 66;
+
+  /// DEL (`KEYCODE_DEL`): deletes the character before the cursor, like a
+  /// keyboard's backspace.
+  static const int delete = 67;
+
+  /// Every named constant above (not the digits), in declaration order.
+  static const List<int> named = [
+    dpadUp,
+    dpadDown,
+    dpadLeft,
+    dpadRight,
+    dpadCenter,
+    back,
+    home,
+    menu,
+    power,
+    volumeUp,
+    volumeDown,
+    mute,
+    channelUp,
+    channelDown,
+    playPause,
+    next,
+    previous,
+    rewind,
+    fastForward,
+    stop,
+    red,
+    green,
+    yellow,
+    blue,
+    tvInput,
+    settings,
+    guide,
+    info,
+    captions,
+    search,
+    enter,
+    delete,
+  ];
+
   /// The key code of the digit key [n], from 0 to 9 (KEYCODE_0 is 7).
   ///
   /// Throws a [RangeError] for any other value.
@@ -114,3 +159,7 @@ enum KeyDirection {
   /// The key is released after a [startLong].
   endLong,
 }
+
+/// Whether the protocol has a name for [keyCode], so `RemoteClient.sendKey`
+/// accepts it. True for every [KeyCodes] constant and digit.
+bool isSupportedKeyCode(int keyCode) => RemoteKeyCode.valueOf(keyCode) != null;

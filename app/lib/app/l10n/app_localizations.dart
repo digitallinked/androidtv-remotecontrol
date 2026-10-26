@@ -772,6 +772,24 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get keySearch;
 
+  /// Screen-reader label of the Enter key (confirms text on the TV).
+  ///
+  /// In en, this message translates to:
+  /// **'Enter'**
+  String get keyEnter;
+
+  /// Screen-reader label of the key that deletes the character before the cursor on the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get keyDelete;
+
+  /// Label of the remote key that opens the keyboard sheet for typing on the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard'**
+  String get keyKeyboard;
+
   /// Shown while the app connects to the TV to start pairing.
   ///
   /// In en, this message translates to:
@@ -915,6 +933,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go back to the list of TVs and choose it again.'**
   String get pairNotFoundBody;
+
+  /// Accessibility label of the tab bar that switches between the touchpad, D-pad and number pad.
+  ///
+  /// In en, this message translates to:
+  /// **'Control style'**
+  String get remotePadTabsLabel;
+
+  /// Tab label: the swipe-and-tap touchpad control style.
+  ///
+  /// In en, this message translates to:
+  /// **'Touchpad'**
+  String get remotePadTouchpad;
+
+  /// Tab label: the directional-pad control style.
+  ///
+  /// In en, this message translates to:
+  /// **'D-pad'**
+  String get remotePadDpad;
+
+  /// Tab label: the number pad (digits 0 to 9).
+  ///
+  /// In en, this message translates to:
+  /// **'Numbers'**
+  String get remotePadNumbers;
+
+  /// Screen-reader label of the touchpad area.
+  ///
+  /// In en, this message translates to:
+  /// **'Touchpad'**
+  String get touchpadLabel;
+
+  /// Screen-reader hint of the touchpad area that explains its gestures.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to move, tap to select, tap with two fingers to go back.'**
+  String get touchpadHint;
+
+  /// Short hint drawn on the touchpad while it is idle.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to move · Tap to select'**
+  String get touchpadIdleHint;
+
+  /// Short visible label of the channel up/down rocker.
+  ///
+  /// In en, this message translates to:
+  /// **'CH'**
+  String get channelLabel;
+
+  /// The TV volume level shown on the volume rocker.
+  ///
+  /// In en, this message translates to:
+  /// **'{level}'**
+  String remoteVolumeValue(int level);
+
+  /// Shown on the volume rocker instead of the level while the TV is muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Muted'**
+  String get remoteMutedValue;
+
+  /// Screen-reader description of the TV volume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume {level} of {max}'**
+  String remoteVolumeSemantics(int level, int max);
+
+  /// Screen-reader description of the TV volume while it is muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume muted'**
+  String get remoteVolumeMutedSemantics;
+
+  /// Screen-reader label of the row of app shortcuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps on your TV'**
+  String get quickAccessAppsLabel;
+
+  /// Screen-reader label of the row of red, green, yellow and blue keys.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour keys'**
+  String get quickAccessColourLabel;
+
+  /// Screen-reader label of the row of playback keys.
+  ///
+  /// In en, this message translates to:
+  /// **'Media keys'**
+  String get quickAccessMediaLabel;
+
+  /// Screen-reader label of an app shortcut: opens the app on the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {app}'**
+  String quickAppOpen(String app);
+
+  /// Screen-reader label of the app shortcut for the app that is open on the TV right now.
+  ///
+  /// In en, this message translates to:
+  /// **'{app}, now on TV'**
+  String quickAppNowOnTv(String app);
+
+  /// Snackbar shown when the power key is tapped instead of held.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to turn the TV on or off'**
+  String get powerHoldHint;
+
+  /// Snackbar shown while the app sends the wake-up signal to the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Waking {tvName}…'**
+  String powerWaking(String tvName);
+
+  /// Error shown when the Wake-on-LAN signal could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the wake-up signal. Make sure your phone is on the same Wi-Fi as the TV.'**
+  String get powerWakeFailed;
+
+  /// Shown on iOS when the TV is off and the app cannot wake it: the user must use the TV remote.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the TV on with its own remote. This app reconnects by itself.'**
+  String get powerTurnOnWithTvRemote;
+
+  /// Title of the sheet that asks for the TV MAC address so the phone can wake it.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on {tvName} from your phone'**
+  String wolSetupTitle(String tvName);
+
+  /// Explains where to find the TV MAC address, in the Wake-on-LAN setup sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone can wake the TV over the network with its MAC address. On the TV, open Settings → System → About → Status (or Settings → Network & Internet) and copy the Wi-Fi or Ethernet MAC address.'**
+  String get wolSetupBody;
+
+  /// Warning in the Wake-on-LAN setup sheet: the Bluetooth address does not work.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the Wi-Fi or Ethernet MAC address, not the Bluetooth one.'**
+  String get wolNotBluetooth;
+
+  /// Caveat in the Wake-on-LAN setup sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Some TVs can\'t be woken when they\'re fully off or in deep standby.'**
+  String get wolMayNotWork;
+
+  /// Label of the MAC address text field.
+  ///
+  /// In en, this message translates to:
+  /// **'MAC address'**
+  String get wolMacLabel;
+
+  /// Example MAC address shown as the hint of the MAC address field.
+  ///
+  /// In en, this message translates to:
+  /// **'AA:BB:CC:DD:EE:FF'**
+  String get wolMacHint;
+
+  /// Validation error under the MAC address field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter 6 pairs of letters or digits, like AA:BB:CC:DD:EE:FF'**
+  String get wolMacError;
+
+  /// Button in the Wake-on-LAN setup sheet: saves the MAC address and sends the wake-up signal.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and turn on'**
+  String get wolSaveAndWake;
+
+  /// Error shown when the MAC address could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the MAC address. Try again.'**
+  String get wolSaveFailed;
+
+  /// Title of the keyboard sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Type on your TV'**
+  String get keyboardTitle;
+
+  /// Label of the text field in the keyboard sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get keyboardFieldLabel;
+
+  /// Hint inside the empty text field of the keyboard sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Start typing…'**
+  String get keyboardHint;
+
+  /// Explains that a text field must be focused on the TV before typing works.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a text field on the TV first, like the search box.'**
+  String get keyboardTvHint;
+
+  /// Button that empties the text field on the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get keyboardClear;
+
+  /// Button in the keyboard sheet that opens the search screen on the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Open search on TV'**
+  String get keyboardOpenTvSearch;
+
+  /// Inline message in the keyboard sheet while the TV is not connected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected to your TV. What you type isn\'t sent.'**
+  String get keyboardNotConnected;
+
+  /// Screen-reader label of the dimmed Theater Mode overlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen dimmed. Touch to brighten.'**
+  String get theaterWakeLabel;
 }
 
 class _AppLocalizationsDelegate

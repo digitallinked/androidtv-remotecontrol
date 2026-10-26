@@ -38,6 +38,15 @@ class FakeRemoteSession implements RemoteSession {
   /// Key codes sent while connected, in order.
   final List<int> sentKeys = [];
 
+  /// Key codes with their directions sent while connected, in order. Matches
+  /// [sentKeys] one to one.
+  final List<(int, KeyDirection)> sentPresses = [];
+
+  /// While positive, the next send on a connected session decrements it and
+  /// throws [NotConnectedException]: the socket dropped between the state
+  /// check and the send.
+  int failNextSends = 0;
+
   /// Deep links sent while connected, in order.
   final List<String> sentLinks = [];
 
@@ -127,7 +136,11 @@ class FakeRemoteSession implements RemoteSession {
   @override
   void sendKey(int keyCode, {KeyDirection direction = KeyDirection.short}) {
     _requireConnected();
+    if (!isSupportedKeyCode(keyCode)) {
+      throw ArgumentError.value(keyCode, 'keyCode', 'Unknown Android key code');
+    }
     sentKeys.add(keyCode);
+    sentPresses.add((keyCode, direction));
   }
 
   @override
@@ -152,6 +165,10 @@ class FakeRemoteSession implements RemoteSession {
 
   void _requireConnected() {
     if (_current.status != ConnectionStatus.connected) {
+      throw const NotConnectedException();
+    }
+    if (failNextSends > 0) {
+      failNextSends--;
       throw const NotConnectedException();
     }
   }

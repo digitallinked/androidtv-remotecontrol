@@ -41,6 +41,8 @@ String keyLabel(AppLocalizations l10n, int keyCode) {
     KeyCodes.info => l10n.keyInfo,
     KeyCodes.captions => l10n.keyCaptions,
     KeyCodes.search => l10n.keySearch,
+    KeyCodes.enter => l10n.keyEnter,
+    KeyCodes.delete => l10n.keyDelete,
     _ => l10n.keyUnknown(keyCode),
   };
 }
