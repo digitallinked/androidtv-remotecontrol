@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
-import 'package:tv_remote/core/app_info/app_info.dart';
 
 import '../../helpers/pump_router_app.dart';
 
@@ -23,19 +21,6 @@ void main() {
       initialLocation: AppRoutes.settings,
       textScale: textScale,
       brightness: brightness,
-      // The About page reads both.
-      overrides: [
-        flavorProvider.overrideWithValue(Flavor.dev),
-        appInfoProvider.overrideWith(
-          (ref) async => const AppInfo(
-            appName: 'Remotely Dev',
-            version: '1.0.0',
-            buildNumber: '1',
-            os: 'android',
-            osVersion: '12',
-          ),
-        ),
-      ],
     );
   }
 

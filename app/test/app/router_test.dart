@@ -1,13 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/placeholder_screen.dart';
-import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/manage_apps_screen.dart';
 import 'package:tv_remote/features/devices/presentation/devices_screen.dart';
@@ -21,20 +18,6 @@ import 'package:tv_remote/features/settings/presentation/remote_layout_page.dart
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../helpers/pump_router_app.dart';
-
-/// What the About page reads: the flavor and the platform's package info.
-final List<Override> _aboutDeps = [
-  flavorProvider.overrideWithValue(Flavor.dev),
-  appInfoProvider.overrideWith(
-    (ref) async => const AppInfo(
-      appName: 'Remotely Dev',
-      version: '1.0.0',
-      buildNumber: '1',
-      os: 'android',
-      osVersion: '12',
-    ),
-  ),
-];
 
 void main() {
   testWidgets('first_run_shows_onboarding_and_get_started_opens_discover', (
@@ -63,7 +46,7 @@ void main() {
       '/paywall': 'Premium',
     };
     for (final e in titles.entries) {
-      await pumpRouterApp(t, initialLocation: e.key, overrides: _aboutDeps);
+      await pumpRouterApp(t, initialLocation: e.key);
       expect(
         find.descendant(
           of: find.byType(AppBar),
@@ -88,7 +71,7 @@ void main() {
       AppRoutes.settingsAbout: AboutPage,
     };
     for (final e in screens.entries) {
-      await pumpRouterApp(t, initialLocation: e.key, overrides: _aboutDeps);
+      await pumpRouterApp(t, initialLocation: e.key);
       expect(find.byType(e.value), findsOneWidget, reason: e.key);
     }
   });
@@ -97,7 +80,6 @@ void main() {
     await pumpRouterApp(
       t,
       initialLocation: AppRoutes.settings,
-      overrides: _aboutDeps,
     );
     final router = GoRouter.of(t.element(find.byType(SettingsScreen)));
     for (final path in const [
