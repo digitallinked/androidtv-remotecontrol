@@ -9,6 +9,7 @@ import 'package:tv_remote/app/app_shell.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -21,6 +22,7 @@ import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
 import 'fake_tv_discovery.dart';
 import 'manual_session_signals.dart';
+import 'recording_haptics.dart';
 import 'test_identity.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
@@ -70,6 +72,7 @@ Future<SettingsStore> pumpRouterApp(
         ),
         hostResolverProvider.overrideWithValue((_) async => null),
         sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
+        hapticsProvider.overrideWithValue(RecordingHaptics()),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,
