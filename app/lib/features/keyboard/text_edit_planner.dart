@@ -66,7 +66,9 @@ final class DeleteChars extends TextEdit {
 /// [ImeTextMode.replaceField]: nothing when unchanged, otherwise the whole of
 /// [next] (including `''`). [ImeTextMode.appendOnly]: backspaces for what
 /// changed after the common prefix, then the rest of [next]; lengths are
-/// grapheme clusters, so an emoji with a skin tone is one backspace.
+/// grapheme clusters, so an emoji with a skin tone, a ZWJ sequence or a
+/// letter with a combining mark is one backspace. (unverified) That matches
+/// how a TV's backspace deletes: the real-device run checks it.
 List<TextEdit> planTextEdit({
   required String sent,
   required String next,

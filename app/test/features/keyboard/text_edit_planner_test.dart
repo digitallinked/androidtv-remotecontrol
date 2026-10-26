@@ -66,6 +66,34 @@ void main() {
     );
   });
 
+  test('append_mode_counts_zwj_sequences_and_combining_marks_as_one', () {
+    const family = '👨‍👩‍👧';
+    expect(
+      planTextEdit(sent: 'a$family', next: 'a', mode: ImeTextMode.appendOnly),
+      [const DeleteChars(1)],
+    );
+    expect(
+      planTextEdit(sent: 'é', next: '', mode: ImeTextMode.appendOnly),
+      [const DeleteChars(1)],
+    );
+    // The accent makes the cluster differ, so it is replaced as a whole.
+    expect(
+      planTextEdit(sent: 'é', next: 'e', mode: ImeTextMode.appendOnly),
+      [const DeleteChars(1), const SendText('e')],
+    );
+  });
+
+  test('append_mode_rewrites_from_the_first_changed_grapheme', () {
+    expect(
+      planTextEdit(sent: 'hello', next: 'hallo', mode: ImeTextMode.appendOnly),
+      [const DeleteChars(4), const SendText('allo')],
+    );
+    expect(
+      planTextEdit(sent: 'a👍🏽b', next: 'a👍b', mode: ImeTextMode.appendOnly),
+      [const DeleteChars(2), const SendText('👍b')],
+    );
+  });
+
   test('edits_compare_by_value_and_never_print_the_text', () {
     expect(const SendText('a'), const SendText('a'));
     expect(const SendText('a').hashCode, const SendText('a').hashCode);

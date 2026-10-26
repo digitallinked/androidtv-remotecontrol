@@ -306,4 +306,104 @@ void main() {
       expect(t.getSize(finder).height, greaterThanOrEqualTo(48));
     }
   });
+
+  testWidgets('reopening_while_the_old_sheet_is_closing_keeps_one_sheet', (
+    t,
+  ) async {
+    await openSheet(t);
+    await t.tap(find.text('Enter'));
+    // The route has popped (its future completed) but the exit animation
+    // is still running, so the old sheet is still mounted.
+    await t.pump();
+    expect(KeyboardSheet.isOpen, isFalse);
+    unawaited(
+      showKeyboardSheet(t.element(find.text('Open')), input: rec),
+    );
+    await t.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byType(KeyboardSheet), findsOneWidget);
+    expect(KeyboardSheet.isOpen, isTrue);
+    // The old sheet's disposal must not clear the flag of the new one.
+    await t.tap(find.byTooltip('Close'));
+    await settleSheetClose(t);
+    expect(KeyboardSheet.isOpen, isFalse);
+    expect(find.byType(KeyboardSheet), findsNothing);
+  });
+
+  testWidgets('a_second_open_in_the_same_frame_is_ignored', (t) async {
+    await pumpHost(t);
+    states.add(_connected);
+    final context = t.element(find.text('Open'));
+    unawaited(showKeyboardSheet(context, input: rec));
+    unawaited(showKeyboardSheet(context, input: rec));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.byType(KeyboardSheet), findsOneWidget);
+  });
+
+  testWidgets('reconnecting_clears_a_stale_refusal', (t) async {
+    await openSheet(t);
+    rec.connected = false;
+    await type(t, 'ab');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(find.textContaining('Not connected'), findsOneWidget);
+    states.add(_offline);
+    await t.pump();
+    states.add(_connected);
+    await t.pump();
+    await t.pump();
+    expect(find.textContaining('Not connected'), findsNothing);
+  });
+
+  testWidgets('enter_closes_only_the_keyboard_sheet', (t) async {
+    await openSheet(t);
+    // Something else ends up on top of the sheet.
+    unawaited(
+      showDialog<void>(
+        context: t.element(find.byType(KeyboardSheet)),
+        builder: (_) => const AlertDialog(title: Text('Other')),
+      ),
+    );
+    await t.pumpAndSettle(const Duration(milliseconds: 50));
+    t.widget<TextField>(find.byType(TextField)).onSubmitted!('');
+    await t.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.byType(KeyboardSheet), findsNothing);
+    expect(find.text('Other'), findsOneWidget);
+    expect(rec.calls, ['tap:66']);
+  });
+
+  testWidgets('personalised_learning_is_off_for_the_field', (t) async {
+    await openSheet(t);
+    final field = t.widget<TextField>(find.byType(TextField));
+    expect(field.enableIMEPersonalizedLearning, isFalse);
+  });
+
+  testWidgets('closing_with_pending_text_sends_it_once_and_nothing_later', (
+    t,
+  ) async {
+    await openSheet(t);
+    await type(t, 'yo');
+    await t.pump(const Duration(milliseconds: 100));
+    await t.tap(find.byTooltip('Close'));
+    await settleSheetClose(t);
+    expect(rec.calls, ['text:yo']);
+    // The cancelled debounce must not fire after the sheet is gone (the
+    // test binding also fails on a pending timer).
+    await t.pump(const Duration(seconds: 1));
+    expect(rec.calls, ['text:yo']);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('append_mode_catches_up_after_a_refused_send', (t) async {
+    await openSheet(t, mode: ImeTextMode.appendOnly);
+    rec.connected = false;
+    await type(t, 'abc');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, isEmpty);
+    rec.connected = true;
+    await type(t, 'abcd');
+    await t.pump(const Duration(milliseconds: 200));
+    // Nothing was ever delivered, so the whole field goes out.
+    expect(rec.calls, ['text:abcd']);
+  });
 }

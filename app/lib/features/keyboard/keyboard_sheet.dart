@@ -21,8 +21,10 @@ Future<void> showKeyboardSheet(
   ImeTextMode mode = kImeTextMode,
   Duration debounce = const Duration(milliseconds: 150),
 }) async {
-  if (KeyboardSheet._open) return;
-  KeyboardSheet._open = true;
+  if (KeyboardSheet.isOpen) return;
+  // Covers the gap between this call and the sheet's initState.
+  final opening = Object();
+  KeyboardSheet._opening = opening;
   try {
     await showAppSheet<void>(
       context: context,
@@ -31,7 +33,10 @@ Future<void> showKeyboardSheet(
           KeyboardSheet(input: input, mode: mode, debounce: debounce),
     );
   } finally {
-    KeyboardSheet._open = false;
+    // Only this call's own claim: a newer sheet has its own.
+    if (identical(KeyboardSheet._opening, opening)) {
+      KeyboardSheet._opening = null;
+    }
   }
 }
 
@@ -59,11 +64,17 @@ class KeyboardSheet extends ConsumerStatefulWidget {
   /// How long the field must rest before its text is sent.
   final Duration debounce;
 
-  static bool _open = false;
+  /// The mounted sheet whose route has not been popped, if any.
+  static _KeyboardSheetState? _active;
 
-  /// Whether a keyboard sheet is open (from [showKeyboardSheet] to its
-  /// close), so the screen doesn't open a second one.
-  static bool get isOpen => _open;
+  /// A [showKeyboardSheet] call that has not built its sheet yet.
+  static Object? _opening;
+
+  /// Whether a keyboard sheet is open (from [showKeyboardSheet] until its
+  /// route pops), so the screen doesn't open a second one. A sheet that is
+  /// still playing its exit animation no longer counts, and its disposal never
+  /// affects a newer sheet.
+  static bool get isOpen => _active != null || _opening != null;
 
   @override
   ConsumerState<KeyboardSheet> createState() => _KeyboardSheetState();
@@ -81,18 +92,34 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
   /// connected.
   bool _refused = false;
   bool _closing = false;
+  ModalRoute<dynamic>? _route;
 
   RemoteInput get _input => widget.input;
 
   @override
   void initState() {
     super.initState();
-    KeyboardSheet._open = true;
+    KeyboardSheet._active = this;
+    KeyboardSheet._opening = null;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_route != null) return;
+    // The route's future completes on pop, before the exit animation ends:
+    // from then on a new sheet may open.
+    _route = ModalRoute.of(context);
+    unawaited(_route?.popped.then((_) => _release()));
+  }
+
+  void _release() {
+    if (identical(KeyboardSheet._active, this)) KeyboardSheet._active = null;
   }
 
   @override
   void dispose() {
-    KeyboardSheet._open = false;
+    _release();
     _closing = true;
     if (_timer?.isActive ?? false) _flush();
     _timer?.cancel();
@@ -154,9 +181,21 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
     _flush();
     final sent = _input.tap(KeyCodes.enter);
     if (sent && mounted) {
-      Navigator.of(context).pop();
+      _closeSheet();
     } else {
       _noteRefused(refused: true);
+    }
+  }
+
+  /// Closes this sheet's own route, never whatever is on top of it.
+  void _closeSheet() {
+    final route = _route;
+    if (route == null) return;
+    final navigator = Navigator.of(context);
+    if (route.isCurrent) {
+      navigator.pop();
+    } else if (route.isActive) {
+      navigator.removeRoute(route);
     }
   }
 
@@ -165,6 +204,13 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colors = context.appColors;
+    // A reconnect starts over: a stale refusal must not outlive it. (A stale
+    // `RemoteActions` sets the flag again on its next refused send.)
+    ref.listen(connectionStateProvider, (_, next) {
+      if (!next.isLoading && next.value?.status == ConnectionStatus.connected) {
+        _noteRefused(refused: false);
+      }
+    });
     final connection = ref.watch(connectionStateProvider);
     final connected =
         !connection.isLoading &&
@@ -209,6 +255,8 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
           autofocus: true,
           autocorrect: false,
           // enableSuggestions stays at its default (true): suggestions help.
+          // The user may type a TV password: don't let the IME learn from it.
+          enableIMEPersonalizedLearning: false,
           textInputAction: TextInputAction.send,
           decoration: InputDecoration(
             labelText: l10n.keyboardFieldLabel,
