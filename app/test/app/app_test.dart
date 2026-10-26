@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/app.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -118,6 +120,32 @@ void main() {
     expect(
       t.widget<MaterialApp>(find.byType(MaterialApp)).locale,
       const Locale('en'),
+    );
+  });
+
+  testWidgets('theme_switch_applies_immediately', (t) async {
+    _prefs({'settings.onboarding_complete': true});
+    await t.pumpWidget(await _root());
+    await t.pumpAndSettle();
+    unawaited(
+      ProviderScope.containerOf(
+        t.element(find.byType(Scaffold).first),
+      ).read(appRouterProvider).push(AppRoutes.settingsAppearance),
+    );
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('Dark'));
+    await t.pump();
+    expect(
+      Theme.of(t.element(find.text('Appearance').first)).brightness,
+      Brightness.dark,
+    );
+
+    await t.tap(find.text('Light'));
+    await t.pump();
+    expect(
+      Theme.of(t.element(find.text('Appearance').first)).brightness,
+      Brightness.light,
     );
   });
 

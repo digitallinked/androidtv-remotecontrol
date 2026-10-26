@@ -55,6 +55,9 @@ class App extends ConsumerWidget {
                 : null,
           ),
           themeMode: _themeMode(settings.themePreference),
+          // A theme choice shows at once; no cross-fade (also right for
+          // reduce motion).
+          themeAnimationDuration: Duration.zero,
           locale: localeFromCode(settings.localeCode),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
