@@ -1,3 +1,4 @@
+import 'package:atv_remote/atv_remote.dart' show DiscoveredTv;
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -6,6 +7,8 @@ import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
+import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 
 part 'router.g.dart';
 
@@ -84,17 +87,14 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/pair/:serviceName',
-        builder: (context, state) => PlaceholderScreen(
-          title: AppLocalizations.of(context).pageTitlePair,
-          params: {'serviceName': state.pathParameters['serviceName']!},
-          extra: state.extra,
+        builder: (_, state) => PairingScreen(
+          serviceName: state.pathParameters['serviceName']!,
+          tv: state.extra is DiscoveredTv ? state.extra! as DiscoveredTv : null,
         ),
       ),
       GoRoute(
         path: AppRoutes.remote,
-        builder: (context, _) => PlaceholderScreen(
-          title: AppLocalizations.of(context).pageTitleRemote,
-        ),
+        builder: (_, _) => const RemoteScreen(),
       ),
       GoRoute(
         path: AppRoutes.apps,

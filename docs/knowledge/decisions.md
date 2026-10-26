@@ -4,6 +4,45 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #19 — 2026-10-26 — Phase 3 package pins
+- nsd 5.0.1 (nsd_android 2.2.0 owns the Android multicast lock, so no native code), connectivity_plus 7.3.2, network_info_plus 8.2.2, fake_async 1.3.3, clock 1.1.2.
+- **Revisit:** with the Flutter upgrade in decision #8.
+
+### #18 — 2026-10-26 — Pairing UX and client identity
+- Client name/model `Remotely`, `DeviceInfo` vendor `digitallinked`; `kAppVersion` is kept equal to the pubspec version.
+- The code is normalised (trim, strip spaces/dashes, upper-case) in both the field formatter and the controller. Paste accepts exactly 6 hex characters after stripping whitespace and dashes.
+- The 60 s code countdown runs from a wall-clock deadline (`clock.now()`), capped at 60 s, so a suspended iOS timer can't show stale seconds.
+- Only the code glyphs are clamped to 1.3× text scale (six large glyphs can't fit 320 dp at 200%); label and error text scale fully.
+- The identity read is retried once after 200 ms before a "can't load identity" state.
+- Leaving mid-save: the pin is always saved (the TV now trusts us), but the session is activated only if the user stayed or the active target is none/this TV.
+
+### #17 — 2026-10-26 — Wake-on-LAN targets
+- Send to `255.255.255.255`, the Wi-Fi subnet broadcast (`network_info_plus` `getWifiBroadcast`), and the /24 of the TV's last IPv4. Each target is tried independently; the first error is rethrown only if every target failed; a 0-byte send counts as a failure.
+- UI (power button) is Phase 4. iOS needs Apple's multicast entitlement.
+
+### #16 — 2026-10-26 — Discovery and manual IP
+- Manual TVs are `manual:<ipv4>` on 6466 and are never re-resolved; merging with a later mDNS entry is Phase 5.
+- Host re-resolution gives up after 4 s, inside the 5 s connect budget.
+- Discovery keeps browsing under the pushed pairing route (short-lived, stops on `go('/remote')`; accepted).
+- Troubleshooting is an in-app sheet shared by discovery and pairing.
+
+### #15 — 2026-10-26 — Session lifecycle
+- Background grace 60 s, then disconnect. On return, force `disconnect()` + `connect()` if the grace closed the socket or the wall clock shows ≥ 60 s.
+- Resume/network nudges are debounced (trailing 500 ms) and forwarded only in the foreground.
+- The first connectivity event is a baseline; duplicates and all-`none` are ignored; the baseline is re-read on foreground (iOS drops background events).
+- Reconnect action: `connect()` from `disconnected`, otherwise `notifyNetworkChanged()` (re-resolves the host).
+
+### #14 — 2026-10-26 — TOFU pin rules (extends #11)
+- Pin = lower-case hex of `PairingClient.serverPublicKeySha256`. No pin → `needsPairing`, no socket opened.
+- `serverKeyChanged` clears the pin **only if it still equals the distrusted pin** (a just-re-paired pin is never wiped by a late old session). `certificateRejected` keeps the pin; re-pairing overwrites it.
+- Pairing upserts the device before activating it; activation always rebuilds the session (ruling P3-R3). Re-selecting the TV that is already active does not rebuild.
+
+### #13 — 2026-10-26 — Phase 3 session architecture
+- The UI talks only to `RemoteSession`. `TvRemoteSession` wraps the library's `TvConnection`; `DemoRemoteSession` implements the same interface and opens no sockets. Widgets check `isDemo` only for the demo badge, the TV preview card and the "Demo TV" name.
+- `ActiveTarget` holds `DeviceTarget(serviceName)` or `DemoTarget` (never persisted). `remoteSessionProvider` builds the session and its `SessionSupervisor`; providers whose errors the UI must show use `retry: noRetry`.
+- App tests use `implements`-fakes (`FakeRemoteClient`, `FakePairingClient`, `FakeTvDiscovery`); the library's `FakeTvServer` stays unexported.
+- **Revisit:** if more session kinds appear (core/session currently imports features/demo).
+
 ### #12 — 2026-10-25 — Phase 2 app-shell choices
 - **Models:** no freezed (toolchain conflict); drift data classes + hand-written `AppSettings`. `SavedDevice.serverKeyPin` is nullable (null = no trusted key → pair).
 - **Start route:** first run → onboarding placeholder → `/discover`; a saved TV → `/remote`. The route is resolved before `runApp` through one `ProviderContainer` (single database).

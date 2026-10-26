@@ -27,7 +27,9 @@ Uint8List buildMagicPacket(String mac) {
 /// Sends a Wake-on-LAN magic packet for [mac] by UDP to every address in
 /// [broadcastAddresses] (default `255.255.255.255`) on [port] (default 9).
 ///
-/// Throws a [FormatException] for a malformed [mac]. Wakes the TV only if it
+/// A failure on one address does not stop the others. Throws a
+/// [FormatException] for a malformed [mac], and the first send error only if
+/// every address failed. Wakes the TV only if it
 /// has Wake-on-LAN enabled; a TV in deep standby on Wi-Fi often ignores it.
 Future<void> sendWakeOnLan(
   String mac, {
@@ -39,10 +41,40 @@ Future<void> sendWakeOnLan(
   final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
   try {
     socket.broadcastEnabled = true;
-    for (final target in targets) {
-      socket.send(packet, target, port);
-    }
+    sendToEachTarget(packet, targets, port, socket.send);
   } finally {
     socket.close();
+  }
+}
+
+/// Sends [packet] to every address in [targets] with [send] (the signature of
+/// `RawDatagramSocket.send`), trying all of them even if some fail.
+///
+/// A target fails when [send] throws or returns 0 bytes. Rethrows the first
+/// failure only when every target failed; an empty [targets] sends nothing.
+/// Exposed for tests; not part of the package API.
+void sendToEachTarget(
+  List<int> packet,
+  List<InternetAddress> targets,
+  int port,
+  int Function(List<int> buffer, InternetAddress address, int port) send,
+) {
+  Object? firstError;
+  StackTrace? firstStack;
+  var succeeded = false;
+  for (final target in targets) {
+    try {
+      final written = send(packet, target, port);
+      if (written == 0) {
+        throw const SocketException('Wake-on-LAN packet was not sent');
+      }
+      succeeded = true;
+    } on Object catch (error, stack) {
+      firstError ??= error;
+      firstStack ??= stack;
+    }
+  }
+  if (!succeeded && firstError != null) {
+    Error.throwWithStackTrace(firstError, firstStack!);
   }
 }

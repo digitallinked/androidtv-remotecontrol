@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/placeholder_screen.dart';
+import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 
 import '../helpers/pump_router_app.dart';
 
@@ -19,7 +20,6 @@ void main() {
 
   testWidgets('every_route_renders_its_titled_screen', (t) async {
     const titles = {
-      AppRoutes.remote: 'Remote',
       AppRoutes.apps: 'Apps',
       AppRoutes.devices: 'Devices',
       AppRoutes.settings: 'Settings',
@@ -40,10 +40,16 @@ void main() {
       'Télé du salon',
       'manual:192.168.0.5',
     ]) {
-      await pumpRouterApp(t, initialLocation: AppRoutes.pair(name));
+      // Pairing a manual TV runs a countdown, so the screen never settles.
+      await pumpRouterApp(
+        t,
+        initialLocation: AppRoutes.pair(name),
+        settle: false,
+      );
+      await t.pump();
       expect(
-        t.widget<PlaceholderScreen>(find.byType(PlaceholderScreen)).params,
-        {'serviceName': name},
+        t.widget<PairingScreen>(find.byType(PairingScreen)).serviceName,
+        name,
       );
       expect(find.text('Pair your TV'), findsOneWidget);
     }

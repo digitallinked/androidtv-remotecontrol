@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 
-/// First-run screen with a single "Get started" button. Phase 7 replaces it
-/// with the real onboarding.
+/// First-run screen with a "Get started" button and a "Try demo" button.
+/// Phase 7 replaces it with the real onboarding.
 class OnboardingScreen extends ConsumerWidget {
   /// Creates the onboarding screen.
   const OnboardingScreen({super.key});
@@ -46,6 +47,17 @@ class OnboardingScreen extends ConsumerWidget {
                     context.go(AppRoutes.discover);
                   },
                   child: Text(l10n.onboardingGetStarted),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await ref
+                        .read(settingsControllerProvider.notifier)
+                        .update((s) => s.setOnboardingComplete(true));
+                    if (!context.mounted) return;
+                    ref.read(activeTargetProvider.notifier).startDemo();
+                    context.go(AppRoutes.remote);
+                  },
+                  child: Text(l10n.onboardingTryDemo),
                 ),
               ],
             ),

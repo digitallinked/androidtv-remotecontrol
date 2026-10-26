@@ -14,6 +14,26 @@ abstract interface class DeviceRepository {
 
   /// The most recently connected TV, or `null` when none is saved.
   Future<SavedDevice?> lastUsed();
+
+  /// The TV named [serviceName], or `null` when it isn't saved.
+  Future<SavedDevice?> find(String serviceName);
+
+  /// Records a successful connection to [serviceName] at [host] and time
+  /// [at], leaving every other field alone. Does nothing for an unknown TV.
+  Future<void> markConnected(
+    String serviceName, {
+    required String host,
+    required DateTime at,
+  });
+
+  /// Forgets the trusted key of [serviceName] (it must be paired again),
+  /// leaving every other field alone, but only while the stored pin is still
+  /// [distrustedPin]: a newer pairing's pin is kept. Does nothing for an
+  /// unknown TV.
+  Future<void> clearServerKeyPin(
+    String serviceName, {
+    required String distrustedPin,
+  });
 }
 
 /// [DeviceRepository] backed by the drift [AppDatabase].
@@ -52,5 +72,39 @@ class DriftDeviceRepository implements DeviceRepository {
   Future<SavedDevice?> lastUsed() async {
     final row = await (_newestFirst()..limit(1)).getSingleOrNull();
     return row == null ? null : _toUtc(row);
+  }
+
+  @override
+  Future<SavedDevice?> find(String serviceName) async {
+    final row = await (_db.select(
+      _db.devices,
+    )..where((t) => t.serviceName.equals(serviceName))).getSingleOrNull();
+    return row == null ? null : _toUtc(row);
+  }
+
+  // Targeted updates: only the named columns are written, so a concurrent
+  // rename or re-pairing is never overwritten with stale values.
+  UpdateStatement<$DevicesTable, SavedDevice> _updateOne(String serviceName) =>
+      _db.update(_db.devices)..where((t) => t.serviceName.equals(serviceName));
+
+  @override
+  Future<void> markConnected(
+    String serviceName, {
+    required String host,
+    required DateTime at,
+  }) async {
+    await _updateOne(serviceName).write(
+      DevicesCompanion(lastHost: Value(host), lastConnectedAt: Value(at)),
+    );
+  }
+
+  @override
+  Future<void> clearServerKeyPin(
+    String serviceName, {
+    required String distrustedPin,
+  }) async {
+    await (_updateOne(serviceName)
+          ..where((t) => t.serverKeyPin.equals(distrustedPin)))
+        .write(const DevicesCompanion(serverKeyPin: Value(null)));
   }
 }

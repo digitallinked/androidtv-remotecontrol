@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +11,10 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import '../helpers/fake_tv_discovery.dart';
 import '../helpers/recording_crash_reporter.dart';
 
 void _prefs([Map<String, Object> data = const {}]) {
@@ -24,6 +29,13 @@ Future<Widget> _root({
   flavor: Flavor.dev,
   crashReporter: RecordingCrashReporter(),
   startupSteps: steps,
+  overrides: [
+    tvDiscoveryFactoryProvider.overrideWithValue(FakeTvDiscoveries().create),
+    // The database's own stream leaves a timer behind when it is disposed.
+    savedDevicesProvider.overrideWith(
+      (ref) => Stream.value(const <SavedDevice>[]),
+    ),
+  ],
   openDatabase: () {
     onOpenDatabase?.call();
     return AppDatabase(NativeDatabase.memory());
@@ -50,7 +62,7 @@ void main() {
     await t.pumpWidget(await _root());
     await t.pumpAndSettle();
 
-    expect(find.text('No TVs found yet'), findsOneWidget);
+    expect(find.text('Choose your TV'), findsOneWidget);
   });
 
   testWidgets('app_follows_dark_theme_preference', (t) async {

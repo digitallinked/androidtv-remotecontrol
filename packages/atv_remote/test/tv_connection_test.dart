@@ -700,6 +700,49 @@ void main() {
       expect(rig.tv.receivedText, isEmpty);
     });
 
+    test('dispose_inside_verify_server_key_never_reports_connected', () async {
+      late TvConnection c;
+      final seen = <ConnectionStatus>[];
+      final rig = await _rig(
+        verifyServerKey: (_) {
+          unawaited(c.dispose());
+          return true;
+        },
+      );
+      c = rig.connection;
+      c.states.listen((s) => seen.add(s.status));
+      await c.connect();
+      await pumpEventQueue();
+
+      expect(seen, isNot(contains(ConnectionStatus.connected)));
+      expect(c.current.status, ConnectionStatus.disconnected);
+    });
+
+    test('disconnect_from_verify_server_key_ends_disconnected', () async {
+      late TvConnection c;
+      final rig = await _rig(
+        initialPushes: pushes,
+        verifyServerKey: (_) {
+          unawaited(c.disconnect());
+          return true;
+        },
+      );
+      c = rig.connection;
+      final seen = <ConnectionStatus>[];
+      final events = <RemoteEvent>[];
+      final stateSub = c.states.listen((s) => seen.add(s.status));
+      final eventSub = c.events.listen(events.add);
+      addTearDown(stateSub.cancel);
+      addTearDown(eventSub.cancel);
+
+      await c.connect();
+      await pumpEventQueue();
+
+      expect(seen, isNot(contains(ConnectionStatus.connected)));
+      expect(c.current.status, ConnectionStatus.disconnected);
+      expect(events, isEmpty);
+    });
+
     test('an_accepted_key_connects_as_before', () async {
       final keys = <Uint8List>[];
       final rig = await _rig(
@@ -728,6 +771,143 @@ void main() {
       ]);
       await _eventually(() => events.isNotEmpty);
       expect(events, const [VolumeChanged(3, 10, false)]);
+    });
+  });
+
+  group('disconnect', () {
+    test('disconnect_closes_the_client_and_emits_disconnected', () async {
+      final rig = await _rig();
+      await _connected(rig);
+
+      await rig.connection.disconnect();
+
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+      expect(
+        () => rig.connection.sendKey(KeyCodes.home),
+        throwsA(isA<NotConnectedException>()),
+      );
+      await _eventually(() => !rig.clients.single.isReady);
+    });
+
+    test('connect_after_disconnect_connects_again', () async {
+      final rig = await _rig();
+      await _connected(rig);
+
+      await rig.connection.disconnect();
+      await rig.connection.connect().timeout(_wait);
+
+      expect(rig.connection.current.status, ConnectionStatus.connected);
+      expect(rig.connection.current.attempt, 0);
+      expect(rig.clients.length, 2);
+    });
+
+    test('disconnect_is_idempotent', () async {
+      final rig = await _rig();
+      await _connected(rig);
+      final seen = <ConnectionStatus>[];
+      final sub = rig.connection.states.listen((s) => seen.add(s.status));
+      addTearDown(sub.cancel);
+
+      await rig.connection.disconnect();
+      await rig.connection.disconnect();
+      await _pump();
+
+      expect(seen, [ConnectionStatus.disconnected]);
+    });
+
+    test('disconnect_is_a_no_op_after_dispose', () async {
+      final rig = await _rig();
+      await rig.connection.dispose();
+      await rig.connection.disconnect();
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+    });
+
+    test('disconnect_cancels_a_scheduled_retry', () async {
+      final rig = await _rig();
+      await _connected(rig);
+
+      rig.unreachable = true;
+      await rig.tv.dropConnections();
+      await _untilStatus(rig.connection, ConnectionStatus.reconnecting);
+      await rig.connection.disconnect();
+      final created = rig.clientsCreated;
+
+      // Three times the fast backoff's cap: a retry would have fired.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+      expect(rig.clientsCreated, created);
+    });
+
+    test('disconnect_abandons_an_attempt_in_flight', () async {
+      final rig = await _rig();
+      await _connected(rig);
+      final hold = rig.hold = Completer<void>();
+      addTearDown(() {
+        if (!hold.isCompleted) hold.complete();
+      });
+
+      await rig.tv.dropConnections();
+      await _untilStatus(rig.connection, ConnectionStatus.reconnecting);
+      await _eventually(() => rig.clientsCreated == 2);
+
+      await rig.connection.disconnect();
+      hold.complete();
+      await _pump();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+      expect(rig.clientsCreated, 2);
+      expect(rig.clients.last.isReady, isFalse);
+    });
+
+    test('resume_and_network_change_do_nothing_after_disconnect', () async {
+      final rig = await _rig();
+      await _connected(rig);
+      await rig.connection.disconnect();
+      final created = rig.clientsCreated;
+
+      rig.connection
+        ..notifyAppResumed()
+        ..notifyNetworkChanged();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      expect(rig.clientsCreated, created);
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+    });
+
+    test('disconnect_during_re_resolve_discards_the_late_host', () async {
+      final resolving = Completer<String?>();
+      var started = false;
+      final rig = await _rig(
+        reResolveHost: () {
+          started = true;
+          return resolving.future;
+        },
+      );
+      await _connected(rig);
+      await rig.tv.dropConnections();
+      await _eventually(() => started);
+
+      await rig.connection.disconnect();
+      resolving.complete('localhost');
+      await _pump();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(rig.connection.host, '127.0.0.1');
+      expect(rig.clientsCreated, 1);
+      expect(rig.connection.current.status, ConnectionStatus.disconnected);
+    });
+
+    test('host_reports_the_re_resolved_address', () async {
+      final rig = await _rig(reResolveHost: () async => 'localhost');
+      expect(rig.connection.host, '127.0.0.1');
+      await _connected(rig);
+      expect(rig.connection.host, '127.0.0.1');
+
+      await rig.tv.dropConnections();
+      await _lostAndBack(rig);
+
+      expect(rig.connection.host, 'localhost');
     });
   });
 

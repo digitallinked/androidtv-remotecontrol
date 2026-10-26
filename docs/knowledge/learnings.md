@@ -4,6 +4,32 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 3 platform behaviour (connect flow)
+- iOS suspends Dart timers in the background: compare wall-clock time on resume (session grace, pairing countdown). iOS also drops connectivity_plus events while backgrounded: re-read the baseline on foreground.
+- A Wi-Fi→Wi-Fi network switch can look like a duplicate event to connectivity_plus; the 15 s idle timeout catches the dead socket.
+- `RawDatagramSocket.send` can return 0 instead of throwing (e.g. IPv6 target on an IPv4 socket on Windows): treat 0 bytes as a failure.
+- NSD on Android may resolve an IPv6 address; `_pickHost` prefers IPv4 and falls back to `service.host` (unverified on the Note10+ — real-device run).
+- Source: Tasks 3.2, 3.5, 3.9, 3.10.
+
+### Riverpod 3 and widget-test gotchas (Phase 3)
+- A notifier can't `ref.invalidate` a provider that depends on it; use `ref.container.invalidate`.
+- `riverpod_generator` can't name drift data classes in a provider signature; hand-write that provider (`savedDevicesProvider`).
+- Notifier instances survive `invalidateSelf`: keep per-build state in `build()` locals.
+- The default provider retry hides errors for ~13 s; use `retry: noRetry` where the UI must show an error.
+- A modal barrier's `BlockSemantics` hides widgets placed above the Navigator (in `MaterialApp.builder`) unless they are in their own semantics container; show dialogs from there with the router's `navigatorKey` context.
+- go_router in tests: a pushed route doesn't appear in `currentConfiguration`; read `GoRouterState.of` from the top `Scaffold`. Don't await `push()`.
+- Screens with a running spinner or countdown never settle: use `pumpRouterApp(settle: false)` and explicit pumps. Demo connect needs `pump()`, `pump(700ms)`, `pumpAndSettle()`.
+- drift's watch stream leaves a pending timer: `pumpRouterApp` overrides `savedDevicesProvider` with an empty list by default; caller overrides replace defaults by `origin`.
+- Fakes must not mark themselves closed on error/success, or "the controller closes the client" tests become vacuous; count `close()` calls instead.
+- drift stores DateTime in whole seconds: compare saved devices field by field.
+- Source: Tasks 3.4–3.9.
+
+### Windows tooling gotchas (Phase 3)
+- build_runner on Windows can rewrite unrelated `.g.dart` files with line-ending-only changes; revert them.
+- A killed `flutter test` can leave `flutter_tester` holding `sqlite3.dll`; stop only that process before re-running.
+- Write source files with the Write tool, not long Bash heredocs (heredocs mangle `@` and quotes).
+- Dart 3.12 private named initialising formals (`this._x`) satisfy `prefer_initializing_formals`.
+
 ### Flutter app tooling in this workspace (Phase 2)
 - Run code generation with `flutter pub run build_runner build --delete-conflicting-outputs` from `app/`; `dart run build_runner` fails in this pub workspace. Then `dart format` the generated files.
 - Android builds need `kotlin.incremental=false` (set in `app/android/gradle.properties`): the pub cache is on C: and the project on D:, and incremental Kotlin fails with "different roots".

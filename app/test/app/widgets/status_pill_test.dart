@@ -13,7 +13,7 @@ void main() {
       ConnectionStatus.connecting: 'Connecting…',
       ConnectionStatus.reconnecting: 'Reconnecting…',
       ConnectionStatus.offline: 'Offline',
-      ConnectionStatus.needsPairing: 'Pair again',
+      ConnectionStatus.needsPairing: 'Needs pairing',
       ConnectionStatus.disconnected: 'Not connected',
     };
     for (final e in labels.entries) {
@@ -51,6 +51,49 @@ void main() {
     expect(n, 1);
   });
 
+  testWidgets('pair_again_button_only_when_needs_pairing_and_callback_given', (
+    t,
+  ) async {
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.needsPairing, onPairAgain: () {}),
+    );
+    expect(find.text('Pair again'), findsOneWidget);
+    expect(find.text('Needs pairing'), findsOneWidget);
+    for (final status in ConnectionStatus.values) {
+      if (status == ConnectionStatus.needsPairing) continue;
+      await pumpApp(t, StatusPill(status: status, onPairAgain: () {}));
+      expect(find.text('Pair again'), findsNothing, reason: status.name);
+    }
+    await pumpApp(t, const StatusPill(status: ConnectionStatus.needsPairing));
+    expect(find.text('Pair again'), findsNothing);
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.needsPairing, onReconnect: () {}),
+    );
+    expect(find.text('Pair again'), findsNothing);
+    expect(find.text('Reconnect'), findsNothing);
+  });
+
+  testWidgets('pair_again_tap_calls_callback_and_is_48dp', (t) async {
+    var n = 0;
+    await pumpApp(
+      t,
+      StatusPill(
+        status: ConnectionStatus.needsPairing,
+        onPairAgain: () => n++,
+      ),
+    );
+    expect(t.getSize(find.byType(TextButton)).height, greaterThanOrEqualTo(48));
+    expect(
+      t.getRect(find.byType(TextButton)).bottom,
+      lessThanOrEqualTo(t.getRect(find.byType(StatusPill)).bottom),
+    );
+    await t.tap(find.text('Pair again'));
+    await t.pumpAndSettle();
+    expect(n, 1);
+  });
+
   testWidgets('pill_is_live_region_with_status_label', (t) async {
     final h = t.ensureSemantics();
     await pumpApp(t, const StatusPill(status: ConnectionStatus.offline));
@@ -83,6 +126,12 @@ void main() {
     await pumpApp(
       t,
       StatusPill(status: ConnectionStatus.offline, onReconnect: () {}),
+      textScale: 2,
+    );
+    expect(t.takeException(), isNull);
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.needsPairing, onPairAgain: () {}),
       textScale: 2,
     );
     expect(t.takeException(), isNull);

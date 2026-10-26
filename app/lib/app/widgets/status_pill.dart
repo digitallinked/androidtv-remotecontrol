@@ -8,10 +8,17 @@ import 'package:tv_remote/app/theme/tokens.dart';
 /// The state is always written out as a label next to the coloured dot, so
 /// colour is never the only signal. The pill is a live region: screen readers
 /// announce changes. When the TV is [ConnectionStatus.offline] and
-/// [onReconnect] is given, a "Reconnect" button is shown inside the pill.
+/// [onReconnect] is given, a "Reconnect" button is shown inside the pill; when
+/// it is [ConnectionStatus.needsPairing] and [onPairAgain] is given, a "Pair
+/// again" button is.
 class StatusPill extends StatelessWidget {
   /// Creates a pill for [status].
-  const StatusPill({required this.status, super.key, this.onReconnect});
+  const StatusPill({
+    required this.status,
+    super.key,
+    this.onReconnect,
+    this.onPairAgain,
+  });
 
   /// Key of the status dot, for tests.
   @visibleForTesting
@@ -23,6 +30,10 @@ class StatusPill extends StatelessWidget {
   /// Called when the user taps "Reconnect". The button only appears while
   /// [status] is [ConnectionStatus.offline] and this is not null.
   final VoidCallback? onReconnect;
+
+  /// Called when the user taps "Pair again". The button only appears while
+  /// [status] is [ConnectionStatus.needsPairing] and this is not null.
+  final VoidCallback? onPairAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +57,8 @@ class StatusPill extends StatelessWidget {
     };
     final showReconnect =
         status == ConnectionStatus.offline && onReconnect != null;
+    final showPairAgain =
+        status == ConnectionStatus.needsPairing && onPairAgain != null;
 
     return Semantics(
       container: true,
@@ -59,7 +72,9 @@ class StatusPill extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.only(
             left: AppSpacing.m,
-            right: showReconnect ? AppSpacing.xs : AppSpacing.m,
+            right: showReconnect || showPairAgain
+                ? AppSpacing.xs
+                : AppSpacing.m,
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
@@ -96,9 +111,20 @@ class StatusPill extends StatelessWidget {
                 ),
                 if (showReconnect) ...[
                   const SizedBox(width: AppSpacing.xs),
-                  TextButton(
-                    onPressed: onReconnect,
-                    child: Text(l10n.statusReconnectAction),
+                  Flexible(
+                    child: TextButton(
+                      onPressed: onReconnect,
+                      child: Text(l10n.statusReconnectAction),
+                    ),
+                  ),
+                ],
+                if (showPairAgain) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: TextButton(
+                      onPressed: onPairAgain,
+                      child: Text(l10n.statusPairAgainAction),
+                    ),
                   ),
                 ],
               ],

@@ -239,10 +239,20 @@ class PairingClient {
   );
 
   Future<void> _connect() async {
+    final SecurityContext context;
+    try {
+      context = clientSecurityContext(identity);
+    } on Object catch (e) {
+      // Only the type: the TLS library's text can quote key material.
+      throw PairingException(
+        PairingFailure.connectionFailed,
+        'could not load the client identity (${e.runtimeType})',
+      );
+    }
     final SecureSocket socket;
     var abandoned = false;
     try {
-      final pending = _connector(host, port, clientSecurityContext(identity));
+      final pending = _connector(host, port, context);
       // Future.timeout does not cancel the connector. If its socket arrives
       // after we gave up, close it instead of leaking a live pairing session.
       unawaited(

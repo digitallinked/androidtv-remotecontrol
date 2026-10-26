@@ -15,6 +15,7 @@ import 'package:test/test.dart';
 
 import 'fake_tv/fake_tv_identity.dart';
 import 'fake_tv/fake_tv_server.dart';
+import 'support/unloadable_identity.dart';
 
 const Duration _wait = Duration(seconds: 5);
 
@@ -105,23 +106,6 @@ Future<void> _eventually(bool Function() condition) async {
     }
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }
-}
-
-/// An identity whose PEM strings `SecurityContext` cannot load (for example
-/// storage handed back corrupt data that bypassed `ClientIdentity.fromPem`).
-class _UnloadableIdentity implements ClientIdentity {
-  _UnloadableIdentity(this._real);
-
-  final ClientIdentity _real;
-
-  @override
-  String get certificatePem => 'not a certificate';
-
-  @override
-  String get privateKeyPem => 'not a key';
-
-  @override
-  RsaPublicParts get publicParts => _real.publicParts;
 }
 
 Matcher _connectFailure(RemoteCloseReason reason) =>
@@ -354,7 +338,7 @@ void main() {
 
     test('an_unloadable_identity_is_a_network_error_and_ends_events', () async {
       final tv = await _startTv();
-      final client = _client(tv, identity: _UnloadableIdentity(_paired));
+      final client = _client(tv, identity: UnloadableIdentity(_paired));
       final all = client.events.toList();
 
       await expectLater(

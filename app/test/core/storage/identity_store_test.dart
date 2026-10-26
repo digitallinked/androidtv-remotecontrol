@@ -109,6 +109,26 @@ void main() {
     );
   });
 
+  test('transient_read_failure_is_retried_once_before_regenerating', () async {
+    final storage = InMemorySecureKeyValueStore()
+      ..values.addAll({
+        IdentityStore.certificateKey: fixture.certificatePem,
+        IdentityStore.privateKeyKey: fixture.privateKeyPem,
+      })
+      ..failNextReads = 1;
+    var n = 0;
+    final id = await IdentityStore(
+      storage,
+      generate: () async {
+        n++;
+        return fixture2;
+      },
+      readRetryDelay: Duration.zero,
+    ).loadOrCreate();
+    expect(n, 0);
+    expect(id.certificatePem, fixture.certificatePem);
+  });
+
   test('write_failure_throws_and_next_call_retries', () async {
     final storage = InMemorySecureKeyValueStore()
       ..throwOnWrite = PlatformException(code: 'x');

@@ -15,6 +15,7 @@ import 'package:test/test.dart';
 
 import 'fake_tv/fake_tv_identity.dart';
 import 'fake_tv/fake_tv_server.dart';
+import 'support/unloadable_identity.dart';
 
 const Duration _wait = Duration(seconds: 5);
 
@@ -153,6 +154,37 @@ void main() {
   });
 
   group('PairingClient', () {
+    test('unloadable_identity_fails_without_tls_library_text', () async {
+      final tv = await _startTv();
+      final client = PairingClient(
+        host: InternetAddress.loopbackIPv4.address,
+        port: tv.pairingPort,
+        identity: UnloadableIdentity(_identity),
+      );
+      addTearDown(client.close);
+
+      await expectLater(
+        client.start(clientName: 'x'),
+        throwsA(
+          isA<PairingException>()
+              .having(
+                (e) => e.reason,
+                'reason',
+                PairingFailure.connectionFailed,
+              )
+              .having(
+                (e) => e.message,
+                'message',
+                allOf(
+                  contains('could not load the client identity'),
+                  isNot(contains('BoringSSL')),
+                  isNot(contains('PEM')),
+                ),
+              ),
+        ),
+      );
+    });
+
     test('pairs_successfully', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
