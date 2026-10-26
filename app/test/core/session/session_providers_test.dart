@@ -11,6 +11,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
@@ -20,6 +21,7 @@ import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/in_memory_secure_store.dart';
+import '../../helpers/manual_session_signals.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
 
@@ -32,16 +34,21 @@ void main() {
   late AppDatabase db;
   late DriftDeviceRepository repo;
   late FakeRemoteClients clients;
+  late ManualSessionSignals signals;
 
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);
     clients = FakeRemoteClients();
+    signals = ManualSessionSignals();
   });
   tearDown(() => db.close());
 
-  List<Override> overrides({IdentityStore? identityStore}) => [
+  List<Override> overrides({
+    IdentityStore? identityStore,
+    SessionTiming timing = const SessionTiming(),
+  }) => [
     appDatabaseProvider.overrideWithValue(db),
     identityStoreProvider.overrideWithValue(
       identityStore ?? testIdentityStore(),
@@ -49,12 +56,16 @@ void main() {
     remoteClientFactoryProvider.overrideWithValue(clients.create),
     hostResolverProvider.overrideWithValue((_) async => null),
     flavorProvider.overrideWithValue(Flavor.dev),
+    sessionSignalsProvider.overrideWithValue(signals),
+    sessionTimingProvider.overrideWithValue(timing),
   ];
 
-  ProviderContainer makeContainer({IdentityStore? identityStore}) =>
-      ProviderContainer.test(
-        overrides: overrides(identityStore: identityStore),
-      );
+  ProviderContainer makeContainer({
+    IdentityStore? identityStore,
+    SessionTiming timing = const SessionTiming(),
+  }) => ProviderContainer.test(
+    overrides: overrides(identityStore: identityStore, timing: timing),
+  );
 
   Future<void> saveTwo() async {
     await repo.upsert(
@@ -303,6 +314,74 @@ void main() {
     expect(client.deviceInfo.model, expected.model);
     expect(client.deviceInfo.vendor, expected.vendor);
     expect(client.deviceInfo.appVersion, expected.appVersion);
+  });
+
+  group('lifecycle', () {
+    const quick = SessionTiming(
+      backgroundGrace: Duration(milliseconds: 20),
+      nudgeDebounce: Duration(milliseconds: 5),
+    );
+
+    test('session_disconnects_after_background_grace', () async {
+      await repo.upsert(savedTv(name: 'a'));
+      final c = makeContainer(timing: quick)
+        ..listen(remoteSessionProvider, (_, _) {});
+      final session = (await c.read(remoteSessionProvider.future))!;
+      await untilConnected(session);
+
+      signals.background();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(clients.created.single.closed, isTrue);
+      expect(session.current.status, ConnectionStatus.disconnected);
+    });
+
+    test('foreground_after_grace_connects_again', () async {
+      await repo.upsert(savedTv(name: 'a'));
+      final c = makeContainer(timing: quick)
+        ..listen(remoteSessionProvider, (_, _) {});
+      final session = (await c.read(remoteSessionProvider.future))!;
+      await untilConnected(session);
+      signals.background();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(session.current.status, ConnectionStatus.disconnected);
+
+      signals.foreground();
+      await untilConnected(session);
+
+      expect(clients.created, hasLength(2));
+      expect(clients.created.last.closed, isFalse);
+    });
+
+    test('rebuilding_the_session_stops_the_old_supervisor', () async {
+      await repo.upsert(savedTv(name: 'a'));
+      final c = makeContainer(timing: quick)
+        ..listen(remoteSessionProvider, (_, _) {});
+      final first = (await c.read(remoteSessionProvider.future))!;
+      await untilConnected(first);
+      c.read(activeTargetProvider.notifier).activateDevice('a');
+      final second = (await c.read(remoteSessionProvider.future))!;
+      await untilConnected(second);
+
+      signals.background();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Only the new session reacts; the old one was disposed with its client.
+      expect(first.current.status, isNot(ConnectionStatus.connected));
+      expect(second.current.status, ConnectionStatus.disconnected);
+      expect(clients.created.where((x) => !x.closed), isEmpty);
+    });
+
+    test('no_saved_device_creates_no_supervisor_work', () async {
+      final c = makeContainer(timing: quick)
+        ..listen(remoteSessionProvider, (_, _) {});
+      expect(await c.read(remoteSessionProvider.future), isNull);
+      signals
+        ..background()
+        ..networkChanged();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(clients.created, isEmpty);
+    });
   });
 
   test('no_retry_never_schedules_a_retry', () {

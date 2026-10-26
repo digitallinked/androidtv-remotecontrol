@@ -47,7 +47,7 @@ final class ActiveTargetProvider
   }
 }
 
-String _$activeTargetHash() => r'4ff4b78ff25bc3e2ac69c5a862e9d4e1aecf590f';
+String _$activeTargetHash() => r'bf6c90244a9e24eb21cc36818a15cdf45d987d16';
 
 /// Which TV the session follows: `null` (the default) means the most
 /// recently connected saved TV.
@@ -136,7 +136,7 @@ final class RemoteSessionProvider
   }
 }
 
-String _$remoteSessionHash() => r'7f673aface11226cea4c7bbaeb684f099e9af872';
+String _$remoteSessionHash() => r'7d71d3acb1e68bf44b7ffc2d3ad3fbabb3785724';
 
 /// The connection state of the active session; `disconnected` when there is
 /// none.

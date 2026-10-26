@@ -4,6 +4,8 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
+import 'package:tv_remote/core/session/session_signals.dart';
+import 'package:tv_remote/core/session/session_supervisor.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/session/tv_remote_session.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -57,6 +59,8 @@ Future<RemoteSession?> remoteSession(Ref ref) async {
   final identityStore = ref.watch(identityStoreProvider);
   final clientFactory = ref.watch(remoteClientFactoryProvider);
   final resolveHost = ref.watch(hostResolverProvider);
+  final signals = ref.watch(sessionSignalsProvider);
+  final timing = ref.watch(sessionTimingProvider);
 
   final device = switch (target) {
     DeviceTarget(:final serviceName) => await devices.find(serviceName),
@@ -75,7 +79,16 @@ Future<RemoteSession?> remoteSession(Ref ref) async {
     clientFactory: clientFactory,
     resolveHost: resolveHost,
   );
-  ref.onDispose(session.dispose);
+  final supervisor = SessionSupervisor(
+    session: session,
+    signals: signals,
+    backgroundGrace: timing.backgroundGrace,
+    nudgeDebounce: timing.nudgeDebounce,
+  );
+  // Registered first, so the supervisor stops before the session closes.
+  ref
+    ..onDispose(supervisor.dispose)
+    ..onDispose(session.dispose);
   unawaited(session.connect());
   return session;
 }

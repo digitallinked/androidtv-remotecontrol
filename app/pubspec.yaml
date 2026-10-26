@@ -11,6 +11,7 @@ resolution: workspace
 dependencies:
   atv_remote:
     path: ../packages/atv_remote
+  connectivity_plus: 7.3.2
   drift: 2.34.0
   drift_flutter: 0.3.1
   dynamic_color: 2.1.0
