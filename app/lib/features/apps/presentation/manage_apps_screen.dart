@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
@@ -153,20 +152,35 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     int index,
     List<AppEntry> listWithout,
   ) async {
-    final base = (mounted ? _current : null) ?? listWithout;
-    if (base.any((a) => a.package == app.package)) return;
-    final restored = [...base]..insert(index.clamp(0, base.length), app);
     if (mounted) {
+      final base = _current ?? listWithout;
+      final restored = _withApp(base, app, index);
+      if (restored == null) return;
       await _run((actions) => actions.replaceAll(restored), next: restored);
       return;
     }
+    // This screen is gone: the list may have changed since, so read it again.
     try {
+      final base = await container.read(shortcutsProvider.future);
+      final restored = _withApp(base, app, index);
+      if (restored == null) return;
       await container.read(shortcutActionsProvider).replaceAll(restored);
     } on Object {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.manageAppsSaveFailed)),
       );
     }
+  }
+
+  /// [base] with [app] inserted at [index] (or at the end if the list is
+  /// shorter now); `null` when [base] already has it.
+  static List<AppEntry>? _withApp(
+    List<AppEntry> base,
+    AppEntry app,
+    int index,
+  ) {
+    if (base.any((a) => a.package == app.package)) return null;
+    return [...base]..insert(index.clamp(0, base.length), app);
   }
 
   Future<void> _reset() async {
@@ -243,13 +257,10 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
           key: ValueKey('manage_app_${items[i].package}'),
           app: items[i],
           index: i,
-          isFirst: i == 0,
-          isLast: i == items.length - 1,
           onEdit: () => unawaited(
             showCustomShortcutEditor(context, existing: items[i]),
           ),
           onRemove: () => unawaited(_remove(items[i])),
-          onMove: (to) => unawaited(_move(i, to)),
         ),
       );
     }
@@ -287,23 +298,15 @@ class _AppRowItem extends StatelessWidget {
   const _AppRowItem({
     required this.app,
     required this.index,
-    required this.isFirst,
-    required this.isLast,
     required this.onEdit,
     required this.onRemove,
-    required this.onMove,
     super.key,
   });
 
   final AppEntry app;
   final int index;
-  final bool isFirst;
-  final bool isLast;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
-
-  /// Moves this row to the given index.
-  final ValueChanged<int> onMove;
 
   @override
   Widget build(BuildContext context) {
@@ -313,69 +316,60 @@ class _AppRowItem extends StatelessWidget {
     final buttonStyle = IconButton.styleFrom(
       minimumSize: const Size.square(AppSizes.touchMin),
     );
-    return Semantics(
-      container: true,
-      customSemanticsActions: {
-        if (!isFirst)
-          CustomSemanticsAction(label: l10n.manageAppsMoveUp): () =>
-              onMove(index - 1),
-        if (!isLast)
-          CustomSemanticsAction(label: l10n.manageAppsMoveDown): () =>
-              onMove(index + 1),
-      },
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.s,
-            vertical: AppSpacing.xs,
-          ),
-          child: Row(
-            spacing: AppSpacing.s,
-            children: [
-              AppIconSquare(app: app, size: 40),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(app.name, style: text.bodyLarge),
-                    Text(
-                      app.package,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodySmall?.copyWith(
-                        color: colors.textSecondary,
-                      ),
+    // No semantics of its own: the list wraps every item in a node with the
+    // Move up / Move down actions, and the name and app ID merge into it.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.s,
+          vertical: AppSpacing.xs,
+        ),
+        child: Row(
+          spacing: AppSpacing.s,
+          children: [
+            AppIconSquare(app: app, size: 40),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(app.name, style: text.bodyLarge),
+                  Text(
+                    app.package,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall?.copyWith(
+                      color: colors.textSecondary,
                     ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: l10n.manageAppsEdit(app.name),
-                style: buttonStyle,
-                onPressed: onEdit,
-              ),
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline),
-                color: colors.dangerText,
-                tooltip: l10n.manageAppsRemove(app.name),
-                style: buttonStyle,
-                onPressed: onRemove,
-              ),
-              Semantics(
-                container: true,
-                label: l10n.manageAppsDragHandle(app.name),
-                child: ReorderableDragStartListener(
-                  index: index,
-                  child: const SizedBox.square(
-                    dimension: AppSizes.touchMin,
-                    child: ExcludeSemantics(child: Icon(Icons.drag_handle)),
                   ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l10n.manageAppsEdit(app.name),
+              style: buttonStyle,
+              onPressed: onEdit,
+            ),
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              color: colors.dangerText,
+              tooltip: l10n.manageAppsRemove(app.name),
+              style: buttonStyle,
+              onPressed: onRemove,
+            ),
+            Semantics(
+              container: true,
+              label: l10n.manageAppsDragHandle(app.name),
+              child: ReorderableDragStartListener(
+                index: index,
+                child: const SizedBox.square(
+                  dimension: AppSizes.touchMin,
+                  child: ExcludeSemantics(child: Icon(Icons.drag_handle)),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

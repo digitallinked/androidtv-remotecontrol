@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -248,6 +251,46 @@ void main() {
     await tapRow(t, inSheet(find.text('Kodi')));
     expect(find.byType(BottomSheet), findsNothing);
     expect(repo.apps.last.name, 'Kodi');
+  });
+
+  testWidgets('an_app_the_repository_already_has_says_so_and_stays', (t) async {
+    await pumpSheet(t);
+    await search(t, 'kodi');
+    // Added elsewhere; the sheet's list has not heard of it yet.
+    repo.apps.add(const AppEntry(package: 'org.xbmc.kodi', name: 'Kodi'));
+    await tapRow(t, inSheet(find.text('Kodi')));
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(inSheet(find.text('Already on your list')), findsOneWidget);
+    expect(find.text('Kodi added'), findsNothing);
+    expect(repo.apps.where((a) => a.package == 'org.xbmc.kodi'), hasLength(1));
+  });
+
+  testWidgets('a_spinner_shows_while_recent_apps_load', (t) async {
+    final pending = Completer<List<AppEntry>>();
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.manageApps,
+      overrides: [
+        shortcutRepositoryProvider.overrideWithValue(repo),
+        recommendedAppsProvider.overrideWith((ref) => pending.future),
+      ],
+    );
+    await t.tap(find.byTooltip('Add app'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+    expect(inSheet(find.text('Recently used on your TV')), findsOneWidget);
+    expect(inSheet(find.byType(CircularProgressIndicator)), findsOneWidget);
+    expect(
+      inSheet(find.text('Apps you open on your TV show up here.')),
+      findsNothing,
+    );
+    pending.complete(const []);
+    await t.pumpAndSettle();
+    expect(inSheet(find.byType(CircularProgressIndicator)), findsNothing);
+    expect(
+      inSheet(find.text('Apps you open on your TV show up here.')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the_custom_row_opens_the_editor_once_the_sheet_is_closed', (

@@ -157,6 +157,43 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('each_row_exposes_move_up_and_down_exactly_once', (t) async {
+    final handle = t.ensureSemantics();
+    await pumpManage(t);
+    // Count the actions over the whole semantics tree: five rows can move up
+    // and five can move down, so a second source of them would show here.
+    final counts = <String, int>{};
+    void visit(SemanticsNode node) {
+      for (final id
+          in node.getSemanticsData().customSemanticsActionIds ??
+              const <int>[]) {
+        final label = CustomSemanticsAction.getAction(id)!.label!;
+        counts[label] = (counts[label] ?? 0) + 1;
+      }
+      node.visitChildren((child) {
+        visit(child);
+        return true;
+      });
+    }
+
+    visit(
+      t.getSemantics(find.byType(Scaffold).first).owner!.rootSemanticsNode!,
+    );
+    expect(counts['Move up'], 5);
+    expect(counts['Move down'], 5);
+    // And the node that has them is the one that carries the row's name.
+    for (final name in _star) {
+      final node = t.getSemantics(find.text(name));
+      expect(node.label, contains(name));
+      expect(
+        node.getSemanticsData().customSemanticsActionIds,
+        isNotEmpty,
+        reason: name,
+      );
+    }
+    handle.dispose();
+  });
+
   testWidgets('the_handle_is_labelled_and_48dp', (t) async {
     final handle = t.ensureSemantics();
     await pumpManage(t);
@@ -211,6 +248,28 @@ void main() {
     await t.tap(find.text('Undo'));
     await t.pumpAndSettle();
     expect(stored(), _star);
+  });
+
+  testWidgets('undo_after_leaving_keeps_changes_made_since', (t) async {
+    await pumpManage(t);
+    await t.tap(find.byTooltip('Remove Spotify'));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Back'));
+    await t.pumpAndSettle();
+    expect(find.byType(ManageAppsScreen), findsNothing);
+    // The list is edited elsewhere (another visit to Edit apps, say).
+    await repo.add(const AppEntry(package: 'org.xbmc.kodi', name: 'Kodi'));
+    await repo.remove('com.netflix.ninja');
+    await t.tap(find.text('Undo'));
+    await t.pumpAndSettle();
+    expect(stored(), [
+      'YouTube',
+      'Prime Video',
+      'Disney+',
+      'Apple TV',
+      'Spotify', // its old index, in the list as it is now
+      'Kodi',
+    ]);
   });
 
   testWidgets('removing_twice_offers_undo_for_the_last_removal', (t) async {

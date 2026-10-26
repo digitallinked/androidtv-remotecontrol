@@ -55,6 +55,10 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
   bool _saving = false;
   bool _failed = false;
 
+  /// The repository said the app is on the list already (the sheet's list
+  /// was a moment behind).
+  bool _alreadyThere = false;
+
   @override
   void dispose() {
     _search.dispose();
@@ -66,6 +70,7 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
     setState(() {
       _saving = true;
       _failed = false;
+      _alreadyThere = false;
     });
     try {
       final added = await ref.read(shortcutActionsProvider).add(app);
@@ -73,8 +78,10 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
       if (added) {
         Navigator.of(context).pop(l10n.addAppAdded(app.name));
       } else {
-        // Already there (the list on screen was a moment behind).
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _alreadyThere = true;
+        });
       }
     } on Object {
       if (!mounted) return;
@@ -137,7 +144,19 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
           ),
         )
         ..add(_SectionHeader(l10n.addAppRecentTitle));
-      if (recent.hasError || (recent.hasValue && recentApps.isEmpty)) {
+      if (recent.isLoading && !recent.hasValue && !recent.hasError) {
+        children.add(
+          const Padding(
+            padding: EdgeInsetsDirectional.symmetric(vertical: AppSpacing.m),
+            child: Center(
+              child: SizedBox.square(
+                dimension: 24,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            ),
+          ),
+        );
+      } else if (recent.hasError || (recent.hasValue && recentApps.isEmpty)) {
         children.add(
           Padding(
             padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.s),
@@ -235,15 +254,18 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
                     onPressed: () => setState(_search.clear),
                   ),
           ),
-          onChanged: (_) => setState(() => _failed = false),
+          onChanged: (_) => setState(() {
+            _failed = false;
+            _alreadyThere = false;
+          }),
         ),
-        if (_failed)
+        if (_failed || _alreadyThere)
           Semantics(
             liveRegion: true,
             child: Padding(
               padding: const EdgeInsetsDirectional.only(top: AppSpacing.s),
               child: Text(
-                l10n.manageAppsSaveFailed,
+                _failed ? l10n.manageAppsSaveFailed : l10n.addAppAlreadyAdded,
                 style: text.bodyMedium?.copyWith(color: colors.dangerText),
               ),
             ),
