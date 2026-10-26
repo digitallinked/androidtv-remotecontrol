@@ -16,6 +16,8 @@ typedef WakeOnLanSender =
       int port,
     });
 
+const String _limitedBroadcast = '255.255.255.255';
+
 /// The broadcast addresses to try, in order and without duplicates: the
 /// limited broadcast `255.255.255.255`, then [subnetBroadcast] (the Wi-Fi
 /// subnet's broadcast) and the `/24` broadcast of [tvHost], each only when it
@@ -24,7 +26,7 @@ List<InternetAddress> wakeOnLanTargets({
   String? subnetBroadcast,
   String? tvHost,
 }) {
-  final addresses = <String>['255.255.255.255'];
+  final addresses = <String>[_limitedBroadcast];
   final subnet = _ipv4(subnetBroadcast);
   if (subnet != null) addresses.add(subnet.address);
   final host = _ipv4(tvHost);
@@ -61,24 +63,36 @@ class WakeOnLanService {
   final WakeOnLanSender _send;
   final Duration _lookupTimeout;
 
-  /// Sends the magic packet for [mac] to the limited broadcast, the Wi-Fi
-  /// subnet broadcast and the `/24` of [tvHost] (the TV's last known IP).
-  /// [tvHost] is a bare IPv4 host such as `192.168.0.20`, not a service name
-  /// like `manual:192.168.0.20`; anything else is ignored.
+  /// Sends the magic packet for [mac] to the limited broadcast at once, then
+  /// to the Wi-Fi subnet broadcast and the `/24` of [tvHost] (the TV's last
+  /// known IP) once the subnet lookup is done (or has timed out). [tvHost] is
+  /// a bare IPv4 host such as `192.168.0.20`, not a service name like
+  /// `manual:192.168.0.20`; anything else is ignored.
   ///
-  /// Returns `true` once sent and `false` if the network refused it. Throws a
-  /// [FormatException] for a malformed [mac], before anything is sent.
+  /// Returns `true` if any send succeeded and `false` if the network refused
+  /// them all. A lookup that fails or times out only means there is no
+  /// subnet to add. Throws a [FormatException] for a malformed [mac], before
+  /// anything is sent.
   Future<bool> wake({required String mac, String? tvHost}) async {
     buildMagicPacket(mac);
+    final limited = InternetAddress(_limitedBroadcast);
+    var sent = await _trySend(mac, [limited]);
+
     final subnet = await _lookupSubnetBroadcast();
+    final rest = [
+      for (final target in wakeOnLanTargets(
+        subnetBroadcast: subnet,
+        tvHost: tvHost,
+      ))
+        if (target.address != _limitedBroadcast) target,
+    ];
+    if (rest.isNotEmpty && await _trySend(mac, rest)) sent = true;
+    return sent;
+  }
+
+  Future<bool> _trySend(String mac, List<InternetAddress> targets) async {
     try {
-      await _send(
-        mac,
-        broadcastAddresses: wakeOnLanTargets(
-          subnetBroadcast: subnet,
-          tvHost: tvHost,
-        ),
-      );
+      await _send(mac, broadcastAddresses: targets);
       return true;
     } on SocketException {
       return false;
@@ -89,7 +103,7 @@ class WakeOnLanService {
 
   Future<String?> _lookupSubnetBroadcast() async {
     try {
-      return await _subnetBroadcast().timeout(_lookupTimeout);
+      return await Future.sync(_subnetBroadcast).timeout(_lookupTimeout);
     } on Object {
       return null;
     }

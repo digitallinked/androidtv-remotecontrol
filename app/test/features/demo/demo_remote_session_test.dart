@@ -58,6 +58,27 @@ void main() {
     });
   });
 
+  test('disconnect_clears_the_simulated_tv_state', () {
+    _whenConnected((session, async) {
+      session.launchAppLink('market://launch?id=com.netflix.ninja');
+      expect(session.volume, isNotNull);
+      expect(session.currentApp, 'com.netflix.ninja');
+
+      unawaited(session.disconnect());
+      async.flushMicrotasks();
+
+      expect(session.current.status, ConnectionStatus.disconnected);
+      expect(session.volume, isNull);
+      expect(session.isPowerOn, isNull);
+      expect(session.currentApp, isNull);
+
+      unawaited(session.connect());
+      async.elapse(_delay);
+      expect(session.volume, const VolumeChanged(8, 20, false));
+      expect(session.isPowerOn, isTrue);
+    });
+  });
+
   test('volume_keys_change_the_simulated_volume_within_bounds', () {
     _whenConnected((session, async) {
       final events = <RemoteEvent>[];

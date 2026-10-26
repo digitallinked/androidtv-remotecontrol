@@ -40,4 +40,38 @@ void main() {
     ]);
     expect(events, isEmpty);
   });
+
+  testWidgets('seeds_from_the_current_lifecycle_state', (tester) async {
+    tester.binding
+      ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    final observer = LifecycleObserver(binding: tester.binding);
+    addTearDown(observer.dispose);
+    final events = <AppVisibility>[];
+    observer.changes.listen(events.add);
+
+    expect(observer.current, AppVisibility.background);
+    tester.binding
+      ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(observer.current, AppVisibility.foreground);
+    expect(events, [AppVisibility.foreground]);
+  });
+
+  testWidgets('current_is_foreground_when_the_app_is_visible', (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    final observer = LifecycleObserver(binding: tester.binding);
+    addTearDown(observer.dispose);
+
+    expect(observer.current, AppVisibility.foreground);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pump();
+    expect(observer.current, AppVisibility.background);
+  });
 }

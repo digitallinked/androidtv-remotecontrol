@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
 
@@ -52,12 +53,12 @@ void main() {
 
   group('WakeOnLanService', () {
     late String? sentMac;
-    late List<InternetAddress>? sentTargets;
+    late List<List<String>> sentCalls;
     late int sendCount;
 
     setUp(() {
       sentMac = null;
-      sentTargets = null;
+      sentCalls = [];
       sendCount = 0;
     });
 
@@ -68,7 +69,7 @@ void main() {
     }) async {
       sendCount++;
       sentMac = mac;
-      sentTargets = broadcastAddresses;
+      sentCalls.add(_addresses(broadcastAddresses));
     }
 
     test('wake_sends_to_every_target', () async {
@@ -81,10 +82,9 @@ void main() {
 
       expect(sent, isTrue);
       expect(sentMac, _mac);
-      expect(_addresses(sentTargets), [
-        '255.255.255.255',
-        '192.168.0.255',
-        '10.0.0.255',
+      expect(sentCalls, [
+        ['255.255.255.255'],
+        ['192.168.0.255', '10.0.0.255'],
       ]);
     });
 
@@ -102,9 +102,12 @@ void main() {
         );
         async.flushMicrotasks();
         expect(sentAfterThrow, isTrue);
-        expect(_addresses(sentTargets), ['255.255.255.255', '192.168.5.255']);
+        expect(sentCalls, [
+          ['255.255.255.255'],
+          ['192.168.5.255'],
+        ]);
 
-        sentTargets = null;
+        sentCalls.clear();
         final hanging = WakeOnLanService(
           subnetBroadcast: () => Completer<String?>().future,
           send: recordingSender,
@@ -117,11 +120,118 @@ void main() {
         );
         async.elapse(const Duration(seconds: 1));
         expect(sentAfterTimeout, isNull);
-        expect(sentTargets, isNull);
+        expect(sentCalls, [
+          ['255.255.255.255'],
+        ]);
         async.elapse(const Duration(seconds: 1));
         expect(sentAfterTimeout, isTrue);
-        expect(_addresses(sentTargets), ['255.255.255.255', '192.168.5.255']);
+        expect(sentCalls, [
+          ['255.255.255.255'],
+          ['192.168.5.255'],
+        ]);
       });
+    });
+
+    test('limited_broadcast_is_sent_before_the_lookup_finishes', () {
+      fakeAsync((a) {
+        final calls = <List<String>>[];
+        final service = WakeOnLanService(
+          subnetBroadcast: () => Completer<String?>().future,
+          send: (mac, {broadcastAddresses, port = 9}) async =>
+              calls.add(_addresses(broadcastAddresses)),
+        );
+        unawaited(service.wake(mac: _mac, tvHost: '192.168.0.20'));
+        a.flushMicrotasks();
+        expect(calls, [
+          ['255.255.255.255'],
+        ]);
+        a.elapse(const Duration(seconds: 2));
+        expect(calls, [
+          ['255.255.255.255'],
+          ['192.168.0.255'],
+        ]);
+      });
+    });
+
+    test('sync_throwing_lookup_still_sends_the_tv_fallback', () async {
+      final calls = <List<String>>[];
+      final service = WakeOnLanService(
+        subnetBroadcast: () => throw StateError('x'),
+        send: (mac, {broadcastAddresses, port = 9}) async =>
+            calls.add(_addresses(broadcastAddresses)),
+      );
+
+      expect(await service.wake(mac: _mac, tvHost: '192.168.0.20'), isTrue);
+      expect(calls, [
+        ['255.255.255.255'],
+        ['192.168.0.255'],
+      ]);
+    });
+
+    test('os_error_lookup_still_sends_the_tv_fallback', () async {
+      final calls = <List<String>>[];
+      final service = WakeOnLanService(
+        subnetBroadcast: () async => throw const OSError('denied'),
+        send: (mac, {broadcastAddresses, port = 9}) async =>
+            calls.add(_addresses(broadcastAddresses)),
+      );
+
+      expect(await service.wake(mac: _mac, tvHost: '192.168.0.20'), isTrue);
+      expect(calls, [
+        ['255.255.255.255'],
+        ['192.168.0.255'],
+      ]);
+    });
+
+    test('returns_true_when_any_send_succeeds', () async {
+      var n = 0;
+      final service = WakeOnLanService(
+        subnetBroadcast: () async => '192.168.0.255',
+        send: (mac, {broadcastAddresses, port = 9}) async {
+          if (n++ == 0) throw const SocketException('unreachable');
+        },
+      );
+
+      expect(await service.wake(mac: _mac), isTrue);
+      expect(n, 2);
+    });
+
+    test('returns_false_when_every_send_fails', () async {
+      var n = 0;
+      final service = WakeOnLanService(
+        subnetBroadcast: () async => '192.168.0.255',
+        send: (mac, {broadcastAddresses, port = 9}) async {
+          n++;
+          throw n.isOdd
+              ? const SocketException('unreachable')
+              : const OSError('denied');
+        },
+      );
+
+      expect(await service.wake(mac: _mac), isFalse);
+      expect(n, 2);
+    });
+
+    test('no_second_send_when_nothing_else_to_try', () async {
+      final calls = <List<String>>[];
+      final service = WakeOnLanService(
+        subnetBroadcast: () async => null,
+        send: (mac, {broadcastAddresses, port = 9}) async =>
+            calls.add(_addresses(broadcastAddresses)),
+      );
+
+      expect(await service.wake(mac: _mac), isTrue);
+      expect(calls, [
+        ['255.255.255.255'],
+      ]);
+    });
+
+    test('provider_builds_a_service', () {
+      final container = ProviderContainer.test();
+      expect(
+        container.read(wakeOnLanServiceProvider),
+        isA<WakeOnLanService>(),
+      );
     });
 
     test(

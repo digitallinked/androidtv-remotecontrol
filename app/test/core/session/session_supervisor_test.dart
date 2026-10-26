@@ -1,6 +1,7 @@
 import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/core/session/lifecycle_observer.dart';
 import 'package:tv_remote/core/session/session_supervisor.dart';
 
 import '../../helpers/fake_remote_session.dart';
@@ -22,6 +23,53 @@ void main() {
       now: () => clock,
     );
   }
+
+  void startInBackground() {
+    clock = DateTime.utc(2026);
+    s = FakeRemoteSession();
+    signals = ManualSessionSignals(initial: AppVisibility.background);
+    supervisor = SessionSupervisor(
+      session: s,
+      signals: signals,
+      now: () => clock,
+    );
+  }
+
+  test('session_built_in_background_disconnects_after_the_grace', () {
+    fakeAsync((a) {
+      startInBackground();
+      a.elapse(const Duration(seconds: 59));
+      expect(s.disconnectCalls, 0);
+      a.elapse(const Duration(seconds: 1));
+      expect(s.disconnectCalls, 1);
+      supervisor.dispose();
+    });
+  });
+
+  test('session_built_in_background_reconnects_on_return_after_the_grace', () {
+    fakeAsync((a) {
+      startInBackground();
+      a.elapse(const Duration(seconds: 61));
+      clock = clock.add(const Duration(seconds: 61));
+      signals.foreground();
+      a.flushMicrotasks();
+      expect((s.disconnectCalls, s.connectCalls), (2, 1));
+      supervisor.dispose();
+    });
+  });
+
+  test('session_built_in_background_returning_quickly_nudges', () {
+    fakeAsync((a) {
+      startInBackground();
+      a.elapse(const Duration(seconds: 5));
+      clock = clock.add(const Duration(seconds: 5));
+      signals.foreground();
+      a.elapse(const Duration(milliseconds: 500));
+      expect(s.disconnectCalls, 0);
+      expect(s.resumeCalls, 1);
+      supervisor.dispose();
+    });
+  });
 
   test('closes_socket_after_60s_in_background', () {
     fakeAsync((a) {

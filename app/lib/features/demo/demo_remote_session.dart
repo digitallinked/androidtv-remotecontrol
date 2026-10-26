@@ -181,6 +181,9 @@ class DemoRemoteSession implements RemoteSession {
   Future<void> disconnect() async {
     if (_disposed) return;
     _cancelConnecting();
+    // Like a real session: nothing is known about a TV that isn't connected.
+    // `connect()` publishes the simulated state again.
+    _clearTvState();
     _setState(ConnectionStatus.disconnected);
   }
 
@@ -248,6 +251,12 @@ class DemoRemoteSession implements RemoteSession {
     await _states.close();
     await _events.close();
     await _actions.close();
+  }
+
+  void _clearTvState() {
+    _volume = null;
+    _isPowerOn = null;
+    _currentApp = null;
   }
 
   VolumeChanged _withLevel(VolumeChanged volume, int level) =>

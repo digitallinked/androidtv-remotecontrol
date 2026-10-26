@@ -2,6 +2,7 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/tv_remote_session.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -43,12 +44,16 @@ void main() {
     await db.close();
   });
 
-  TvRemoteSession session(SavedDevice device, {HostResolver? resolveHost}) {
+  TvRemoteSession session(
+    SavedDevice device, {
+    HostResolver? resolveHost,
+    RemoteClientFactory? clientFactory,
+  }) {
     final s = TvRemoteSession(
       device: device,
       identity: testIdentity(),
       devices: repo,
-      clientFactory: clients.create,
+      clientFactory: clientFactory ?? clients.create,
       resolveHost: resolveHost ?? (_) async => null,
       backoff: Backoff(
         initial: const Duration(milliseconds: 1),
@@ -342,6 +347,65 @@ void main() {
     final noPin = session(savedTv(noPin: true));
     await noPin.dispose();
     await noPin.dispose();
+  });
+
+  test('live_values_reset_when_the_connection_drops', () async {
+    final s = session(savedTv());
+    await s.connect();
+    await until(s, ConnectionStatus.connected);
+    clients.created.last
+      ..push(const VolumeChanged(8, 20, false))
+      ..push(const PowerStateChanged(true))
+      ..push(const CurrentAppChanged('com.netflix.ninja'));
+    await pumpEventQueue();
+    expect(s.volume, const VolumeChanged(8, 20, false));
+    expect(s.isPowerOn, isTrue);
+    expect(s.currentApp, 'com.netflix.ninja');
+
+    clients.created.last.drop();
+    await until(s, ConnectionStatus.reconnecting);
+
+    expect((s.volume, s.isPowerOn, s.currentApp), (null, null, null));
+  });
+
+  test('live_values_are_cleared_before_the_state_is_forwarded', () async {
+    final s = session(savedTv());
+    await s.connect();
+    await until(s, ConnectionStatus.connected);
+    clients.created.last.push(const VolumeChanged(8, 20, false));
+    await pumpEventQueue();
+
+    VolumeChanged? seen = const VolumeChanged(1, 1, false);
+    s.states.listen((state) {
+      if (state.status == ConnectionStatus.reconnecting) seen = s.volume;
+    });
+    clients.created.last.drop();
+    await until(s, ConnectionStatus.reconnecting);
+
+    expect(seen, isNull);
+  });
+
+  test('pushes_that_arrive_just_before_connected_are_kept', () async {
+    // Each new client gets its pushes before it is ready: they are held back
+    // and emitted right after RemoteReady, around the `connected` state.
+    final s = session(
+      savedTv(),
+      clientFactory: ({required host, required port, required identity}) {
+        final client =
+            clients.create(host: host, port: port, identity: identity)
+                as FakeRemoteClient;
+        return client
+          ..push(const VolumeChanged(5, 20, true))
+          ..push(const PowerStateChanged(true))
+          ..push(const CurrentAppChanged('com.example'));
+      },
+    );
+    await s.connect();
+    await until(s, ConnectionStatus.connected);
+
+    expect(s.volume, const VolumeChanged(5, 20, true));
+    expect(s.isPowerOn, isTrue);
+    expect(s.currentApp, 'com.example');
   });
 
   test('saved_device_label_and_discovered_tv', () {

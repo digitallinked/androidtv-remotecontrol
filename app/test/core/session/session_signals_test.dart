@@ -50,6 +50,15 @@ void main() {
     await tester.pump();
   }
 
+  testWidgets('current_visibility_follows_the_lifecycle', (tester) async {
+    create(tester);
+    expect(signals.currentVisibility, AppVisibility.foreground);
+    await background(tester);
+    expect(signals.currentVisibility, AppVisibility.background);
+    await foreground(tester);
+    expect(signals.currentVisibility, AppVisibility.foreground);
+  });
+
   testWidgets('foreground_resyncs_a_baseline_gone_stale_in_the_background', (
     tester,
   ) async {

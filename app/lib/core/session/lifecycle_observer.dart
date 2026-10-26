@@ -17,7 +17,16 @@ enum AppVisibility {
 /// call banner) changes nothing: the app is still visible.
 class LifecycleObserver {
   /// Starts listening on [binding] (the app's `WidgetsBinding` by default).
+  ///
+  /// It starts from the binding's current lifecycle state, so an observer
+  /// created while the app is in the background reports [current] as
+  /// [AppVisibility.background] and emits [AppVisibility.foreground] on the
+  /// next `resumed`.
   LifecycleObserver({WidgetsBinding? binding}) {
+    final lifecycleState = (binding ?? WidgetsBinding.instance).lifecycleState;
+    _inBackground =
+        lifecycleState == AppLifecycleState.hidden ||
+        lifecycleState == AppLifecycleState.paused;
     _listener = AppLifecycleListener(
       binding: binding,
       onStateChange: _onStateChange,
@@ -28,6 +37,11 @@ class LifecycleObserver {
   final StreamController<AppVisibility> _changes =
       StreamController<AppVisibility>.broadcast();
   bool _inBackground = false;
+
+  /// The visibility right now: [AppVisibility.background] after `hidden` or
+  /// `paused` until `resumed`, otherwise [AppVisibility.foreground].
+  AppVisibility get current =>
+      _inBackground ? AppVisibility.background : AppVisibility.foreground;
 
   /// Emits [AppVisibility.background] on the first transition to `hidden` or
   /// `paused`, and [AppVisibility.foreground] on `resumed` after a

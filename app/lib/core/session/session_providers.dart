@@ -141,7 +141,7 @@ Stream<VolumeChanged?> volume(Ref ref) async* {
     yield null;
     return;
   }
-  yield* _cachedThenEvents<VolumeChanged, VolumeChanged>(
+  yield* _liveValue<VolumeChanged, VolumeChanged>(
     session,
     cached: session.volume,
     valueOf: (event) => event,
@@ -157,7 +157,7 @@ Stream<bool?> powerState(Ref ref) async* {
     yield null;
     return;
   }
-  yield* _cachedThenEvents<PowerStateChanged, bool>(
+  yield* _liveValue<PowerStateChanged, bool>(
     session,
     cached: session.isPowerOn,
     valueOf: (event) => event.isOn,
@@ -173,29 +173,45 @@ Stream<String?> currentApp(Ref ref) async* {
     yield null;
     return;
   }
-  yield* _cachedThenEvents<CurrentAppChanged, String>(
+  yield* _liveValue<CurrentAppChanged, String>(
     session,
     cached: session.currentApp,
     valueOf: (event) => event.package,
   );
 }
 
-/// Emits [cached], then the value of every [E] event of [session].
+/// A live value of [session]: its cached value while connected, then the
+/// value of every [E] event, and `null` whenever the session leaves
+/// `connected`.
 ///
-/// It subscribes before it emits [cached], so no event falls between the
-/// two.
-Stream<V?> _cachedThenEvents<E extends RemoteEvent, V>(
+/// The session clears its own value when the connection ends, so this emits
+/// `null` once per drop (not again while the status stays non-connected, and
+/// not if the last emitted value was already `null`). It subscribes before it
+/// emits the first value, so no event falls between the two.
+Stream<V?> _liveValue<E extends RemoteEvent, V>(
   RemoteSession session, {
   required V? cached,
   required V Function(E event) valueOf,
 }) => Stream<V?>.multi((listener) {
-  final subscription = session.events.listen(
-    (event) {
-      if (event is E) listener.add(valueOf(event));
-    },
-    onDone: listener.close,
-  );
-  listener
-    ..add(cached)
-    ..onCancel = subscription.cancel;
+  V? last;
+  void emit(V? value) {
+    last = value;
+    listener.add(value);
+  }
+
+  final eventSubscription = session.events.listen((event) {
+    if (event is E) emit(valueOf(event));
+  }, onDone: listener.close);
+  // `states` replays the current state first, which is also what decides
+  // whether `cached` is worth showing.
+  final stateSubscription = session.states.listen((state) {
+    if (state.status != ConnectionStatus.connected && last != null) {
+      emit(null);
+    }
+  });
+  emit(session.current.status == ConnectionStatus.connected ? cached : null);
+  listener.onCancel = () => Future.wait([
+    eventSubscription.cancel(),
+    stateSubscription.cancel(),
+  ]);
 });

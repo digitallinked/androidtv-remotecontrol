@@ -11,6 +11,9 @@ part 'session_signals.g.dart';
 /// What the session supervisor listens to: whether the app is on screen and
 /// whether the phone's network changed. Tests replace it with a manual one.
 abstract interface class SessionSignals {
+  /// The visibility right now, for a supervisor created mid-flight.
+  AppVisibility get currentVisibility;
+
   /// The app going to the background and coming back.
   Stream<AppVisibility> get visibility;
 
@@ -61,6 +64,9 @@ class PlatformSessionSignals implements SessionSignals {
       // Keep the old baseline; the next event corrects it.
     }
   }
+
+  @override
+  AppVisibility get currentVisibility => _lifecycle.current;
 
   @override
   Stream<AppVisibility> get visibility => _lifecycle.changes;
