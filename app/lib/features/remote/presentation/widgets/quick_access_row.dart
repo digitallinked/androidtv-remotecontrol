@@ -1,0 +1,242 @@
+import 'package:atv_remote/atv_remote.dart';
+import 'package:flutter/material.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_key_button.dart';
+import 'package:tv_remote/core/storage/settings_store.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/remote/application/key_input.dart';
+import 'package:tv_remote/features/remote/presentation/key_labels.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
+
+const Color _darkLabel = Color(0xFF0F1115);
+
+/// The label colour for a TV colour key filled with [key]: the dark ink or
+/// white, whichever has the higher WCAG contrast with [key].
+Color colourKeyLabelColor(Color key) =>
+    contrastRatio(_darkLabel, key) >= contrastRatio(Colors.white, key)
+    ? _darkLabel
+    : Colors.white;
+
+const double _pillMinWidth = 64;
+const double _rowHeight = AppSizes.keyMin;
+
+/// The row under the remote's status strip: app shortcuts, the TV's colour
+/// keys, or media keys, as chosen by the `quickAccessRow` setting.
+///
+/// (The settings enum is called `QuickAccessRow`, so the widget is a bar.)
+/// Every variant keeps a 16 dp gutter at both sides and scrolls horizontally
+/// when its keys don't fit, so it never overflows at 320 dp or at 200% text.
+/// [QuickAccessRow.none] takes no space.
+class QuickAccessBar extends StatelessWidget {
+  /// Creates the bar for [variant], sending presses to [input].
+  const QuickAccessBar({
+    required this.variant,
+    required this.input,
+    required this.apps,
+    this.currentApp,
+    super.key,
+  });
+
+  /// Which row to show.
+  final QuickAccessRow variant;
+
+  /// Where taps and app launches go.
+  final RemoteInput input;
+
+  /// The app shortcuts, shown by [QuickAccessRow.apps].
+  final List<AppEntry> apps;
+
+  /// The package of the app open on the TV, if known.
+  final String? currentApp;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return switch (variant) {
+      QuickAccessRow.apps => Semantics(
+        container: true,
+        label: l10n.quickAccessAppsLabel,
+        child: SizedBox(
+          height: QuickAppTile.heightOf(context),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+            itemCount: apps.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
+            itemBuilder: (context, i) => QuickAppTile(
+              app: apps[i],
+              isCurrent: apps[i].package == currentApp,
+              onTap: () => input.launch(apps[i]),
+            ),
+          ),
+        ),
+      ),
+      QuickAccessRow.colourKeys => Semantics(
+        container: true,
+        label: l10n.quickAccessColourLabel,
+        child: _ColourKeys(input: input),
+      ),
+      QuickAccessRow.mediaKeys => Semantics(
+        container: true,
+        label: l10n.quickAccessMediaLabel,
+        child: _MediaKeys(input: input),
+      ),
+      QuickAccessRow.none => const SizedBox.shrink(),
+    };
+  }
+}
+
+class _ColourKeys extends StatelessWidget {
+  const _ColourKeys({required this.input});
+
+  final KeyInput input;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = context.appColors;
+    final keys = [
+      (KeyCodes.red, colors.tvRed),
+      (KeyCodes.green, colors.tvGreen),
+      (KeyCodes.yellow, colors.tvYellow),
+      (KeyCodes.blue, colors.tvBlue),
+    ];
+    final fitWidth =
+        keys.length * _pillMinWidth + (keys.length - 1) * AppSizes.keyGap;
+
+    Widget pill(int code, Color fill) => _ColourPill(
+      label: keyLabel(l10n, code),
+      fill: fill,
+      onTap: () => input.tap(code),
+    );
+
+    return SizedBox(
+      height: _rowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= fitWidth) {
+              return Row(
+                spacing: AppSizes.keyGap,
+                children: [
+                  for (final (code, fill) in keys)
+                    Expanded(child: pill(code, fill)),
+                ],
+              );
+            }
+            return ListView.separated(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: keys.length,
+              separatorBuilder: (_, _) =>
+                  const SizedBox(width: AppSizes.keyGap),
+              itemBuilder: (_, i) => SizedBox(
+                width: _pillMinWidth,
+                child: pill(keys[i].$1, keys[i].$2),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ColourPill extends StatelessWidget {
+  const _ColourPill({
+    required this.label,
+    required this.fill,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color fill;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelLarge;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Material(
+        color: fill,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: style?.copyWith(color: colourKeyLabelColor(fill)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MediaKeys extends StatelessWidget {
+  const _MediaKeys({required this.input});
+
+  final KeyInput input;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    const keys = [
+      (KeyCodes.previous, Icons.skip_previous),
+      (KeyCodes.rewind, Icons.fast_rewind),
+      // One constant icon: the TV's play state isn't known.
+      (KeyCodes.playPause, Icons.play_arrow),
+      (KeyCodes.fastForward, Icons.fast_forward),
+      (KeyCodes.next, Icons.skip_next),
+    ];
+    final fitWidth =
+        keys.length * AppSizes.keyMin + (keys.length - 1) * AppSizes.keyGap;
+
+    Widget key(int code, IconData icon) => AppKeyButton(
+      semanticLabel: keyLabel(l10n, code),
+      icon: Icon(icon),
+      onTap: () => input.tap(code),
+    );
+
+    return SizedBox(
+      height: _rowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= fitWidth) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                spacing: AppSizes.keyGap,
+                children: [for (final (code, icon) in keys) key(code, icon)],
+              );
+            }
+            return ListView.separated(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: keys.length,
+              separatorBuilder: (_, _) =>
+                  const SizedBox(width: AppSizes.keyGap),
+              itemBuilder: (_, i) => key(keys[i].$1, keys[i].$2),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
