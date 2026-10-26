@@ -160,4 +160,65 @@ void main() {
     expect(mail, contains('App: ? (?)'));
     expect(mail, contains('System: '));
   });
+
+  testWidgets('the_fallback_subject_names_the_flavor_not_a_question_mark', (
+    t,
+  ) async {
+    final opener = RecordingLinkOpener();
+    await pumpHub(
+      t,
+      opener,
+      appInfo: appInfoProvider.overrideWith(
+        (ref) => throw StateError('no package info'),
+      ),
+    );
+
+    await openFeedback(t);
+    await t.tap(find.text('Write email'));
+    await t.pumpAndSettle();
+
+    final mail = Uri.decodeFull(opener.opened.single.toString());
+    expect(mail, contains('subject=Feedback on Remotely Dev ?'));
+  });
+
+  test('feedback_mail_round_trips_awkward_text_through_the_query', () {
+    const subject =
+        'Q&A? #1 + 100% é 日本'
+        '\nnext line';
+    const prompt =
+        'Tell us: a&b=c?d #e +f 50% é 日本'
+        '\nsecond line';
+    final text = feedbackMailUri(
+      info: _info,
+      subject: subject,
+      prompt: prompt,
+    ).toString();
+
+    // Split the raw query by hand: `queryParameters` would turn a `+` into
+    // a space, which is exactly what must not happen.
+    final query = text.substring(text.indexOf('?') + 1);
+    final parts = {
+      for (final pair in query.split('&'))
+        pair.substring(0, pair.indexOf('=')): Uri.decodeComponent(
+          pair.substring(pair.indexOf('=') + 1),
+        ),
+    };
+    expect(parts.keys, ['subject', 'body']);
+    expect(parts['subject'], subject);
+    expect(
+      parts['body'],
+      '$prompt\n\n\n---\nApp: 1.0.0 (1)\nSystem: android 12',
+    );
+
+    // The raw text has no literal `+` (a `+` the user typed is `%2B`), no
+    // raw newline, and spaces are `%20`.
+    expect(text, isNot(contains('+')));
+    expect(text, isNot(contains('\n')));
+    expect(text, contains('%2B'));
+    expect(text, contains('%20'));
+    // Separators inside the values are escaped, so the query splits in two.
+    expect(query.split('&'), hasLength(2));
+    expect(query.split('#'), hasLength(1));
+    expect(text.split('?'), hasLength(2));
+  });
 }
