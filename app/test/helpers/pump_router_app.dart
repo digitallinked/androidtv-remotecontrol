@@ -8,16 +8,25 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import 'fake_remote_client.dart';
 import 'fake_tv_discovery.dart';
+import 'test_identity.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
 /// store it runs on (backed by in-memory preferences and an in-memory
 /// database that is closed when the test ends).
+///
+/// Pass [database] to run on a database of your own (for example one that
+/// already holds saved TVs); the caller closes it. The defaults also replace
+/// everything platform-backed: the client identity (a fixture), the remote
+/// clients (fakes that connect at once) and the host resolver (finds
+/// nothing).
 ///
 /// Every call gets a fresh `ProviderScope`, so several locations can be
 /// pumped in one test without reusing a router. [overrides] are applied after
@@ -25,6 +34,7 @@ import 'fake_tv_discovery.dart';
 Future<SettingsStore> pumpRouterApp(
   WidgetTester tester, {
   required String initialLocation,
+  AppDatabase? database,
   List<Override> overrides = const [],
   Brightness brightness = Brightness.light,
   double textScale = 1,
@@ -32,14 +42,19 @@ Future<SettingsStore> pumpRouterApp(
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
   final store = await SettingsStore.open();
-  final db = AppDatabase(NativeDatabase.memory());
-  addTearDown(db.close);
+  final db = database ?? AppDatabase(NativeDatabase.memory());
+  if (database == null) addTearDown(db.close);
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
       overrides: [
         settingsStoreProvider.overrideWithValue(store),
         appDatabaseProvider.overrideWithValue(db),
+        identityStoreProvider.overrideWithValue(testIdentityStore()),
+        remoteClientFactoryProvider.overrideWithValue(
+          FakeRemoteClients().create,
+        ),
+        hostResolverProvider.overrideWithValue((_) async => null),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,

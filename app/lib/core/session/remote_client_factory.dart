@@ -1,5 +1,8 @@
 import 'package:atv_remote/atv_remote.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/flavor.dart';
+
+part 'remote_client_factory.g.dart';
 
 /// Creates a new [RemoteClient] for one connection attempt to the TV at
 /// [host]:[port], presenting [identity].
@@ -25,3 +28,16 @@ DeviceInfo deviceInfoFor(Flavor flavor) => DeviceInfo(
   packageName: flavor.applicationId,
   appVersion: kAppVersion,
 );
+
+/// Builds the real [RemoteClient]s of this app; tests override it with a
+/// fake.
+@Riverpod(keepAlive: true)
+RemoteClientFactory remoteClientFactory(Ref ref) {
+  final deviceInfo = deviceInfoFor(ref.watch(flavorProvider));
+  return ({required host, required port, required identity}) => RemoteClient(
+    host: host,
+    port: port,
+    identity: identity,
+    deviceInfo: deviceInfo,
+  );
+}

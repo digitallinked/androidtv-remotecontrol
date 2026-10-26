@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart' show StreamProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
@@ -32,3 +33,13 @@ SettingsStore settingsStore(Ref ref) => throw UnimplementedError(
 @Riverpod(keepAlive: true)
 IdentityStore identityStore(Ref ref) =>
     IdentityStore(const FlutterSecureKeyValueStore());
+
+/// The saved TVs, most recently connected first, kept up to date.
+///
+/// Written by hand: `riverpod_generator` can't name [SavedDevice], because
+/// drift generates that class in the same build (`InvalidTypeException`).
+final StreamProvider<List<SavedDevice>> savedDevicesProvider =
+    StreamProvider.autoDispose<List<SavedDevice>>(
+      (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
+      name: 'savedDevicesProvider',
+    );
