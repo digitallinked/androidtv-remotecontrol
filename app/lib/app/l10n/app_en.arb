@@ -522,6 +522,18 @@
   "@keySearch": {
     "description": "Screen-reader label of the search key."
   },
+  "keyEnter": "Enter",
+  "@keyEnter": {
+    "description": "Screen-reader label of the Enter key (confirms text on the TV)."
+  },
+  "keyDelete": "Delete",
+  "@keyDelete": {
+    "description": "Screen-reader label of the key that deletes the character before the cursor on the TV."
+  },
+  "keyKeyboard": "Keyboard",
+  "@keyKeyboard": {
+    "description": "Label of the remote key that opens the keyboard sheet for typing on the TV."
+  },
   "pairStarting": "Connecting to {tvName}…",
   "@pairStarting": {
     "description": "Shown while the app connects to the TV to start pairing.",
@@ -647,5 +659,197 @@
   "pairNotFoundBody": "Go back to the list of TVs and choose it again.",
   "@pairNotFoundBody": {
     "description": "Explanation shown when the pairing screen is opened for a TV that is not known."
+  },
+  "remotePadTabsLabel": "Control style",
+  "@remotePadTabsLabel": {
+    "description": "Accessibility label of the tab bar that switches between the touchpad, D-pad and number pad."
+  },
+  "remotePadTouchpad": "Touchpad",
+  "@remotePadTouchpad": {
+    "description": "Tab label: the swipe-and-tap touchpad control style."
+  },
+  "remotePadDpad": "D-pad",
+  "@remotePadDpad": {
+    "description": "Tab label: the directional-pad control style."
+  },
+  "remotePadNumbers": "Numbers",
+  "@remotePadNumbers": {
+    "description": "Tab label: the number pad (digits 0 to 9)."
+  },
+  "touchpadLabel": "Touchpad",
+  "@touchpadLabel": {
+    "description": "Screen-reader label of the touchpad area."
+  },
+  "touchpadHint": "Swipe to move, tap to select, tap with two fingers to go back.",
+  "@touchpadHint": {
+    "description": "Screen-reader hint of the touchpad area that explains its gestures."
+  },
+  "touchpadIdleHint": "Swipe to move · Tap to select",
+  "@touchpadIdleHint": {
+    "description": "Short hint drawn on the touchpad while it is idle."
+  },
+  "channelLabel": "CH",
+  "@channelLabel": {
+    "description": "Short visible label of the channel up/down rocker."
+  },
+  "remoteVolumeValue": "{level}",
+  "@remoteVolumeValue": {
+    "description": "The TV volume level shown on the volume rocker.",
+    "placeholders": {
+      "level": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "remoteMutedValue": "Muted",
+  "@remoteMutedValue": {
+    "description": "Shown on the volume rocker instead of the level while the TV is muted."
+  },
+  "remoteVolumeSemantics": "Volume {level} of {max}",
+  "@remoteVolumeSemantics": {
+    "description": "Screen-reader description of the TV volume.",
+    "placeholders": {
+      "level": {
+        "type": "int",
+        "example": "12"
+      },
+      "max": {
+        "type": "int",
+        "example": "100"
+      }
+    }
+  },
+  "remoteVolumeMutedSemantics": "Volume muted",
+  "@remoteVolumeMutedSemantics": {
+    "description": "Screen-reader description of the TV volume while it is muted."
+  },
+  "quickAccessAppsLabel": "Apps on your TV",
+  "@quickAccessAppsLabel": {
+    "description": "Screen-reader label of the row of app shortcuts."
+  },
+  "quickAccessColourLabel": "Colour keys",
+  "@quickAccessColourLabel": {
+    "description": "Screen-reader label of the row of red, green, yellow and blue keys."
+  },
+  "quickAccessMediaLabel": "Media keys",
+  "@quickAccessMediaLabel": {
+    "description": "Screen-reader label of the row of playback keys."
+  },
+  "quickAppOpen": "Open {app}",
+  "@quickAppOpen": {
+    "description": "Screen-reader label of an app shortcut: opens the app on the TV.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Netflix"
+      }
+    }
+  },
+  "quickAppNowOnTv": "{app}, now on TV",
+  "@quickAppNowOnTv": {
+    "description": "Screen-reader label of the app shortcut for the app that is open on the TV right now.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Netflix"
+      }
+    }
+  },
+  "powerHoldHint": "Hold to turn the TV on or off",
+  "@powerHoldHint": {
+    "description": "Snackbar shown when the power key is tapped instead of held."
+  },
+  "powerWaking": "Waking {tvName}…",
+  "@powerWaking": {
+    "description": "Snackbar shown while the app sends the wake-up signal to the TV.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "powerWakeFailed": "Couldn't send the wake-up signal. Make sure your phone is on the same Wi-Fi as the TV.",
+  "@powerWakeFailed": {
+    "description": "Error shown when the Wake-on-LAN signal could not be sent."
+  },
+  "powerTurnOnWithTvRemote": "Turn the TV on with its own remote. This app reconnects by itself.",
+  "@powerTurnOnWithTvRemote": {
+    "description": "Shown on iOS when the TV is off and the app cannot wake it: the user must use the TV remote."
+  },
+  "wolSetupTitle": "Turn on {tvName} from your phone",
+  "@wolSetupTitle": {
+    "description": "Title of the sheet that asks for the TV MAC address so the phone can wake it.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living Room TV"
+      }
+    }
+  },
+  "wolSetupBody": "Your phone can wake the TV over the network with its MAC address. On the TV, open Settings → System → About → Status (or Settings → Network & Internet) and copy the Wi-Fi or Ethernet MAC address.",
+  "@wolSetupBody": {
+    "description": "Explains where to find the TV MAC address, in the Wake-on-LAN setup sheet."
+  },
+  "wolNotBluetooth": "Use the Wi-Fi or Ethernet MAC address, not the Bluetooth one.",
+  "@wolNotBluetooth": {
+    "description": "Warning in the Wake-on-LAN setup sheet: the Bluetooth address does not work."
+  },
+  "wolMayNotWork": "Some TVs can't be woken when they're fully off or in deep standby.",
+  "@wolMayNotWork": {
+    "description": "Caveat in the Wake-on-LAN setup sheet."
+  },
+  "wolMacLabel": "MAC address",
+  "@wolMacLabel": {
+    "description": "Label of the MAC address text field."
+  },
+  "wolMacHint": "AA:BB:CC:DD:EE:FF",
+  "@wolMacHint": {
+    "description": "Example MAC address shown as the hint of the MAC address field."
+  },
+  "wolMacError": "Enter 6 pairs of letters or digits, like AA:BB:CC:DD:EE:FF",
+  "@wolMacError": {
+    "description": "Validation error under the MAC address field."
+  },
+  "wolSaveAndWake": "Save and turn on",
+  "@wolSaveAndWake": {
+    "description": "Button in the Wake-on-LAN setup sheet: saves the MAC address and sends the wake-up signal."
+  },
+  "wolSaveFailed": "Couldn't save the MAC address. Try again.",
+  "@wolSaveFailed": {
+    "description": "Error shown when the MAC address could not be saved."
+  },
+  "keyboardTitle": "Type on your TV",
+  "@keyboardTitle": {
+    "description": "Title of the keyboard sheet."
+  },
+  "keyboardFieldLabel": "Text",
+  "@keyboardFieldLabel": {
+    "description": "Label of the text field in the keyboard sheet."
+  },
+  "keyboardHint": "Start typing…",
+  "@keyboardHint": {
+    "description": "Hint inside the empty text field of the keyboard sheet."
+  },
+  "keyboardTvHint": "Select a text field on the TV first, like the search box.",
+  "@keyboardTvHint": {
+    "description": "Explains that a text field must be focused on the TV before typing works."
+  },
+  "keyboardClear": "Clear",
+  "@keyboardClear": {
+    "description": "Button that empties the text field on the TV."
+  },
+  "keyboardOpenTvSearch": "Open search on TV",
+  "@keyboardOpenTvSearch": {
+    "description": "Button in the keyboard sheet that opens the search screen on the TV."
+  },
+  "keyboardNotConnected": "Not connected to your TV. What you type isn't sent.",
+  "@keyboardNotConnected": {
+    "description": "Inline message in the keyboard sheet while the TV is not connected."
+  },
+  "theaterWakeLabel": "Screen dimmed. Touch to brighten.",
+  "@theaterWakeLabel": {
+    "description": "Screen-reader label of the dimmed Theater Mode overlay."
   }
 }

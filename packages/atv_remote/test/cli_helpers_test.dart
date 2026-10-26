@@ -25,8 +25,24 @@ void main() {
       expect(parseKeyName(''), isNull);
     });
 
+    test('parses_enter_and_delete', () {
+      expect(parseKeyName('Enter'), 66);
+      expect(parseKeyName('delete'), 67);
+    });
+
     test('lists the valid names', () {
       expect(validKeyNames(), contains('volumeup'));
+    });
+  });
+
+  group('parseHoldMillis', () {
+    test('parses_hold_millis_in_range', () {
+      expect(parseHoldMillis('800'), 800);
+      expect(parseHoldMillis('1'), 1);
+      expect(parseHoldMillis('30000'), 30000);
+      for (final raw in ['0', '-1', 'abc', '30001', '', '1.5']) {
+        expect(parseHoldMillis(raw), isNull, reason: raw);
+      }
     });
   });
 

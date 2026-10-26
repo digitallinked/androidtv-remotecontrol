@@ -502,6 +502,42 @@ void main() {
       expect(tv.receivedImeBatchEdit!.fieldCounter, 4);
     });
 
+    test('sends_enter_and_delete', () async {
+      final (tv, client) = await _ready();
+
+      client
+        ..sendKey(KeyCodes.enter)
+        ..sendKey(KeyCodes.delete);
+
+      await _eventually(() => tv.receivedKeyCodes.length == 2);
+      expect(tv.receivedKeyCodes, [66, 67]);
+    });
+
+    test('empty_text_clears_the_field', () async {
+      final (tv, client) = await _ready();
+      client.sendText('abc');
+      await _eventually(() => tv.receivedText == 'abc');
+
+      client.sendText('');
+
+      await _eventually(() => tv.receivedText.isEmpty);
+      expect(
+        tv.receivedImeBatchEdit!.editInfo.single.textFieldStatus.value,
+        '',
+      );
+    });
+
+    test('unsupported_key_code_throws_argument_error', () async {
+      final (tv, client) = await _ready();
+
+      expect(() => client.sendKey(9999), throwsArgumentError);
+
+      expect(client.isReady, isTrue);
+      client.sendKey(KeyCodes.home);
+      await _eventually(() => tv.receivedKeyCodes.isNotEmpty);
+      expect(tv.receivedKeyCodes, [KeyCodes.home]);
+    });
+
     test('sendKey_before_ready_throws_StateError', () {
       final client = RemoteClient(
         host: InternetAddress.loopbackIPv4.address,

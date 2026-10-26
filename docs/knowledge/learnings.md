@@ -4,6 +4,18 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 4 Flutter gotchas (remote experience)
+- `ScaffoldMessenger.hideCurrentSnackBar()` + `showSnackBar()` **queues** — it does not replace. Bursts of refusals built a ~25 s backlog; keep one `ScaffoldFeatureController` and show only when it's null.
+- `RouteObserver<PageRoute>` ignores sheets and dialogs (both routes must be `PageRoute`), and a page pushed while a sheet is on top isn't seen. The platform wake lock is one global flag, not ref-counted.
+- `ModalRoute.popped` completes at pop time, before the exit animation; release "is open" flags there and identity-check them in `dispose`, or a closing sheet's dispose clears the flag of a new one.
+- Riverpod skips equal consecutive values: a stream of identical events (e.g. IME requests) needs identity-typed signals. flutter_riverpod 3.3.2 pauses only `watch` subscriptions under `TickerMode` off — `ref.listen` keeps firing (an earlier review claim of "replay on resume" was wrong).
+- `TextScaler` may be non-linear (Android 14+): compute a line's height as `scale(fontSize) * height`, not `scale(fontSize * height)`. Linear test scalers hide this — test with a non-linear scaler too.
+- Ahem goldens can't prove text wrapping (every glyph is one em); assert `maxLines`/`didExceedMaxLines` instead.
+- Theater tests: the first tap only wakes — `warnIfMissed: false` and `pump()` after it; keep the child tree identical across a dim so state survives.
+- After `FakeRemoteClient.push` use `pumpAndSettle`; share one in-memory DB across re-pumps (drift warns about multiple databases).
+- A `ScrollEndNotification` also fires when a pointer interrupts a `PageView` animation (hold), possibly at a fractional page.
+- Source: Tasks 4.3–4.12 and the Phase 4 final review.
+
 ### Phase 3 platform behaviour (connect flow)
 - iOS suspends Dart timers in the background: compare wall-clock time on resume (session grace, pairing countdown). iOS also drops connectivity_plus events while backgrounded: re-read the baseline on foreground.
 - A Wi-Fi→Wi-Fi network switch can look like a duplicate event to connectivity_plus; the 15 s idle timeout catches the dead socket.
@@ -49,6 +61,7 @@ All of these are (unverified) until the smoke test records an answer here:
 - **IME counters** for `sendText` (`RemoteImeBatchEdit` `ime_counter`/`field_counter` from the latest TV IME message), and whether text with emoji positions the cursor correctly (we count UTF-16 code units; androidtvremote2 counts code points).
 - Does the TV present the **same key** on 6467 (pairing) and 6466 (control)? TOFU pinning assumes yes.
 - Does `watch` run 5 minutes with no drop (pings answered)?
+- **Phase 4 additions:** does `RemoteImeBatchEdit` with the whole field replace the TV's field (`kImeTextMode = replaceField`; check with CLI `text`)? How does the TV's backspace count (graphemes vs code units) if `appendOnly` is ever used? Does a `startLong` volume key auto-repeat on the TV, and what happens if `endLong` never arrives? Long-press OK behaviour. What `KEYCODE_SEARCH` (84) does on Google TV. Does the 6466 socket survive TV standby? Does Wake-on-LAN wake the MediaTek TV, and how soon does `reconnect()` find it? Which starter apps open via `market://launch?id=`? Does iOS restore system brightness after `resetApplicationScreenBrightness`?
 
 ### `dart test` cannot resolve this workspace; use `flutter test`
 - The root pub workspace contains a Flutter member, so `dart test` fails to find the Flutter SDK. `flutter test` runs pure-Dart tests (including `dart:io` sockets) on the host VM. `dart run bin/...` works, because it reuses the existing package config.

@@ -187,6 +187,17 @@ class TvRemoteSession implements RemoteSession {
       _connection ?? (throw const NotConnectedException());
 
   void _onState(TvConnectionState state) {
+    // The live values describe the connection that just ended: clear them
+    // before listeners see the new state. Never when entering `connected`:
+    // the client holds pushes back until `RemoteReady`, and `TvConnection`
+    // sets `connected` first and then forwards the held-back volume, power
+    // and app events, so the fresh values arrive right after this state and
+    // must not be treated as leftovers of the connection that ended.
+    if (state.status != ConnectionStatus.connected) {
+      _volume = null;
+      _isPowerOn = null;
+      _currentApp = null;
+    }
     _current = state;
     if (!_states.isClosed) _states.add(state);
     switch (state.status) {

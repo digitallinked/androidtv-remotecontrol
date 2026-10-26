@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/widgets/placeholder_screen.dart';
+import 'package:tv_remote/core/device/page_route_observer.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
@@ -75,6 +76,7 @@ String initialLocation(Ref ref) => throw UnimplementedError(
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   final router = GoRouter(
+    observers: [ref.watch(pageRouteObserverProvider)],
     initialLocation: ref.watch(initialLocationProvider),
     routes: [
       GoRoute(

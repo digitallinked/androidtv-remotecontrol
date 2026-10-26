@@ -99,6 +99,29 @@ class AppColors extends ThemeExtension<AppColors> {
     tvBlue: Color(0xFF3E63DD),
   );
 
+  /// The Theater Mode palette: the dark set with an even darker background
+  /// and softer text and accent, for a dim room. Text still has at least
+  /// 4.5:1 on every surface; the status and TV colours are the dark set's.
+  static const AppColors theater = AppColors(
+    bg: Color(0xFF000000),
+    surface: Color(0xFF050608),
+    surfaceRaised: Color(0xFF0D0F13),
+    outline: Color(0xFF1A1D24),
+    textPrimary: Color(0xFFB8BEC9),
+    textSecondary: Color(0xFF8A919E),
+    accent: Color(0xFF5A72C8),
+    onAccent: Color(0xFF000000),
+    success: Color(0xFF3DDC97),
+    warning: Color(0xFFFFC857),
+    danger: Color(0xFFFF6B6B),
+    dangerText: Color(0xFFFF6B6B),
+    onDanger: Color(0xFF0F1115),
+    tvRed: Color(0xFFE5484D),
+    tvGreen: Color(0xFF30A46C),
+    tvYellow: Color(0xFFF5D90A),
+    tvBlue: Color(0xFF3E63DD),
+  );
+
   /// The light palette.
   static const AppColors light = AppColors(
     bg: Color(0xFFF6F7F9),

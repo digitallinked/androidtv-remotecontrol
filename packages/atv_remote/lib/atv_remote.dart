@@ -8,7 +8,7 @@ export 'src/backoff.dart' show Backoff;
 export 'src/discovery.dart' show DiscoveredTv, TvDiscovery, parseServiceRecord;
 export 'src/identity.dart'
     show ClientIdentity, RsaPublicParts, rsaPublicPartsFromCertificateDer;
-export 'src/key_codes.dart' show KeyCodes, KeyDirection;
+export 'src/key_codes.dart' show KeyCodes, KeyDirection, isSupportedKeyCode;
 export 'src/pairing_client.dart'
     show PairingClient, PairingException, PairingFailure;
 export 'src/pairing_secret.dart'

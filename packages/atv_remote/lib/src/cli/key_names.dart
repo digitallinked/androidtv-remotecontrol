@@ -35,6 +35,8 @@ const Map<String, int> cliKeyCodes = {
   'info': KeyCodes.info,
   'captions': KeyCodes.captions,
   'search': KeyCodes.search,
+  'enter': KeyCodes.enter,
+  'delete': KeyCodes.delete,
 };
 
 /// Resolves a user-typed key name (case-insensitive [KeyCodes] member name, or
@@ -49,3 +51,11 @@ int? parseKeyName(String name) {
 
 /// The key names to show the user when [parseKeyName] fails.
 String validKeyNames() => '${cliKeyCodes.keys.join(', ')}, 0-9';
+
+/// Parses the `<ms>` argument of `atv_cli hold`: an integer from 1 to 30000,
+/// or `null` for anything else.
+int? parseHoldMillis(String raw) {
+  final value = int.tryParse(raw.trim());
+  if (value == null || value < 1 || value > 30000) return null;
+  return value;
+}

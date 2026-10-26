@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
@@ -23,6 +24,8 @@ class Rocker extends StatelessWidget {
     this.onUpLongPressEnd,
     this.onDownLongPressStart,
     this.onDownLongPressEnd,
+    this.longPressDuration = kLongPressTimeout,
+    this.valueSemantics,
   });
 
   /// Short caption in the centre, for example "VOL".
@@ -61,6 +64,13 @@ class Rocker extends StatelessWidget {
   /// Called when a hold on the down key ends.
   final VoidCallback? onDownLongPressEnd;
 
+  /// How long a key must be held to count as a hold; passed to both keys.
+  final Duration longPressDuration;
+
+  /// When given, the centre label and value are read as one node with this
+  /// label, for example "Volume 8 of 20". Otherwise they are read as they are.
+  final String? valueSemantics;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -85,29 +95,34 @@ class Rocker extends StatelessWidget {
                 onTap: onUp,
                 onLongPressStart: onUpLongPressStart,
                 onLongPressEnd: onUpLongPressEnd,
+                longPressDuration: longPressDuration,
+                color: Colors.transparent,
               ),
               Flexible(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 40),
-                  child: Center(
-                    heightFactor: 1,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            label,
-                            style: textTheme.labelLarge,
-                            textAlign: TextAlign.center,
-                          ),
-                          if (value != null)
+                  child: _CentreSemantics(
+                    label: valueSemantics,
+                    child: Center(
+                      heightFactor: 1,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Text(
-                              value,
-                              style: textTheme.bodySmall,
+                              label,
+                              style: textTheme.labelLarge,
                               textAlign: TextAlign.center,
                             ),
-                        ],
+                            if (value != null)
+                              Text(
+                                value,
+                                style: textTheme.bodySmall,
+                                textAlign: TextAlign.center,
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -119,11 +134,33 @@ class Rocker extends StatelessWidget {
                 onTap: onDown,
                 onLongPressStart: onDownLongPressStart,
                 onLongPressEnd: onDownLongPressEnd,
+                longPressDuration: longPressDuration,
+                color: Colors.transparent,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Reads its child as one node with [label], or leaves it as it is.
+class _CentreSemantics extends StatelessWidget {
+  const _CentreSemantics({required this.label, required this.child});
+
+  final String? label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = this.label;
+    if (label == null) return child;
+    return Semantics(
+      container: true,
+      label: label,
+      excludeSemantics: true,
+      child: child,
     );
   }
 }

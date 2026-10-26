@@ -32,6 +32,9 @@ class _ThrowingDevices implements DeviceRepository {
   }) async {}
 
   @override
+  Future<void> setWolMac(String serviceName, String? mac) async {}
+
+  @override
   Future<void> clearServerKeyPin(
     String serviceName, {
     required String distrustedPin,

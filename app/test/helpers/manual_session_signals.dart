@@ -5,6 +5,10 @@ import 'package:tv_remote/core/session/session_signals.dart';
 
 /// [SessionSignals] that tests fire by hand. Delivery is synchronous.
 class ManualSessionSignals implements SessionSignals {
+  /// Creates signals for an app that is [initial] on screen.
+  ManualSessionSignals({AppVisibility initial = AppVisibility.foreground})
+    : currentVisibility = initial;
+
   final StreamController<AppVisibility> _visibility =
       StreamController<AppVisibility>.broadcast(sync: true);
   final StreamController<void> _network = StreamController<void>.broadcast(
@@ -17,11 +21,20 @@ class ManualSessionSignals implements SessionSignals {
   /// How many listeners [networkChanges] has right now.
   int networkListeners = 0;
 
+  @override
+  AppVisibility currentVisibility;
+
   /// Delivers [AppVisibility.background].
-  void background() => _visibility.add(AppVisibility.background);
+  void background() {
+    currentVisibility = AppVisibility.background;
+    _visibility.add(AppVisibility.background);
+  }
 
   /// Delivers [AppVisibility.foreground].
-  void foreground() => _visibility.add(AppVisibility.foreground);
+  void foreground() {
+    currentVisibility = AppVisibility.foreground;
+    _visibility.add(AppVisibility.foreground);
+  }
 
   /// Delivers a network change.
   void networkChanged() => _network.add(null);

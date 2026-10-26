@@ -2,13 +2,17 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 
-/// A remote-control key: a raised rounded square with an icon.
+/// A remote-control key: a rounded square with an icon, raised by default.
 ///
 /// A short press calls [onTap]. Holding for [longPressDuration] calls
 /// [onLongPressStart] (never [onTap]) and, when the finger lifts or the touch
 /// is cancelled, [onLongPressEnd] exactly once. If the widget is removed while
 /// held, [onLongPressEnd] is still called once. Without long-press callbacks
 /// only taps are recognised.
+///
+/// A screen reader's "double-tap and hold" arrives as one semantic long-press
+/// action, not a real hold. It calls [onSemanticLongPress] when given and
+/// [onTap] otherwise, so a hold key is one press for TalkBack and VoiceOver.
 class AppKeyButton extends StatefulWidget {
   /// Creates a key.
   const AppKeyButton({
@@ -18,8 +22,10 @@ class AppKeyButton extends StatefulWidget {
     super.key,
     this.onLongPressStart,
     this.onLongPressEnd,
+    this.onSemanticLongPress,
     this.longPressDuration = kLongPressTimeout,
     this.size = AppSizes.keyMin,
+    this.color,
   });
 
   /// Spoken label of the key, for example "Volume up".
@@ -37,12 +43,21 @@ class AppKeyButton extends StatefulWidget {
   /// Called once when a hold that started ends, however it ends.
   final VoidCallback? onLongPressEnd;
 
+  /// Called when a screen reader performs the long-press action. When null,
+  /// that action calls [onTap]. The action is offered only when the key has
+  /// long-press callbacks or this callback.
+  final VoidCallback? onSemanticLongPress;
+
   /// How long a press must be held to count as a long press. It is applied
   /// when the key is first built.
   final Duration longPressDuration;
 
   /// Minimum width and height of the key.
   final double size;
+
+  /// Fill of the key; defaults to `surfaceRaised`. The ripple and the press
+  /// scale still show on a transparent key.
+  final Color? color;
 
   @override
   State<AppKeyButton> createState() => _AppKeyButtonState();
@@ -83,19 +98,15 @@ class _AppKeyButtonState extends State<AppKeyButton> {
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : AppMotion.fast;
-    final onLongPressStart = widget.onLongPressStart;
+    final onSemanticLongPress =
+        widget.onSemanticLongPress ?? (_hasLongPress ? widget.onTap : null);
 
     return Semantics(
       button: true,
       label: widget.semanticLabel,
       excludeSemantics: true,
       onTap: widget.onTap,
-      onLongPress: onLongPressStart == null
-          ? null
-          : () {
-              onLongPressStart();
-              widget.onLongPressEnd?.call();
-            },
+      onLongPress: onSemanticLongPress,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           minWidth: widget.size,
@@ -128,7 +139,7 @@ class _AppKeyButtonState extends State<AppKeyButton> {
             duration: duration,
             curve: AppMotion.curve,
             child: Material(
-              color: colors.surfaceRaised,
+              color: widget.color ?? colors.surfaceRaised,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadii.key),
               ),

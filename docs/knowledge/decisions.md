@@ -4,6 +4,42 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #26 — 2026-10-27 — Phase 4 package pins
+- wakelock_plus 1.8.2 (uses `FLAG_KEEP_SCREEN_ON`; pulls package_info_plus 10.2.2), screen_brightness 2.1.11 (app-window brightness only). No new Android permissions. iOS needs `pod install` on a Mac.
+
+### #25 — 2026-10-27 — Quick access before the app catalogue
+- Five starter apps (Netflix, YouTube, Prime Video, Disney+, Spotify) shown as monogram letter tiles — no logos, no brand colours — launched with `market://launch?id=<package>` (packages unverified on the owner's TV). Phase 5.1's catalogue replaces `quickAccessAppsProvider`'s body.
+- Quick row variants: apps, colour keys (label ink picked by WCAG contrast), media keys, none. The row owns its 16 dp gutter.
+
+### #24 — 2026-10-27 — Screen behaviour (P4-R13/R14/R15)
+- Live values (volume, power, current app) clear on entering any non-connected status, never on entering `connected` — `TvConnection` sets `connected` and then flushes held-back pushes.
+- `SessionSupervisor` is seeded from the current visibility, so a session built while backgrounded starts its 60 s grace.
+- Keep screen awake: held while the remote is the top **page** route (`RouteObserver<PageRoute>` on GoRouter; sheets/dialogs don't count) and the app is in the foreground.
+- Theater mode: dims to 5 % app brightness with `AppColors.theater` after 30 s idle; the first pointer sequence while dimmed only wakes; it never dims with a screen reader on or with a sheet/dialog over the remote (an identity dialog or keyboard auto-open therefore wakes it).
+- Touchpad: steps at 24 dp then every 40 dp; "moved" means the largest displacement from the touch-down point (tremor can't cancel a tap; a wiggle past 18 dp is a dead swipe).
+
+### #23 — 2026-10-27 — Keyboard (P4-R12)
+- `kImeTextMode = replaceField` (unverified): each debounced change (150 ms) sends the whole field; `appendOnly` (grapheme-cluster deletes) is the fallback behind one constant.
+- Enter flushes, sends `KEYCODE_ENTER` (66) and closes; Clear sends `''` at once; closing flushes. Offline: inline message, nothing queued, baseline not advanced.
+- Auto-open on the TV's IME request only with the setting on, the remote as the top route and no keyboard sheet open (`KeyboardSheet.isOpen` is claimed by instance, released at `ModalRoute.popped`). `ImeShowSignal` uses identity equality (Riverpod drops equal consecutive values) and is ignored after 2 s.
+- IME personalised learning is off on the field (users may type TV passwords). The demo's Search key emits an IME request.
+
+### #22 — 2026-10-27 — Power and Wake-on-LAN (amends #17)
+- Power key: a tap shows a hint; a 600 ms hold (or a screen-reader long press) is the power action. Connected → `KEYCODE_POWER` through `RemoteActions`. Otherwise read the device fresh → no MAC: setup sheet; MAC: Wake-on-LAN then `reconnect()`. Exactly one heavy haptic per power action.
+- The MAC setup sheet is the only MAC source in Phase 4 (the mDNS `bt` TXT value is a Bluetooth MAC — never used). `parseMac` accepts `:`/`-`/dotted/bare forms and stores upper-case colon form; `setWolMac` updates only that column.
+- iOS: Wake-on-LAN is off (`kIosWakeOnLanEnabled = false`) until Apple grants the multicast entitlement.
+- **#17 wording correction:** the library's `sendWakeOnLan` tries each target and rethrows the first error only if all fail. The app's `WakeOnLanService.wake` sends to `255.255.255.255` immediately, then to the subnet broadcast and the TV's /24 after a lookup of up to 2 s; it returns `false` (never throws) when every send fails, and throws `FormatException` for a bad MAC before sending.
+
+### #21 — 2026-10-27 — Remote layout (P4-R7/R8)
+- Pad area is a pager with always-visible tabs: Touchpad / D-pad / Numbers. Only Touchpad and D-pad persist as `navigationStyle`; with a screen reader on it opens on the D-pad without persisting. Pages switch on the settled page, not mid-drag.
+- 64 dp app bar (TV switcher + Power), 48 dp status strip under it. Portrait, or split when width ≥ 600 dp or landscape: right column `clamp(0.4 × width, 280, 400)` + 16 dp end gutter. Pad ≥ 160 dp; quick row dropped when the pad would get < 200 dp; scroll fallback. Bottom cluster 280 dp.
+- While not connected the controls fade to 0.4 (tabs never fade). One "Not connected" snackbar at a time and none when the remote isn't the top route. The previous remote stays visible while a TV switch reloads.
+
+### #20 — 2026-10-27 — Input path and holds (P4-R2..R6, R17)
+- Widgets take `KeyInput`/`RemoteInput`; `RemoteActions` (autoDispose; the screen watches it) is the only send path. A press with no session, a loading/errored session or a non-connected status is refused: nothing sent, no haptic, one not-connected notice. Unsupported key codes throw `ArgumentError` even when offline.
+- Hold threshold 300 ms (touchpad hold 500 ms). Smooth Press on → `startLong`/`endLong`; off → short repeats every 120 ms (centre never repeats). One hold at a time; auto-release after 15 s; dispose releases. Guard timers are armed before haptics/listeners; listener errors are swallowed.
+- Haptics: light (tap, step, launch, Enter), medium (hold start), heavy (power, once). The action listener gets the first send of a hold only and text length only — never text.
+
 ### #19 — 2026-10-26 — Phase 3 package pins
 - nsd 5.0.1 (nsd_android 2.2.0 owns the Android multicast lock, so no native code), connectivity_plus 7.3.2, network_info_plus 8.2.2, fake_async 1.3.3, clock 1.1.2.
 - **Revisit:** with the Flutter upgrade in decision #8.
@@ -16,7 +52,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - The identity read is retried once after 200 ms before a "can't load identity" state.
 - Leaving mid-save: the pin is always saved (the TV now trusts us), but the session is activated only if the user stayed or the active target is none/this TV.
 
-### #17 — 2026-10-26 — Wake-on-LAN targets
+### #17 — 2026-10-26 — Wake-on-LAN targets (wording corrected and timing amended by #22)
 - Send to `255.255.255.255`, the Wi-Fi subnet broadcast (`network_info_plus` `getWifiBroadcast`), and the /24 of the TV's last IPv4. Each target is tried independently; the first error is rethrown only if every target failed; a 0-byte send counts as a failure.
 - UI (power button) is Phase 4. iOS needs Apple's multicast entitlement.
 

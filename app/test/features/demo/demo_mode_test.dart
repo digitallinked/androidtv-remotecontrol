@@ -12,9 +12,12 @@ import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/demo/demo_providers.dart';
+import 'package:tv_remote/features/demo/demo_remote_session.dart';
 import 'package:tv_remote/features/demo/presentation/demo_badge.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
+import 'package:tv_remote/features/remote/application/key_input.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
@@ -87,9 +90,115 @@ void main() {
 
     await t.tap(find.bySemanticsLabel('Mute'));
     await t.pump();
-    expect(find.text('Muted'), findsOneWidget);
+    // The preview card and the volume rocker both say so.
+    expect(
+      find.descendant(
+        of: find.byType(TvPreviewCard),
+        matching: find.text('Muted'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Muted'), findsNWidgets(2));
     expect(find.textContaining('Volume 9 of 20'), findsNothing);
     handle.dispose();
+  });
+
+  testWidgets('preview_shows_holding_and_released', (t) async {
+    final handle = t.ensureSemantics();
+    await tryDemo(t);
+
+    final hold = await t.startGesture(
+      t.getCenter(find.bySemanticsLabel('Volume up')),
+    );
+    await t.pump(kHoldThreshold + const Duration(milliseconds: 50));
+    expect(find.text('Holding Volume up'), findsOneWidget);
+
+    await hold.up();
+    await t.pump();
+    expect(find.text('Released Volume up'), findsOneWidget);
+    expect(find.text('Holding Volume up'), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('preview_shows_opened_app', (t) async {
+    final handle = t.ensureSemantics();
+    await tryDemo(t);
+
+    await t.tap(find.bySemanticsLabel('Open Netflix'));
+    await t.pump();
+
+    expect(
+      find.text('Opened market://launch?id=com.netflix.ninja'),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
+
+  testWidgets('preview_shows_typed_text', (t) async {
+    final handle = t.ensureSemantics();
+    await tryDemo(t);
+
+    await t.tap(find.bySemanticsLabel('Keyboard'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField), 'hi');
+    await t.pump(const Duration(milliseconds: 150));
+
+    expect(find.text('Typed "hi"'), findsOneWidget);
+    handle.dispose();
+    // The sheet's own flush on close needs the demo still connected.
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('preview_shows_screen_off_after_power', (t) async {
+    final handle = t.ensureSemantics();
+    await tryDemo(t);
+    expect(find.textContaining('Screen on'), findsOneWidget);
+
+    final hold = await t.startGesture(
+      t.getCenter(find.bySemanticsLabel('Power')),
+    );
+    await t.pump(PowerButton.holdDuration + const Duration(milliseconds: 50));
+    await hold.up();
+    await t.pump();
+
+    expect(find.textContaining('Screen off'), findsOneWidget);
+    expect(find.text('Pressed Power'), findsOneWidget);
+    handle.dispose();
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('demo_search_from_the_sheet_keeps_one_sheet', (t) async {
+    final handle = t.ensureSemantics();
+    await tryDemo(t);
+
+    await t.tap(find.bySemanticsLabel('Keyboard'));
+    await t.pumpAndSettle();
+    expect(find.text('Type on your TV'), findsOneWidget);
+
+    await t.tap(find.text('Open search on TV'));
+    await t.pumpAndSettle();
+
+    // The demo TV asked for the keyboard (ImeShowRequested), but it is open.
+    expect(find.text('Type on your TV'), findsOneWidget);
+    expect(find.text('Pressed Search'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('demo_search_from_the_remote_opens_the_keyboard_by_itself', (
+    t,
+  ) async {
+    await tryDemo(t);
+    expect(find.text('Type on your TV'), findsNothing);
+
+    // The demo TV opens its search box: the remote's keyboard follows by
+    // itself (Ruling P4-R12), as it does for a real TV's text field.
+    (container.read(remoteSessionProvider).value! as DemoRemoteSession).sendKey(
+      KeyCodes.search,
+    );
+    await t.pumpAndSettle();
+
+    expect(find.text('Type on your TV'), findsOneWidget);
+    expect(find.text('Pressed Search'), findsOneWidget);
   });
 
   testWidgets('try_demo_completes_onboarding_and_targets_the_demo_tv', (
@@ -251,7 +360,7 @@ void main() {
       expect(find.text('Demo mode'), findsOneWidget);
       for (final finder in [
         find.byType(TvPreviewCard),
-        find.byType(BasicControls),
+        find.byType(RemoteBody),
       ]) {
         final rect = t.getRect(finder);
         expect(rect.left, greaterThanOrEqualTo(0));

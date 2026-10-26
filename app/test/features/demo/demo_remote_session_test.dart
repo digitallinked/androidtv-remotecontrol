@@ -58,6 +58,27 @@ void main() {
     });
   });
 
+  test('disconnect_clears_the_simulated_tv_state', () {
+    _whenConnected((session, async) {
+      session.launchAppLink('market://launch?id=com.netflix.ninja');
+      expect(session.volume, isNotNull);
+      expect(session.currentApp, 'com.netflix.ninja');
+
+      unawaited(session.disconnect());
+      async.flushMicrotasks();
+
+      expect(session.current.status, ConnectionStatus.disconnected);
+      expect(session.volume, isNull);
+      expect(session.isPowerOn, isNull);
+      expect(session.currentApp, isNull);
+
+      unawaited(session.connect());
+      async.elapse(_delay);
+      expect(session.volume, const VolumeChanged(8, 20, false));
+      expect(session.isPowerOn, isTrue);
+    });
+  });
+
   test('volume_keys_change_the_simulated_volume_within_bounds', () {
     _whenConnected((session, async) {
       final events = <RemoteEvent>[];
@@ -115,6 +136,35 @@ void main() {
         const PowerStateChanged(false),
         const PowerStateChanged(true),
       ]);
+    });
+  });
+
+  test('search_key_asks_for_the_keyboard', () {
+    _whenConnected((session, async) {
+      final events = <RemoteEvent>[];
+      session.events.listen(events.add);
+
+      session.sendKey(KeyCodes.search);
+      async.flushMicrotasks();
+
+      // Like a TV that opens its search box: the remote's keyboard follows.
+      expect(events, [const ImeShowRequested()]);
+      expect(
+        session.lastAction,
+        const DemoKeyPressed(KeyCodes.search, KeyDirection.short),
+      );
+    });
+  });
+
+  test('search_held_does_not_ask_for_the_keyboard_twice', () {
+    _whenConnected((session, async) {
+      final events = <RemoteEvent>[];
+      session.events.listen(events.add);
+
+      session.sendKey(KeyCodes.search, direction: KeyDirection.endLong);
+      async.flushMicrotasks();
+
+      expect(events, isEmpty);
     });
   });
 

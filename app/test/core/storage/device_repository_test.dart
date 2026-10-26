@@ -155,4 +155,23 @@ void main() {
     expect(await repo.find('zzz'), isNull);
     expect(await repo.watchAll().first, [dev('a', pin: 'ab12')]);
   });
+
+  test('set_wol_mac_updates_only_the_mac', () async {
+    final a = dev('a', pin: 'ab12').copyWith(nickname: const Value('Lounge'));
+    await repo.upsert(a);
+    await repo.setWolMac('a', 'AA:BB:CC:DD:EE:F0');
+    expect(
+      await repo.find('a'),
+      a.copyWith(wolMac: const Value('AA:BB:CC:DD:EE:F0')),
+    );
+    await repo.setWolMac('a', null);
+    expect(await repo.find('a'), a);
+  });
+
+  test('set_wol_mac_on_unknown_device_is_a_no_op', () async {
+    await repo.upsert(dev('a'));
+    await repo.setWolMac('zzz', 'AA:BB:CC:DD:EE:F0');
+    expect(await repo.find('zzz'), isNull);
+    expect(await repo.watchAll().first, [dev('a')]);
+  });
 }

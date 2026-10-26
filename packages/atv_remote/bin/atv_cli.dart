@@ -2,6 +2,8 @@
 //
 //   atv_cli pair <host>
 //   atv_cli key <host> <keyName>
+//   atv_cli text <host> <text>
+//   atv_cli hold <host> <keyName> <ms>
 //   atv_cli watch <host>
 import 'dart:async';
 import 'dart:convert';
@@ -15,6 +17,9 @@ const String _usage = '''
 Usage:
   atv_cli pair <host>             pair with the TV (type the code it shows)
   atv_cli key <host> <keyName>    send one key press (e.g. home, volumeUp, 5)
+  atv_cli text <host> <text>      type text into the TV's focused text field
+  atv_cli hold <host> <keyName> <ms>
+                                  press and hold a key for <ms> (1-30000)
   atv_cli watch <host>            print events from the TV until Ctrl+C
 ''';
 
@@ -37,6 +42,10 @@ Future<void> main(List<String> args) async {
       code = await _pair(args[1]);
     case ('key', 3):
       code = await _key(args[1], args[2]);
+    case ('text', 3):
+      code = await _text(args[1], args[2]);
+    case ('hold', 4):
+      code = await _hold(args[1], args[2], args[3]);
     case ('watch', 2):
       code = await _watch(args[1]);
     default:
@@ -97,6 +106,66 @@ Future<int> _key(String host, String keyName) async {
     client.sendKey(keyCode);
     await Future<void>.delayed(const Duration(milliseconds: 300));
     stdout.writeln('Sent $keyName.');
+    return 0;
+  } on RemoteConnectException catch (e) {
+    _printConnectError(e, host);
+    return 1;
+  } finally {
+    await client.close();
+  }
+}
+
+/// Types [text] into the TV's focused text field. Prints only the length.
+Future<int> _text(String host, String text) async {
+  final client = RemoteClient(
+    host: host,
+    identity: await _identity(),
+    deviceInfo: _deviceInfo,
+  );
+  try {
+    await client.connect();
+    client.sendText(text);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    stdout.writeln('sent ${text.runes.length} characters');
+    return 0;
+  } on RemoteConnectException catch (e) {
+    _printConnectError(e, host);
+    return 1;
+  } finally {
+    await client.close();
+  }
+}
+
+/// Presses [keyName] down, keeps it down for [rawMillis], then releases it.
+Future<int> _hold(String host, String keyName, String rawMillis) async {
+  final keyCode = parseKeyName(keyName);
+  if (keyCode == null) {
+    stderr.writeln('Unknown key "$keyName". Valid keys: ${validKeyNames()}');
+    return 1;
+  }
+  final millis = parseHoldMillis(rawMillis);
+  if (millis == null) {
+    stderr.writeln('Invalid hold time "$rawMillis". Use 1 to 30000 ms.');
+    return 1;
+  }
+  final client = RemoteClient(
+    host: host,
+    identity: await _identity(),
+    deviceInfo: _deviceInfo,
+  );
+  try {
+    await client.connect();
+    client.sendKey(keyCode, direction: KeyDirection.startLong);
+    try {
+      await Future<void>.delayed(Duration(milliseconds: millis));
+    } finally {
+      // Never leave the key down on the TV, even if the wait was interrupted.
+      if (client.isReady) {
+        client.sendKey(keyCode, direction: KeyDirection.endLong);
+      }
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    stdout.writeln('Held $keyName for $millis ms.');
     return 0;
   } on RemoteConnectException catch (e) {
     _printConnectError(e, host);

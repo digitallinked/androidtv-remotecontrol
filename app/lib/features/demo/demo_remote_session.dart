@@ -82,6 +82,10 @@ final class DemoTextTyped extends DemoAction {
 /// volume, mute and power keys, and throws `NotConnectedException` from
 /// commands until it is connected. Every command is also published as a
 /// [DemoAction] for the TV preview card.
+///
+/// The Search key behaves like a TV that opens its search box: it emits
+/// [ImeShowRequested], so reviewers see the remote's keyboard open by itself
+/// (Ruling P4-R12).
 class DemoRemoteSession implements RemoteSession {
   /// Creates a disconnected demo TV. [connect] takes [connectDelay] to
   /// reach [ConnectionStatus.connected].
@@ -181,6 +185,9 @@ class DemoRemoteSession implements RemoteSession {
   Future<void> disconnect() async {
     if (_disposed) return;
     _cancelConnecting();
+    // Like a real session: nothing is known about a TV that isn't connected.
+    // `connect()` publishes the simulated state again.
+    _clearTvState();
     _setState(ConnectionStatus.disconnected);
   }
 
@@ -216,6 +223,8 @@ class DemoRemoteSession implements RemoteSession {
         final isOn = !(_isPowerOn ?? true);
         _isPowerOn = isOn;
         _emit(PowerStateChanged(isOn));
+      case KeyCodes.search:
+        _emit(const ImeShowRequested());
     }
   }
 
@@ -248,6 +257,12 @@ class DemoRemoteSession implements RemoteSession {
     await _states.close();
     await _events.close();
     await _actions.close();
+  }
+
+  void _clearTvState() {
+    _volume = null;
+    _isPowerOn = null;
+    _currentApp = null;
   }
 
   VolumeChanged _withLevel(VolumeChanged volume, int level) =>

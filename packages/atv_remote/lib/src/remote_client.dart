@@ -264,10 +264,10 @@ class RemoteClient {
   /// fails closes the client; [RemoteClosed] follows on [events].
   void sendKey(int keyCode, {KeyDirection direction = KeyDirection.short}) {
     _requireReady();
-    final code = RemoteKeyCode.valueOf(keyCode);
-    if (code == null) {
+    if (!isSupportedKeyCode(keyCode)) {
       throw ArgumentError.value(keyCode, 'keyCode', 'Unknown Android key code');
     }
+    final code = RemoteKeyCode.valueOf(keyCode)!;
     _write(
       RemoteMessage(
         remoteKeyInject: RemoteKeyInject(
@@ -299,8 +299,10 @@ class RemoteClient {
   ///
   /// Sent as an IME batch edit that inserts [text] with the cursor at its
   /// end, echoing the IME and field counters of the TV's latest IME message
-  /// (0 until it sent one). Whether a real TV needs the counters incremented
-  /// per edit is unverified.
+  /// (0 until it sent one), like androidtvremote2's `send_text` in
+  /// `remote.py`. Whether a real TV needs the counters incremented per edit,
+  /// and whether the value replaces the whole field, is unverified. An empty
+  /// [text] is sent as is and is meant to clear the field.
   ///
   /// Throws a [StateError] unless the client is ready.
   void sendText(String text) {

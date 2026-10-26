@@ -9,15 +9,32 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/status_pill.dart';
+import 'package:tv_remote/core/device/keep_awake.dart';
+import 'package:tv_remote/core/device/theater_mode.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/settings_controller.dart';
+import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/apps/data/starter_apps.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
+import 'package:tv_remote/features/keyboard/keyboard_sheet.dart';
+import 'package:tv_remote/features/remote/application/ime_requests.dart';
+import 'package:tv_remote/features/remote/application/power_controller.dart';
+import 'package:tv_remote/features/remote/application/remote_actions.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/device_switcher.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/wol_setup_sheet.dart';
 
-/// The remote control for the active TV: the TV's name and live connection
-/// status in the app bar, and the keys below.
+/// The remote control for the active TV: the TV's name in the app bar, its
+/// live connection status in a strip under it, and the controls below.
+///
+/// While the session reloads (a switch to another TV) the previous remote
+/// stays on screen, with the status `connecting` and every press refused.
 ///
 /// It never opens pairing by itself. A TV that needs pairing shows a "Pair
 /// again" action in the status pill, and a TV whose security key changed also
@@ -33,6 +50,13 @@ class RemoteScreen extends ConsumerStatefulWidget {
 class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// The session the identity-changed dialog was last shown for.
   RemoteSession? _askedAboutIdentityFor;
+
+  /// The "Not connected" snackbar on screen, if any. One is enough: a swipe
+  /// on the touchpad refuses several steps at once.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _notConnectedBar;
+
+  /// A power action is in flight (see [_power]).
+  bool _powering = false;
 
   @override
   void initState() {
@@ -101,32 +125,143 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     );
   }
 
-  void _press(RemoteSession session, int code) {
-    final status = _statusOf(ref.read(connectionStateProvider));
-    if (status == ConnectionStatus.connected) {
-      try {
-        session.sendKey(code);
-        return;
-      } on NotConnectedException {
-        // The state lags the socket by a microtask: fall through.
-      }
+  /// Says why a press did nothing (Ruling P4-R3): one snackbar per refused
+  /// command, with Reconnect when the connection is closed.
+  void _showNotConnected() {
+    // A sheet or dialog on top (the keyboard) explains it itself.
+    if (!mounted ||
+        _notConnectedBar != null ||
+        !(ModalRoute.isCurrentOf(context) ?? false)) {
+      return;
     }
     final l10n = AppLocalizations.of(context);
+    final sessionState = ref.read(remoteSessionProvider);
+    final session = sessionState.value;
+    final status = sessionState.isLoading
+        ? ConnectionStatus.connecting
+        : _statusOf(ref.read(connectionStateProvider));
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    final bar = messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.remoteNotConnected),
+        // Offline and needs-pairing have an action in the status pill;
+        // a closed connection has none, so offer it here.
+        action: session != null && status == ConnectionStatus.disconnected
+            ? SnackBarAction(
+                label: l10n.statusReconnectAction,
+                onPressed: session.reconnect,
+              )
+            : null,
+      ),
+    );
+    _notConnectedBar = bar;
+    unawaited(
+      bar.closed.then((_) {
+        if (identical(_notConnectedBar, bar)) _notConnectedBar = null;
+      }),
+    );
+  }
+
+  /// Says [message] in a snackbar of its own. The "Not connected" snackbar
+  /// has its own controller, [_showNotConnected].
+  void _say(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(l10n.remoteNotConnected),
-          // Offline and needs-pairing have an action in the status pill;
-          // a closed connection has none, so offer it here.
-          action: status == ConnectionStatus.disconnected
-              ? SnackBarAction(
-                  label: l10n.statusReconnectAction,
-                  onPressed: session.reconnect,
-                )
-              : null,
-        ),
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// The power key was held (Ruling P4-R10): the controller powers the TV or
+  /// wakes it, and the outcome is said here. A refusal is already announced
+  /// by the "Not connected" notice.
+  Future<void> _power() async {
+    // A second hold while the first is still waking the TV or asking for
+    // the MAC would wake twice, buzz twice or stack a second sheet.
+    if (_powering) return;
+    _powering = true;
+    try {
+      final l10n = AppLocalizations.of(context);
+      final controller = ref.read(powerControllerProvider);
+      final session = controller.session;
+      final tvName = session == null ? '' : _tvName(l10n, session);
+
+      final outcome = await controller.press();
+      if (!mounted) return;
+      if (outcome != PowerOutcome.needsMac) {
+        _sayPowerOutcome(l10n, outcome, tvName);
+        return;
+      }
+
+      PowerOutcome? afterSave;
+      await showWolSetupSheet(
+        context,
+        tvName: tvName,
+        onSave: (mac) async => afterSave = await controller.saveMacAndWake(mac),
       );
+      // Said even when the sheet was dismissed while it was saving.
+      final saved = afterSave;
+      if (saved != null) _sayPowerOutcome(l10n, saved, tvName);
+    } finally {
+      _powering = false;
+    }
+  }
+
+  void _sayPowerOutcome(
+    AppLocalizations l10n,
+    PowerOutcome outcome,
+    String tvName,
+  ) {
+    switch (outcome) {
+      case PowerOutcome.waking:
+        _say(l10n.powerWaking(tvName));
+      case PowerOutcome.wakeFailed:
+        _say(l10n.powerWakeFailed);
+      case PowerOutcome.cannotWake:
+        _say(l10n.powerTurnOnWithTvRemote);
+      // The key press needs no message; a refusal has its own snackbar; the
+      // setup sheet is opened by the caller.
+      case PowerOutcome.sentPowerKey ||
+          PowerOutcome.notConnected ||
+          PowerOutcome.needsMac:
+        break;
+    }
+  }
+
+  void _openKeyboard() {
+    unawaited(
+      showKeyboardSheet(context, input: ref.read(remoteActionsProvider)),
+    );
+  }
+
+  /// The TV started a text field: open the keyboard when the user wants that
+  /// and nothing else is on top of the remote (Ruling P4-R12).
+  void _onImeShowRequested() {
+    if (!mounted ||
+        !ref.read(settingsControllerProvider).autoOpenKeyboard ||
+        !(ModalRoute.isCurrentOf(context) ?? false) ||
+        KeyboardSheet.isOpen) {
+      return;
+    }
+    _openKeyboard();
+  }
+
+  /// Touchpad and D-pad are remembered as the navigation style; Numbers is a
+  /// detour that is never saved (Ruling P4-R7).
+  void _onPageChanged(PadPage page) {
+    final style = switch (page) {
+      PadPage.touchpad => NavigationStyle.touchpad,
+      PadPage.dpad => NavigationStyle.dpad,
+      PadPage.numbers => null,
+    };
+    if (style == null ||
+        ref.read(settingsControllerProvider).navigationStyle == style) {
+      return;
+    }
+    unawaited(
+      ref
+          .read(settingsControllerProvider.notifier)
+          .update((store) => store.setNavigationStyle(style)),
+    );
   }
 
   @override
@@ -134,8 +269,10 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final l10n = AppLocalizations.of(context);
     final sessionState = ref.watch(remoteSessionProvider);
     final connection = ref.watch(connectionStateProvider);
+    final session = sessionState.value;
 
-    if (sessionState.isLoading) {
+    // Nothing to keep on screen yet.
+    if (sessionState.isLoading && session == null) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.pageTitleRemote)),
         body: const Center(child: CircularProgressIndicator()),
@@ -152,7 +289,6 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         ),
       );
     }
-    final session = sessionState.value;
     if (session == null) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.pageTitleRemote)),
@@ -164,73 +300,144 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       );
     }
 
-    final status = _statusOf(connection);
-    final canPairAgain = session.pairingTarget != null;
-    return Scaffold(
+    // Every refused press (offline, or a TV switch in progress) says why.
+    ref
+      ..listen(notConnectedNoticesProvider, (_, _) => _showNotConnected())
+      ..listen(imeShowRequestsProvider, (_, next) {
+        if (next is AsyncData<ImeShowSignal> && next.value.isFresh) {
+          _onImeShowRequested();
+        }
+      });
+    // Watched, not read: the provider is autoDispose. Listening keeps the
+    // power controller (which uses these actions) alive the same way.
+    final input = ref.watch(remoteActionsProvider);
+    ref.listen(powerControllerProvider, (_, _) {});
+    final (navigationStyle, quickAccess) = ref.watch(
+      settingsControllerProvider.select(
+        (s) => (s.navigationStyle, s.quickAccessRow),
+      ),
+    );
+    final devices = ref.watch(savedDevicesProvider).value ?? const [];
+    final target = ref.watch(activeTargetProvider);
+
+    // The session is rebuilding for another TV: the old one is disposed and
+    // its state is stale, so the remote shows "connecting".
+    final reloading = sessionState.isLoading;
+    final status = reloading
+        ? ConnectionStatus.connecting
+        : _statusOf(connection);
+    final connected = status == ConnectionStatus.connected;
+    final canPairAgain = !reloading && session.pairingTarget != null;
+
+    var tvName = _tvName(l10n, session);
+    var serviceName = session.pairingTarget?.serviceName;
+    if (reloading && target is DeviceTarget) {
+      serviceName = target.serviceName;
+      for (final device in devices) {
+        if (device.serviceName == serviceName) tvName = device.label;
+      }
+    }
+
+    final liveVolume = ref.watch(volumeProvider).value;
+    final liveApp = ref.watch(currentAppProvider).value;
+    final initialPage =
+        MediaQuery.accessibleNavigationOf(context) ||
+            navigationStyle == NavigationStyle.dpad
+        ? PadPage.dpad
+        : PadPage.touchpad;
+
+    final scaffold = Scaffold(
+      // The keyboard sheet has the text field; the remote keeps its layout.
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
+        toolbarHeight: 64,
         titleSpacing: AppSpacing.s,
         title: DeviceSwitcher(
-          currentName: _tvName(l10n, session),
-          currentServiceName: session.pairingTarget?.serviceName,
-          devices: ref.watch(savedDevicesProvider).value ?? const [],
+          currentName: tvName,
+          currentServiceName: serviceName,
+          devices: devices,
           onSelect: (name) {
             // The current TV keeps its session: rebuilding would drop a
             // working connection for nothing.
-            if (name == session.pairingTarget?.serviceName) return;
+            if (name == serviceName) return;
             ref.read(activeTargetProvider.notifier).activateDevice(name);
           },
           onAddTv: () => context.push(AppRoutes.discover),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsetsDirectional.only(end: AppSpacing.m),
-            // The app bar gives its actions unbounded width: cap the pill so
-            // the TV name keeps room and the pill wraps at large text sizes.
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.62,
-              ),
-              child: StatusPill(
-                status: status,
-                onReconnect: session.reconnect,
-                onPairAgain: canPairAgain ? () => _pairAgain(session) : null,
-              ),
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.s),
+            child: PowerButton(
+              onHint: () => _say(l10n.powerHoldHint),
+              onPower: () => unawaited(_power()),
             ),
           ),
         ],
       ),
       body: SafeArea(
-        // Keys sit at the bottom, within thumb reach; the page scrolls when
-        // they don't fit (landscape, large text).
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.l,
-              vertical: AppSpacing.xl,
+        child: Column(
+          children: [
+            _StatusStrip(
+              status: status,
+              onReconnect: reloading ? null : session.reconnect,
+              onPairAgain: canPairAgain ? () => _pairAgain(session) : null,
             ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 2 * AppSpacing.xl,
-              ),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: AppSpacing.xl,
-                  children: [
-                    if (session.isDemo)
-                      const SizedBox(
-                        width: double.infinity,
-                        child: TvPreviewCard(),
-                      ),
-                    BasicControls(
-                      enabled: status == ConnectionStatus.connected,
-                      onKey: (code) => _press(session, code),
-                    ),
-                  ],
-                ),
+            Expanded(
+              child: RemoteBody(
+                input: input,
+                enabled: connected,
+                quickAccess: quickAccess,
+                apps: ref.watch(quickAccessAppsProvider),
+                currentApp: connected ? liveApp : null,
+                initialPage: initialPage,
+                onPageChanged: _onPageChanged,
+                volume: connected ? liveVolume : null,
+                onKeyboard: _openKeyboard,
+                preview: session.isDemo ? const TvPreviewCard() : null,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+
+    final (keepAwake, theater) = ref.watch(
+      settingsControllerProvider.select(
+        (s) => (s.keepScreenAwake, s.theaterMode),
+      ),
+    );
+    return KeepAwake(
+      enabled: keepAwake,
+      child: TheaterMode(enabled: theater, child: scaffold),
+    );
+  }
+}
+
+/// The row under the app bar that holds the connection pill: at least 48 dp
+/// high and start-aligned; the pill wraps at large text.
+class _StatusStrip extends StatelessWidget {
+  const _StatusStrip({
+    required this.status,
+    required this.onReconnect,
+    required this.onPairAgain,
+  });
+
+  final ConnectionStatus status;
+  final VoidCallback? onReconnect;
+  final VoidCallback? onPairAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: StatusPill(
+            status: status,
+            onReconnect: onReconnect,
+            onPairAgain: onPairAgain,
           ),
         ),
       ),

@@ -336,6 +336,57 @@ void main() {
     expect(c.read(powerStateProvider).value, isFalse);
   });
 
+  test('volume_provider_emits_null_when_the_connection_drops', () async {
+    await repo.upsert(savedTv(name: 'a'));
+    final values = <VolumeChanged?>[];
+    final c = makeContainer()
+      ..listen(volumeProvider, (_, next) => values.add(next.value));
+    await c.read(volumeProvider.future);
+    final session = (await c.read(remoteSessionProvider.future))!;
+    await untilConnected(session);
+
+    clients.created.last.push(const VolumeChanged(8, 20, false));
+    await pumpEventQueue();
+    clients.created.last.drop();
+    await pumpEventQueue();
+
+    expect(values, [null, const VolumeChanged(8, 20, false), null]);
+  });
+
+  test('current_app_provider_emits_null_when_the_connection_drops', () async {
+    await repo.upsert(savedTv(name: 'a'));
+    final values = <String?>[];
+    final c = makeContainer()
+      ..listen(currentAppProvider, (_, next) => values.add(next.value));
+    await c.read(currentAppProvider.future);
+    final session = (await c.read(remoteSessionProvider.future))!;
+    await untilConnected(session);
+
+    clients.created.last.push(const CurrentAppChanged('com.netflix.ninja'));
+    await pumpEventQueue();
+    clients.created.last.drop();
+    await pumpEventQueue();
+
+    expect(values, [null, 'com.netflix.ninja', null]);
+  });
+
+  test('power_state_provider_emits_null_when_the_connection_drops', () async {
+    await repo.upsert(savedTv(name: 'a'));
+    final values = <bool?>[];
+    final c = makeContainer()
+      ..listen(powerStateProvider, (_, next) => values.add(next.value));
+    await c.read(powerStateProvider.future);
+    final session = (await c.read(remoteSessionProvider.future))!;
+    await untilConnected(session);
+
+    clients.created.last.push(const PowerStateChanged(true));
+    await pumpEventQueue();
+    clients.created.last.drop();
+    await pumpEventQueue();
+
+    expect(values, [null, true, null]);
+  });
+
   test('values_cached_before_a_provider_is_read_are_replayed', () async {
     await repo.upsert(savedTv(name: 'a'));
     final c = makeContainer()..listen(currentAppProvider, (_, _) {});

@@ -9,8 +9,25 @@ import 'package:tv_remote/app/theme/tokens.dart';
 ThemeData buildAppTheme({
   required Brightness brightness,
   ColorScheme? dynamicScheme,
+}) => _buildTheme(
+  brightness: brightness,
+  base: brightness == Brightness.dark ? AppColors.dark : AppColors.light,
+  dynamicScheme: dynamicScheme,
+);
+
+/// The theme of Theater Mode: the dark theme on the [AppColors.theater]
+/// palette (and a matching `ColorScheme`). Never follows dynamic colour.
+ThemeData buildTheaterTheme() => _buildTheme(
+  brightness: Brightness.dark,
+  base: AppColors.theater,
+  dynamicScheme: null,
+);
+
+ThemeData _buildTheme({
+  required Brightness brightness,
+  required AppColors base,
+  required ColorScheme? dynamicScheme,
 }) {
-  final base = brightness == Brightness.dark ? AppColors.dark : AppColors.light;
   final s = dynamicScheme;
   final t = s == null
       ? base

@@ -9,18 +9,24 @@ import 'package:tv_remote/app/app_shell.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/device/screen_services.dart';
+import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
+import 'fake_screen_services.dart';
 import 'fake_tv_discovery.dart';
+import 'fake_wake_on_lan.dart';
 import 'manual_session_signals.dart';
+import 'recording_haptics.dart';
 import 'test_identity.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
@@ -37,6 +43,11 @@ import 'test_identity.dart';
 /// pumped in one test without reusing a router. [overrides] are applied after
 /// the defaults: an override of a provider that has a default replaces it.
 ///
+/// [prepareSettings] runs after the store has opened and before the app is
+/// pumped, to write the settings a test starts with. [accessibleNavigation]
+/// turns on the screen-reader flag of the `MediaQuery` that [textScale] is
+/// applied in.
+///
 /// With [settle] false it pumps one frame instead of waiting for the app to
 /// go idle: a screen with a running progress indicator never goes idle, and
 /// `pumpAndSettle` would then run the fake clock forward until the screen
@@ -49,10 +60,13 @@ Future<SettingsStore> pumpRouterApp(
   Brightness brightness = Brightness.light,
   double textScale = 1,
   bool settle = true,
+  Future<void> Function(SettingsStore store)? prepareSettings,
+  bool accessibleNavigation = false,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
   final store = await SettingsStore.open();
+  if (prepareSettings != null) await prepareSettings(store);
   final db = database ?? AppDatabase(NativeDatabase.memory());
   if (database == null) addTearDown(db.close);
   await tester.pumpWidget(
@@ -70,6 +84,11 @@ Future<SettingsStore> pumpRouterApp(
         ),
         hostResolverProvider.overrideWithValue((_) async => null),
         sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
+        hapticsProvider.overrideWithValue(RecordingHaptics()),
+        screenWakeLockProvider.overrideWithValue(RecordingWakeLock()),
+        screenDimmerProvider.overrideWithValue(RecordingDimmer()),
+        wakeOnLanServiceProvider.overrideWithValue(FakeWakeOnLan()),
+        wakeOnLanAvailableProvider.overrideWithValue(true),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,
@@ -87,9 +106,10 @@ Future<SettingsStore> pumpRouterApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, app) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+              accessibleNavigation: accessibleNavigation,
+            ),
             child: buildAppShell(context, app),
           ),
           routerConfig: ref.watch(appRouterProvider),

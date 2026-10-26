@@ -380,6 +380,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keySearch => 'Search';
 
   @override
+  String get keyEnter => 'Enter';
+
+  @override
+  String get keyDelete => 'Delete';
+
+  @override
+  String get keyKeyboard => 'Keyboard';
+
+  @override
   String pairStarting(String tvName) {
     return 'Connecting to $tvName…';
   }
@@ -466,4 +475,139 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pairNotFoundBody =>
       'Go back to the list of TVs and choose it again.';
+
+  @override
+  String get remotePadTabsLabel => 'Control style';
+
+  @override
+  String get remotePadTouchpad => 'Touchpad';
+
+  @override
+  String get remotePadDpad => 'D-pad';
+
+  @override
+  String get remotePadNumbers => 'Numbers';
+
+  @override
+  String get touchpadLabel => 'Touchpad';
+
+  @override
+  String get touchpadHint =>
+      'Swipe to move, tap to select, tap with two fingers to go back.';
+
+  @override
+  String get touchpadIdleHint => 'Swipe to move · Tap to select';
+
+  @override
+  String get channelLabel => 'CH';
+
+  @override
+  String remoteVolumeValue(int level) {
+    return '$level';
+  }
+
+  @override
+  String get remoteMutedValue => 'Muted';
+
+  @override
+  String remoteVolumeSemantics(int level, int max) {
+    return 'Volume $level of $max';
+  }
+
+  @override
+  String get remoteVolumeMutedSemantics => 'Volume muted';
+
+  @override
+  String get quickAccessAppsLabel => 'Apps on your TV';
+
+  @override
+  String get quickAccessColourLabel => 'Colour keys';
+
+  @override
+  String get quickAccessMediaLabel => 'Media keys';
+
+  @override
+  String quickAppOpen(String app) {
+    return 'Open $app';
+  }
+
+  @override
+  String quickAppNowOnTv(String app) {
+    return '$app, now on TV';
+  }
+
+  @override
+  String get powerHoldHint => 'Hold to turn the TV on or off';
+
+  @override
+  String powerWaking(String tvName) {
+    return 'Waking $tvName…';
+  }
+
+  @override
+  String get powerWakeFailed =>
+      'Couldn\'t send the wake-up signal. Make sure your phone is on the same Wi-Fi as the TV.';
+
+  @override
+  String get powerTurnOnWithTvRemote =>
+      'Turn the TV on with its own remote. This app reconnects by itself.';
+
+  @override
+  String wolSetupTitle(String tvName) {
+    return 'Turn on $tvName from your phone';
+  }
+
+  @override
+  String get wolSetupBody =>
+      'Your phone can wake the TV over the network with its MAC address. On the TV, open Settings → System → About → Status (or Settings → Network & Internet) and copy the Wi-Fi or Ethernet MAC address.';
+
+  @override
+  String get wolNotBluetooth =>
+      'Use the Wi-Fi or Ethernet MAC address, not the Bluetooth one.';
+
+  @override
+  String get wolMayNotWork =>
+      'Some TVs can\'t be woken when they\'re fully off or in deep standby.';
+
+  @override
+  String get wolMacLabel => 'MAC address';
+
+  @override
+  String get wolMacHint => 'AA:BB:CC:DD:EE:FF';
+
+  @override
+  String get wolMacError =>
+      'Enter 6 pairs of letters or digits, like AA:BB:CC:DD:EE:FF';
+
+  @override
+  String get wolSaveAndWake => 'Save and turn on';
+
+  @override
+  String get wolSaveFailed => 'Couldn\'t save the MAC address. Try again.';
+
+  @override
+  String get keyboardTitle => 'Type on your TV';
+
+  @override
+  String get keyboardFieldLabel => 'Text';
+
+  @override
+  String get keyboardHint => 'Start typing…';
+
+  @override
+  String get keyboardTvHint =>
+      'Select a text field on the TV first, like the search box.';
+
+  @override
+  String get keyboardClear => 'Clear';
+
+  @override
+  String get keyboardOpenTvSearch => 'Open search on TV';
+
+  @override
+  String get keyboardNotConnected =>
+      'Not connected to your TV. What you type isn\'t sent.';
+
+  @override
+  String get theaterWakeLabel => 'Screen dimmed. Touch to brighten.';
 }

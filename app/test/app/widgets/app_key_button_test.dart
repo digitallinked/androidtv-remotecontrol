@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 
@@ -9,6 +10,8 @@ Widget key({
   VoidCallback? onTap,
   VoidCallback? start,
   VoidCallback? end,
+  VoidCallback? semanticLongPress,
+  Color? color,
   Duration d = kLongPressTimeout,
 }) => AppKeyButton(
   semanticLabel: 'Volume up',
@@ -16,6 +19,8 @@ Widget key({
   onTap: onTap ?? () {},
   onLongPressStart: start,
   onLongPressEnd: end,
+  onSemanticLongPress: semanticLongPress,
+  color: color,
   longPressDuration: d,
 );
 
@@ -103,20 +108,116 @@ void main() {
 
   testWidgets('semantics_label_and_long_press_action', (t) async {
     final h = t.ensureSemantics();
-    final log = <String>[];
+    await pumpApp(t, key(start: () {}, end: () {}));
+    expect(find.bySemanticsLabel('Volume up'), findsOneWidget);
+    expect(
+      t
+          .getSemantics(find.bySemanticsLabel('Volume up'))
+          .getSemanticsData()
+          .hasAction(SemanticsAction.longPress),
+      isTrue,
+    );
+    h.dispose();
+  });
+
+  testWidgets('semantic_long_press_defaults_to_one_tap', (t) async {
+    final h = t.ensureSemantics();
+    var taps = 0;
+    var starts = 0;
+    var ends = 0;
+    await pumpApp(
+      t,
+      key(onTap: () => taps++, start: () => starts++, end: () => ends++),
+    );
+    t.semantics.longPress(find.semantics.byLabel('Volume up'));
+    await t.pumpAndSettle();
+    expect((taps, starts, ends), (1, 0, 0));
+    h.dispose();
+  });
+
+  testWidgets('semantic_long_press_uses_the_override', (t) async {
+    final h = t.ensureSemantics();
+    var taps = 0;
+    var overrides = 0;
+    var starts = 0;
+    var ends = 0;
     await pumpApp(
       t,
       key(
-        onTap: () => log.add('tap'),
-        start: () => log.add('start'),
-        end: () => log.add('end'),
+        onTap: () => taps++,
+        start: () => starts++,
+        end: () => ends++,
+        semanticLongPress: () => overrides++,
       ),
     );
-    expect(find.bySemanticsLabel('Volume up'), findsOneWidget);
     t.semantics.longPress(find.semantics.byLabel('Volume up'));
     await t.pumpAndSettle();
-    expect(log, ['start', 'end']);
+    expect((taps, overrides, starts, ends), (0, 1, 0, 0));
     h.dispose();
+  });
+
+  testWidgets('semantic_long_press_override_alone_offers_the_action', (
+    t,
+  ) async {
+    final h = t.ensureSemantics();
+    var overrides = 0;
+    await pumpApp(t, key(semanticLongPress: () => overrides++));
+    t.semantics.longPress(find.semantics.byLabel('Volume up'));
+    await t.pumpAndSettle();
+    expect(overrides, 1);
+    h.dispose();
+  });
+
+  testWidgets('no_semantic_long_press_without_hold_callbacks', (t) async {
+    final h = t.ensureSemantics();
+    await pumpApp(t, key());
+    final data = t
+        .getSemantics(find.bySemanticsLabel('Volume up'))
+        .getSemanticsData();
+    expect(data.hasAction(SemanticsAction.longPress), isFalse);
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    h.dispose();
+  });
+
+  testWidgets('removing_a_held_key_ends_the_hold_once', (t) async {
+    var starts = 0;
+    var ends = 0;
+    await pumpApp(t, key(start: () => starts++, end: () => ends++));
+    final g = await t.startGesture(t.getCenter(find.byType(AppKeyButton)));
+    await t.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    expect((starts, ends), (1, 0));
+    await pumpApp(t, const SizedBox());
+    expect((starts, ends), (1, 1));
+    await g.up();
+    await t.pumpAndSettle();
+    expect((starts, ends), (1, 1));
+  });
+
+  testWidgets('key_colour_override_is_painted', (t) async {
+    Color? fill() => t
+        .widget<Material>(
+          find.descendant(
+            of: find.byType(AppKeyButton),
+            matching: find.byType(Material),
+          ),
+        )
+        .color;
+    await pumpApp(t, key());
+    final raised = fill();
+    expect(raised, isNot(Colors.transparent));
+    await pumpApp(t, key(color: Colors.transparent));
+    expect(fill(), Colors.transparent);
+  });
+
+  testWidgets('transparent_key_still_shows_press_scale', (t) async {
+    await pumpApp(t, key(color: Colors.transparent));
+    final g = await t.startGesture(t.getCenter(find.byType(AppKeyButton)));
+    await t.pump(const Duration(milliseconds: 300));
+    expect(
+      t.widget<AnimatedScale>(find.byType(AnimatedScale)).scale,
+      lessThan(1),
+    );
+    await g.up();
   });
 
   testWidgets('press_scale_has_no_animation_with_reduce_motion', (t) async {

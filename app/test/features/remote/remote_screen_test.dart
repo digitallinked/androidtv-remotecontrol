@@ -18,7 +18,7 @@ import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
-import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_remote_session.dart';
@@ -359,13 +359,15 @@ void main() {
         await pumpRemote(t, textScale: scale);
         expect(t.takeException(), isNull);
         final keys = find.byType(AppKeyButton);
-        expect(keys, findsNWidgets(10));
+        // The bottom cluster (two rockers, four keys, and the 2 x 2 grid)
+        // and the power key in the app bar.
+        expect(keys, findsNWidgets(9));
         for (final key in keys.evaluate()) {
           final size = t.getSize(find.byElementPredicate((e) => e == key));
           expect(size.width, greaterThanOrEqualTo(56));
           expect(size.height, greaterThanOrEqualTo(56));
         }
-        final controls = t.getRect(find.byType(BasicControls));
+        final controls = t.getRect(find.byType(RemoteBody));
         expect(controls.left, greaterThanOrEqualTo(0));
         expect(controls.right, lessThanOrEqualTo(width));
       });

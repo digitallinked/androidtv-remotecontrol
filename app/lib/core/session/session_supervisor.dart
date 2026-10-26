@@ -14,6 +14,8 @@ import 'package:tv_remote/core/session/session_signals.dart';
 ///   because iOS suspends Dart timers), otherwise nudged.
 /// - Network changes and the return to the foreground are coalesced: one
 ///   nudge per burst, `nudgeDebounce` after the last event.
+/// - A supervisor created while the app is already in the background starts
+///   as if it had just been backgrounded: the grace timer is running.
 /// - Nothing is forwarded while the app is in the background. A session that
 ///   was `offline` stays offline through the grace disconnect, and nudging
 ///   it would open a socket behind the user's back.
@@ -31,6 +33,11 @@ class SessionSupervisor {
       signals.visibility.listen(_onVisibility),
       signals.networkChanges.listen((_) => _onNetworkChanged()),
     ];
+    // The first visibility event may be a long way off (or never come while
+    // the app stays backgrounded): start from where the app is now.
+    if (signals.currentVisibility == AppVisibility.background) {
+      _onVisibility(AppVisibility.background);
+    }
   }
 
   final RemoteSession _session;
