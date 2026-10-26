@@ -58,7 +58,9 @@ class AppCatalogue {
   /// Throws a [FormatException] for a missing or empty field, a duplicate
   /// package, a region that is neither `*` nor two upper-case letters, a
   /// default-row package that is not in [apps], a row that is not exactly
-  /// [rowLength] long, or a missing `*` row.
+  /// [rowLength] long or repeats a package, a missing `*` row, a `version`
+  /// other than 1, or any key the schema does not define (so an icon URL or a
+  /// colour can never slip in unnoticed; Ruling P5-R4).
   factory AppCatalogue.parse(String json) {
     final Object? root;
     try {
@@ -68,6 +70,11 @@ class AppCatalogue {
     }
     if (root is! Map<String, Object?>) {
       throw const FormatException('The catalogue must be a JSON object.');
+    }
+
+    _onlyKeys(root, _topKeys, 'catalogue');
+    if (root['version'] != schemaVersion) {
+      throw const FormatException('Unsupported catalogue version.');
     }
 
     final rawApps = _list(root['apps'], 'apps');
@@ -97,8 +104,11 @@ class AppCatalogue {
       final packages = [
         for (final p in _list(value, 'defaultRows.$key')) _string(p, key),
       ];
-      if (packages.length != rowLength) {
-        throw FormatException('Row "$key" must have $rowLength apps.');
+      if (packages.length != rowLength ||
+          packages.toSet().length != rowLength) {
+        throw FormatException(
+          'Row "$key" must have $rowLength different apps.',
+        );
       }
       for (final p in packages) {
         if (!byPackage.containsKey(p)) {
@@ -116,6 +126,17 @@ class AppCatalogue {
       Map.unmodifiable(byPackage),
     );
   }
+
+  /// The only catalogue format version this build reads.
+  static const int schemaVersion = 1;
+
+  static const Set<String> _topKeys = {'version', 'apps', 'defaultRows'};
+  static const Set<String> _appKeys = {
+    'package',
+    'name',
+    'regions',
+    'launchLink',
+  };
 
   /// How many apps every default row holds.
   static const int rowLength = 6;
@@ -177,6 +198,7 @@ class AppCatalogue {
     if (raw is! Map<String, Object?>) {
       throw const FormatException('An app entry must be an object.');
     }
+    _onlyKeys(raw, _appKeys, 'app entry');
     final package = _string(raw['package'], 'package');
     final name = _string(raw['name'], '$package name');
     final link = raw['launchLink'];
@@ -196,6 +218,18 @@ class AppCatalogue {
       launchLink: link as String?,
       regions: Set.unmodifiable(regions),
     );
+  }
+
+  static void _onlyKeys(
+    Map<String, Object?> map,
+    Set<String> allowed,
+    String what,
+  ) {
+    for (final key in map.keys) {
+      if (!allowed.contains(key)) {
+        throw FormatException('Unknown key "$key" in $what.');
+      }
+    }
   }
 
   static String _region(String region, String package) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,11 +8,11 @@ const _file = 'assets/catalogue/apps_v1.json';
 
 AppCatalogue _load() => AppCatalogue.parse(File(_file).readAsStringSync());
 
-const _sixRow = ['a.one', 'b.two', 'c.three', 'a.one', 'b.two', 'c.three'];
+const _sixRow = ['a.one', 'b.two', 'c.three', 'd.four', 'e.five', 'f.six'];
 
 /// A catalogue document with the given [packages], all sharing [regions].
 String _json({
-  List<String> packages = const ['a.one', 'b.two', 'c.three'],
+  List<String> packages = _sixRow,
   List<String> regions = const ['*'],
   Map<String, List<String>> rows = const {'*': _sixRow},
 }) {
@@ -87,7 +88,7 @@ void main() {
 
     // Duplicate package.
     expect(
-      () => AppCatalogue.parse(_json(packages: ['a.one', 'a.one', 'b.two'])),
+      () => AppCatalogue.parse(_json(packages: [..._sixRow, 'a.one'])),
       throwsFormatException,
     );
     // Default-row package not in the catalogue.
@@ -95,7 +96,7 @@ void main() {
       () => AppCatalogue.parse(
         _json(
           rows: {
-            '*': ['a.one', 'b.two', 'c.three', 'a.one', 'b.two', 'x.unknown'],
+            '*': ['a.one', 'b.two', 'c.three', 'd.four', 'e.five', 'x.unknown'],
           },
         ),
       ),
@@ -125,6 +126,69 @@ void main() {
       ),
       throwsFormatException,
     );
+    // A row that repeats a package (still 6 long).
+    expect(
+      () => AppCatalogue.parse(
+        _json(
+          rows: {
+            '*': ['a.one', 'b.two', 'c.three', 'd.four', 'e.five', 'a.one'],
+          },
+        ),
+      ),
+      throwsFormatException,
+    );
+    // A bad region key in defaultRows.
+    for (final bad in ['my', 'MYS', 'M1', '']) {
+      expect(
+        () => AppCatalogue.parse(_json(rows: {'*': _sixRow, bad: _sixRow})),
+        throwsFormatException,
+        reason: 'row key "$bad"',
+      );
+    }
+  });
+
+  test('parse_rejects_unknown_keys_and_other_versions', () {
+    final valid = _json();
+    expect(() => AppCatalogue.parse(valid), returnsNormally);
+
+    for (final extra in [
+      '"iconUrl":"https://example.com/i.png"',
+      '"color":"#E50914"',
+      '"colour":123',
+      '"icon":null',
+    ]) {
+      expect(
+        () => AppCatalogue.parse(
+          valid.replaceFirst(
+            '"package":"a.one"',
+            '"package":"a.one",$extra',
+          ),
+        ),
+        throwsFormatException,
+        reason: extra,
+      );
+    }
+    // Unknown top-level key.
+    expect(
+      () => AppCatalogue.parse(
+        valid.replaceFirst('"version":1', '"version":1,"notes":"x"'),
+      ),
+      throwsFormatException,
+    );
+    // Versions other than 1, or a missing version.
+    for (final v in ['2', '0', '"1"', 'null']) {
+      expect(
+        () => AppCatalogue.parse(
+          valid.replaceFirst('"version":1', '"version":$v'),
+        ),
+        throwsFormatException,
+        reason: 'version $v',
+      );
+    }
+    expect(
+      () => AppCatalogue.parse(valid.replaceFirst('"version":1,', '')),
+      throwsFormatException,
+    );
   });
 
   test('parse_rejects_missing_and_empty_fields', () {
@@ -145,10 +209,10 @@ void main() {
 
   test('launch_link_is_an_optional_override', () {
     final custom = AppCatalogue.parse(
-      '{"version":1,"apps":['
-      '{"package":"a.one","name":"One","regions":["*"],'
-      '"launchLink":"https://example.com/one"}],'
-      '"defaultRows":{"*":["a.one","a.one","a.one","a.one","a.one","a.one"]}}',
+      _json().replaceFirst(
+        '"package":"a.one"',
+        '"package":"a.one","launchLink":"https://example.com/one"',
+      ),
     );
     expect(
       custom.byPackage('a.one')!.toEntry().launchLink,
@@ -213,6 +277,47 @@ void main() {
       c.suggestedFor('my').map((a) => a.package),
       c.suggestedFor('MY').map((a) => a.package),
     );
+  });
+
+  test('default_rows_match_the_agreed_regions', () {
+    const expected = {
+      'SG': 'Netflix, YouTube, Disney+, Viu, Prime Video, iQIYI',
+      'ID': 'Netflix, YouTube, Vidio, Disney+ Hotstar, Viu, Prime Video',
+      'IN': 'JioHotstar, YouTube, Netflix, Prime Video, ZEE5, Sony LIV',
+      'US': 'Netflix, YouTube, Prime Video, Hulu, Disney+, HBO Max',
+      'GB': 'Netflix, BBC iPlayer, YouTube, Prime Video, Disney+, Channel 4',
+      'AU': 'Netflix, YouTube, Stan, Prime Video, Disney+, ABC iview',
+    };
+    for (final MapEntry(:key, :value) in expected.entries) {
+      expect(
+        c.defaultShortcutsFor(key).map((e) => e.name).join(', '),
+        value,
+        reason: key,
+      );
+    }
+  });
+
+  test('catalogue_file_holds_no_icons_or_brand_colours', () {
+    final text = File(_file).readAsStringSync();
+    const allowed = {'package', 'name', 'regions', 'launchLink'};
+    final root = jsonDecode(text) as Map<String, Object?>;
+    expect(root.keys.toSet(), {'version', 'apps', 'defaultRows'});
+    for (final app
+        in (root['apps']! as List<Object?>).cast<Map<String, Object?>>()) {
+      expect(
+        allowed.containsAll(app.keys),
+        isTrue,
+        reason: '${app['package']}',
+      );
+    }
+    // `http` may only appear inside an optional launchLink value.
+    final withoutLinks = text.replaceAll(
+      RegExp(r'"launchLink"\s*:\s*"[^"]*"'),
+      '',
+    );
+    expect(withoutLinks, isNot(contains('http')));
+    expect(text, isNot(matches(RegExp('#[0-9a-fA-F]{3,8}'))));
+    expect(text, isNot(contains('0x')));
   });
 
   test('catalogue_file_stays_under_40kb', () {

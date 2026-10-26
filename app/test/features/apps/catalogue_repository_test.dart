@@ -13,6 +13,19 @@ void main() {
     expect(catalogue.defaultRows, contains('*'));
   });
 
+  test('catalogue_provider_surfaces_a_corrupt_asset_as_an_error', () async {
+    final container = ProviderContainer.test(
+      overrides: [
+        catalogueSourceProvider.overrideWith((ref) async => '{ not json'),
+      ],
+    );
+    await expectLater(
+      container.read(catalogueProvider.future),
+      throwsA(isA<FormatException>()),
+    );
+    expect(container.read(catalogueProvider).hasError, isTrue);
+  });
+
   testWidgets('device_region_reads_the_first_locale_with_a_country', (
     t,
   ) async {
