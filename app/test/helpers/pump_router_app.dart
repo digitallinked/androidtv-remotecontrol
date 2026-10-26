@@ -9,6 +9,7 @@ import 'package:tv_remote/app/app_shell.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/device/screen_services.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
@@ -21,6 +22,7 @@ import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
+import 'fake_screen_services.dart';
 import 'fake_tv_discovery.dart';
 import 'fake_wake_on_lan.dart';
 import 'manual_session_signals.dart';
@@ -83,6 +85,8 @@ Future<SettingsStore> pumpRouterApp(
         hostResolverProvider.overrideWithValue((_) async => null),
         sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
         hapticsProvider.overrideWithValue(RecordingHaptics()),
+        screenWakeLockProvider.overrideWithValue(RecordingWakeLock()),
+        screenDimmerProvider.overrideWithValue(RecordingDimmer()),
         wakeOnLanServiceProvider.overrideWithValue(FakeWakeOnLan()),
         wakeOnLanAvailableProvider.overrideWithValue(true),
         initialLocationProvider.overrideWithValue(initialLocation),

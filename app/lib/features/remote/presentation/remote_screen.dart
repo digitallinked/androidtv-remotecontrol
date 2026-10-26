@@ -9,6 +9,8 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/status_pill.dart';
+import 'package:tv_remote/core/device/keep_awake.dart';
+import 'package:tv_remote/core/device/theater_mode.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -333,7 +335,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         ? PadPage.dpad
         : PadPage.touchpad;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       // The keyboard sheet has the text field; the remote keeps its layout.
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
@@ -386,6 +388,16 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
           ],
         ),
       ),
+    );
+
+    final (keepAwake, theater) = ref.watch(
+      settingsControllerProvider.select(
+        (s) => (s.keepScreenAwake, s.theaterMode),
+      ),
+    );
+    return KeepAwake(
+      enabled: keepAwake,
+      child: TheaterMode(enabled: theater, child: scaffold),
     );
   }
 }

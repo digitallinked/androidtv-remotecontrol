@@ -57,6 +57,66 @@ final class InitialLocationProvider
 
 String _$initialLocationHash() => r'fe44ee17d256bb5c43dfdf6cf430600bc2740bdc';
 
+/// Tells screens when another full page covers them or leaves again. Only
+/// page routes count: a sheet or dialog over a screen is not "leaving" it
+/// (Ruling P4-R14). Registered on the router below.
+
+@ProviderFor(pageRouteObserver)
+final pageRouteObserverProvider = PageRouteObserverProvider._();
+
+/// Tells screens when another full page covers them or leaves again. Only
+/// page routes count: a sheet or dialog over a screen is not "leaving" it
+/// (Ruling P4-R14). Registered on the router below.
+
+final class PageRouteObserverProvider
+    extends
+        $FunctionalProvider<
+          RouteObserver<PageRoute<dynamic>>,
+          RouteObserver<PageRoute<dynamic>>,
+          RouteObserver<PageRoute<dynamic>>
+        >
+    with $Provider<RouteObserver<PageRoute<dynamic>>> {
+  /// Tells screens when another full page covers them or leaves again. Only
+  /// page routes count: a sheet or dialog over a screen is not "leaving" it
+  /// (Ruling P4-R14). Registered on the router below.
+  PageRouteObserverProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pageRouteObserverProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pageRouteObserverHash();
+
+  @$internal
+  @override
+  $ProviderElement<RouteObserver<PageRoute<dynamic>>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RouteObserver<PageRoute<dynamic>> create(Ref ref) {
+    return pageRouteObserver(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RouteObserver<PageRoute<dynamic>> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RouteObserver<PageRoute<dynamic>>>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$pageRouteObserverHash() => r'98aedd591d03103b68c46c1c9ef279af416d0797';
+
 /// The app's router.
 
 @ProviderFor(appRouter)
@@ -101,4 +161,4 @@ final class AppRouterProvider
   }
 }
 
-String _$appRouterHash() => r'c7c8a0b7a57f93f08d9cdc68d6ee734392bdefeb';
+String _$appRouterHash() => r'ea7f2d5d43b92ebb3466b8a0259fbbf358411ffe';

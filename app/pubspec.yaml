@@ -28,7 +28,9 @@ dependencies:
   network_info_plus: 8.2.2
   nsd: 5.0.1
   riverpod_annotation: 4.0.3
+  screen_brightness: 2.1.11
   shared_preferences: 2.5.6
+  wakelock_plus: 1.8.2
 
 dev_dependencies:
   build_runner: 2.15.1

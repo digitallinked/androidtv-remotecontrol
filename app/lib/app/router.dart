@@ -1,4 +1,5 @@
 import 'package:atv_remote/atv_remote.dart' show DiscoveredTv;
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -71,10 +72,18 @@ String initialLocation(Ref ref) => throw UnimplementedError(
   'initialLocationProvider must be overridden at bootstrap',
 );
 
+/// Tells screens when another full page covers them or leaves again. Only
+/// page routes count: a sheet or dialog over a screen is not "leaving" it
+/// (Ruling P4-R14). Registered on the router below.
+@Riverpod(keepAlive: true)
+RouteObserver<PageRoute<dynamic>> pageRouteObserver(Ref ref) =>
+    RouteObserver<PageRoute<dynamic>>();
+
 /// The app's router.
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   final router = GoRouter(
+    observers: [ref.watch(pageRouteObserverProvider)],
     initialLocation: ref.watch(initialLocationProvider),
     routes: [
       GoRoute(
