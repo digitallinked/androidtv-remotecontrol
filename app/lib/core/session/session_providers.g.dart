@@ -47,7 +47,7 @@ final class ActiveTargetProvider
   }
 }
 
-String _$activeTargetHash() => r'bf6c90244a9e24eb21cc36818a15cdf45d987d16';
+String _$activeTargetHash() => r'df026daabff8b6698aacfe8bce0a23cd9260dc8d';
 
 /// Which TV the session follows: `null` (the default) means the most
 /// recently connected saved TV.
@@ -70,7 +70,8 @@ abstract class _$ActiveTarget extends $Notifier<SessionTarget?> {
   }
 }
 
-/// The session with the active TV, or `null` when no TV is saved.
+/// The session with the active TV, or `null` when no TV is saved. For
+/// [DemoTarget] it is a [DemoRemoteSession].
 ///
 /// It connects as soon as it is built and is disposed when it is rebuilt
 /// (another TV, or [ActiveTarget.activateDevice]) or with the container. The
@@ -83,7 +84,8 @@ abstract class _$ActiveTarget extends $Notifier<SessionTarget?> {
 @ProviderFor(remoteSession)
 final remoteSessionProvider = RemoteSessionProvider._();
 
-/// The session with the active TV, or `null` when no TV is saved.
+/// The session with the active TV, or `null` when no TV is saved. For
+/// [DemoTarget] it is a [DemoRemoteSession].
 ///
 /// It connects as soon as it is built and is disposed when it is rebuilt
 /// (another TV, or [ActiveTarget.activateDevice]) or with the container. The
@@ -101,7 +103,8 @@ final class RemoteSessionProvider
           FutureOr<RemoteSession?>
         >
     with $FutureModifier<RemoteSession?>, $FutureProvider<RemoteSession?> {
-  /// The session with the active TV, or `null` when no TV is saved.
+  /// The session with the active TV, or `null` when no TV is saved. For
+  /// [DemoTarget] it is a [DemoRemoteSession].
   ///
   /// It connects as soon as it is built and is disposed when it is rebuilt
   /// (another TV, or [ActiveTarget.activateDevice]) or with the container. The
@@ -136,7 +139,7 @@ final class RemoteSessionProvider
   }
 }
 
-String _$remoteSessionHash() => r'7d71d3acb1e68bf44b7ffc2d3ad3fbabb3785724';
+String _$remoteSessionHash() => r'8e954c822b68a529afc649d44143f316885737ef';
 
 /// The connection state of the active session; `disconnected` when there is
 /// none.

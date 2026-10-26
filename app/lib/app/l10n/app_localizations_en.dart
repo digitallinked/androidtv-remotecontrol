@@ -48,6 +48,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingGetStarted => 'Get started';
 
   @override
+  String get onboardingTryDemo => 'Try demo';
+
+  @override
+  String get demoBadgeLabel => 'Demo mode';
+
+  @override
+  String get demoLeaveAction => 'Leave';
+
+  @override
+  String get demoLeaveTitle => 'Leave demo?';
+
+  @override
+  String get demoLeaveMessage => 'You\'ll go back to the list of TVs.';
+
+  @override
+  String get demoLeaveConfirm => 'Leave demo';
+
+  @override
+  String get demoStay => 'Stay';
+
+  @override
+  String get tvPreviewTitle => 'TV preview';
+
+  @override
+  String get tvPreviewIdle => 'Press a button to see what the TV would do.';
+
+  @override
+  String tvPreviewPressed(String key) {
+    return 'Pressed $key';
+  }
+
+  @override
+  String tvPreviewHolding(String key) {
+    return 'Holding $key';
+  }
+
+  @override
+  String tvPreviewReleased(String key) {
+    return 'Released $key';
+  }
+
+  @override
+  String tvPreviewOpened(String link) {
+    return 'Opened $link';
+  }
+
+  @override
+  String tvPreviewTyped(String text) {
+    return 'Typed \"$text\"';
+  }
+
+  @override
+  String get tvPreviewScreenOn => 'Screen on';
+
+  @override
+  String get tvPreviewScreenOff => 'Screen off';
+
+  @override
+  String tvPreviewVolume(int level, int max) {
+    return 'Volume $level of $max';
+  }
+
+  @override
+  String get tvPreviewMuted => 'Muted';
+
+  @override
   String get discoverTitle => 'Choose your TV';
 
   @override

@@ -17,6 +17,8 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/demo/demo_providers.dart';
+import 'package:tv_remote/features/demo/demo_remote_session.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 import '../../helpers/fake_remote_client.dart';
@@ -84,6 +86,54 @@ void main() {
     expect(const DeviceTarget('a'), const DeviceTarget('a'));
     expect(const DeviceTarget('a').hashCode, const DeviceTarget('a').hashCode);
     expect(const DeviceTarget('a'), isNot(const DeviceTarget('b')));
+  });
+
+  test('the_demo_target_compares_by_value', () {
+    expect(const DemoTarget(), const DemoTarget());
+    expect(const DemoTarget().hashCode, const DemoTarget().hashCode);
+    expect(const DemoTarget(), isNot(const DeviceTarget('a')));
+  });
+
+  test('the_demo_target_builds_a_demo_session_and_opens_no_socket', () async {
+    final c = makeContainer()..listen(remoteSessionProvider, (_, _) {});
+    expect(c.read(isDemoActiveProvider), isFalse);
+
+    c.read(activeTargetProvider.notifier).startDemo();
+    final session = (await c.read(remoteSessionProvider.future))!;
+
+    expect(c.read(isDemoActiveProvider), isTrue);
+    expect(session, isA<DemoRemoteSession>());
+    expect(session.isDemo, isTrue);
+    await untilConnected(session);
+    expect(clients.created, isEmpty);
+  });
+
+  test('leaving_the_demo_goes_back_to_the_last_used_device', () async {
+    await saveTwo();
+    final c = makeContainer()..listen(remoteSessionProvider, (_, _) {});
+    c.read(activeTargetProvider.notifier).startDemo();
+    final demo = (await c.read(remoteSessionProvider.future))!;
+
+    c.read(activeTargetProvider.notifier).clear();
+    final real = (await c.read(remoteSessionProvider.future))!;
+
+    expect(real.isDemo, isFalse);
+    expect(real.tvName, 'b');
+    // The demo session was closed with its provider state.
+    expect(
+      () => demo.sendKey(KeyCodes.home),
+      throwsA(isA<NotConnectedException>()),
+    );
+  });
+
+  test('the_demo_works_without_any_saved_tv', () async {
+    final c = makeContainer()..listen(remoteSessionProvider, (_, _) {});
+    expect(await c.read(remoteSessionProvider.future), isNull);
+
+    c.read(activeTargetProvider.notifier).startDemo();
+    final session = (await c.read(remoteSessionProvider.future))!;
+
+    expect(session.isDemo, isTrue);
   });
 
   test('session_follows_the_last_used_device_by_default', () async {

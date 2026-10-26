@@ -9,6 +9,7 @@ import 'package:tv_remote/core/session/session_supervisor.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/session/tv_remote_session.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/demo/demo_remote_session.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 part 'session_providers.g.dart';
@@ -39,11 +40,15 @@ class ActiveTarget extends _$ActiveTarget {
     ref.container.invalidate(remoteSessionProvider);
   }
 
+  /// Makes the simulated demo TV the active one.
+  void startDemo() => state = const DemoTarget();
+
   /// Goes back to following the most recently connected TV.
   void clear() => state = null;
 }
 
-/// The session with the active TV, or `null` when no TV is saved.
+/// The session with the active TV, or `null` when no TV is saved. For
+/// [DemoTarget] it is a [DemoRemoteSession].
 ///
 /// It connects as soon as it is built and is disposed when it is rebuilt
 /// (another TV, or [ActiveTarget.activateDevice]) or with the container. The
@@ -62,8 +67,12 @@ Future<RemoteSession?> remoteSession(Ref ref) async {
   final signals = ref.watch(sessionSignalsProvider);
   final timing = ref.watch(sessionTimingProvider);
 
+  if (target is DemoTarget) {
+    return _startSession(ref, DemoRemoteSession(), timing, signals);
+  }
   final device = switch (target) {
     DeviceTarget(:final serviceName) => await devices.find(serviceName),
+    DemoTarget() => null, // Handled above.
     null => await devices.lastUsed(),
   };
   if (device == null || !ref.mounted) return null;
@@ -79,6 +88,17 @@ Future<RemoteSession?> remoteSession(Ref ref) async {
     clientFactory: clientFactory,
     resolveHost: resolveHost,
   );
+  return _startSession(ref, session, timing, signals);
+}
+
+/// Puts [session] under a supervisor, connects it, and ties both to [ref]'s
+/// lifetime.
+RemoteSession _startSession(
+  Ref ref,
+  RemoteSession session,
+  SessionTiming timing,
+  SessionSignals signals,
+) {
   final supervisor = SessionSupervisor(
     session: session,
     signals: signals,

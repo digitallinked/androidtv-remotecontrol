@@ -12,6 +12,7 @@ import 'package:tv_remote/app/widgets/status_pill.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/basic_controls.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/device_switcher.dart';
 
@@ -208,9 +209,20 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
               ),
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: BasicControls(
-                  enabled: status == ConnectionStatus.connected,
-                  onKey: (code) => _press(session, code),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: AppSpacing.xl,
+                  children: [
+                    if (session.isDemo)
+                      const SizedBox(
+                        width: double.infinity,
+                        child: TvPreviewCard(),
+                      ),
+                    BasicControls(
+                      enabled: status == ConnectionStatus.connected,
+                      onKey: (code) => _press(session, code),
+                    ),
+                  ],
                 ),
               ),
             ),

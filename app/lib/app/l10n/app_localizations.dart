@@ -166,6 +166,114 @@ abstract class AppLocalizations {
   /// **'Get started'**
   String get onboardingGetStarted;
 
+  /// Button on the first-run screen that opens the remote with a simulated TV, for people without a TV at hand.
+  ///
+  /// In en, this message translates to:
+  /// **'Try demo'**
+  String get onboardingTryDemo;
+
+  /// Label of the strip shown above every screen while the simulated demo TV is in use.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo mode'**
+  String get demoBadgeLabel;
+
+  /// Button in the demo strip that asks to leave demo mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get demoLeaveAction;
+
+  /// Title of the dialog that asks to leave demo mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave demo?'**
+  String get demoLeaveTitle;
+
+  /// Body of the leave-demo dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll go back to the list of TVs.'**
+  String get demoLeaveMessage;
+
+  /// Button of the leave-demo dialog that leaves demo mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave demo'**
+  String get demoLeaveConfirm;
+
+  /// Button of the leave-demo dialog that keeps demo mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay'**
+  String get demoStay;
+
+  /// Title of the card that shows what the simulated TV did.
+  ///
+  /// In en, this message translates to:
+  /// **'TV preview'**
+  String get tvPreviewTitle;
+
+  /// TV preview text before any button was pressed.
+  ///
+  /// In en, this message translates to:
+  /// **'Press a button to see what the TV would do.'**
+  String get tvPreviewIdle;
+
+  /// TV preview text after a key was tapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Pressed {key}'**
+  String tvPreviewPressed(String key);
+
+  /// TV preview text while a key is held down.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding {key}'**
+  String tvPreviewHolding(String key);
+
+  /// TV preview text after a held key was released.
+  ///
+  /// In en, this message translates to:
+  /// **'Released {key}'**
+  String tvPreviewReleased(String key);
+
+  /// TV preview text after an app link was opened on the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened {link}'**
+  String tvPreviewOpened(String link);
+
+  /// TV preview text after text was typed into the TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Typed \"{text}\"'**
+  String tvPreviewTyped(String text);
+
+  /// TV preview status: the simulated TV screen is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen on'**
+  String get tvPreviewScreenOn;
+
+  /// TV preview status: the simulated TV screen is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen off'**
+  String get tvPreviewScreenOff;
+
+  /// TV preview status: the simulated TV volume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume {level} of {max}'**
+  String tvPreviewVolume(int level, int max);
+
+  /// TV preview status: the simulated TV is muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Muted'**
+  String get tvPreviewMuted;
+
   /// Title of the TV discovery screen.
   ///
   /// In en, this message translates to:

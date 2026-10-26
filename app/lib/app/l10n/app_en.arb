@@ -54,6 +54,118 @@
   "@onboardingGetStarted": {
     "description": "Button that finishes onboarding and opens the TV list."
   },
+  "onboardingTryDemo": "Try demo",
+  "@onboardingTryDemo": {
+    "description": "Button on the first-run screen that opens the remote with a simulated TV, for people without a TV at hand."
+  },
+  "demoBadgeLabel": "Demo mode",
+  "@demoBadgeLabel": {
+    "description": "Label of the strip shown above every screen while the simulated demo TV is in use."
+  },
+  "demoLeaveAction": "Leave",
+  "@demoLeaveAction": {
+    "description": "Button in the demo strip that asks to leave demo mode."
+  },
+  "demoLeaveTitle": "Leave demo?",
+  "@demoLeaveTitle": {
+    "description": "Title of the dialog that asks to leave demo mode."
+  },
+  "demoLeaveMessage": "You'll go back to the list of TVs.",
+  "@demoLeaveMessage": {
+    "description": "Body of the leave-demo dialog."
+  },
+  "demoLeaveConfirm": "Leave demo",
+  "@demoLeaveConfirm": {
+    "description": "Button of the leave-demo dialog that leaves demo mode."
+  },
+  "demoStay": "Stay",
+  "@demoStay": {
+    "description": "Button of the leave-demo dialog that keeps demo mode."
+  },
+  "tvPreviewTitle": "TV preview",
+  "@tvPreviewTitle": {
+    "description": "Title of the card that shows what the simulated TV did."
+  },
+  "tvPreviewIdle": "Press a button to see what the TV would do.",
+  "@tvPreviewIdle": {
+    "description": "TV preview text before any button was pressed."
+  },
+  "tvPreviewPressed": "Pressed {key}",
+  "@tvPreviewPressed": {
+    "description": "TV preview text after a key was tapped.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "Home"
+      }
+    }
+  },
+  "tvPreviewHolding": "Holding {key}",
+  "@tvPreviewHolding": {
+    "description": "TV preview text while a key is held down.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "Volume up"
+      }
+    }
+  },
+  "tvPreviewReleased": "Released {key}",
+  "@tvPreviewReleased": {
+    "description": "TV preview text after a held key was released.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "Volume up"
+      }
+    }
+  },
+  "tvPreviewOpened": "Opened {link}",
+  "@tvPreviewOpened": {
+    "description": "TV preview text after an app link was opened on the TV.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "market://launch?id=com.netflix.ninja"
+      }
+    }
+  },
+  "tvPreviewTyped": "Typed \"{text}\"",
+  "@tvPreviewTyped": {
+    "description": "TV preview text after text was typed into the TV.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "hello"
+      }
+    }
+  },
+  "tvPreviewScreenOn": "Screen on",
+  "@tvPreviewScreenOn": {
+    "description": "TV preview status: the simulated TV screen is on."
+  },
+  "tvPreviewScreenOff": "Screen off",
+  "@tvPreviewScreenOff": {
+    "description": "TV preview status: the simulated TV screen is off."
+  },
+  "tvPreviewVolume": "Volume {level} of {max}",
+  "@tvPreviewVolume": {
+    "description": "TV preview status: the simulated TV volume.",
+    "placeholders": {
+      "level": {
+        "type": "int",
+        "example": "8"
+      },
+      "max": {
+        "type": "int",
+        "example": "20"
+      }
+    }
+  },
+  "tvPreviewMuted": "Muted",
+  "@tvPreviewMuted": {
+    "description": "TV preview status: the simulated TV is muted."
+  },
   "discoverTitle": "Choose your TV",
   "@discoverTitle": {
     "description": "Title of the TV discovery screen."
