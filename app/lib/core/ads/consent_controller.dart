@@ -115,24 +115,32 @@ class ConsentController extends _$ConsentController {
   Future<ConsentResult> ensureGathered() => _gathered ??= _gatherOnce();
 
   Future<ConsentResult> _gatherOnce() async {
-    await refresh();
+    // Read before the first await: after the container is disposed the ref
+    // can't be used, and the caller (a screen) doesn't await this.
     final service = _service;
+    await refresh();
+    if (!ref.mounted) return _disposed;
     // A failed form is not an error here: the platform may still allow ads
     // from an earlier choice, and `canRequestAds` says.
     await _guard(service.showFormIfRequired, ConsentFormOutcome.failed);
+    if (!ref.mounted) return _disposed;
     final canRequest = await _guard(service.canRequestAds, false);
+    if (!ref.mounted) return _disposed;
     final options = await _guard(service.privacyOptionsRequired, false);
+    if (!ref.mounted) return _disposed;
     final result = ConsentResult(
-      region: ref.mounted
-          ? ref.read(consentRegionStateProvider)
-          : ConsentRegion.unknown,
+      region: ref.read(consentRegionStateProvider),
       canRequestAds: canRequest,
       privacyOptionsRequired: options,
       gathered: true,
     );
-    if (ref.mounted) state = result;
+    state = result;
     return result;
   }
+
+  /// What a gather that outlived its container answers: nothing is known and
+  /// nothing is published.
+  static const _disposed = ConsentResult.notGathered(ConsentRegion.unknown);
 
   /// Opens the privacy-options form (the "Ad privacy choices" row). Returns
   /// `false` when it could not be shown. Afterwards the choice may have

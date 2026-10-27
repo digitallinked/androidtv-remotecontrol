@@ -18,6 +18,7 @@ class FakeConsentService implements ConsentService {
     this.optionsResult = true,
     this.holdRequestUpdate,
     this.holdShowForm,
+    this.holdShowPrivacyOptions,
   });
 
   /// What [requestUpdate] answers.
@@ -40,6 +41,9 @@ class FakeConsentService implements ConsentService {
 
   /// When set, [showFormIfRequired] waits for it.
   Completer<void>? holdShowForm;
+
+  /// When set, [showPrivacyOptions] waits for it.
+  Completer<void>? holdShowPrivacyOptions;
 
   /// How many times [requestUpdate] was called.
   int requestUpdateCalls = 0;
@@ -73,6 +77,7 @@ class FakeConsentService implements ConsentService {
   @override
   Future<bool> showPrivacyOptions() async {
     privacyOptionsCalls++;
+    await holdShowPrivacyOptions?.future;
     return optionsResult;
   }
 }

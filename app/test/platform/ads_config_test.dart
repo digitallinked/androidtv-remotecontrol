@@ -60,11 +60,26 @@ void main() {
         gradle,
         contains('manifestPlaceholders["admobAppId"] = admobTestAppId'),
       );
+      // A blank value or the example's placeholder is "not set", because an
+      // empty or malformed app id makes the Mobile Ads provider throw at
+      // launch; the test id then stands in.
+      expect(
+        gradle,
+        contains(
+          'val admobAppIdProd = secrets.getProperty("admobAppIdProd")?.trim()',
+        ),
+      );
+      expect(
+        gradle,
+        contains(
+          '?.takeIf { it.isNotBlank() && !it.contains("XXXXXXXX") }',
+        ),
+      );
       expect(
         gradle,
         contains(
           'manifestPlaceholders["admobAppId"] = '
-          'secrets.getProperty("admobAppIdProd") ?: admobTestAppId',
+          'admobAppIdProd ?: admobTestAppId',
         ),
       );
       expect(
@@ -72,6 +87,16 @@ void main() {
         contains(
           "prod uses Google's test AdMob app id; "
           'set admobAppIdProd in android/secrets.properties',
+        ),
+      );
+      // The warning is for prod builds only, and says so only when the test
+      // id is really used.
+      expect(
+        gradle,
+        contains(
+          'if (admobAppIdProd == null && '
+          'gradle.startParameter.taskNames.any { '
+          'it.contains("prod", ignoreCase = true) })',
         ),
       );
       // Each placeholder sits in its own flavor.
@@ -86,6 +111,7 @@ void main() {
       expect(dev, contains('admobTestAppId'));
       expect(dev, isNot(contains('secrets')));
       expect(prod, contains('admobAppIdProd'));
+      expect(prod, isNot(contains('getProperty')));
 
       final example = read('android/secrets.example.properties');
       expect(
@@ -93,6 +119,8 @@ void main() {
         contains('admobAppIdProd=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY'),
       );
       expect(example, contains('#'));
+      // The placeholder the build treats as "not set".
+      expect(example, contains('XXXXXXXX'));
     },
   );
 
@@ -185,14 +213,29 @@ void main() {
       '-z',
     ], workingDirectory: root);
     expect(listing.exitCode, 0, reason: '${listing.stderr}');
+    // Every tracked file of the repository: the app, the packages, the docs,
+    // the tools and the files at the root. Not working notes (.superpowers/,
+    // git-ignored anyway), build output or the Dart tool cache.
     final files = (listing.stdout as String)
         .split('\u0000')
-        .where((p) => p.startsWith('app/') || p.startsWith('docs/'))
+        .where((p) => p.isNotEmpty)
+        .where(
+          (p) =>
+              !p.startsWith('.superpowers/') &&
+              !p.contains('/build/') &&
+              !p.contains('.dart_tool/'),
+        )
         .toList();
     expect(files, isNotEmpty);
 
+    // Google's published test publisher is the only AdMob id the repository
+    // may hold. One more is quoted as research data: the competitor's, in
+    // its teardown. Only the number is held here, so this file does not match
+    // the pattern it scans for.
+    const competitorPublisher = '5506461561907650';
+    const competitorDocs = 'docs/competitor-analysis/';
     final admob = RegExp(r'ca-app-pub-\d{16}');
-    final revenueCat = RegExp('(^|[^a-z])(goog|appl)_[A-Za-z0-9]{20,}');
+    final revenueCat = RegExp('(^|[^a-z])(goog|appl|test)_[A-Za-z0-9]{20,}');
     final firebaseKey = RegExp('AIza[0-9A-Za-z_-]{35}');
     final offenders = <String>[];
     var scanned = 0;
@@ -206,18 +249,22 @@ void main() {
         continue; // binary
       }
       scanned++;
-      // The competitor teardown quotes another publisher's ids as research
-      // data; they are not ours and are not in any build.
-      final isTeardown = path.startsWith('docs/competitor-analysis/');
       for (final m in admob.allMatches(text)) {
-        if (!isTeardown && m.group(0) != 'ca-app-pub-3940256099942544') {
-          offenders.add('$path: ${m.group(0)}');
-        }
+        final id = m.group(0)!;
+        final isTestId = id == 'ca-app-pub-3940256099942544';
+        final isCompetitor =
+            id == 'ca-app-pub-$competitorPublisher' &&
+            path.startsWith(competitorDocs);
+        if (!isTestId && !isCompetitor) offenders.add('$path: $id');
       }
       if (revenueCat.hasMatch(text)) offenders.add('$path: RevenueCat key');
       if (firebaseKey.hasMatch(text)) offenders.add('$path: Firebase key');
     }
     expect(scanned, greaterThan(50));
     expect(offenders, isEmpty);
+    // The scan reads the packages, the tools and the root, not only app/.
+    expect(files.any((p) => p.startsWith('packages/')), isTrue);
+    expect(files.any((p) => p.startsWith('tool/')), isTrue);
+    expect(files.any((p) => !p.contains('/')), isTrue);
   });
 }

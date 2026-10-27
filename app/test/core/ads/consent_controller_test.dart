@@ -180,4 +180,36 @@ void main() {
     expect(state.gathered, isFalse);
     expect(state.canRequestAds, isFalse);
   });
+
+  group('the container is disposed while consent is being gathered', () {
+    // The remote screen starts the gather unawaited, so nothing may throw
+    // into it, whichever step the disposal interrupts.
+    for (final step in ['the_silent_update', 'the_form']) {
+      test('nothing_throws_during_$step', () async {
+        final hold = Completer<void>();
+        final service = step == 'the_silent_update'
+            ? FakeConsentService(holdRequestUpdate: hold)
+            : FakeConsentService(holdShowForm: hold);
+        final container = ProviderContainer(
+          overrides: [
+            settingsStoreProvider.overrideWithValue(store),
+            consentServiceProvider.overrideWithValue(service),
+          ],
+        )..listen(consentControllerProvider, (_, _) {});
+        final result = container
+            .read(consentControllerProvider.notifier)
+            .ensureGathered();
+        await pumpEventQueue();
+
+        container.dispose();
+        hold.complete();
+
+        final done = await result;
+        await pumpEventQueue();
+        // Nothing was published, and the answer says so.
+        expect(done.gathered, isFalse);
+        expect(done.canRequestAds, isFalse);
+      });
+    }
+  });
 }

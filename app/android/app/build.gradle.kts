@@ -45,7 +45,12 @@ val secrets = Properties().apply {
     val file = rootProject.file("secrets.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
-if (secrets.getProperty("admobAppIdProd").isNullOrBlank()) {
+// A blank value, or the placeholder of secrets.example.properties left in place, counts as
+// "not set": an empty or malformed app id makes the Mobile Ads provider throw at launch.
+val admobAppIdProd = secrets.getProperty("admobAppIdProd")?.trim()
+    ?.takeIf { it.isNotBlank() && !it.contains("XXXXXXXX") }
+// Only a prod build needs the warning; dev always uses the test id on purpose.
+if (admobAppIdProd == null && gradle.startParameter.taskNames.any { it.contains("prod", ignoreCase = true) }) {
     logger.warn("prod uses Google's test AdMob app id; set admobAppIdProd in android/secrets.properties")
 }
 
@@ -80,7 +85,7 @@ android {
         create("prod") {
             dimension = "env"
             manifestPlaceholders["appName"] = "Remotely for Android TV"
-            manifestPlaceholders["admobAppId"] = secrets.getProperty("admobAppIdProd") ?: admobTestAppId
+            manifestPlaceholders["admobAppId"] = admobAppIdProd ?: admobTestAppId
         }
     }
 

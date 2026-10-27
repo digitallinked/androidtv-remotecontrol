@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +18,7 @@ import 'package:tv_remote/features/settings/presentation/privacy_choices_page.da
 
 import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_tracking_service.dart';
+import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_link_opener.dart';
@@ -43,6 +46,7 @@ void main() {
     TrackingService? tracking,
     Size size = const Size(390, 844),
     double textScale = 1,
+    TextScaler? textScaler,
     Brightness brightness = Brightness.light,
   }) {
     t.view
@@ -55,6 +59,7 @@ void main() {
       t,
       initialLocation: AppRoutes.settingsPrivacy,
       textScale: textScale,
+      textScaler: textScaler,
       brightness: brightness,
       prepareSettings: (store) async {
         await store.setConsentRegion(region);
@@ -301,28 +306,165 @@ void main() {
     expect(order, orderedEquals([...order]..sort()));
   });
 
-  for (final b in Brightness.values) {
-    testWidgetsOn(
-      TargetPlatform.iOS,
-      'privacy_page_has_no_banner_and_fits_320dp_at_200_percent_text_${b.name}',
-      (t) async {
-        consent.optionsRequired = true;
-        await pumpPage(
-          t,
-          size: const Size(320, 640),
-          textScale: 2,
-          brightness: b,
-          firebase: FirebaseStatus.notConfigured,
-          tracking: FakeTrackingService(current: TrackingStatus.denied),
-        );
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'privacy_page_has_no_banner_and_fits_320dp_at_200_percent_text',
+    (t) async {
+      consent.optionsRequired = true;
+      // The linear 200% and Android 14's non-linear curve, light and dark.
+      for (final scaler in [
+        const TextScaler.linear(2),
+        const NonlinearTwoXScaler(),
+      ]) {
+        for (final b in Brightness.values) {
+          final reason = '$scaler ${b.name}';
+          await pumpPage(
+            t,
+            size: const Size(320, 640),
+            textScaler: scaler,
+            brightness: b,
+            firebase: FirebaseStatus.notConfigured,
+            tracking: FakeTrackingService(current: TrackingStatus.denied),
+          );
+          expect(find.byType(BannerSlot), findsNothing, reason: reason);
 
-        expect(find.byType(BannerSlot), findsNothing);
-        await t.drag(find.byType(Scrollable).first, const Offset(0, -4000));
-        await t.pumpAndSettle();
-        expect(t.takeException(), isNull);
-        expect(find.byType(BannerSlot), findsNothing);
-        expect(find.text('Privacy policy'), findsOneWidget);
-      },
+          // Every row that carries meaning is whole on screen: inside the
+          // view, below the app bar, and with its texts inside the row.
+          final appBar = t.getRect(find.byType(AppBar));
+          for (final label in [
+            'Remove ads with Premium',
+            'Ad privacy choices',
+            'Ad tracking',
+            'Privacy policy',
+          ]) {
+            final row = find.ancestor(
+              of: find.text(label),
+              matching: find.byType(ListTile),
+            );
+            await t.scrollUntilVisible(
+              row,
+              100,
+              scrollable: find.byType(Scrollable),
+            );
+            await t.ensureVisible(row);
+            await t.pumpAndSettle();
+            final rect = t.getRect(row);
+            expect(
+              rect.left,
+              greaterThanOrEqualTo(0),
+              reason: '$label $reason',
+            );
+            expect(
+              rect.right,
+              lessThanOrEqualTo(320),
+              reason: '$label $reason',
+            );
+            expect(
+              rect.top,
+              greaterThanOrEqualTo(appBar.bottom),
+              reason: '$label $reason',
+            );
+            expect(
+              rect.bottom,
+              lessThanOrEqualTo(640),
+              reason: '$label $reason',
+            );
+            final texts = find.descendant(of: row, matching: find.byType(Text));
+            for (final text in texts.evaluate()) {
+              final inner = t.getRect(find.byWidget(text.widget));
+              expect(
+                inner.left,
+                greaterThanOrEqualTo(rect.left),
+                reason: '$label $reason',
+              );
+              expect(
+                inner.right,
+                lessThanOrEqualTo(rect.right),
+                reason: '$label $reason',
+              );
+              expect(
+                inner.top,
+                greaterThanOrEqualTo(rect.top - 0.5),
+                reason: '$label $reason',
+              );
+              expect(
+                inner.bottom,
+                lessThanOrEqualTo(rect.bottom + 0.5),
+                reason: '$label $reason',
+              );
+            }
+          }
+          expect(t.takeException(), isNull, reason: reason);
+          expect(find.byType(BannerSlot), findsNothing, reason: reason);
+        }
+      }
+    },
+  );
+
+  testWidgetsOn(TargetPlatform.iOS, 'every_row_is_at_least_56dp_high', (
+    t,
+  ) async {
+    consent.optionsRequired = true;
+    await pumpPage(
+      t,
+      size: const Size(390, 1600),
+      firebase: FirebaseStatus.notConfigured,
+      tracking: FakeTrackingService(current: TrackingStatus.denied),
     );
-  }
+    final rows = find.byType(ListTile).evaluate().toList();
+    // Two switches, Remove ads, Ad privacy choices, Ad tracking, Privacy
+    // policy.
+    expect(rows, hasLength(6));
+    for (final row in rows) {
+      expect(
+        t.getRect(find.byWidget(row.widget)).height,
+        greaterThanOrEqualTo(56),
+        reason: '${row.widget}',
+      );
+    }
+  });
+
+  testWidgetsOn(TargetPlatform.iOS, 'the_tracking_row_says_it_opens_settings', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    await pumpPage(
+      t,
+      tracking: FakeTrackingService(current: TrackingStatus.denied),
+    );
+    await scrollTo(t, find.text('Ad tracking'));
+    final node = t.getSemantics(
+      find.ancestor(
+        of: find.text('Ad tracking'),
+        matching: find.byType(ListTile),
+      ),
+    );
+    expect(node.hint, contains("Opens your phone's Settings"));
+    expect(node.label, contains('Ad tracking'));
+    handle.dispose();
+  });
+
+  testWidgets('a_double_tap_on_ad_privacy_choices_opens_the_form_once', (
+    t,
+  ) async {
+    final hold = Completer<void>();
+    consent
+      ..optionsRequired = true
+      ..holdShowPrivacyOptions = hold;
+    await pumpPage(t);
+
+    await t.tap(find.text('Ad privacy choices'));
+    await t.pump();
+    await t.tap(find.text('Ad privacy choices'));
+    await t.pump();
+    expect(consent.privacyOptionsCalls, 1);
+
+    // After the form closes the row works again.
+    hold.complete();
+    await t.pumpAndSettle();
+    consent.holdShowPrivacyOptions = null;
+    await t.tap(find.text('Ad privacy choices'));
+    await t.pumpAndSettle();
+    expect(consent.privacyOptionsCalls, 2);
+  });
 }

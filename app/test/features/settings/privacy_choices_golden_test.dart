@@ -16,7 +16,8 @@ void main() {
       ..physicalSize = const Size(390, 844)
       ..devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    // A free user in a region that needs consent: the whole page shows.
+    // A free user (the fake region is "consent not required"), with the Ad
+    // privacy choices row on, so every kind of row can show.
     await pumpRouterApp(
       t,
       initialLocation: AppRoutes.settingsPrivacy,

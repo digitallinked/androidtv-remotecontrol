@@ -11,6 +11,7 @@ import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
 import '../../helpers/fake_tracking_service.dart';
+import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_app.dart';
 
@@ -30,7 +31,7 @@ void main() {
   /// A screen with one button that asks for the tracking decision.
   Future<void> pump(
     WidgetTester t, {
-    double textScale = 1,
+    TextScaler textScaler = TextScaler.noScaling,
     Brightness brightness = Brightness.light,
   }) => pumpApp(
     t,
@@ -46,7 +47,7 @@ void main() {
         ),
       ),
     ),
-    textScale: textScale,
+    textScaler: textScaler,
     brightness: brightness,
   );
 
@@ -151,29 +152,49 @@ void main() {
     },
   );
 
-  for (final b in Brightness.values) {
-    testWidgetsOn(TargetPlatform.iOS, 'preprompt_fits_320dp_${b.name}', (
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'preprompt_fits_320dp_at_200_percent_text',
+    (
       t,
     ) async {
       t.view
         ..physicalSize = const Size(320, 640)
         ..devicePixelRatio = 1;
       addTearDown(t.view.reset);
-      await pump(t, textScale: 2, brightness: b);
-      await ask(t);
+      // The linear 200% and Android 14's non-linear curve, light and dark.
+      for (final scaler in [
+        const TextScaler.linear(2),
+        const NonlinearTwoXScaler(),
+      ]) {
+        for (final b in Brightness.values) {
+          final reason = '$scaler ${b.name}';
+          await store.setTrackingPrepromptShown(false);
+          tracking.current = TrackingStatus.notDetermined;
+          await pump(t, textScaler: scaler, brightness: b);
+          await ask(t);
 
-      expect(t.takeException(), isNull);
-      expect(find.text('About ads in this app'), findsOneWidget);
-      // Continue is reachable at this size.
-      await t.ensureVisible(find.text('Continue'));
-      expect(find.text('Continue').hitTestable(), findsOneWidget);
-      final button = t.getRect(
-        find.ancestor(
-          of: find.text('Continue'),
-          matching: find.byType(FilledButton),
-        ),
-      );
-      expect(button.height, greaterThanOrEqualTo(48));
-    });
-  }
+          expect(t.takeException(), isNull, reason: reason);
+          expect(find.text('About ads in this app'), findsOneWidget);
+          // The body and Continue are reachable and not cut off.
+          await t.ensureVisible(find.text('Continue'));
+          await t.pumpAndSettle();
+          final button = find.ancestor(
+            of: find.text('Continue'),
+            matching: find.byType(FilledButton),
+          );
+          expect(button.hitTestable(), findsOneWidget, reason: reason);
+          final rect = t.getRect(button);
+          expect(rect.height, greaterThanOrEqualTo(48), reason: reason);
+          expect(rect.left, greaterThanOrEqualTo(0), reason: reason);
+          expect(rect.right, lessThanOrEqualTo(320), reason: reason);
+          expect(rect.bottom, lessThanOrEqualTo(640), reason: reason);
+
+          await t.tap(find.text('Continue'));
+          await t.pumpAndSettle();
+          expect(find.byType(AppDialog<void>), findsNothing, reason: reason);
+        }
+      }
+    },
+  );
 }
