@@ -4,6 +4,7 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
@@ -89,10 +90,24 @@ final class TextSent extends RemoteActionEvent {
 /// Receives each command `RemoteActions` sent.
 typedef RemoteActionListener = void Function(RemoteActionEvent event);
 
-/// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-/// and the review prompter's press counter.
+/// Where sent commands are reported: a fan-out to everything that follows
+/// what the user does on the remote. Today that is analytics (key presses
+/// sampled, app launches by catalogue package; typed text is never logged,
+/// not even its length).
 @Riverpod(keepAlive: true)
-RemoteActionListener remoteActionListener(Ref ref) => (_) {};
+RemoteActionListener remoteActionListener(Ref ref) {
+  final analytics = ref.watch(analyticsHooksProvider);
+  return (event) {
+    switch (event) {
+      case KeySent(:final keyCode):
+        analytics.keySent(keyCode);
+      case AppLaunched(:final package):
+        analytics.appLaunched(package);
+      case TextSent():
+        break;
+    }
+  };
+}
 
 /// Counts the presses that were refused because the TV isn't connected; the
 /// remote screen shows the "Not connected" snackbar for each bump.
@@ -269,8 +284,15 @@ class RemoteActions implements RemoteInput {
   void _report(RemoteActionEvent event) {
     try {
       _onSent?.call(event);
-    } on Object {
-      // Analytics and counters are best effort.
+    } on Object catch (error) {
+      // Analytics and counters are best effort. The event's fields and the
+      // error's message are left out: they could hold what the user typed.
+      if (kDebugMode) {
+        debugPrint(
+          'RemoteActions listener failed on ${event.runtimeType}: '
+          '${error.runtimeType}',
+        );
+      }
     }
   }
 

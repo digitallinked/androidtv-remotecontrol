@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart' show immutable, listEquals;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/analytics/analytics_events.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 part 'discovery_controller.g.dart';
@@ -54,6 +56,9 @@ class DiscoveryState {
 /// The search stops when the screen goes away.
 @riverpod
 class DiscoveryController extends _$DiscoveryController {
+  // Kept across a rescan: the event says "a TV was found", once.
+  bool _foundLogged = false;
+
   @override
   DiscoveryState build() {
     final discovery = ref.watch(tvDiscoveryFactoryProvider)();
@@ -68,7 +73,14 @@ class DiscoveryController extends _$DiscoveryController {
     );
 
     void publish() {
-      if (ref.mounted) state = current();
+      if (!ref.mounted) return;
+      if (!_foundLogged && tvs.isNotEmpty) {
+        _foundLogged = true;
+        ref
+            .read(appAnalyticsProvider.notifier)
+            .log(AnalyticsEvent.tvDiscovered(tvs.length));
+      }
+      state = current();
     }
 
     final subscription = discovery.watch().listen(

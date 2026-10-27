@@ -1,5 +1,6 @@
 import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -397,6 +398,32 @@ void main() {
       expect(sent.single.toString(), isNot(contains('hello')));
       expect(h.events, isEmpty);
     });
+  });
+
+  test('listener_errors_are_logged_in_debug_without_event_data', () {
+    final logged = <String>[];
+    final original = debugPrint;
+    debugPrint = (message, {wrapWidth}) => logged.add(message ?? '');
+    addTearDown(() => debugPrint = original);
+
+    final x = RemoteActions(
+      session: session,
+      smoothPress: true,
+      hapticsEnabled: false,
+      haptics: h,
+      onRefused: () => refused++,
+      onSent: (event) => throw StateError('secret detail 24'),
+    );
+
+    // The press still counts as sent.
+    expect(x.tap(KeyCodes.volumeUp), isTrue);
+    expect(session.sentKeys, [KeyCodes.volumeUp]);
+    expect(logged, hasLength(1));
+    expect(logged.single, contains('RemoteActions listener failed on KeySent'));
+    expect(logged.single, contains('StateError'));
+    // Neither the key code, nor the error's message.
+    expect(logged.single, isNot(contains('24')));
+    expect(logged.single, isNot(contains('secret')));
   });
 
   test('unsupported_key_code_throws', () {

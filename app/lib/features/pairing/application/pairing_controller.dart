@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/analytics/analytics_events.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -69,6 +71,7 @@ class PairingController extends _$PairingController {
     // Read before the first await: the providers live as long as the app, so
     // saving and activating work even if the screen goes away meanwhile.
     final devices = ref.read(deviceRepositoryProvider);
+    final analytics = ref.read(appAnalyticsProvider.notifier);
     final container = ref.container;
     state = const PairingVerifying();
 
@@ -114,6 +117,7 @@ class PairingController extends _$PairingController {
       return;
     }
     // The pin is stored either way: the TV trusts this phone now.
+    analytics.log(const AnalyticsEvent.pairSuccess());
     final stayed = ref.mounted && run == _run;
     final activeTarget = container.read(activeTargetProvider);
     // The session has to be rebuilt, because the old one holds the pin it
@@ -141,6 +145,9 @@ class PairingController extends _$PairingController {
     final run = ++_run;
     bool stale() => !ref.mounted || run != _run;
     if (stale()) return;
+    ref
+        .read(appAnalyticsProvider.notifier)
+        .log(const AnalyticsEvent.pairStart());
 
     final ClientIdentity identity;
     try {
@@ -216,6 +223,15 @@ class PairingController extends _$PairingController {
   /// Releases the client and the clock, then publishes [next].
   void _end(PairingState next) {
     _release();
+    final analytics = ref.read(appAnalyticsProvider.notifier);
+    switch (next) {
+      case PairingFailed(:final kind):
+        analytics.log(AnalyticsEvent.pairFail(kind));
+      case PairingCodeExpired():
+        analytics.log(const AnalyticsEvent.pairCodeExpired());
+      case _:
+        break;
+    }
     state = next;
   }
 

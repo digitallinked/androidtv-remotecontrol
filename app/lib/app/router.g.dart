@@ -57,6 +57,62 @@ final class InitialLocationProvider
 
 String _$initialLocationHash() => r'fe44ee17d256bb5c43dfdf6cf430600bc2740bdc';
 
+/// Reports each screen to analytics by its route name. It is built here, not
+/// in `core/`, because the names are `AppRouteNames`.
+
+@ProviderFor(analyticsRouteObserver)
+final analyticsRouteObserverProvider = AnalyticsRouteObserverProvider._();
+
+/// Reports each screen to analytics by its route name. It is built here, not
+/// in `core/`, because the names are `AppRouteNames`.
+
+final class AnalyticsRouteObserverProvider
+    extends
+        $FunctionalProvider<
+          AnalyticsRouteObserver,
+          AnalyticsRouteObserver,
+          AnalyticsRouteObserver
+        >
+    with $Provider<AnalyticsRouteObserver> {
+  /// Reports each screen to analytics by its route name. It is built here, not
+  /// in `core/`, because the names are `AppRouteNames`.
+  AnalyticsRouteObserverProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'analyticsRouteObserverProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$analyticsRouteObserverHash();
+
+  @$internal
+  @override
+  $ProviderElement<AnalyticsRouteObserver> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  AnalyticsRouteObserver create(Ref ref) {
+    return analyticsRouteObserver(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AnalyticsRouteObserver value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AnalyticsRouteObserver>(value),
+    );
+  }
+}
+
+String _$analyticsRouteObserverHash() =>
+    r'65f56320cab70cf839156a806eab79f5770c8847';
+
 /// The app's router.
 
 @ProviderFor(appRouter)
@@ -101,4 +157,4 @@ final class AppRouterProvider
   }
 }
 
-String _$appRouterHash() => r'd3878d7fc43d4045206fa5edee16e891f7cb915b';
+String _$appRouterHash() => r'644b4b61f6d33c7f08ef81ad2751fc0ae3eb53fa';

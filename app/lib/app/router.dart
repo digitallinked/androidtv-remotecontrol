@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/widgets/placeholder_screen.dart';
+import 'package:tv_remote/core/analytics/analytics_route_observer.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/device/page_route_observer.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -181,11 +183,23 @@ String initialLocation(Ref ref) => throw UnimplementedError(
   'initialLocationProvider must be overridden at bootstrap',
 );
 
+/// Reports each screen to analytics by its route name. It is built here, not
+/// in `core/`, because the names are `AppRouteNames`.
+@Riverpod(keepAlive: true)
+AnalyticsRouteObserver analyticsRouteObserver(Ref ref) =>
+    AnalyticsRouteObserver(
+      screenNames: AppRouteNames.all,
+      onScreen: ref.read(appAnalyticsProvider.notifier).screen,
+    );
+
 /// The app's router.
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   final router = GoRouter(
-    observers: [ref.watch(pageRouteObserverProvider)],
+    observers: [
+      ref.watch(pageRouteObserverProvider),
+      ref.watch(analyticsRouteObserverProvider),
+    ],
     initialLocation: ref.watch(initialLocationProvider),
     routes: [
       GoRoute(

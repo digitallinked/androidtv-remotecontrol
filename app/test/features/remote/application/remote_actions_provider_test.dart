@@ -42,6 +42,10 @@ void main() {
         remoteSessionProvider.overrideWith(
           (ref) async => queue[next++ % queue.length],
         ),
+        // These tests are about the actions, not about analytics hooks (which
+        // listen to the session and so change when it rebuilds).
+        if (!extra.any((o) => o.origin == remoteActionListenerProvider))
+          remoteActionListenerProvider.overrideWithValue((_) {}),
         ...extra,
       ],
     )..listen(remoteActionsProvider, (_, _) {}); // Alive, like on the screen.
@@ -118,6 +122,7 @@ void main() {
       overrides: [
         settingsStoreProvider.overrideWithValue(store),
         hapticsProvider.overrideWithValue(haptic),
+        remoteActionListenerProvider.overrideWithValue((_) {}),
         remoteSessionProvider.overrideWith((ref) async {
           if (calls++ == 0) return a;
           throw StateError('identity unusable');
@@ -168,7 +173,9 @@ void main() {
   });
 
   test('the_default_listener_ignores_events', () {
-    final c = ProviderContainer.test();
+    final c = ProviderContainer.test(
+      overrides: [settingsStoreProvider.overrideWithValue(store)],
+    );
     c.read(remoteActionListenerProvider)(const TextSent(1));
   });
 }

@@ -8,14 +8,18 @@ part of 'remote_actions.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-/// and the review prompter's press counter.
+/// Where sent commands are reported: a fan-out to everything that follows
+/// what the user does on the remote. Today that is analytics (key presses
+/// sampled, app launches by catalogue package; typed text is never logged,
+/// not even its length).
 
 @ProviderFor(remoteActionListener)
 final remoteActionListenerProvider = RemoteActionListenerProvider._();
 
-/// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-/// and the review prompter's press counter.
+/// Where sent commands are reported: a fan-out to everything that follows
+/// what the user does on the remote. Today that is analytics (key presses
+/// sampled, app launches by catalogue package; typed text is never logged,
+/// not even its length).
 
 final class RemoteActionListenerProvider
     extends
@@ -25,8 +29,10 @@ final class RemoteActionListenerProvider
           RemoteActionListener
         >
     with $Provider<RemoteActionListener> {
-  /// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-  /// and the review prompter's press counter.
+  /// Where sent commands are reported: a fan-out to everything that follows
+  /// what the user does on the remote. Today that is analytics (key presses
+  /// sampled, app launches by catalogue package; typed text is never logged,
+  /// not even its length).
   RemoteActionListenerProvider._()
     : super(
         from: null,
@@ -62,7 +68,7 @@ final class RemoteActionListenerProvider
 }
 
 String _$remoteActionListenerHash() =>
-    r'f019182a81525fb3dd37557362ca2c928db6e161';
+    r'e45634618d394fc4fafd82a55bf0d4e5f8bf70e3';
 
 /// Counts the presses that were refused because the TV isn't connected; the
 /// remote screen shows the "Not connected" snackbar for each bump.

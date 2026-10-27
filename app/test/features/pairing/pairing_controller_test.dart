@@ -8,11 +8,15 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
+import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/pairing/application/pairing_controller.dart';
@@ -23,6 +27,7 @@ import '../../helpers/fake_pairing_client.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_secure_store.dart';
+import '../../helpers/recording_analytics_sink.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
 
@@ -100,8 +105,21 @@ void main() {
   final tv0 = tv('Living Room TV 3');
   late FakePairingClients fakes;
   late AppDatabase db;
+  late RecordingAnalyticsSink analyticsSink;
+  late List<Override> analyticsOverrides;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final settings = await SettingsStore.open();
+    await settings.setConsentRegion(ConsentRegion.notRequired);
+    analyticsSink = RecordingAnalyticsSink();
+    // The guard throws as in a debug build, so a bad event fails the test.
+    analyticsOverrides = [
+      settingsStoreProvider.overrideWithValue(settings),
+      analyticsSinkProvider.overrideWithValue(analyticsSink),
+      analyticsDebugBuildProvider.overrideWithValue(true),
+    ];
     fakes = FakePairingClients();
     db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -118,6 +136,7 @@ void main() {
           identity ?? testIdentityStore(),
         ),
         pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        ...analyticsOverrides,
         if (repository != null)
           deviceRepositoryProvider.overrideWithValue(repository),
       ],
@@ -226,6 +245,49 @@ void main() {
     expect(fakes.created.single.closeCalls, greaterThanOrEqualTo(1));
   });
 
+  test('pairing_logs_start_success_and_fail_without_codes', () async {
+    // A code the TV rejects ends the pairing with a reason.
+    fakes.onCreate = (client) =>
+        client.submitError = const PairingException(PairingFailure.badSecret);
+    final failed = await waiting();
+    expect(analyticsSink.eventNames, ['pair_start']);
+    await notifier(failed).submit('AB12CD');
+    expect(analyticsSink.eventNames, ['pair_start', 'pair_fail']);
+    expect(analyticsSink.events.last.params, {'reason': 'code_rejected_by_tv'});
+
+    // A good code is saved and logs success.
+    analyticsSink.events.clear();
+    fakes = FakePairingClients();
+    final ok = await waiting();
+    await notifier(ok).submit('AB12CD');
+    expect(analyticsSink.eventNames, ['pair_start', 'pair_success']);
+
+    // Neither the code, the TV's name nor its address appear in any param.
+    for (final e in analyticsSink.events) {
+      expect(e.params, isEmpty);
+    }
+  });
+
+  test('pairing_logs_a_fail_when_the_code_expires_and_a_new_start', () {
+    fakeAsync((async) {
+      final c = makeContainer();
+      async
+        ..flushMicrotasks()
+        ..elapse(const Duration(seconds: 60));
+      expect(read(c), const PairingCodeExpired());
+      expect(analyticsSink.eventNames, ['pair_start', 'pair_fail']);
+      expect(analyticsSink.events.last.params, {'reason': 'code_expired'});
+
+      unawaited(notifier(c).restart());
+      async.flushMicrotasks();
+      expect(analyticsSink.eventNames, [
+        'pair_start',
+        'pair_fail',
+        'pair_start',
+      ]);
+    });
+  });
+
   test('re_pairing_keeps_nickname_and_wol_mac', () async {
     await DriftDeviceRepository(db).upsert(
       savedTv(nickname: 'Lounge', wolMac: 'AA:BB:CC:DD:EE:FF', pin: 'old'),
@@ -249,6 +311,7 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         identityStoreProvider.overrideWithValue(testIdentityStore()),
         pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        ...analyticsOverrides,
       ],
     )..listen(pairingControllerProvider(target), (_, _) {});
     final controller = pairingControllerProvider(target);
@@ -390,6 +453,7 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         identityStoreProvider.overrideWithValue(testIdentityStore()),
         pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        ...analyticsOverrides,
       ],
     );
     final subscription = c.listen(pairingControllerProvider(tv0), (_, _) {});
@@ -413,6 +477,7 @@ void main() {
           overrides: <Override>[
             identityStoreProvider.overrideWithValue(testIdentityStore()),
             pairingClientFactoryProvider.overrideWithValue(fakes.create),
+            ...analyticsOverrides,
             deviceRepositoryProvider.overrideWithValue(repo),
           ],
         )..listen(pairingControllerProvider(tv0), (_, _) {});
@@ -452,6 +517,7 @@ void main() {
           overrides: <Override>[
             identityStoreProvider.overrideWithValue(testIdentityStore()),
             pairingClientFactoryProvider.overrideWithValue(fakes.create),
+            ...analyticsOverrides,
           ],
         );
         final subscription = c.listen(
@@ -522,6 +588,7 @@ void main() {
             overrides: <Override>[
               identityStoreProvider.overrideWithValue(testIdentityStore()),
               pairingClientFactoryProvider.overrideWithValue(fakes.create),
+              ...analyticsOverrides,
               deviceRepositoryProvider.overrideWithValue(repo),
             ],
           );
@@ -562,6 +629,7 @@ void main() {
         overrides: <Override>[
           identityStoreProvider.overrideWithValue(testIdentityStore()),
           pairingClientFactoryProvider.overrideWithValue(fakes.create),
+          ...analyticsOverrides,
           deviceRepositoryProvider.overrideWithValue(repo),
         ],
       );
@@ -600,6 +668,7 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         identityStoreProvider.overrideWithValue(testIdentityStore()),
         pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        ...analyticsOverrides,
         remoteSessionProvider.overrideWith((ref) async {
           built++;
           return FakeRemoteSession();

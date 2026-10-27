@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/core/analytics/analytics_events.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 
@@ -44,6 +46,9 @@ class OnboardingScreen extends ConsumerWidget {
                         .read(settingsControllerProvider.notifier)
                         .update((s) => s.setOnboardingComplete(true));
                     if (!context.mounted) return;
+                    ref
+                        .read(appAnalyticsProvider.notifier)
+                        .log(const AnalyticsEvent.onboardingComplete());
                     context.go(AppRoutes.discover);
                   },
                   child: Text(l10n.onboardingGetStarted),
@@ -54,6 +59,9 @@ class OnboardingScreen extends ConsumerWidget {
                         .read(settingsControllerProvider.notifier)
                         .update((s) => s.setOnboardingComplete(true));
                     if (!context.mounted) return;
+                    ref
+                        .read(appAnalyticsProvider.notifier)
+                        .log(const AnalyticsEvent.onboardingComplete());
                     ref.read(activeTargetProvider.notifier).startDemo();
                     context.go(AppRoutes.remote);
                   },
