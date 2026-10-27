@@ -103,15 +103,28 @@ class AppDialog<T> extends StatelessWidget {
 
 /// Shows an [AppDialog] and returns the value of the tapped action, or `null`
 /// when the dialog is dismissed by tapping outside it.
+///
+/// With [barrierDismissible] false only an action closes the dialog: neither
+/// the barrier nor the system Back button does.
 Future<T?> showAppDialog<T>({
   required BuildContext context,
   required String title,
   required String message,
   required List<AppDialogAction<T>> actions,
+  bool barrierDismissible = true,
 }) {
   return showDialog<T>(
     context: context,
-    builder: (_) =>
-        AppDialog<T>(title: title, message: message, actions: actions),
+    barrierDismissible: barrierDismissible,
+    builder: (_) {
+      final dialog = AppDialog<T>(
+        title: title,
+        message: message,
+        actions: actions,
+      );
+      return barrierDismissible
+          ? dialog
+          : PopScope(canPop: false, child: dialog);
+    },
   );
 }

@@ -1,1 +1,6 @@
 #include "Generated.xcconfig"
+// AdMob app id for the prod configurations (Ruling P6-R9). It is Google's test
+// id until Secrets.xcconfig (git-ignored; see Secrets.example.xcconfig) sets the
+// real one, so the include must stay last.
+ADMOB_APP_ID_PROD = ca-app-pub-3940256099942544~1458002511
+#include? "Secrets.xcconfig"

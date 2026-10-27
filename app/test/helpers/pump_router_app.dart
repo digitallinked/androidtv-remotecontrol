@@ -10,6 +10,8 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/ads/consent_service.dart';
+import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/device/screen_services.dart';
@@ -28,9 +30,11 @@ import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
+import 'fake_consent_service.dart';
 import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
 import 'fake_screen_services.dart';
+import 'fake_tracking_service.dart';
 import 'fake_tv_discovery.dart';
 import 'fake_wake_on_lan.dart';
 import 'in_memory_app_usage_repository.dart';
@@ -133,6 +137,10 @@ Future<SettingsStore> pumpRouterApp(
         // No services are configured in tests: Firebase is not started.
         serviceConfigProvider.overrideWithValue(ServiceConfig.none),
         firebaseStatusProvider.overrideWithValue(FirebaseStatus.notConfigured),
+        // Consent: a region that needs none, no form, ads allowed. Tracking:
+        // the Android answer (nothing to decide).
+        consentServiceProvider.overrideWithValue(FakeConsentService()),
+        trackingServiceProvider.overrideWithValue(FakeTrackingService()),
         // Premium is the free stub until a test overrides it.
         premiumProvider.overrideWith(() => TestPremium(PremiumState.free)),
         initialLocationProvider.overrideWithValue(initialLocation),

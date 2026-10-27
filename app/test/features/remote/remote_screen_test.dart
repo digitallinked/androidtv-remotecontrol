@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
+import 'package:tv_remote/core/ads/consent_service.dart';
+import 'package:tv_remote/core/privacy/privacy_choices.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
@@ -26,6 +30,7 @@ import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart
 import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
+import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_app_usage_repository.dart';
@@ -567,5 +572,76 @@ void main() {
     expect(rect.height, greaterThanOrEqualTo(48));
     expect(rect.right, lessThanOrEqualTo(t.getRect(switcher).left));
     expect(t.getRect(switcher).right, lessThanOrEqualTo(t.getRect(power).left));
+  });
+
+  testWidgets('consent_form_waits_for_the_remote', (t) async {
+    final consent = FakeConsentService(
+      region: ConsentRegion.required,
+      formOutcome: ConsentFormOutcome.shown,
+    );
+    fake.emit(_connected);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.onboarding,
+      overrides: [
+        consentServiceProvider.overrideWithValue(consent),
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        savedDevicesProvider.overrideWith(
+          (ref) => Stream.value([savedTv()]),
+        ),
+      ],
+    );
+    final router = GoRouter.of(t.element(find.byType(Scaffold).first));
+    expect(consent.showFormCalls, 0);
+
+    router.go(AppRoutes.discover);
+    await t.pumpAndSettle();
+    expect(consent.showFormCalls, 0);
+
+    router.go(AppRoutes.pair('Living Room TV 3'));
+    await t.pumpAndSettle();
+    expect(consent.showFormCalls, 0);
+
+    router.go(AppRoutes.remote);
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+    expect(consent.showFormCalls, 1);
+    // The silent update ran before the form.
+    expect(consent.requestUpdateCalls, 1);
+  });
+
+  testWidgets('consent_form_never_shown_twice_in_a_launch', (t) async {
+    final consent = FakeConsentService(
+      formOutcome: ConsentFormOutcome.shown,
+    );
+    fake.emit(_connected);
+    await pumpRemote(
+      t,
+      overrides: [consentServiceProvider.overrideWithValue(consent)],
+    );
+    expect(consent.showFormCalls, 1);
+
+    await t.tap(find.byTooltip('Settings'));
+    await t.pumpAndSettle();
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+    expect(consent.showFormCalls, 1);
+  });
+
+  testWidgets('the_remote_works_while_the_consent_form_is_open', (t) async {
+    final hold = Completer<void>();
+    final consent = FakeConsentService(holdShowForm: hold);
+    fake.emit(_connected);
+    await pumpRemote(
+      t,
+      overrides: [consentServiceProvider.overrideWithValue(consent)],
+    );
+    expect(consent.showFormCalls, 1);
+    // The form is still open (held), and the remote already shows and sends.
+    expect(find.byType(RemoteBody), findsOneWidget);
+    hold.complete();
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
   });
 }

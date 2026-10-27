@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- AdMob reads the advertising id (Android 13+ needs it declared). Analytics never
+         does: google_analytics_adid_collection_enabled stays false below. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <application
         android:label="${appName}"
         android:name="${applicationName}"
@@ -57,6 +60,14 @@
         <meta-data
             android:name="google_analytics_default_allow_ad_personalization_signals"
             android:value="false" />
+        <!-- AdMob (Ruling P6-R9): the app id comes from the build flavor, and the SDK
+             waits for the app to start it, which happens only after consent. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
         <!-- Screen views are logged by the app, by route name; Firebase's own
              reporting would add the activity name next to them. -->
         <meta-data

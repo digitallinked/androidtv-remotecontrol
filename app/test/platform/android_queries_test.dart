@@ -22,10 +22,20 @@ void main() {
         '<data android:scheme="https"/> </intent>',
       ),
     );
-    // No new permissions: the manifest asks for the same four as before.
+    // The four network permissions, plus the advertising id that AdMob needs
+    // (Ruling P6-R8). Nothing else.
     expect(
-      RegExp('<uses-permission ').allMatches(manifest),
-      hasLength(4),
+      RegExp(
+        '<uses-permission android:name="([^"]+)"',
+      ).allMatches(manifest).map((m) => m.group(1)).toSet(),
+      {
+        'android.permission.INTERNET',
+        'android.permission.ACCESS_NETWORK_STATE',
+        'android.permission.ACCESS_WIFI_STATE',
+        'android.permission.CHANGE_WIFI_MULTICAST_STATE',
+        'com.google.android.gms.permission.AD_ID',
+      },
     );
+    expect(RegExp('<uses-permission ').allMatches(manifest), hasLength(5));
   });
 }

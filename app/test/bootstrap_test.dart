@@ -19,6 +19,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+import 'helpers/fake_ads_overrides.dart';
 import 'helpers/fake_config_source.dart';
 import 'helpers/in_memory_device_repository.dart';
 import 'helpers/recording_crash_reporter.dart';
@@ -86,6 +87,7 @@ void main() {
         openSettings: openSettings,
         openDatabase:
             openDatabase ?? () => AppDatabase(NativeDatabase.memory()),
+        overrides: fakeAdsOverrides(),
       ),
     );
 
@@ -207,6 +209,7 @@ void main() {
       initFirebase: initFirebase,
       startupSteps: startupSteps,
       openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      overrides: fakeAdsOverrides(),
     );
 
     ProviderContainer containerOf(WidgetTester tester) => tester
@@ -351,6 +354,7 @@ void main() {
                 opens++;
                 return AppDatabase(NativeDatabase.memory());
               },
+              overrides: fakeAdsOverrides(),
             );
           },
         ),
@@ -388,7 +392,10 @@ void main() {
       crashReporter: reporter,
       startupSteps: startupSteps,
       openDatabase: () => AppDatabase(NativeDatabase.memory()),
-      overrides: [remoteConfigSourceProvider.overrideWithValue(source)],
+      overrides: [
+        ...fakeAdsOverrides(),
+        remoteConfigSourceProvider.overrideWithValue(source),
+      ],
     );
 
     ProviderContainer containerOf(WidgetTester tester) => tester
@@ -480,6 +487,7 @@ void main() {
         flavor: Flavor.dev,
         crashReporter: RecordingCrashReporter(),
         openDatabase: () => AppDatabase(NativeDatabase.memory()),
+        overrides: fakeAdsOverrides(),
       );
       await tester.pumpWidget(app);
       await tester.pumpAndSettle();
@@ -517,6 +525,7 @@ void main() {
       },
       openDatabase: () => AppDatabase(NativeDatabase.memory()),
       overrides: [
+        ...fakeAdsOverrides(),
         crashlyticsSinkProvider.overrideWithValue(sink),
         crashDebugBuildProvider.overrideWithValue(false),
         deviceRepositoryProvider.overrideWithValue(InMemoryDeviceRepository()),
@@ -593,6 +602,7 @@ void main() {
         initFirebase: (_) async => FirebaseStatus.ready,
         openDatabase: () => AppDatabase(NativeDatabase.memory()),
         overrides: [
+          ...fakeAdsOverrides(),
           crashlyticsSinkProvider.overrideWith(
             (ref) => throw StateError('no crashlytics'),
           ),

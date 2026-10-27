@@ -8,6 +8,7 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/dynamic_color_support.dart';
 import 'package:tv_remote/app/theme/dynamic_scheme.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -43,7 +44,10 @@ class App extends ConsumerWidget {
       ..watch(analyticsHooksProvider)
       // Ask now so Settings → Appearance already knows whether to offer the
       // wallpaper-colour switch when it opens (the answer is kept).
-      ..read(dynamicColorSupportedProvider);
+      ..read(dynamicColorSupportedProvider)
+      // The first read starts the silent consent update (it shows nothing);
+      // the consent form itself waits for the remote screen.
+      ..read(consentControllerProvider);
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {

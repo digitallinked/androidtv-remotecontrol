@@ -16,6 +16,8 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import '../helpers/fake_ads_overrides.dart';
+import '../helpers/fake_consent_service.dart';
 import '../helpers/fake_tv_discovery.dart';
 import '../helpers/recording_crash_reporter.dart';
 
@@ -27,11 +29,13 @@ void _prefs([Map<String, Object> data = const {}]) {
 Future<Widget> _root({
   List<StartupStep> steps = const [],
   void Function()? onOpenDatabase,
+  FakeConsentService? consent,
 }) => buildRootWidget(
   flavor: Flavor.dev,
   crashReporter: RecordingCrashReporter(),
   startupSteps: steps,
   overrides: [
+    ...fakeAdsOverrides(consent: consent),
     tvDiscoveryFactoryProvider.overrideWithValue(FakeTvDiscoveries().create),
     // The database's own stream leaves a timer behind when it is disposed.
     savedDevicesProvider.overrideWith(
@@ -46,6 +50,18 @@ Future<Widget> _root({
 
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+
+  testWidgets('the_silent_consent_update_starts_with_the_app', (t) async {
+    _prefs();
+    final consent = FakeConsentService();
+    await t.pumpWidget(await _root(consent: consent));
+    await t.pumpAndSettle();
+
+    // Onboarding is on screen: the update ran, the form did not.
+    expect(find.text('Get started'), findsOneWidget);
+    expect(consent.requestUpdateCalls, 1);
+    expect(consent.showFormCalls, 0);
+  });
 
   testWidgets('app_opens_onboarding_on_first_run_without_any_service_config', (
     t,

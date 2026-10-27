@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -35,6 +37,18 @@ if (firebaseFlavors.isNotEmpty()) {
     }
 }
 
+// AdMob app ids (Ruling P6-R9). The dev flavor always uses Google's test id. The prod
+// flavor reads its own from git-ignored android/secrets.properties (admobAppIdProd) and
+// falls back to the test id, so a clean clone still builds.
+val admobTestAppId = "ca-app-pub-3940256099942544~3347511713"
+val secrets = Properties().apply {
+    val file = rootProject.file("secrets.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+if (secrets.getProperty("admobAppIdProd").isNullOrBlank()) {
+    logger.warn("prod uses Google's test AdMob app id; set admobAppIdProd in android/secrets.properties")
+}
+
 android {
     namespace = "com.digitallinked.atvremote"
     compileSdk = flutter.compileSdkVersion
@@ -61,10 +75,12 @@ android {
             dimension = "env"
             applicationIdSuffix = ".dev"
             manifestPlaceholders["appName"] = "Remotely Dev"
+            manifestPlaceholders["admobAppId"] = admobTestAppId
         }
         create("prod") {
             dimension = "env"
             manifestPlaceholders["appName"] = "Remotely for Android TV"
+            manifestPlaceholders["admobAppId"] = secrets.getProperty("admobAppIdProd") ?: admobTestAppId
         }
     }
 
