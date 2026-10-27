@@ -4,6 +4,8 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
 
 /// About this app: name, version, open-source licences and credits.
@@ -18,7 +20,8 @@ class AboutPage extends ConsumerWidget {
     final secondary = theme.textTheme.bodyMedium?.copyWith(
       color: context.appColors.textSecondary,
     );
-    final name = ref.watch(flavorProvider).displayName;
+    final flavor = ref.watch(flavorProvider);
+    final name = flavor.displayName;
     final info = ref.watch(appInfoProvider).value;
     final failed = ref.watch(appInfoProvider).hasError;
     final versionText = info != null
@@ -59,6 +62,12 @@ class AboutPage extends ConsumerWidget {
               applicationVersion: info?.version,
             ),
           ),
+          if (flavor == Flavor.dev)
+            SettingsNavTile(
+              icon: Icons.bug_report_outlined,
+              title: l10n.aboutTestCrash,
+              onTap: () => _sendTestCrash(context, ref),
+            ),
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(
               AppSpacing.l,
@@ -79,4 +88,20 @@ class AboutPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Reports a non-fatal test error, so a dev build can check that Crashlytics
+/// receives reports. Only the dev flavor offers it.
+Future<void> _sendTestCrash(BuildContext context, WidgetRef ref) async {
+  final l10n = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  await safeRecordError(
+    ref.read(crashReporterProvider),
+    StateError('Test crash report from a dev build'),
+    StackTrace.current,
+    reason: 'test crash',
+  );
+  messenger
+    ..clearSnackBars()
+    ..showSnackBar(SnackBar(content: Text(l10n.aboutTestCrashSent)));
 }

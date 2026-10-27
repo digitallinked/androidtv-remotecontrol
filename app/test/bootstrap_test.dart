@@ -11,12 +11,16 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/bootstrap.dart';
 import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
 
+import 'helpers/in_memory_device_repository.dart';
 import 'helpers/recording_crash_reporter.dart';
+import 'helpers/recording_crashlytics_sink.dart';
 
 void main() {
   testWidgets('failing_step_is_reported_and_later_steps_run', (tester) async {
@@ -363,6 +367,123 @@ void main() {
       expect(find.text('Get started'), findsOneWidget);
       expect(builds, 1);
       expect(opens, 1);
+    });
+  });
+
+  group('Crashlytics reporter', () {
+    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+    });
+
+    Future<Widget> root(
+      CrashReporter reporter,
+      RecordingCrashlyticsSink sink,
+      FirebaseStatus status,
+    ) => buildRootWidget(
+      flavor: Flavor.dev,
+      crashReporter: reporter,
+      serviceConfig: const ServiceConfig(firebaseEnabled: true),
+      initFirebase: (_) async => status,
+      // A region where sharing is on, so a report would be sent.
+      openSettings: () async {
+        final store = await SettingsStore.open();
+        await store.setConsentRegion(ConsentRegion.notRequired);
+        return store;
+      },
+      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      overrides: [
+        crashlyticsSinkProvider.overrideWithValue(sink),
+        crashDebugBuildProvider.overrideWithValue(false),
+        deviceRepositoryProvider.overrideWithValue(InMemoryDeviceRepository()),
+      ],
+    );
+
+    testWidgets('firebase_ready_installs_the_scrubbing_reporter', (
+      tester,
+    ) async {
+      final logging = RecordingCrashReporter();
+      final reporter = DelegatingCrashReporter(logging);
+      final sink = RecordingCrashlyticsSink();
+
+      await tester.pumpWidget(await root(reporter, sink, FirebaseStatus.ready));
+      await tester.pumpAndSettle();
+
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+      await reporter.recordError(
+        StateError('lost 192.168.0.20'),
+        null,
+        fatal: true,
+      );
+      // The sink sees scrubbed text; the log-only reporter is still wired.
+      expect(
+        sink.errors.single.error.toString(),
+        'StateError: Bad state: lost <ip>',
+      );
+      expect(sink.errors.single.fatal, isTrue);
+      expect(sink.collectionHistory, [true]);
+    });
+
+    for (final status in [
+      FirebaseStatus.unavailable,
+      FirebaseStatus.notConfigured,
+    ]) {
+      testWidgets('firebase_${status.name}_keeps_logging_only', (
+        tester,
+      ) async {
+        final logging = RecordingCrashReporter();
+        final reporter = DelegatingCrashReporter(logging);
+        final sink = RecordingCrashlyticsSink();
+
+        await tester.pumpWidget(await root(reporter, sink, status));
+        await tester.pumpAndSettle();
+
+        expect(reporter.delegate, same(logging));
+        await reporter.recordError('x', null);
+        expect(logging.errors, hasLength(1));
+        expect(sink.untouched, isTrue);
+      });
+    }
+
+    testWidgets('a_plain_reporter_is_left_alone_even_when_firebase_is_ready', (
+      tester,
+    ) async {
+      final plain = RecordingCrashReporter();
+      final sink = RecordingCrashlyticsSink();
+
+      await tester.pumpWidget(await root(plain, sink, FirebaseStatus.ready));
+      await tester.pumpAndSettle();
+
+      expect(sink.untouched, isTrue);
+    });
+
+    testWidgets('a_reporter_that_cannot_be_built_does_not_stop_startup', (
+      tester,
+    ) async {
+      final logging = RecordingCrashReporter();
+      final reporter = DelegatingCrashReporter(logging);
+
+      final app = await buildRootWidget(
+        flavor: Flavor.dev,
+        crashReporter: reporter,
+        initFirebase: (_) async => FirebaseStatus.ready,
+        openDatabase: () => AppDatabase(NativeDatabase.memory()),
+        overrides: [
+          crashlyticsSinkProvider.overrideWith(
+            (ref) => throw StateError('no crashlytics'),
+          ),
+          deviceRepositoryProvider.overrideWithValue(
+            InMemoryDeviceRepository(),
+          ),
+        ],
+      );
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(reporter.delegate, same(logging));
+      expect(logging.errors.single.reason, 'crash reporter setup');
     });
   });
 

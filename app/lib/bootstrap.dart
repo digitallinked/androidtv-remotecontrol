@@ -10,6 +10,7 @@ import 'package:tv_remote/app/licenses.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
@@ -107,7 +108,33 @@ Future<Widget> buildRootWidget({
     container.dispose();
     rethrow;
   }
+  if (firebaseResult == FirebaseStatus.ready &&
+      crashReporter is DelegatingCrashReporter) {
+    _installCrashlytics(container, crashReporter);
+  }
   return _RootHost(container: container);
+}
+
+/// Points [reporter] at the log and the scrubbing Crashlytics reporter. A
+/// failure leaves it logging only; the app still starts.
+void _installCrashlytics(
+  ProviderContainer container,
+  DelegatingCrashReporter reporter,
+) {
+  try {
+    // Riverpod pauses what nothing listens to, and the collection's own
+    // listeners must keep following the privacy choice. The container ends
+    // this subscription when it is disposed.
+    container.listen(crashCollectionProvider, (_, _) {});
+    reporter.delegate = CompositeCrashReporter([
+      const LoggingCrashReporter(),
+      container.read(crashCollectionProvider.notifier).reporter,
+    ]);
+  } on Object catch (error, stack) {
+    unawaited(
+      safeRecordError(reporter, error, stack, reason: 'crash reporter setup'),
+    );
+  }
 }
 
 /// Provides [container] to the [App] and disposes it with the widget tree.
