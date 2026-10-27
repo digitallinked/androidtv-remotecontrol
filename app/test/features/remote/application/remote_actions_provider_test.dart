@@ -172,7 +172,7 @@ void main() {
     ]);
   });
 
-  test('the_default_listener_ignores_events', () {
+  test('the_default_listener_ignores_text_and_needs_no_session', () {
     final c = ProviderContainer.test(
       overrides: [settingsStoreProvider.overrideWithValue(store)],
     );

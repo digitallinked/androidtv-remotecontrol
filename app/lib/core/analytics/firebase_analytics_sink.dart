@@ -35,15 +35,17 @@ class FirebaseAnalyticsSink implements AnalyticsSink {
   Future<void> setCollectionEnabled(bool enabled) async {
     try {
       final analytics = FirebaseAnalytics.instance;
-      await analytics.setAnalyticsCollectionEnabled(enabled);
       // Consent mode: only analytics storage follows the user's choice;
-      // nothing is ever granted for ads.
+      // nothing is ever granted for ads. Storage is granted before collection
+      // starts, so buffered events that follow are not sent while it is still
+      // denied; on the way off, storage is denied first.
       await analytics.setConsent(
         analyticsStorageConsentGranted: enabled,
         adStorageConsentGranted: false,
         adUserDataConsentGranted: false,
         adPersonalizationSignalsConsentGranted: false,
       );
+      await analytics.setAnalyticsCollectionEnabled(enabled);
     } on Object {
       // Collection stays off natively until it can be turned on.
     }

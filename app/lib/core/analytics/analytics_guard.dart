@@ -1,5 +1,6 @@
 import 'package:atv_remote/atv_remote.dart' show RemoteCloseReason;
 import 'package:tv_remote/core/analytics/analytics_events.dart';
+import 'package:tv_remote/core/analytics/key_names.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
 import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 
@@ -56,7 +57,7 @@ final Map<String, Map<String, _Param>> _catalogue = {
       'unknown',
     }),
   },
-  'key_press': const {'key': _Param.token()},
+  'key_press': const {'key': _Param.oneOf(analyticsKeyNames)},
   'app_launch': const {'package': _Param.package()},
   'layout_change': const {
     'layout': _Param.oneOf({

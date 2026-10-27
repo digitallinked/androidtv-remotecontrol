@@ -76,6 +76,11 @@ void main() {
       analyticsViolations('layout_change', {'layout': 'Living_Room'}),
       isNotEmpty,
     );
+    // A plain token that is not one of the key names.
+    expect(
+      analyticsViolations('key_press', {'key': 'Living_Room'}),
+      isNotEmpty,
+    );
     // A required parameter that is missing.
     expect(analyticsViolations('pair_fail', {}), isNotEmpty);
     // The wrong type, and a count below 1.

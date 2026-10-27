@@ -4,6 +4,8 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/analytics/analytics_guard.dart'
+    show AnalyticsPolicyError;
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
@@ -284,6 +286,12 @@ class RemoteActions implements RemoteInput {
   void _report(RemoteActionEvent event) {
     try {
       _onSent?.call(event);
+      // A policy error is an Error on purpose (a programming mistake).
+      // ignore: avoid_catching_errors
+    } on AnalyticsPolicyError {
+      // A bad analytics event is a programming error: debug builds (and so
+      // the tests) must see it. A release build already dropped the event.
+      if (kDebugMode) rethrow;
     } on Object catch (error) {
       // Analytics and counters are best effort. The event's fields and the
       // error's message are left out: they could hold what the user typed.

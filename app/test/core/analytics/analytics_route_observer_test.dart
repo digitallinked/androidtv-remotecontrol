@@ -106,5 +106,10 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
     expect(sink.screens, ['settings']);
+    // Closing it shows the same screen again, which is not a new view.
+    await t.tapAt(const Offset(10, 10));
+    await t.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(sink.screens, ['settings']);
   });
 }

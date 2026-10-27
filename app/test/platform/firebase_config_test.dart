@@ -76,6 +76,25 @@ void main() {
     }
   });
 
+  test('firebase_does_not_report_screens_by_itself', () {
+    // Screen views are logged by the app, by route name (Ruling P6-R6).
+    final manifest = read('android/app/src/main/AndroidManifest.xml');
+    expect(
+      RegExp(
+        'android:name="google_analytics_automatic_screen_reporting_enabled"'
+        r'\s+android:value="false"',
+      ).hasMatch(manifest),
+      isTrue,
+    );
+    final plist = read('ios/Runner/Info.plist');
+    expect(
+      RegExp(
+        r'<key>FirebaseAutomaticScreenReportingEnabled</key>\s*<false/>',
+      ).hasMatch(plist),
+      isTrue,
+    );
+  });
+
   test('ios_deployment_target_is_15', () {
     final pbx = read('ios/Runner.xcodeproj/project.pbxproj');
     expect(pbx, isNot(contains('IPHONEOS_DEPLOYMENT_TARGET = 13.0;')));

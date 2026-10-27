@@ -33,7 +33,9 @@ void main() {
     expect(sink.eventNames, ['onboarding_complete']);
     expect(sink.events.single.params, isEmpty);
 
-    sink.events.clear();
+    sink
+      ..events.clear()
+      ..calls.clear();
     await pump(t);
     await t.tap(find.text('Try demo'));
     await t.pumpAndSettle();

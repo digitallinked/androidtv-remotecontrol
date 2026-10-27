@@ -2,6 +2,7 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
@@ -424,6 +425,24 @@ void main() {
     // Neither the key code, nor the error's message.
     expect(logged.single, isNot(contains('24')));
     expect(logged.single, isNot(contains('secret')));
+  });
+
+  test('a_policy_error_from_the_listener_is_not_swallowed_in_debug', () {
+    final x = RemoteActions(
+      session: session,
+      smoothPress: true,
+      hapticsEnabled: false,
+      haptics: h,
+      onRefused: () => refused++,
+      onSent: (event) => throw AnalyticsPolicyError('key_press: bad'),
+    );
+    // A bad analytics event fails the test that triggered it; the key was
+    // sent before the listener ran.
+    expect(
+      () => x.tap(KeyCodes.volumeUp),
+      throwsA(isA<AnalyticsPolicyError>()),
+    );
+    expect(session.sentKeys, [KeyCodes.volumeUp]);
   });
 
   test('unsupported_key_code_throws', () {

@@ -149,32 +149,62 @@ void main() {
     expect(sink.events[2].params, isEmpty);
   });
 
-  test(
-    'connect_lost_without_a_reason_is_unknown_and_a_close_is_silent',
-    () async {
-      await start();
-      session.emit(_connected);
-      await pumpEventQueue();
-      session.emit(const TvConnectionState(status: ConnectionStatus.offline));
-      await pumpEventQueue();
-      session
-        ..emit(_connected)
-        ..emit(
-          const TvConnectionState(
-            status: ConnectionStatus.disconnected,
-            lastError: RemoteCloseReason.closedByClient,
-          ),
-        );
-      await pumpEventQueue();
+  test('connect_lost_without_a_reason_is_unknown', () async {
+    await start();
+    session.emit(_connected);
+    await pumpEventQueue();
+    session.emit(const TvConnectionState(status: ConnectionStatus.offline));
+    await pumpEventQueue();
 
-      expect(sink.eventNames, [
-        'connect_success',
-        'connect_lost',
-        'connect_success',
-      ]);
-      expect(sink.events[1].params, {'reason': 'unknown'});
-    },
-  );
+    expect(sink.eventNames, ['connect_success', 'connect_lost']);
+    expect(sink.events[1].params, {'reason': 'unknown'});
+  });
+
+  test('losing_the_pairing_is_a_lost_connection', () async {
+    await start();
+    session.emit(_connected);
+    await pumpEventQueue();
+    session.emit(
+      const TvConnectionState(
+        status: ConnectionStatus.needsPairing,
+        lastError: RemoteCloseReason.serverKeyChanged,
+      ),
+    );
+    await pumpEventQueue();
+
+    expect(sink.events.last.params, {'reason': 'server_key_changed'});
+  });
+
+  test('a_close_by_the_app_is_silent', () async {
+    await start();
+    session.emit(_connected);
+    await pumpEventQueue();
+    // What the real connection emits for disconnect(), a close and dispose:
+    // `disconnected` with no reason (it never reports `closedByClient`).
+    session.emit(
+      const TvConnectionState(status: ConnectionStatus.disconnected),
+    );
+    await pumpEventQueue();
+
+    expect(sink.eventNames, ['connect_success']);
+  });
+
+  test('going_to_the_background_and_back_logs_no_lost_connection', () async {
+    await start();
+    // The supervisor disconnects after the background grace, then connects.
+    session.emit(_connected);
+    await pumpEventQueue();
+    session.emit(
+      const TvConnectionState(status: ConnectionStatus.disconnected),
+    );
+    await pumpEventQueue();
+    session.emit(const TvConnectionState(status: ConnectionStatus.connecting));
+    await pumpEventQueue();
+    session.emit(_connected);
+    await pumpEventQueue();
+
+    expect(sink.eventNames, ['connect_success', 'connect_success']);
+  });
 
   test('switching_tvs_is_not_a_lost_connection', () async {
     final c = await start();

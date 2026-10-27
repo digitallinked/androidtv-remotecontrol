@@ -69,12 +69,16 @@ AnalyticsHooks analyticsHooks(Ref ref) {
       final was = last;
       last = state.status;
       if (isDemo()) return;
-      final connected = state.status == ConnectionStatus.connected;
-      if (connected && was != ConnectionStatus.connected) {
-        analytics.log(const AnalyticsEvent.connectSuccess());
-      } else if (!connected &&
-          was == ConnectionStatus.connected &&
-          state.lastError != RemoteCloseReason.closedByClient) {
+      final status = state.status;
+      if (status == ConnectionStatus.connected) {
+        if (was != ConnectionStatus.connected) {
+          analytics.log(const AnalyticsEvent.connectSuccess());
+        }
+      } else if (was == ConnectionStatus.connected &&
+          status != ConnectionStatus.disconnected) {
+        // `disconnected` is always the app closing the connection itself (the
+        // background grace, a reconnect, a TV switch): not a loss. A real
+        // loss goes through reconnecting, offline or needsPairing.
         analytics.log(AnalyticsEvent.connectLost(state.lastError));
       }
     })
