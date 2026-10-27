@@ -282,6 +282,101 @@ void main() {
     });
   });
 
+  group('loadThroughGate', () {
+    test('an_interstitial_that_loads_later_is_returned', () {
+      timed((async) {
+        // Like the SDK: start returns first, the ad comes afterwards.
+        void Function(String)? onLoaded;
+        final discarded = <String>[];
+        String? wrapped;
+        var done = false;
+        unawaited(
+          loadThroughGate<String, String>(
+            start: (loaded, failed) async => onLoaded = loaded,
+            wrap: (ad) => wrapped = 'wraps $ad',
+            discard: discarded.add,
+          ).then((v) {
+            wrapped = v;
+            done = true;
+          }),
+        );
+        async.flushMicrotasks();
+        expect(done, isFalse, reason: 'still waiting for the SDK');
+
+        onLoaded!('ad 1');
+        async.flushMicrotasks();
+
+        expect(done, isTrue);
+        expect(wrapped, 'wraps ad 1');
+        expect(discarded, isEmpty);
+      });
+    });
+
+    test('an_ad_that_arrives_after_the_timeout_is_discarded', () {
+      timed((async) {
+        void Function(String)? onLoaded;
+        final discarded = <String>[];
+        String? result = 'unset';
+        unawaited(
+          loadThroughGate<String, String>(
+            start: (loaded, failed) async => onLoaded = loaded,
+            wrap: (ad) => ad,
+            discard: discarded.add,
+          ).then((v) => result = v),
+        );
+        async.elapse(adLoadTimeout);
+        expect(result, isNull);
+
+        onLoaded!('late');
+        async.flushMicrotasks();
+        expect(discarded, ['late']);
+      });
+    });
+
+    test('an_ad_the_wrapper_fails_on_is_discarded', () {
+      timed((async) {
+        final discarded = <String>[];
+        String? result = 'unset';
+        unawaited(
+          loadThroughGate<String, String>(
+            start: (loaded, failed) async => loaded('ad'),
+            wrap: (ad) => throw StateError('wrap'),
+            discard: discarded.add,
+          ).then((v) => result = v),
+        );
+        async.flushMicrotasks();
+        expect(result, isNull);
+        expect(discarded, ['ad']);
+      });
+    });
+
+    test('a_failure_or_a_throwing_start_answers_null', () {
+      timed((async) {
+        String? result = 'unset';
+        unawaited(
+          loadThroughGate<String, String>(
+            start: (loaded, failed) async => failed(),
+            wrap: (ad) => ad,
+            discard: (_) {},
+          ).then((v) => result = v),
+        );
+        async.flushMicrotasks();
+        expect(result, isNull);
+
+        result = 'unset';
+        unawaited(
+          loadThroughGate<String, String>(
+            start: (loaded, failed) async => throw StateError('x'),
+            wrap: (ad) => ad,
+            discard: (_) {},
+          ).then((v) => result = v),
+        );
+        async.flushMicrotasks();
+        expect(result, isNull);
+      });
+    });
+  });
+
   group('AdLoadGate', () {
     test('the_first_answer_wins', () {
       timed((async) {

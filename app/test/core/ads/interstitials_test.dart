@@ -55,6 +55,16 @@ void settle(FakeAsync async) {
     ..elapse(Duration.zero);
 }
 
+/// A store that fails only when the last-shown time is cleared again.
+class _NoRestoreStore extends SettingsStore {
+  _NoRestoreStore(super.prefs);
+
+  @override
+  Future<void> setInterstitialLastShownAt(DateTime? value) => value == null
+      ? Future.error(StateError('disk full'))
+      : super.setInterstitialLastShownAt(value);
+}
+
 /// A store whose write of the last-shown time fails.
 class _FailingStore extends SettingsStore {
   _FailingStore(super.prefs);
@@ -418,6 +428,23 @@ void main() {
       expect(r.sdk.interstitialLoads, 2);
       expect(show(async, r.interstitials), isTrue);
       expect(r.sdk.shows, 1);
+    });
+  });
+
+  test('if_restoring_the_time_fails_the_next_ad_still_loads', () async {
+    final flaky = _NoRestoreStore(
+      await SharedPreferencesWithCache.create(
+        cacheOptions: const SharedPreferencesWithCacheOptions(
+          allowList: SettingsStore.keys,
+        ),
+      ),
+    );
+    await flaky.setLaunchCount(2);
+    timed((async) {
+      final r = rig(async, settings: flaky);
+      r.sdk.failShows = true;
+      expect(show(async, r.interstitials), isFalse);
+      expect(r.sdk.interstitialLoads, 2, reason: 'the next ad is preloaded');
     });
   });
 

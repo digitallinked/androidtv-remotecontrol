@@ -97,11 +97,12 @@ void main() {
   testWidgets('the_app_keeps_interstitial_pacing_listening_to_the_connection', (
     t,
   ) async {
-    // The pacing only knows about trouble if something listens to it from
-    // launch on: Riverpod pauses a provider nothing listens to, and the
-    // listeners it holds with it. `App` is that listener, so this pumps the
-    // real app and never listens by hand. The connection drops, and straight
-    // afterwards no ad may show.
+    // The pacing only knows about trouble if it was started at launch: it
+    // must be listening to the connection before the connection drops. `App`
+    // starts it, so this pumps the real app and never starts or listens to it
+    // by hand. (It pins that start, not how `App` holds the provider: `watch`
+    // versus `read` makes no difference to this behaviour.) The connection
+    // drops, and straight afterwards no ad may show.
     final r = await run(t, trouble: true);
     expect(r.shown, isFalse);
     expect(r.sdk.shows, 0);

@@ -200,7 +200,18 @@ class Interstitials extends _$Interstitials {
       final shown = await ad.show();
       ad.dispose();
       // An ad that could not be shown doesn't use up the interval.
-      if (!shown) await store.setInterstitialLastShownAt(last);
+      if (!shown) {
+        try {
+          await store.setInterstitialLastShownAt(last);
+        } on Object catch (error) {
+          // Not worth losing the next ad over.
+          developer.log(
+            'could not restore the time',
+            name: 'ads',
+            error: error,
+          );
+        }
+      }
       if (ref.mounted) unawaited(_preload());
       return shown;
     } on Object catch (error) {

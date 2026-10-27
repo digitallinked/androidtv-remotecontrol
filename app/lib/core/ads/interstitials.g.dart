@@ -14,8 +14,9 @@ part of 'interstitials.dart';
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
 ///
-/// The app keeps this provider listened to (`App` watches it): Riverpod
-/// pauses a provider nothing listens to, and the listeners below with it.
+/// The app starts this at launch and keeps it listened to (`App` watches
+/// it), so it hears about trouble from the start: Riverpod may pause the
+/// listeners inside a provider that nothing listens to.
 
 @ProviderFor(Interstitials)
 final interstitialsProvider = InterstitialsProvider._();
@@ -26,8 +27,9 @@ final interstitialsProvider = InterstitialsProvider._();
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
 ///
-/// The app keeps this provider listened to (`App` watches it): Riverpod
-/// pauses a provider nothing listens to, and the listeners below with it.
+/// The app starts this at launch and keeps it listened to (`App` watches
+/// it), so it hears about trouble from the start: Riverpod may pause the
+/// listeners inside a provider that nothing listens to.
 final class InterstitialsProvider
     extends $NotifierProvider<Interstitials, void> {
   /// Interstitial pacing (Ruling P6-R9). They are off unless Remote Config
@@ -36,8 +38,9 @@ final class InterstitialsProvider
   /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
   /// an ad that isn't ready is simply not shown. Nothing here throws.
   ///
-  /// The app keeps this provider listened to (`App` watches it): Riverpod
-  /// pauses a provider nothing listens to, and the listeners below with it.
+  /// The app starts this at launch and keeps it listened to (`App` watches
+  /// it), so it hears about trouble from the start: Riverpod may pause the
+  /// listeners inside a provider that nothing listens to.
   InterstitialsProvider._()
     : super(
         from: null,
@@ -65,7 +68,7 @@ final class InterstitialsProvider
   }
 }
 
-String _$interstitialsHash() => r'3995153ccdbcb1bb63086f48b317a7eb58f34fd7';
+String _$interstitialsHash() => r'da4e446b25dea418cf14d7a1e7ef187070d82032';
 
 /// Interstitial pacing (Ruling P6-R9). They are off unless Remote Config
 /// turns them on.
@@ -73,8 +76,9 @@ String _$interstitialsHash() => r'3995153ccdbcb1bb63086f48b317a7eb58f34fd7';
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
 ///
-/// The app keeps this provider listened to (`App` watches it): Riverpod
-/// pauses a provider nothing listens to, and the listeners below with it.
+/// The app starts this at launch and keeps it listened to (`App` watches
+/// it), so it hears about trouble from the start: Riverpod may pause the
+/// listeners inside a provider that nothing listens to.
 
 abstract class _$Interstitials extends $Notifier<void> {
   void build();

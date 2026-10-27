@@ -48,6 +48,54 @@ class AdLoadGate {
   );
 }
 
+/// Starts a load that reports through [start]'s callbacks, waits for the
+/// first answer and returns the loaded ad wrapped by [wrap], or `null`.
+///
+/// The SDK's `load` returns before it answers: the ad arrives later, through
+/// the callback. So the ad is read only once the gate has said it loaded. An
+/// ad that arrives after the timeout, or that [wrap] fails on, is handed to
+/// [discard], so nothing leaks.
+@visibleForTesting
+Future<R?> loadThroughGate<T extends Object, R extends Object>({
+  required Future<void> Function(
+    void Function(T ad) onLoaded,
+    void Function() onFailed,
+  )
+  start,
+  required R Function(T ad) wrap,
+  required void Function(T ad) discard,
+  Duration timeout = adLoadTimeout,
+}) async {
+  final gate = AdLoadGate();
+  T? loaded;
+  try {
+    await start((ad) {
+      if (gate.succeed()) {
+        loaded = ad;
+      } else {
+        // It answered after the timeout: nobody is waiting for it.
+        discard(ad);
+      }
+    }, gate.fail);
+    if (await gate.result(timeout)) {
+      // Read now, not before the wait: `start` returns before the ad does.
+      final ad = loaded;
+      if (ad != null) {
+        try {
+          return wrap(ad);
+        } on Object {
+          discard(ad);
+          rethrow;
+        }
+      }
+    }
+  } on Object catch (error) {
+    _log('ad load failed', error);
+    gate.fail();
+  }
+  return null;
+}
+
 /// Looks up the large anchored adaptive banner size for a width.
 typedef AdSizeLookup =
     Future<AnchoredAdaptiveBannerAdSize?> Function(
@@ -186,37 +234,21 @@ class GoogleMobileAdsSdk implements AdsSdk {
   }
 
   @override
-  Future<LoadedInterstitial?> loadInterstitial(String unitId) async {
-    final gate = AdLoadGate();
-    InterstitialAd? loaded;
-    try {
-      await platform.startInterstitial(
-        unitId,
-        InterstitialAdLoadCallback(
-          onAdLoaded: (ad) {
-            if (gate.succeed()) {
-              loaded = ad;
-            } else {
-              // It answered after the timeout: nobody is waiting for it.
-              _release(platform.releaseAd, ad, 'late interstitial');
-            }
-          },
-          onAdFailedToLoad: (error) {
-            _log('interstitial failed to load', error.message);
-            gate.fail();
-          },
+  Future<LoadedInterstitial?> loadInterstitial(String unitId) =>
+      loadThroughGate<InterstitialAd, LoadedInterstitial>(
+        start: (onLoaded, onFailed) => platform.startInterstitial(
+          unitId,
+          InterstitialAdLoadCallback(
+            onAdLoaded: onLoaded,
+            onAdFailedToLoad: (error) {
+              _log('interstitial failed to load', error.message);
+              onFailed();
+            },
+          ),
         ),
+        wrap: (ad) => _Interstitial(ad, platform.releaseAd),
+        discard: (ad) => _release(platform.releaseAd, ad, 'interstitial'),
       );
-      final ad = loaded;
-      if (await gate.result(adLoadTimeout) && ad != null) {
-        return _Interstitial(ad, platform.releaseAd);
-      }
-    } on Object catch (error) {
-      _log('interstitial load failed', error);
-      gate.fail();
-    }
-    return null;
-  }
 }
 
 void _log(String what, Object? error) =>
