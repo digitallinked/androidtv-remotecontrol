@@ -1,3 +1,4 @@
+import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,18 @@ class _ThrowingDevices implements DeviceRepository {
     required String host,
     required DateTime at,
   }) async {}
+
+  @override
+  Future<void> setLastHost(String serviceName, String host) async {}
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) async => false;
+
+  @override
+  Future<void> setNickname(String serviceName, String? nickname) async {}
 
   @override
   Future<void> setWolMac(String serviceName, String? mac) async {}

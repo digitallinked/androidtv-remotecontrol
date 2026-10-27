@@ -406,4 +406,63 @@ void main() {
     // Nothing was ever delivered, so the whole field goes out.
     expect(rec.calls, ['text:abcd']);
   });
+
+  testWidgets('append_mode_partial_failure_never_deletes_twice', (t) async {
+    await openSheet(t, mode: ImeTextMode.appendOnly);
+    await type(t, 'abcd');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:abcd']);
+
+    // Two backspaces are due; the connection gives out after the first.
+    rec.budget = 1;
+    await type(t, 'ab');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:abcd', 'tap:67']);
+    expect(rec.refused, 1);
+
+    // The TV holds 'abc' now. Any further edit plans from there: one more
+    // backspace, not the two it would take from 'abcd'.
+    rec.budget = null;
+    await type(t, 'abx');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:abcd', 'tap:67', 'tap:67', 'text:x']);
+    expect(rec.calls.where((c) => c == 'tap:67'), hasLength(2));
+  });
+
+  testWidgets('append_mode_partial_send_is_not_resent', (t) async {
+    await openSheet(t, mode: ImeTextMode.appendOnly);
+    await type(t, 'abcd');
+    await t.pump(const Duration(milliseconds: 200));
+
+    // Both backspaces go out, then the new suffix is refused.
+    rec.budget = 2;
+    await type(t, 'abx');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:abcd', 'tap:67', 'tap:67']);
+    expect(rec.refused, 1);
+
+    // The deletes stay confirmed: only the missing suffix goes out.
+    rec.budget = null;
+    await type(t, 'abxy');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:abcd', 'tap:67', 'tap:67', 'text:xy']);
+  });
+
+  testWidgets('append_mode_partial_delete_removes_whole_graphemes', (t) async {
+    await openSheet(t, mode: ImeTextMode.appendOnly);
+    await type(t, 'a👨‍👩‍👧b');
+    await t.pump(const Duration(milliseconds: 200));
+
+    // Only the first backspace (the 'b') is delivered.
+    rec.budget = 1;
+    await type(t, 'a');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:a👨‍👩‍👧b', 'tap:67']);
+
+    // The family emoji is one cluster, so it takes one more backspace.
+    rec.budget = null;
+    await type(t, 'ac');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(rec.calls, ['text:a👨‍👩‍👧b', 'tap:67', 'tap:67', 'text:c']);
+  });
 }

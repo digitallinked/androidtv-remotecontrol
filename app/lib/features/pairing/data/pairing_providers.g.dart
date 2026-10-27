@@ -65,8 +65,10 @@ String _$pairingClientFactoryHash() =>
 /// restored, or the link was opened by hand).
 ///
 /// It tries the saved TV, then an IP address typed in earlier
-/// (`manual:<ip>`), then a look-up on the network. It is `null` when the TV
-/// can't be found.
+/// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
+/// mDNS name is looked up again first (it may have a new address) and falls
+/// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
+/// never looked up. It is `null` when the TV can't be found.
 
 @ProviderFor(pairingTarget)
 final pairingTargetProvider = PairingTargetFamily._();
@@ -75,8 +77,10 @@ final pairingTargetProvider = PairingTargetFamily._();
 /// restored, or the link was opened by hand).
 ///
 /// It tries the saved TV, then an IP address typed in earlier
-/// (`manual:<ip>`), then a look-up on the network. It is `null` when the TV
-/// can't be found.
+/// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
+/// mDNS name is looked up again first (it may have a new address) and falls
+/// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
+/// never looked up. It is `null` when the TV can't be found.
 
 final class PairingTargetProvider
     extends
@@ -90,8 +94,10 @@ final class PairingTargetProvider
   /// restored, or the link was opened by hand).
   ///
   /// It tries the saved TV, then an IP address typed in earlier
-  /// (`manual:<ip>`), then a look-up on the network. It is `null` when the TV
-  /// can't be found.
+  /// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
+  /// mDNS name is looked up again first (it may have a new address) and falls
+  /// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
+  /// never looked up. It is `null` when the TV can't be found.
   PairingTargetProvider._({
     required PairingTargetFamily super.from,
     required String super.argument,
@@ -136,14 +142,16 @@ final class PairingTargetProvider
   }
 }
 
-String _$pairingTargetHash() => r'7fb257bd6af49535663a23e0e84574c1ab1ac108';
+String _$pairingTargetHash() => r'83d47aad3495812796cbce78a786cd30a66b6ce9';
 
 /// The TV to pair when the route carries only its service name (the app was
 /// restored, or the link was opened by hand).
 ///
 /// It tries the saved TV, then an IP address typed in earlier
-/// (`manual:<ip>`), then a look-up on the network. It is `null` when the TV
-/// can't be found.
+/// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
+/// mDNS name is looked up again first (it may have a new address) and falls
+/// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
+/// never looked up. It is `null` when the TV can't be found.
 
 final class PairingTargetFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<DiscoveredTv?>, String> {
@@ -160,8 +168,10 @@ final class PairingTargetFamily extends $Family
   /// restored, or the link was opened by hand).
   ///
   /// It tries the saved TV, then an IP address typed in earlier
-  /// (`manual:<ip>`), then a look-up on the network. It is `null` when the TV
-  /// can't be found.
+  /// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
+  /// mDNS name is looked up again first (it may have a new address) and falls
+  /// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
+  /// never looked up. It is `null` when the TV can't be found.
 
   PairingTargetProvider call(String serviceName) =>
       PairingTargetProvider._(argument: serviceName, from: this);

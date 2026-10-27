@@ -9,15 +9,6 @@ import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/key_labels.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 
-const Color _darkLabel = Color(0xFF0F1115);
-
-/// The label colour for a TV colour key filled with [key]: the dark ink or
-/// white, whichever has the higher WCAG contrast with [key].
-Color colourKeyLabelColor(Color key) =>
-    contrastRatio(_darkLabel, key) >= contrastRatio(Colors.white, key)
-    ? _darkLabel
-    : Colors.white;
-
 const double _pillMinWidth = 64;
 const double _rowHeight = AppSizes.keyMin;
 const EdgeInsets _gutter = EdgeInsets.symmetric(horizontal: AppSpacing.l);
@@ -36,6 +27,7 @@ class QuickAccessBar extends StatelessWidget {
     required this.input,
     required this.apps,
     this.currentApp,
+    this.onAllApps,
     super.key,
   });
 
@@ -51,6 +43,11 @@ class QuickAccessBar extends StatelessWidget {
   /// The package of the app open on the TV, if known.
   final String? currentApp;
 
+  /// Called when the All apps tile of [QuickAccessRow.apps] is tapped. The
+  /// tile is pinned after the scrolling list, so it is always in view. `null`
+  /// leaves it out. It opens a screen; it is not a TV command.
+  final VoidCallback? onAllApps;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -60,16 +57,35 @@ class QuickAccessBar extends StatelessWidget {
         label: l10n.quickAccessAppsLabel,
         child: SizedBox(
           height: QuickAppTile.heightOf(context),
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: _gutter,
-            itemCount: apps.length,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
-            itemBuilder: (context, i) => QuickAppTile(
-              app: apps[i],
-              isCurrent: apps[i].package == currentApp,
-              onTap: () => input.launch(apps[i]),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  // With All apps pinned after the list, the list ends where
+                  // the gap before that tile begins.
+                  padding: EdgeInsetsDirectional.only(
+                    start: AppSpacing.l,
+                    end: onAllApps == null ? AppSpacing.l : 0,
+                  ),
+                  itemCount: apps.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppSpacing.s),
+                  itemBuilder: (context, i) => QuickAppTile(
+                    app: apps[i],
+                    isCurrent: apps[i].package == currentApp,
+                    onTap: () => input.launch(apps[i]),
+                  ),
+                ),
+              ),
+              if (onAllApps != null) ...[
+                // Also keeps a tile that is clipped at the list's edge 8 dp
+                // away from the pinned one.
+                const SizedBox(width: AppSpacing.s),
+                _AllAppsTile(onTap: onAllApps!),
+                const SizedBox(width: AppSpacing.l),
+              ],
+            ],
           ),
         ),
       ),
@@ -85,6 +101,70 @@ class QuickAccessBar extends StatelessWidget {
       ),
       QuickAccessRow.none => const SizedBox.shrink(),
     };
+  }
+}
+
+/// The last tile of the apps row: opens the Apps screen. It looks like an app
+/// tile but is not one (an outlined square, no monogram) and sends nothing to
+/// the TV.
+class _AllAppsTile extends StatelessWidget {
+  const _AllAppsTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = AppLocalizations.of(context).quickAccessAllApps;
+    final colors = context.appColors;
+    return Semantics(
+      // Its own node: next to the scrolling list it would otherwise merge
+      // into the row's label.
+      container: true,
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: SizedBox(
+        width: QuickAppTile.width,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: AppSpacing.xs,
+          children: [
+            SizedBox.square(
+              key: const ValueKey('quick_all_apps_square'),
+              dimension: QuickAppTile.squareSize,
+              child: Material(
+                color: colors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.key),
+                  side: BorderSide(color: colors.outline),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Center(
+                    child: Icon(Icons.apps, color: colors.textPrimary),
+                  ),
+                ),
+              ),
+            ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

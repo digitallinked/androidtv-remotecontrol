@@ -4,6 +4,23 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 5 gotchas (apps, devices, settings)
+- Reading `.future` of an autoDispose provider with no listener throws "disposed during loading state". Hold a `container.listen(...)` subscription across the await.
+- A `ref.watch(x.future)` that is awaited only after another await needs `.ignore()`, or its failure surfaces as an unhandled error.
+- Riverpod 3's default retry makes a failing bundled-asset provider hang `.future` in tests — use `retry: noRetry`; mocking the `flutter/assets` channel also hangs, so put the raw string behind its own provider seam.
+- build_runner can skip a file whose committed `.g.dart` was reverted (its cache thinks it's fresh) — `flutter pub run build_runner clean` then build; a riverpod hash is `sha1` of the declaration source, so stale hashes are real drift (debug-only effect).
+- go_router: pushing a nested child path puts only that child over the current page; `go('/remote')` keeps `RemoteScreen`'s State (same page key).
+- `ReorderableListView` adds its own localised Move up/down/start/end actions on each item; nesting another `Semantics(container: true, customSemanticsActions)` duplicates them. Its reorder animation ignores reduce-motion.
+- `Uri(queryParameters:)` encodes spaces as `+`; build `mailto:` queries with `Uri.encodeComponent`.
+- `MaterialApp` cross-fades themes for 200 ms (`themeAnimationDuration`); a single `pump()` still sees the old theme.
+- `SliverGridDelegateWithFixedCrossAxisCount(mainAxisExtent:)` gives a text-scale-aware row height; lazy rows don't build off-screen tiles, so assert order from data, not finders.
+- `rootBundle.loadString` hands strings > 50 KB to an isolate that never completes inside `testWidgets` — keep bundled JSON < 40 KB.
+- A Play web 404 for a package id isn't proof it's wrong (geo-restricted or TV-only listings).
+- Android Auto Backup is on by default and copies the drift DB and prefs to the user's Google Drive.
+- Riverpod 3 retries a provider that throws an `Exception` (drift's `SqliteException` included) for ~38 s, but not an `Error` — an error state can hide behind a spinner; use `retry: noRetry` where the UI must show it.
+- A tile placed next to a scrollable in a `Row` needs its own `Semantics(container: true)`, or its label merges into the row's node.
+- Source: Tasks 5.1–5.10 and the Phase 5 final review.
+
 ### Phase 4 Flutter gotchas (remote experience)
 - `ScaffoldMessenger.hideCurrentSnackBar()` + `showSnackBar()` **queues** — it does not replace. Bursts of refusals built a ~25 s backlog; keep one `ScaffoldFeatureController` and show only when it's null.
 - `RouteObserver<PageRoute>` ignores sheets and dialogs (both routes must be `PageRoute`), and a page pushed while a sheet is on top isn't seen. The platform wake lock is one global flag, not ref-counted.
@@ -62,6 +79,7 @@ All of these are (unverified) until the smoke test records an answer here:
 - Does the TV present the **same key** on 6467 (pairing) and 6466 (control)? TOFU pinning assumes yes.
 - Does `watch` run 5 minutes with no drop (pings answered)?
 - **Phase 4 additions:** does `RemoteImeBatchEdit` with the whole field replace the TV's field (`kImeTextMode = replaceField`; check with CLI `text`)? How does the TV's backspace count (graphemes vs code units) if `appendOnly` is ever used? Does a `startLong` volume key auto-repeat on the TV, and what happens if `endLong` never arrives? Long-press OK behaviour. What `KEYCODE_SEARCH` (84) does on Google TV. Does the 6466 socket survive TV standby? Does Wake-on-LAN wake the MediaTek TV, and how soon does `reconnect()` find it? Which starter apps open via `market://launch?id=`? Does iOS restore system brightness after `resetApplicationScreenBrightness`?
+- **Phase 5 additions:** what `market://launch?id=` does for an app that isn't installed; which packages a MediaTek TV reports as the current app (filtering); whether the TV still lists or trusts a phone after it was removed in the app; whether a TV found by mDNS presents the same key as when it was paired by IP (merge without re-pairing); which starter/catalogue package names open on the TV (incl. `in.startv.hotstar.dplus`, `uk.co.bbc.iplayer`, `deezer.android.tv`, `com.google.android.youtube.tvkids`); the real ids of Astro GO, sooka and Tonton (`adb shell pm list packages` on the TV).
 
 ### `dart test` cannot resolve this workspace; use `flutter test`
 - The root pub workspace contains a Flutter member, so `dart test` fails to find the Flutter SDK. `flutter test` runs pure-Dart tests (including `dart:io` sockets) on the host VM. `dart run bin/...` works, because it reuses the existing package config.

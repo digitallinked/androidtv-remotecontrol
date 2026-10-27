@@ -4,10 +4,57 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #37 — 2026-10-27 — Phase 5 package pins
+- url_launcher 6.3.3 and package_info_plus 10.2.2 (both behind injectable providers: `linkOpenerProvider`, `appInfoProvider`). Android manifest `<queries>` adds SENDTO `mailto` and VIEW `https`; no iOS `LSApplicationQueriesSchemes` needed.
+- `pumpRouterApp` supplies safe defaults for every platform-backed provider (flavor, app info, link opener, screen services, haptics, …); new platform providers get a default there.
+
+### #36 — 2026-10-27 — Keyboard hardening (P5-R13)
+- Append-only mode advances its baseline per confirmed step (no double deletes after a partial failure); grapheme-cluster deletes. `kImeTextMode` stays `replaceField` until the device run answers.
+
+### #35 — 2026-10-27 — Help, About, legal and feedback (P5-R12)
+- Privacy/terms links and the support address in `AppLinks` are **placeholders** (`example.com`, `support@example.com`) until the owner supplies real ones (before any store upload). Links open externally.
+- Feedback mail is hand-encoded (`Uri(queryParameters:)` writes spaces as `+`) with a fixed English footer: app version/build and OS only — never TV names, IPs, MACs or pins.
+- The androidtvremote2 Apache-2.0 licence ships as a byte-identical asset registered once at bootstrap.
+
+### #34 — 2026-10-27 — Settings structure (P5-R11)
+- Hub (sections Remote / App / Help & feedback / About) + Appearance, Remote layout (live preview of `RemoteBody`, no session), Remote behaviour (the Phase 4 toggles), Help, About. `RadioGroup` choice groups are labelled semantics containers. Language names are endonyms in data; the wallpaper-colour switch shows only where supported.
+- **Theme changes apply instantly** (`themeAnimationDuration: Duration.zero`, ruling P5-C4): `AnimatedTheme` ignores reduce-motion and a 200 ms `ColorScheme` lerp adds nothing; theater mode has its own theme and is unaffected.
+- A navigation style chosen in Settings reaches the already-open remote (body re-keyed only when the stored style differs from what the pad shows).
+
+### #33 — 2026-10-27 — Connect-flow carry-overs (P5-R10)
+- Tapping a paired TV in discovery writes the fresh `lastHost`. `toDiscoveredTv()` carries the announced name; the nickname stays separate. "Pair again" re-resolves the host (≤ 4 s, then the saved host).
+- A TV added by IP is merged into its mDNS entry in one transaction; the stored pin moves with the row unchanged and the merge never overwrites an existing row, so a different TV at the old address still triggers "identity changed" (decision #14).
+
+### #32 — 2026-10-27 — Your TVs and device removal (P5-R9)
+- The TV label is read from saved devices everywhere, so a rename shows at once without rebuilding the session.
+- One `MacAddressField` (Edit TV and the Wake-on-LAN sheet); validation `macFieldError` (empty is valid in Edit TV, invalid in the setup sheet; an over-long paste shows an error).
+- Removing a TV deletes its row (pin, MAC, nickname) but **never the client identity**. Removing the TV in use clears the target and rebuilds the session, so the remote moves to the next saved TV or "No TV selected".
+
+### #31 — 2026-10-27 — Apps screen (P5-R7, P5-C5)
+- Launch from Apps then `go('/remote')` (the remote's State survives); "More apps" from the catalogue launch without being added. A refused launch shows the single not-connected notice.
+- The **All apps** tile is the main way into `/apps`; it is pinned at the end of the quick row outside the scroller (always visible) and shown in the layout preview.
+
+### #30 — 2026-10-27 — Usage tracking privacy (P5-R6)
+- The current app reported by the TV is counted on the phone only (package, count, last seen) — never for the demo TV, never logged or sent; system packages are filtered when read. Recommendations exclude system apps and existing shortcuts. Caveat: Android Auto Backup is on by default and copies the DB off the phone — decide `allowBackup` in Phase 8.
+
+### #29 — 2026-10-27 — Shortcuts (P5-R5, P5-R8)
+- Global, one per package, dense positions. Seeded once from the region's default row (`seedIfEmpty` + a stored flag; emptying the list never re-seeds). Region = first phone locale with a country code, read at seeding and on Reset (Reset asks first and replaces the whole list).
+- Edit apps: reorder by the handle (plus the framework's own localised Move actions — ours removed to avoid duplicates); remove with Undo (re-inserted at its original index into the *current* list; a second removal replaces the first Undo); suggestions exclude listed apps; custom shortcuts pick a monogram colour and a generic icon.
+
+### #28 — 2026-10-27 — App catalogue (P5-R4)
+- Our own `apps_v1.json`: 55 apps and 8 region default rows (`*`, MY, SG, ID, IN, US, GB, AU), < 40 KB (bigger strings are decoded on an isolate that never finishes in `testWidgets`). The schema is **closed**: `version` 1; app keys `package`/`name`/`regions`/`launchLink`; unknown keys, duplicate packages and repeated packages in a row are rejected. No icons, icon URLs or brand colours — monograms or generic icons; launch via `market://launch?id=`.
+- `com.wbd.stream` is named "HBO Max" (its Play title). Four packages are kept although Play web returns 404 (geo/TV-only listings; device run). No verified ids yet for Astro GO, sooka, Tonton or mewatch.
+- `search(query, {region})` ranks region-available apps first. `catalogueProvider` and `catalogueSourceProvider` use `retry: noRetry`.
+
+### #27 — 2026-10-27 — Navigation and the banner slot (P5-R1..R3)
+- Routes `/apps` (+ `/apps/manage`), `/devices` (+ `/devices/:serviceName`), `/settings` (+ appearance, remote-layout, remote-behaviour, help, about). Ways in: the remote's Settings button, the All apps tile, "Manage TVs" in the switcher, and the Settings rows. `pageTitleDevices` = "Your TVs".
+- `BannerSlot` (empty until Phase 6) sits only on `/apps` and the `/settings` hub, in `bottomNavigationBar`, with 48 dp scroll clearance and no bottom-anchored controls (decision #6).
+- All Phase 5 strings landed in one task (P5-R1); the fix wave added four load/remove error strings (P5-C6).
+
 ### #26 — 2026-10-27 — Phase 4 package pins
 - wakelock_plus 1.8.2 (uses `FLAG_KEEP_SCREEN_ON`; pulls package_info_plus 10.2.2), screen_brightness 2.1.11 (app-window brightness only). No new Android permissions. iOS needs `pod install` on a Mac.
 
-### #25 — 2026-10-27 — Quick access before the app catalogue
+### #25 — 2026-10-27 — Quick access before the app catalogue (SUPERSEDED by #28/#29: `kStarterApps` and `quickAccessAppsProvider` were replaced by the catalogue and `shortcutsProvider` in Phase 5)
 - Five starter apps (Netflix, YouTube, Prime Video, Disney+, Spotify) shown as monogram letter tiles — no logos, no brand colours — launched with `market://launch?id=<package>` (packages unverified on the owner's TV). Phase 5.1's catalogue replaces `quickAccessAppsProvider`'s body.
 - Quick row variants: apps, colour keys (label ink picked by WCAG contrast), media keys, none. The row owns its 16 dp gutter.
 

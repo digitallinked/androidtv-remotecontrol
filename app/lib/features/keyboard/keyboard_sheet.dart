@@ -135,30 +135,39 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
 
   /// Sends what changed since the last successful send. Returns whether the
   /// TV's field now matches the phone's.
+  ///
+  /// Every step that succeeds moves [_sent] forward, so a refusal part-way
+  /// (in append mode: after some backspaces) never repeats those steps on the
+  /// next edit (Ruling P5-R13).
   bool _flush() {
     _timer?.cancel();
     _timer = null;
     final text = _controller.text;
     final edits = planTextEdit(sent: _sent, next: text, mode: widget.mode);
+    // What the TV holds after the steps that succeeded so far.
+    var confirmed = _sent;
+    bool refuse() {
+      _sent = confirmed;
+      _noteRefused(refused: true);
+      return false;
+    }
+
     for (final edit in edits) {
-      final ok = switch (edit) {
-        SendText(:final text) => _input.typeText(text),
-        DeleteChars(:final count) => _deleteTimes(count),
-      };
-      if (!ok) {
-        _noteRefused(refused: true);
-        return false;
+      switch (edit) {
+        case SendText(text: final chunk):
+          if (!_input.typeText(chunk)) return refuse();
+          confirmed = widget.mode == ImeTextMode.appendOnly
+              ? confirmed + chunk
+              : chunk;
+        case DeleteChars(:final count):
+          for (var i = 0; i < count; i++) {
+            if (!_input.tap(KeyCodes.delete)) return refuse();
+            confirmed = confirmed.characters.skipLast(1).string;
+          }
       }
     }
     _sent = text;
     if (edits.isNotEmpty) _noteRefused(refused: false);
-    return true;
-  }
-
-  bool _deleteTimes(int count) {
-    for (var i = 0; i < count; i++) {
-      if (!_input.tap(KeyCodes.delete)) return false;
-    }
     return true;
   }
 

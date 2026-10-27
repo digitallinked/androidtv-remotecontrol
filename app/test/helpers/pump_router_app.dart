@@ -6,17 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/app_shell.dart';
+import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/device/screen_services.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
+import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
+import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
@@ -25,8 +30,12 @@ import 'fake_remote_client.dart';
 import 'fake_screen_services.dart';
 import 'fake_tv_discovery.dart';
 import 'fake_wake_on_lan.dart';
+import 'in_memory_app_usage_repository.dart';
+import 'in_memory_shortcut_repository.dart';
 import 'manual_session_signals.dart';
 import 'recording_haptics.dart';
+import 'recording_link_opener.dart';
+import 'test_catalogue.dart';
 import 'test_identity.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
@@ -48,6 +57,9 @@ import 'test_identity.dart';
 /// turns on the screen-reader flag of the `MediaQuery` that [textScale] is
 /// applied in.
 ///
+/// [textScaler] replaces the linear [textScale] with a scaler of your own, for
+/// the non-linear curves of Android 14+.
+///
 /// With [settle] false it pumps one frame instead of waiting for the app to
 /// go idle: a screen with a running progress indicator never goes idle, and
 /// `pumpAndSettle` would then run the fake clock forward until the screen
@@ -59,6 +71,7 @@ Future<SettingsStore> pumpRouterApp(
   List<Override> overrides = const [],
   Brightness brightness = Brightness.light,
   double textScale = 1,
+  TextScaler? textScaler,
   bool settle = true,
   Future<void> Function(SettingsStore store)? prepareSettings,
   bool accessibleNavigation = false,
@@ -89,6 +102,30 @@ Future<SettingsStore> pumpRouterApp(
         screenDimmerProvider.overrideWithValue(RecordingDimmer()),
         wakeOnLanServiceProvider.overrideWithValue(FakeWakeOnLan()),
         wakeOnLanAvailableProvider.overrideWithValue(true),
+        // Shortcuts and usage live in memory (drift's own streams leave
+        // timers behind); the catalogue is the real bundled file, and no
+        // region means the "*" default row.
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+        appUsageRepositoryProvider.overrideWithValue(
+          InMemoryAppUsageRepository(),
+        ),
+        catalogueProvider.overrideWith((ref) async => testCatalogue()),
+        deviceRegionProvider.overrideWithValue(null),
+        // What the About page and the legal links read: a flavor, the
+        // platform's package info and the url_launcher plugin.
+        flavorProvider.overrideWithValue(Flavor.dev),
+        appInfoProvider.overrideWith(
+          (ref) async => const AppInfo(
+            appName: 'Remotely Dev',
+            version: '1.0.0',
+            buildNumber: '1',
+            os: 'android',
+            osVersion: '12',
+          ),
+        ),
+        linkOpenerProvider.overrideWithValue(RecordingLinkOpener()),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,
@@ -107,7 +144,7 @@ Future<SettingsStore> pumpRouterApp(
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, app) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.linear(textScale),
+              textScaler: textScaler ?? TextScaler.linear(textScale),
               accessibleNavigation: accessibleNavigation,
             ),
             child: buildAppShell(context, app),

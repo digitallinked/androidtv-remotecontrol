@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +14,11 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_tv_discovery.dart';
+import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
 
@@ -22,6 +26,45 @@ import '../../helpers/test_devices.dart';
 Override _savedTvs(List<String> names) => savedDevicesProvider.overrideWith(
   (ref) => Stream.value([for (final name in names) savedTv(name: name)]),
 );
+
+/// Saved TVs held in [repo], with the repository itself behind the screen.
+List<Override> _repoOverrides(InMemoryDeviceRepository repo) => [
+  deviceRepositoryProvider.overrideWithValue(repo),
+  savedDevicesProvider.overrideWith((ref) => repo.watchAll()),
+  remoteSessionProvider.overrideWith((ref) async => FakeRemoteSession()),
+];
+
+/// A repository whose host update waits until [release] completes.
+class _SlowHostRepository extends InMemoryDeviceRepository {
+  _SlowHostRepository(super.initial);
+
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<void> setLastHost(String serviceName, String host) async {
+    await release.future;
+    await super.setLastHost(serviceName, host);
+  }
+}
+
+/// A repository whose manual → mDNS merge waits until [release] completes.
+class _SlowAdoptRepository extends InMemoryDeviceRepository {
+  _SlowAdoptRepository(super.initial);
+
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) async {
+    await release.future;
+    return super.adoptManualDevice(
+      manualServiceName: manualServiceName,
+      tv: tv,
+    );
+  }
+}
 
 void main() {
   late FakeTvDiscoveries discoveries;
@@ -207,6 +250,191 @@ void main() {
       containerOf(t).read(activeTargetProvider),
       const DeviceTarget('Den'),
     );
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('tapping_a_paired_tv_updates_its_host_before_connecting', (
+    t,
+  ) async {
+    final repo = InMemoryDeviceRepository([savedTv(name: 'Den')]);
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    String? hostWhenActivated;
+    containerOf(t).listen(activeTargetProvider, (_, next) {
+      hostWhenActivated = repo.saved['Den']?.lastHost;
+    });
+    await found(t, [tv('Den', host: '192.168.0.33')]);
+
+    await t.tap(find.text('Den'));
+    await t.pumpAndSettle();
+
+    expect(repo.saved['Den']!.lastHost, '192.168.0.33');
+    expect(hostWhenActivated, '192.168.0.33');
+    expect(
+      containerOf(t).read(activeTargetProvider),
+      const DeviceTarget('Den'),
+    );
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('a_failed_host_update_still_connects', (t) async {
+    final repo = InMemoryDeviceRepository([savedTv(name: 'Den')])
+      ..failNextWrite = StateError('disk full');
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Den', host: '192.168.0.33')]);
+
+    await t.tap(find.text('Den'));
+    await t.pumpAndSettle();
+
+    expect(repo.saved['Den']!.lastHost, '192.168.0.20');
+    expect(
+      containerOf(t).read(activeTargetProvider),
+      const DeviceTarget('Den'),
+    );
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('a_second_tap_while_connecting_is_ignored', (t) async {
+    final repo = _SlowHostRepository([savedTv(name: 'Den')]);
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Den', host: '192.168.0.33')]);
+
+    await t.tap(find.text('Den'));
+    await t.pump();
+    await t.tap(find.text('Den'));
+    await t.pump();
+    expect(repo.writes, 0);
+
+    repo.release.complete();
+    await t.pumpAndSettle();
+    expect(repo.writes, 1);
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('manual_tv_found_by_mdns_shows_paired_and_merges_on_tap', (
+    t,
+  ) async {
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20', nickname: 'Den'),
+    ]);
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Living Room TV 3')]);
+    expect(find.text('Paired'), findsOneWidget);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+
+    expect(repo.saved.keys, ['Living Room TV 3']);
+    final moved = repo.saved['Living Room TV 3']!;
+    expect(moved.serverKeyPin, testPin);
+    expect(moved.nickname, 'Den');
+    expect(
+      containerOf(t).read(activeTargetProvider),
+      const DeviceTarget('Living Room TV 3'),
+    );
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('a_merge_finished_after_leaving_discovery_moves_the_session', (
+    t,
+  ) async {
+    const manual = 'manual:192.168.0.20';
+    final repo = _SlowAdoptRepository([savedTv(name: manual, nickname: 'Den')]);
+    await pumpDiscover(
+      t,
+      overrides: [
+        deviceRepositoryProvider.overrideWithValue(repo),
+        savedDevicesProvider.overrideWith((ref) => repo.watchAll()),
+      ],
+    );
+    // The remote is following the manual row.
+    containerOf(t).read(activeTargetProvider.notifier).activateDevice(manual);
+    await found(t, [tv('Living Room TV 3')]);
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pump();
+
+    // The user leaves discovery while the merge is still running.
+    GoRouter.of(t.element(find.byType(Scaffold).last)).go(AppRoutes.remote);
+    await t.pumpAndSettle();
+    expect(find.byType(DiscoveryScreen), findsNothing);
+
+    repo.release.complete();
+    await t.pumpAndSettle();
+
+    expect(repo.saved.keys, ['Living Room TV 3']);
+    expect(
+      containerOf(t).read(activeTargetProvider),
+      const DeviceTarget('Living Room TV 3'),
+    );
+    // No session is left on the manual row that no longer exists.
+    final session = await containerOf(t).read(remoteSessionProvider.future);
+    expect(session?.pairingTarget?.serviceName, 'Living Room TV 3');
+    // The user stays where they went.
+    expect(top(t).uri.path, AppRoutes.remote);
+  });
+
+  testWidgets('manual_tv_at_another_address_is_not_merged', (t) async {
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20'),
+    ]);
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Living Room TV 3', host: '192.168.0.55')]);
+    expect(find.text('Paired'), findsNothing);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
+    expect(repo.saved.keys, ['manual:192.168.0.20']);
+  });
+
+  testWidgets('manual_tv_without_a_pin_is_not_merged', (t) async {
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20', noPin: true),
+    ]);
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Living Room TV 3')]);
+    expect(find.text('Paired'), findsNothing);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+
+    expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
+    expect(repo.saved.keys, ['manual:192.168.0.20']);
+    expect(repo.writes, 0);
+  });
+
+  testWidgets('a_manual_tv_is_not_merged_over_an_existing_mdns_row', (t) async {
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20'),
+      savedTv(noPin: true),
+    ]);
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Living Room TV 3')]);
+    expect(find.text('Paired'), findsNothing);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
+    expect(repo.writes, 0);
+  });
+
+  testWidgets('a_failed_merge_says_so_and_stays', (t) async {
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20'),
+    ])..failNextWrite = StateError('disk full');
+    await pumpDiscover(t, overrides: _repoOverrides(repo));
+    await found(t, [tv('Living Room TV 3')]);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+
+    expect(find.text("Couldn't open this TV. Try again."), findsOneWidget);
+    expect(top(t).uri.path, AppRoutes.discover);
+    expect(repo.saved.keys, ['manual:192.168.0.20']);
+    expect(containerOf(t).read(activeTargetProvider), isNull);
+
+    // A later tap works.
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.remote);
   });
 

@@ -171,6 +171,7 @@ class SettingsStore {
   static const _localeKey = 'settings.locale';
   static const _autoOpenKeyboardKey = 'settings.auto_open_keyboard';
   static const _onboardingCompleteKey = 'settings.onboarding_complete';
+  static const _shortcutsSeededKey = 'apps.shortcuts_seeded';
 
   /// Every preference key this store uses.
   static const Set<String> keys = {
@@ -185,6 +186,7 @@ class SettingsStore {
     _localeKey,
     _autoOpenKeyboardKey,
     _onboardingCompleteKey,
+    _shortcutsSeededKey,
   };
 
   final SharedPreferencesWithCache _prefs;
@@ -319,6 +321,15 @@ class SettingsStore {
   // ignore: avoid_positional_boolean_parameters
   Future<void> setOnboardingComplete(bool value) =>
       _prefs.setBool(_onboardingCompleteKey, value);
+
+  /// Whether the shortcut list has been seeded with the region's defaults.
+  /// Not part of [AppSettings]: it is app state, not a user setting.
+  bool get shortcutsSeeded => _bool(_shortcutsSeededKey, fallback: false);
+
+  /// Stores whether the shortcut list has been seeded.
+  // ignore: avoid_positional_boolean_parameters
+  Future<void> setShortcutsSeeded(bool value) =>
+      _prefs.setBool(_shortcutsSeededKey, value);
 
   /// Reads every setting at once.
   AppSettings snapshot() => AppSettings(

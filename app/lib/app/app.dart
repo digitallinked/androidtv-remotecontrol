@@ -6,6 +6,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/app/theme/dynamic_color_support.dart';
 import 'package:tv_remote/app/theme/dynamic_scheme.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -35,6 +36,9 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsControllerProvider);
     final router = ref.watch(appRouterProvider);
+    // Ask now so Settings → Appearance already knows whether to offer the
+    // wallpaper-colour switch when it opens (the answer is kept).
+    ref.read(dynamicColorSupportedProvider);
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
@@ -55,6 +59,9 @@ class App extends ConsumerWidget {
                 : null,
           ),
           themeMode: _themeMode(settings.themePreference),
+          // A theme choice shows at once; no cross-fade (also right for
+          // reduce motion).
+          themeAnimationDuration: Duration.zero,
           locale: localeFromCode(settings.localeCode),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

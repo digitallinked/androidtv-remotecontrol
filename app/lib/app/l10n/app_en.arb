@@ -292,9 +292,9 @@
   "@pageTitleApps": {
     "description": "Title of the TV apps screen."
   },
-  "pageTitleDevices": "Devices",
+  "pageTitleDevices": "Your TVs",
   "@pageTitleDevices": {
-    "description": "Title of the saved TVs screen."
+    "description": "Title of `/devices` and its hub row (was \"Devices\")."
   },
   "pageTitleSettings": "Settings",
   "@pageTitleSettings": {
@@ -851,5 +851,815 @@
   "theaterWakeLabel": "Screen dimmed. Touch to brighten.",
   "@theaterWakeLabel": {
     "description": "Screen-reader label of the dimmed Theater Mode overlay."
+  },
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Dismiss action of confirmation dialogs."
+  },
+  "commonSave": "Save",
+  "@commonSave": {
+    "description": "Save buttons (Edit TV, shortcut editor)."
+  },
+  "commonUndo": "Undo",
+  "@commonUndo": {
+    "description": "Snackbar action after removing an app."
+  },
+  "commonRetry": "Try again",
+  "@commonRetry": {
+    "description": "Button that retries loading a list that couldn't be read."
+  },
+  "remoteManageTvs": "Manage TVs",
+  "@remoteManageTvs": {
+    "description": "Row in the TV switcher sheet → Your TVs."
+  },
+  "quickAccessAllApps": "All apps",
+  "@quickAccessAllApps": {
+    "description": "Last tile of the quick row → Apps screen."
+  },
+  "pageTitleManageApps": "Edit apps",
+  "@pageTitleManageApps": {
+    "description": "Title of `/apps/manage`; Apps screen action."
+  },
+  "pageTitleEditDevice": "Edit TV",
+  "@pageTitleEditDevice": {
+    "description": "Edit TV title while loading or when the TV isn't found."
+  },
+  "pageTitleAppearance": "Appearance",
+  "@pageTitleAppearance": {
+    "description": "Page title and hub row."
+  },
+  "pageTitleRemoteLayout": "Remote layout",
+  "@pageTitleRemoteLayout": {
+    "description": "Page title and hub row."
+  },
+  "pageTitleRemoteBehaviour": "Remote behaviour",
+  "@pageTitleRemoteBehaviour": {
+    "description": "Page title and hub row."
+  },
+  "pageTitleHelp": "Help",
+  "@pageTitleHelp": {
+    "description": "Page title and hub row."
+  },
+  "pageTitleAbout": "About this app",
+  "@pageTitleAbout": {
+    "description": "Page title and hub row."
+  },
+  "appsSearchLabel": "Search apps",
+  "@appsSearchLabel": {
+    "description": "Label of the Apps screen search field."
+  },
+  "appsYourApps": "Your apps",
+  "@appsYourApps": {
+    "description": "Header of the shortcuts grid."
+  },
+  "appsMoreApps": "More apps",
+  "@appsMoreApps": {
+    "description": "Header of catalogue matches while searching."
+  },
+  "appsNoMatches": "No apps match \"{query}\".",
+  "@appsNoMatches": {
+    "description": "Search with no results.",
+    "placeholders": {
+      "query": {
+        "type": "String",
+        "example": "jazz"
+      }
+    }
+  },
+  "appsEmptyTitle": "No apps yet",
+  "@appsEmptyTitle": {
+    "description": "Empty Apps screen."
+  },
+  "appsLoadFailed": "Couldn't load your apps.",
+  "@appsLoadFailed": {
+    "description": "Apps screen, when the saved shortcuts can't be read."
+  },
+  "appsEmptyBody": "Add the apps you use on your TV to open them with one tap.",
+  "@appsEmptyBody": {
+    "description": "Empty Apps screen."
+  },
+  "appsEmptyAction": "Add apps",
+  "@appsEmptyAction": {
+    "description": "Empty Apps screen button → Edit apps."
+  },
+  "manageAppsAdd": "Add app",
+  "@manageAppsAdd": {
+    "description": "App bar action of Edit apps."
+  },
+  "manageAppsReset": "Reset to suggested apps",
+  "@manageAppsReset": {
+    "description": "Overflow menu item."
+  },
+  "manageAppsResetTitle": "Reset your apps?",
+  "@manageAppsResetTitle": {
+    "description": "Reset confirmation title."
+  },
+  "manageAppsResetBody": "Your list goes back to the suggested apps for your region. Shortcuts you added or changed are removed.",
+  "@manageAppsResetBody": {
+    "description": "Reset confirmation body."
+  },
+  "manageAppsResetConfirm": "Reset",
+  "@manageAppsResetConfirm": {
+    "description": "Destructive reset action."
+  },
+  "manageAppsReorderHint": "Drag the handle to change the order. The remote shows your apps in this order.",
+  "@manageAppsReorderHint": {
+    "description": "Hint above the list."
+  },
+  "manageAppsDragHandle": "Reorder {app}",
+  "@manageAppsDragHandle": {
+    "description": "Semantics label of a row's drag handle.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "YouTube"
+      }
+    }
+  },
+  "manageAppsEdit": "Edit {app}",
+  "@manageAppsEdit": {
+    "description": "Tooltip of a row's edit button.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "YouTube"
+      }
+    }
+  },
+  "manageAppsRemove": "Remove {app}",
+  "@manageAppsRemove": {
+    "description": "Tooltip of a row's remove button.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "YouTube"
+      }
+    }
+  },
+  "manageAppsRemoved": "{app} removed",
+  "@manageAppsRemoved": {
+    "description": "Snackbar after removing (with Undo).",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "YouTube"
+      }
+    }
+  },
+  "manageAppsEmpty": "No apps on your list. Add one to see it on the remote.",
+  "@manageAppsEmpty": {
+    "description": "Empty Edit apps list."
+  },
+  "manageAppsSaveFailed": "Couldn't save your apps. Try again.",
+  "@manageAppsSaveFailed": {
+    "description": "Any shortcut write failed."
+  },
+  "addAppTitle": "Add an app",
+  "@addAppTitle": {
+    "description": "Add sheet title."
+  },
+  "addAppSearchLabel": "Search apps or enter an app ID",
+  "@addAppSearchLabel": {
+    "description": "Add sheet search field."
+  },
+  "addAppCustom": "Create a custom shortcut",
+  "@addAppCustom": {
+    "description": "First row of the add sheet."
+  },
+  "addAppRecentTitle": "Recently used on your TV",
+  "@addAppRecentTitle": {
+    "description": "Section header."
+  },
+  "addAppRecentEmpty": "Apps you open on your TV show up here.",
+  "@addAppRecentEmpty": {
+    "description": "Empty recent section."
+  },
+  "addAppPopularTitle": "Suggested apps",
+  "@addAppPopularTitle": {
+    "description": "Section header (catalogue for the region)."
+  },
+  "addAppNoResults": "No apps found. If you know the app's ID, type it to add it.",
+  "@addAppNoResults": {
+    "description": "Search with no results."
+  },
+  "addAppById": "Add app ID \"{package}\"",
+  "@addAppById": {
+    "description": "Row that adds a typed package name.",
+    "placeholders": {
+      "package": {
+        "type": "String",
+        "example": "com.example.app"
+      }
+    }
+  },
+  "addAppAdded": "{app} added",
+  "@addAppAdded": {
+    "description": "Snackbar after adding.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "YouTube"
+      }
+    }
+  },
+  "addAppAlreadyAdded": "Already on your list",
+  "@addAppAlreadyAdded": {
+    "description": "Subtitle of a disabled row."
+  },
+  "shortcutNewTitle": "New shortcut",
+  "@shortcutNewTitle": {
+    "description": "Editor title (create)."
+  },
+  "shortcutEditTitle": "Edit shortcut",
+  "@shortcutEditTitle": {
+    "description": "Editor title (edit)."
+  },
+  "shortcutNameLabel": "Name",
+  "@shortcutNameLabel": {
+    "description": "Editor field."
+  },
+  "shortcutNameError": "Enter a name of up to 30 characters.",
+  "@shortcutNameError": {
+    "description": "Editor validation."
+  },
+  "shortcutPackageLabel": "App ID",
+  "@shortcutPackageLabel": {
+    "description": "Editor field."
+  },
+  "shortcutPackageHint": "com.example.app",
+  "@shortcutPackageHint": {
+    "description": "Editor field hint."
+  },
+  "shortcutPackageHelp": "The app's ID on the TV. It's in the app's Play Store web address, after \"id=\".",
+  "@shortcutPackageHelp": {
+    "description": "Editor helper text."
+  },
+  "shortcutPackageError": "Enter an app ID like com.example.app.",
+  "@shortcutPackageError": {
+    "description": "Editor validation."
+  },
+  "shortcutPackageTaken": "This app is already on your list.",
+  "@shortcutPackageTaken": {
+    "description": "Editor validation."
+  },
+  "shortcutColourLabel": "Tile colour",
+  "@shortcutColourLabel": {
+    "description": "Editor group label."
+  },
+  "shortcutColourDefault": "Default",
+  "@shortcutColourDefault": {
+    "description": "Colour choice: no custom colour."
+  },
+  "shortcutColourSlate": "Slate",
+  "@shortcutColourSlate": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourBlue": "Blue",
+  "@shortcutColourBlue": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourTeal": "Teal",
+  "@shortcutColourTeal": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourGreen": "Green",
+  "@shortcutColourGreen": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourAmber": "Amber",
+  "@shortcutColourAmber": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourOrange": "Orange",
+  "@shortcutColourOrange": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourRed": "Red",
+  "@shortcutColourRed": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutColourPurple": "Purple",
+  "@shortcutColourPurple": {
+    "description": "Colour swatch name (semantics)."
+  },
+  "shortcutIconLabel": "Icon",
+  "@shortcutIconLabel": {
+    "description": "Editor group label."
+  },
+  "shortcutIconLetter": "First letter",
+  "@shortcutIconLetter": {
+    "description": "Icon choice: monogram."
+  },
+  "shortcutIconApp": "App",
+  "@shortcutIconApp": {
+    "description": "Generic icon name."
+  },
+  "shortcutIconMovies": "Movies",
+  "@shortcutIconMovies": {
+    "description": "Icon name."
+  },
+  "shortcutIconLive": "Live TV",
+  "@shortcutIconLive": {
+    "description": "Icon name."
+  },
+  "shortcutIconSports": "Sports",
+  "@shortcutIconSports": {
+    "description": "Icon name."
+  },
+  "shortcutIconMusic": "Music",
+  "@shortcutIconMusic": {
+    "description": "Icon name."
+  },
+  "shortcutIconKids": "Kids",
+  "@shortcutIconKids": {
+    "description": "Icon name."
+  },
+  "shortcutIconNews": "News",
+  "@shortcutIconNews": {
+    "description": "Icon name."
+  },
+  "shortcutIconGames": "Games",
+  "@shortcutIconGames": {
+    "description": "Icon name."
+  },
+  "shortcutIconLearning": "Learning",
+  "@shortcutIconLearning": {
+    "description": "Icon name."
+  },
+  "shortcutPreview": "Preview",
+  "@shortcutPreview": {
+    "description": "Label of the live preview tile."
+  },
+  "shortcutSaved": "Shortcut saved",
+  "@shortcutSaved": {
+    "description": "Snackbar after editing."
+  },
+  "devicesEmptyTitle": "No TVs yet",
+  "@devicesEmptyTitle": {
+    "description": "Empty Your TVs."
+  },
+  "devicesLoadFailed": "Couldn't load your TVs.",
+  "@devicesLoadFailed": {
+    "description": "Your TVs and Edit TV, when the saved TVs can't be read."
+  },
+  "devicesEmptyBody": "Pair a TV to control it from this phone.",
+  "@devicesEmptyBody": {
+    "description": "Empty Your TVs."
+  },
+  "devicesInUse": "In use",
+  "@devicesInUse": {
+    "description": "Marker on the session's TV."
+  },
+  "devicesEditTv": "Edit {tvName}",
+  "@devicesEditTv": {
+    "description": "Semantics/tooltip of a TV row.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living room"
+      }
+    }
+  },
+  "editDeviceNameLabel": "Name on this phone",
+  "@editDeviceNameLabel": {
+    "description": "Nickname field."
+  },
+  "editDeviceNameHelp": "Leave empty to use the TV's own name, {tvName}.",
+  "@editDeviceNameHelp": {
+    "description": "Nickname helper.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living room"
+      }
+    }
+  },
+  "editDeviceNameError": "Use 40 characters or fewer.",
+  "@editDeviceNameError": {
+    "description": "Nickname validation."
+  },
+  "editDeviceWolTitle": "Turn on from your phone",
+  "@editDeviceWolTitle": {
+    "description": "MAC section header."
+  },
+  "editDeviceWolBody": "Add the TV's MAC address so the power key can wake it from standby.",
+  "@editDeviceWolBody": {
+    "description": "MAC section text."
+  },
+  "editDeviceWolHelp": "Where do I find it?",
+  "@editDeviceWolHelp": {
+    "description": "Link → MAC help sheet."
+  },
+  "editDeviceWolUnavailable": "Turning the TV on from an iPhone isn't available yet. You can still save the address.",
+  "@editDeviceWolUnavailable": {
+    "description": "IOS without the entitlement."
+  },
+  "wolMacTooLong": "That's longer than a MAC address. Check what you pasted.",
+  "@wolMacTooLong": {
+    "description": "MAC field: over-long input."
+  },
+  "wolHelpTitle": "Find the TV's MAC address",
+  "@wolHelpTitle": {
+    "description": "MAC help sheet title."
+  },
+  "editDeviceLastAddress": "Last address: {host}",
+  "@editDeviceLastAddress": {
+    "description": "Edit TV info line.",
+    "placeholders": {
+      "host": {
+        "type": "String",
+        "example": "192.168.0.20"
+      }
+    }
+  },
+  "editDeviceSaved": "Saved",
+  "@editDeviceSaved": {
+    "description": "Snackbar after saving."
+  },
+  "editDeviceSaveFailed": "Couldn't save. Try again.",
+  "@editDeviceSaveFailed": {
+    "description": "Snackbar on write failure."
+  },
+  "editDeviceRemove": "Remove TV",
+  "@editDeviceRemove": {
+    "description": "Destructive button."
+  },
+  "editDeviceRemoveFailed": "Couldn't remove this TV. Try again.",
+  "@editDeviceRemoveFailed": {
+    "description": "Snackbar when removing a TV fails."
+  },
+  "editDeviceRemoveTitle": "Remove {tvName}?",
+  "@editDeviceRemoveTitle": {
+    "description": "Confirmation title.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living room"
+      }
+    }
+  },
+  "editDeviceRemoveBody": "This phone forgets the TV and its settings. To use it again, pair it with a new code. The TV may still list this phone.",
+  "@editDeviceRemoveBody": {
+    "description": "Confirmation body."
+  },
+  "editDeviceRemoveConfirm": "Remove",
+  "@editDeviceRemoveConfirm": {
+    "description": "Destructive confirm action."
+  },
+  "editDeviceRemoved": "{tvName} removed",
+  "@editDeviceRemoved": {
+    "description": "Snackbar after removing.",
+    "placeholders": {
+      "tvName": {
+        "type": "String",
+        "example": "Living room"
+      }
+    }
+  },
+  "editDeviceNotFound": "This TV isn't saved on this phone anymore.",
+  "@editDeviceNotFound": {
+    "description": "Edit TV for an unknown name."
+  },
+  "editDeviceBackToTvs": "Back to your TVs",
+  "@editDeviceBackToTvs": {
+    "description": "Action on the not-found state."
+  },
+  "discoverOpenFailed": "Couldn't open this TV. Try again.",
+  "@discoverOpenFailed": {
+    "description": "Discovery: a merge or host update failed hard."
+  },
+  "settingsSectionRemote": "Remote",
+  "@settingsSectionRemote": {
+    "description": "Hub section header."
+  },
+  "settingsSectionApp": "App",
+  "@settingsSectionApp": {
+    "description": "Hub section header."
+  },
+  "settingsSectionSupport": "Help and feedback",
+  "@settingsSectionSupport": {
+    "description": "Hub section header."
+  },
+  "settingsSectionAbout": "About",
+  "@settingsSectionAbout": {
+    "description": "Hub section header."
+  },
+  "settingsRemoteLayoutSubtitle": "Touchpad or D-pad, and the row of keys above it",
+  "@settingsRemoteLayoutSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsRemoteBehaviourSubtitle": "Vibration, Smooth Press, screen and keyboard",
+  "@settingsRemoteBehaviourSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsAppsSubtitle": "Choose and order your app shortcuts",
+  "@settingsAppsSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsDevicesSubtitle": "Rename, remove, or turn on from your phone",
+  "@settingsDevicesSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsAppearanceSubtitle": "Theme and language",
+  "@settingsAppearanceSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsHelpSubtitle": "Common questions and troubleshooting",
+  "@settingsHelpSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsFeedback": "Send feedback",
+  "@settingsFeedback": {
+    "description": "Hub row; Help page button."
+  },
+  "settingsFeedbackSubtitle": "Write to us by email",
+  "@settingsFeedbackSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsAboutSubtitle": "Version and licences",
+  "@settingsAboutSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "settingsPrivacy": "Privacy policy",
+  "@settingsPrivacy": {
+    "description": "Hub row (external link)."
+  },
+  "settingsTerms": "Terms of use",
+  "@settingsTerms": {
+    "description": "Hub row (external link)."
+  },
+  "settingsOpensInBrowser": "Opens in your browser",
+  "@settingsOpensInBrowser": {
+    "description": "Semantics hint of external-link rows."
+  },
+  "settingsLinkFailed": "Couldn't open the page. Check your internet connection and try again.",
+  "@settingsLinkFailed": {
+    "description": "Link failed."
+  },
+  "appearanceTheme": "Theme",
+  "@appearanceTheme": {
+    "description": "Group label."
+  },
+  "appearanceThemeSystem": "Same as phone",
+  "@appearanceThemeSystem": {
+    "description": "Theme choice."
+  },
+  "appearanceThemeLight": "Light",
+  "@appearanceThemeLight": {
+    "description": "Theme choice."
+  },
+  "appearanceThemeDark": "Dark",
+  "@appearanceThemeDark": {
+    "description": "Theme choice."
+  },
+  "appearanceDynamicColour": "Colours from wallpaper",
+  "@appearanceDynamicColour": {
+    "description": "Switch title."
+  },
+  "appearanceDynamicColourSubtitle": "Use your phone's wallpaper colours in the app.",
+  "@appearanceDynamicColourSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "appearanceLanguage": "Language",
+  "@appearanceLanguage": {
+    "description": "Group label."
+  },
+  "appearanceLanguageSystem": "Same as phone",
+  "@appearanceLanguageSystem": {
+    "description": "Language choice: follow the system."
+  },
+  "layoutPreviewTitle": "Preview",
+  "@layoutPreviewTitle": {
+    "description": "Header over the preview."
+  },
+  "layoutPreviewSemantics": "Preview of the remote with these choices",
+  "@layoutPreviewSemantics": {
+    "description": "Semantics label of the preview."
+  },
+  "layoutNavigation": "Navigation",
+  "@layoutNavigation": {
+    "description": "Group label."
+  },
+  "layoutTouchpadSubtitle": "Swipe to move, tap to select.",
+  "@layoutTouchpadSubtitle": {
+    "description": "Under Touchpad (title reuses `remotePadTouchpad`)."
+  },
+  "layoutDpadSubtitle": "Arrow keys around an OK button, like a TV remote.",
+  "@layoutDpadSubtitle": {
+    "description": "Under D-pad (title reuses `remotePadDpad`)."
+  },
+  "layoutQuickAccess": "Row above the pad",
+  "@layoutQuickAccess": {
+    "description": "Group label."
+  },
+  "layoutQuickApps": "App shortcuts",
+  "@layoutQuickApps": {
+    "description": "Choice title."
+  },
+  "layoutQuickAppsSubtitle": "Open your TV apps with one tap.",
+  "@layoutQuickAppsSubtitle": {
+    "description": "Choice subtitle."
+  },
+  "layoutQuickColourSubtitle": "Red, green, yellow and blue keys.",
+  "@layoutQuickColourSubtitle": {
+    "description": "Under Colour keys (title reuses `quickAccessColourLabel`)."
+  },
+  "layoutQuickMediaSubtitle": "Previous, rewind, play or pause, fast-forward and next.",
+  "@layoutQuickMediaSubtitle": {
+    "description": "Under Media keys (title reuses `quickAccessMediaLabel`)."
+  },
+  "layoutQuickNone": "Nothing",
+  "@layoutQuickNone": {
+    "description": "Choice title."
+  },
+  "layoutQuickNoneSubtitle": "More room for the touchpad or D-pad.",
+  "@layoutQuickNoneSubtitle": {
+    "description": "Choice subtitle."
+  },
+  "behaviourHaptics": "Vibrate on key press",
+  "@behaviourHaptics": {
+    "description": "Switch."
+  },
+  "behaviourHapticsSubtitle": "A short vibration when a key reaches the TV.",
+  "@behaviourHapticsSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "behaviourSmoothPress": "Smooth Press",
+  "@behaviourSmoothPress": {
+    "description": "Switch."
+  },
+  "behaviourSmoothPressSubtitle": "Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.",
+  "@behaviourSmoothPressSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "behaviourKeepAwake": "Keep screen on",
+  "@behaviourKeepAwake": {
+    "description": "Switch."
+  },
+  "behaviourKeepAwakeSubtitle": "Your phone's screen stays on while the remote is open.",
+  "@behaviourKeepAwakeSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "behaviourTheater": "Theater mode",
+  "@behaviourTheater": {
+    "description": "Switch."
+  },
+  "behaviourTheaterSubtitle": "Dims your phone after 30 seconds without a touch. The first touch only brightens it.",
+  "@behaviourTheaterSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "behaviourAutoKeyboard": "Open keyboard automatically",
+  "@behaviourAutoKeyboard": {
+    "description": "Switch."
+  },
+  "behaviourAutoKeyboardSubtitle": "Opens the keyboard when the TV asks for text, like in a search box.",
+  "@behaviourAutoKeyboardSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "helpCantConnectTitle": "Can't connect?",
+  "@helpCantConnectTitle": {
+    "description": "Help card title."
+  },
+  "helpCantConnectBody": "Go through the checks one at a time. Most problems come from the Wi-Fi network or the TV's remote service.",
+  "@helpCantConnectBody": {
+    "description": "Help card text."
+  },
+  "helpTroubleshootingAction": "Show troubleshooting steps",
+  "@helpTroubleshootingAction": {
+    "description": "Opens the troubleshooting sheet."
+  },
+  "helpFaqTitle": "Common questions",
+  "@helpFaqTitle": {
+    "description": "FAQ header."
+  },
+  "helpStillStuck": "Still stuck?",
+  "@helpStillStuck": {
+    "description": "Header above Send feedback."
+  },
+  "faqTvsQ": "Which TVs does this app work with?",
+  "@faqTvsQ": {
+    "description": "FAQ question."
+  },
+  "faqTvsA": "TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can't be controlled by this app.",
+  "@faqTvsA": {
+    "description": "FAQ answer."
+  },
+  "faqNotFoundQ": "My TV isn't in the list.",
+  "@faqNotFoundQ": {
+    "description": "FAQ question."
+  },
+  "faqNotFoundA": "Make sure the TV is on and connected to the same Wi-Fi as your phone, and that \"Android TV Remote Service\" is up to date on the TV. You can also add the TV by its IP address. The troubleshooting steps go through each check.",
+  "@faqNotFoundA": {
+    "description": "FAQ answer."
+  },
+  "faqCodeQ": "Why does the TV ask for a code again?",
+  "@faqCodeQ": {
+    "description": "FAQ question."
+  },
+  "faqCodeA": "Pairing makes the TV and this phone trust each other. Clearing the app's data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.",
+  "@faqCodeA": {
+    "description": "FAQ answer."
+  },
+  "faqPowerQ": "Why can't the app turn my TV on?",
+  "@faqPowerQ": {
+    "description": "FAQ question."
+  },
+  "faqPowerA": "A TV that is fully off can't hear the app. The app can send a wake-up signal if you add the TV's MAC address under Settings → Your TVs, but some TVs ignore it in deep standby. On iPhone this isn't available yet.",
+  "@faqPowerA": {
+    "description": "FAQ answer."
+  },
+  "faqTypingQ": "What I type doesn't show up on the TV.",
+  "@faqTypingQ": {
+    "description": "FAQ question."
+  },
+  "faqTypingA": "Select a text field on the TV first, such as a search box. When the TV asks for text, the keyboard opens on your phone by itself.",
+  "@faqTypingA": {
+    "description": "FAQ answer."
+  },
+  "faqAppQ": "An app shortcut doesn't open.",
+  "@faqAppQ": {
+    "description": "FAQ question."
+  },
+  "faqAppA": "The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.",
+  "@faqAppA": {
+    "description": "FAQ answer."
+  },
+  "faqPrivacyQ": "What does the app keep about my TV?",
+  "@faqPrivacyQ": {
+    "description": "FAQ question."
+  },
+  "faqPrivacyA": "Your TV's name, network address and MAC address stay on this phone. The app doesn't send them to us.",
+  "@faqPrivacyA": {
+    "description": "FAQ answer."
+  },
+  "aboutVersion": "Version {version} ({build})",
+  "@aboutVersion": {
+    "description": "About page.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.0"
+      },
+      "build": {
+        "type": "String",
+        "example": "1"
+      }
+    }
+  },
+  "aboutVersionUnknown": "Version unavailable",
+  "@aboutVersionUnknown": {
+    "description": "About page when package info fails."
+  },
+  "aboutLicences": "Open-source licences",
+  "@aboutLicences": {
+    "description": "About row → `showLicensePage`."
+  },
+  "aboutProtocol": "Talks to your TV over Wi-Fi with the Android TV Remote protocol. Its message formats come from the open-source androidtvremote2 project.",
+  "@aboutProtocol": {
+    "description": "About page credit."
+  },
+  "aboutTrademark": "Android TV and Google TV are trademarks of Google LLC. This app isn't made or endorsed by Google.",
+  "@aboutTrademark": {
+    "description": "About page disclaimer."
+  },
+  "feedbackTitle": "Send feedback?",
+  "@feedbackTitle": {
+    "description": "Feedback dialog title."
+  },
+  "feedbackBody": "Your email app opens with a message to us. It includes the app version and your phone's system version, and nothing about your TV.",
+  "@feedbackBody": {
+    "description": "Feedback dialog body."
+  },
+  "feedbackConfirm": "Write email",
+  "@feedbackConfirm": {
+    "description": "Feedback dialog primary action."
+  },
+  "feedbackSubject": "Feedback on {appName} {version}",
+  "@feedbackSubject": {
+    "description": "Email subject.",
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "TV Remote"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.0.0"
+      }
+    }
+  },
+  "feedbackPrompt": "Write your message here.",
+  "@feedbackPrompt": {
+    "description": "First line of the email body."
+  },
+  "feedbackNoEmailApp": "No email app found. Write to us at {email}.",
+  "@feedbackNoEmailApp": {
+    "description": "Snackbar when mailto can't open.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "support@example.com"
+      }
+    }
   }
 }

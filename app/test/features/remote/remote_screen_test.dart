@@ -17,11 +17,19 @@ import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
+import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_remote_session.dart';
+import '../../helpers/in_memory_app_usage_repository.dart';
+import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
 
@@ -55,6 +63,7 @@ void main() {
   Future<void> pumpRemote(
     WidgetTester t, {
     RemoteSession? session,
+    List<SavedDevice>? devices,
     List<Override> overrides = const [],
     double textScale = 1,
   }) async {
@@ -66,10 +75,13 @@ void main() {
       overrides: [
         remoteSessionProvider.overrideWith((ref) async => s),
         savedDevicesProvider.overrideWith(
-          (ref) => Stream.value([
-            savedTv(),
-            savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
-          ]),
+          (ref) => Stream.value(
+            devices ??
+                [
+                  savedTv(),
+                  savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
+                ],
+          ),
         ),
         ...overrides,
       ],
@@ -103,6 +115,34 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Connected'), findsOneWidget);
     expect(find.text('Reconnecting…'), findsNothing);
+  });
+
+  testWidgets('quick_row_shows_the_seeded_shortcuts', (t) async {
+    fake.emit(_connected);
+    await pumpRemote(t);
+    // No region: the "*" default row, in its order. The row is a lazy
+    // horizontal list, so the order is read from the widget it is given.
+    expect(
+      [
+        for (final a
+            in t.widget<QuickAccessBar>(find.byType(QuickAccessBar)).apps)
+          a.name,
+      ],
+      ['Netflix', 'YouTube', 'Prime Video', 'Disney+', 'Spotify', 'Apple TV'],
+    );
+    expect(find.bySemanticsLabel('Open Netflix'), findsOneWidget);
+  });
+
+  testWidgets('the_open_remote_counts_the_foreground_app', (t) async {
+    final usage = InMemoryAppUsageRepository();
+    fake.emit(_connected);
+    await pumpRemote(
+      t,
+      overrides: [appUsageRepositoryProvider.overrideWithValue(usage)],
+    );
+    fake.push(const CurrentAppChanged('com.netflix.ninja'));
+    await t.pumpAndSettle();
+    expect(usage.stats['com.netflix.ninja']?.seenCount, 1);
   });
 
   testWidgets('the_app_bar_names_the_tv', (t) async {
@@ -139,7 +179,33 @@ void main() {
     await t.tap(find.text('Pair again'));
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
-    expect(top(t).extra, savedTv().toDiscoveredTv());
+    // No `extra`: the pairing screen re-resolves the TV's address.
+    expect(top(t).extra, isNull);
+  });
+
+  testWidgets('pair_again_resolves_the_tv_before_pairing', (t) async {
+    final resolved = <String>[];
+    fake.emit(_needsPairing);
+    await pumpRemote(
+      t,
+      overrides: [
+        deviceRepositoryProvider.overrideWithValue(
+          InMemoryDeviceRepository([savedTv()]),
+        ),
+        hostResolverProvider.overrideWithValue((name) async {
+          resolved.add(name);
+          return '192.168.0.33';
+        }),
+      ],
+    );
+
+    await t.tap(find.text('Pair again'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+
+    expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
+    expect(t.widget<PairingScreen>(find.byType(PairingScreen)).tv, isNull);
+    expect(resolved, ['Living Room TV 3']);
   });
 
   testWidgets('identity_changed_routes_to_pairing', (t) async {
@@ -156,11 +222,45 @@ void main() {
     await t.tap(inDialog(find.text('Pair again')));
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
-    expect(top(t).extra, savedTv().toDiscoveredTv());
+    // No `extra`: the pairing screen re-resolves the TV's address.
+    expect(top(t).extra, isNull);
     // The same state again asks nothing more.
     fake.emit(_identityChanged);
     await t.pumpAndSettle();
     expect(find.byType(AppDialog<bool>), findsNothing);
+  });
+
+  testWidgets('a_renamed_tv_shows_its_saved_label_everywhere', (t) async {
+    fake.emit(_connected);
+    await pumpRemote(
+      t,
+      devices: [
+        savedTv(nickname: 'Lounge'),
+        savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
+      ],
+    );
+    // The session carries the TV's own name; the title and the switcher
+    // show the nickname, without a new session.
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Lounge'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Living Room TV 3'), findsNothing);
+    await t.tap(find.byTooltip('Switch TV'));
+    await t.pumpAndSettle();
+    expect(find.text('Lounge'), findsWidgets);
+    await t.tapAt(const Offset(10, 10));
+    await t.pumpAndSettle();
+
+    fake.emit(_identityChanged);
+    await t.pumpAndSettle();
+    expect(
+      find.textContaining('Lounge presented a different security'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('identity_changed_not_now_keeps_the_remote', (t) async {
@@ -406,4 +506,66 @@ void main() {
       expect(find.byType(AppDialog<bool>), findsNothing);
     },
   );
+
+  testWidgets('settings_button_opens_settings_and_back_returns', (t) async {
+    fake.emit(_connected);
+    await pumpRemote(t);
+    await t.tap(find.byTooltip('Settings'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.settings);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Settings'),
+      ),
+      findsOneWidget,
+    );
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+  });
+
+  testWidgets('all_apps_tile_opens_the_apps_screen', (t) async {
+    final handle = t.ensureSemantics();
+    fake.emit(_connected);
+    await pumpRemote(t);
+    // Pinned after the apps: no scrolling to find it.
+    await t.tap(find.bySemanticsLabel('All apps'));
+    await t.pumpAndSettle();
+    expect(top(t).uri.path, AppRoutes.apps);
+    expect(find.byType(AppsScreen), findsOneWidget);
+    // Nothing was sent to the TV, and Back returns to the remote.
+    expect(fake.sentLinks, isEmpty);
+    expect(fake.sentKeys, isEmpty);
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.byType(RemoteBody), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('remote_app_bar_fits_320dp_at_200_percent_text', (t) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    fake.emit(_connected);
+    await pumpRemote(t, textScale: 2);
+    expect(t.takeException(), isNull);
+    final bar = t.getRect(find.byType(AppBar));
+    final settings = find.byTooltip('Settings');
+    final switcher = find.byTooltip('Switch TV');
+    final power = find.byType(PowerButton);
+    for (final f in [settings, switcher, power]) {
+      expect(f, findsOneWidget);
+      final rect = t.getRect(f);
+      expect(bar.contains(rect.topLeft), isTrue, reason: '$f');
+      expect(bar.contains(rect.bottomRight), isTrue, reason: '$f');
+      expect(f.hitTestable(), findsOneWidget, reason: '$f');
+    }
+    final rect = t.getRect(settings);
+    expect(rect.width, greaterThanOrEqualTo(48));
+    expect(rect.height, greaterThanOrEqualTo(48));
+    expect(rect.right, lessThanOrEqualTo(t.getRect(switcher).left));
+    expect(t.getRect(switcher).right, lessThanOrEqualTo(t.getRect(power).left));
+  });
 }

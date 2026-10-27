@@ -26,15 +26,29 @@ PairingClientFactory pairingClientFactory(Ref ref) =>
 /// restored, or the link was opened by hand).
 ///
 /// It tries the saved TV, then an IP address typed in earlier
-/// (`manual:<ip>`), then a look-up on the network. It is `null` when the TV
-/// can't be found.
+/// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
+/// mDNS name is looked up again first (it may have a new address) and falls
+/// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
+/// never looked up. It is `null` when the TV can't be found.
 @Riverpod(retry: noRetry)
 Future<DiscoveredTv?> pairingTarget(Ref ref, String serviceName) async {
   final devices = ref.watch(deviceRepositoryProvider);
   final resolveHost = ref.watch(hostResolverProvider);
 
   final saved = await devices.find(serviceName);
-  if (saved != null) return saved.toDiscoveredTv();
+  if (saved != null) {
+    final tv = saved.toDiscoveredTv();
+    if (isManualServiceName(serviceName)) return tv;
+    final host = await resolveHost(serviceName);
+    if (host == null) return tv;
+    return DiscoveredTv(
+      serviceName: tv.serviceName,
+      displayName: tv.displayName,
+      host: host,
+      port: tv.port,
+      isLegacyService: tv.isLegacyService,
+    );
+  }
 
   if (isManualServiceName(serviceName)) {
     final ip = parseIpv4(serviceName.substring(manualServiceNamePrefix.length));

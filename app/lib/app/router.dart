@@ -6,10 +6,20 @@ import 'package:tv_remote/app/widgets/placeholder_screen.dart';
 import 'package:tv_remote/core/device/page_route_observer.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
+import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
+import 'package:tv_remote/features/apps/presentation/manage_apps_screen.dart';
+import 'package:tv_remote/features/devices/presentation/devices_screen.dart';
+import 'package:tv_remote/features/devices/presentation/edit_device_screen.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
+import 'package:tv_remote/features/settings/presentation/about_page.dart';
+import 'package:tv_remote/features/settings/presentation/appearance_page.dart';
+import 'package:tv_remote/features/settings/presentation/help_page.dart';
+import 'package:tv_remote/features/settings/presentation/remote_behaviour_page.dart';
+import 'package:tv_remote/features/settings/presentation/remote_layout_page.dart';
+import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 part 'router.g.dart';
 
@@ -27,14 +37,36 @@ abstract final class AppRoutes {
   /// Apps on the TV.
   static const apps = '/apps';
 
+  /// Edit apps: add, reorder and remove app shortcuts.
+  static const manageApps = '/apps/manage';
+
   /// Saved TVs.
   static const devices = '/devices';
 
   /// App settings.
   static const settings = '/settings';
 
+  /// Settings: theme and language.
+  static const settingsAppearance = '/settings/appearance';
+
+  /// Settings: touchpad or D-pad, and the row above it.
+  static const settingsRemoteLayout = '/settings/remote-layout';
+
+  /// Settings: haptics, Smooth Press, screen and keyboard.
+  static const settingsRemoteBehaviour = '/settings/remote-behaviour';
+
+  /// Settings: troubleshooting and common questions.
+  static const settingsHelp = '/settings/help';
+
+  /// Settings: version, licences and credits.
+  static const settingsAbout = '/settings/about';
+
   /// Path of the premium screen, without its query.
   static const paywallPath = '/paywall';
+
+  /// Edit page of the saved TV [serviceName]; the name is percent-encoded.
+  static String editDevice(String serviceName) =>
+      '/devices/${Uri.encodeComponent(serviceName)}';
 
   /// Pairing with the TV named [serviceName]. The name is percent-encoded.
   static String pair(String serviceName) =>
@@ -100,21 +132,45 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.apps,
-        builder: (context, _) => PlaceholderScreen(
-          title: AppLocalizations.of(context).pageTitleApps,
-        ),
+        builder: (_, _) => const AppsScreen(),
+        routes: [
+          GoRoute(
+            path: 'manage',
+            builder: (_, _) => const ManageAppsScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.devices,
-        builder: (context, _) => PlaceholderScreen(
-          title: AppLocalizations.of(context).pageTitleDevices,
-        ),
+        builder: (_, _) => const DevicesScreen(),
+        routes: [
+          GoRoute(
+            path: ':serviceName',
+            builder: (_, state) => EditDeviceScreen(
+              serviceName: state.pathParameters['serviceName']!,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.settings,
-        builder: (context, _) => PlaceholderScreen(
-          title: AppLocalizations.of(context).pageTitleSettings,
-        ),
+        builder: (_, _) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'appearance',
+            builder: (_, _) => const AppearancePage(),
+          ),
+          GoRoute(
+            path: 'remote-layout',
+            builder: (_, _) => const RemoteLayoutPage(),
+          ),
+          GoRoute(
+            path: 'remote-behaviour',
+            builder: (_, _) => const RemoteBehaviourPage(),
+          ),
+          GoRoute(path: 'help', builder: (_, _) => const HelpPage()),
+          GoRoute(path: 'about', builder: (_, _) => const AboutPage()),
+        ],
       ),
       GoRoute(
         path: AppRoutes.paywallPath,

@@ -329,3 +329,12 @@ double contrastRatio(Color a, Color b) {
   final darker = la > lb ? lb : la;
   return (lighter + 0.05) / (darker + 0.05);
 }
+
+const Color _darkLabel = Color(0xFF0F1115);
+
+/// The label colour for a TV colour key filled with [key]: the dark ink or
+/// white, whichever has the higher WCAG contrast with [key].
+Color colourKeyLabelColor(Color key) =>
+    contrastRatio(_darkLabel, key) >= contrastRatio(Colors.white, key)
+    ? _darkLabel
+    : Colors.white;

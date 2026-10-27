@@ -414,7 +414,8 @@ void main() {
     expect(savedTv().label, 'Living Room TV 3');
     final d = tv.toDiscoveredTv();
     expect(d.serviceName, 'Living Room TV 3');
-    expect(d.displayName, 'Lounge');
+    // The announced name, never the nickname.
+    expect(d.displayName, 'Living Room TV 3');
     expect(d.host, '192.168.0.20');
     expect(d.port, 6466);
     expect(d.isLegacyService, isFalse);

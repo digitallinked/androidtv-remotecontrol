@@ -1,15 +1,32 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
-import 'package:tv_remote/features/apps/data/starter_apps.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 
 import '../../../helpers/key_input_recorder.dart';
 import '../../../helpers/pump_app.dart';
+
+/// The five apps the quick row tests show.
+const List<AppEntry> _apps = [
+  AppEntry(package: 'com.netflix.ninja', name: 'Netflix'),
+  AppEntry(package: 'com.google.android.youtube.tv', name: 'YouTube'),
+  AppEntry(package: 'com.amazon.amazonvideo.livingroom', name: 'Prime Video'),
+  AppEntry(package: 'com.disney.disneyplus', name: 'Disney+'),
+  AppEntry(package: 'com.spotify.tv.android', name: 'Spotify'),
+];
+
+/// Six apps: more than any phone width shows at once.
+const List<AppEntry> _sixApps = [
+  ..._apps,
+  AppEntry(package: 'com.example.sixth', name: 'Plex'),
+];
 
 /// Android 14's non-linear 200% font curve (its font scale converter): small
 /// sizes double, large ones grow less, so a line is not `size * 2`.
@@ -46,12 +63,14 @@ void main() {
 
   setUp(() => rec = KeyInputRecorder());
 
-  Future<void> pumpBar(
+  Future<void> pumpBarWith(
     WidgetTester t,
-    QuickAccessRow variant, {
+    List<AppEntry> apps, {
+    QuickAccessRow variant = QuickAccessRow.apps,
     double width = 360,
     double textScale = 1,
     String? currentApp,
+    VoidCallback? onAllApps,
     Brightness brightness = Brightness.light,
   }) => pumpApp(
     t,
@@ -60,11 +79,31 @@ void main() {
       child: QuickAccessBar(
         variant: variant,
         input: rec,
-        apps: kStarterApps,
+        apps: apps,
         currentApp: currentApp,
+        onAllApps: onAllApps,
       ),
     ),
     textScale: textScale,
+    brightness: brightness,
+  );
+
+  Future<void> pumpBar(
+    WidgetTester t,
+    QuickAccessRow variant, {
+    double width = 360,
+    double textScale = 1,
+    String? currentApp,
+    VoidCallback? onAllApps,
+    Brightness brightness = Brightness.light,
+  }) => pumpBarWith(
+    t,
+    _apps,
+    variant: variant,
+    width: width,
+    textScale: textScale,
+    currentApp: currentApp,
+    onAllApps: onAllApps,
     brightness: brightness,
   );
 
@@ -261,7 +300,7 @@ void main() {
           body: QuickAccessBar(
             variant: QuickAccessRow.apps,
             input: rec,
-            apps: kStarterApps,
+            apps: _apps,
           ),
         ),
       ),
@@ -322,5 +361,143 @@ void main() {
     await t.tap(find.bySemanticsLabel('Open Netflix'));
     expect(rec.calls, isEmpty);
     expect(rec.refused, 1);
+  });
+
+  testWidgets('all_apps_tile_calls_back_and_sends_nothing', (t) async {
+    final handle = t.ensureSemantics();
+    var opened = 0;
+    await pumpBar(t, QuickAccessRow.apps, onAllApps: () => opened++);
+    // Pinned after the list: in view without scrolling.
+    final all = find.bySemanticsLabel('All apps');
+    expect(all, findsOneWidget);
+    expect(
+      t.getSemantics(all),
+      isSemantics(isButton: true, hasTapAction: true),
+    );
+    await t.tap(all);
+    expect(opened, 1);
+    // Its caption is tappable too.
+    await t.tap(find.text('All apps'));
+    expect(opened, 2);
+    // It is not a TV command.
+    expect(rec.calls, isEmpty);
+    expect(rec.refused, 0);
+    handle.dispose();
+  });
+
+  testWidgets('all_apps_tile_is_the_last_tile_and_looks_like_a_tile', (
+    t,
+  ) async {
+    await pumpBar(t, QuickAccessRow.apps, onAllApps: () {});
+    final square = find.byKey(const ValueKey('quick_all_apps_square'));
+    expect(t.getSize(square), const Size(56, 56));
+    expect(
+      find.descendant(of: square, matching: find.byIcon(Icons.apps)),
+      findsOneWidget,
+    );
+    final material = t.widget<Material>(
+      find.descendant(of: square, matching: find.byType(Material)).first,
+    );
+    expect(material.color, AppColors.light.surface);
+    expect(
+      (material.shape! as RoundedRectangleBorder).side.color,
+      AppColors.light.outline,
+    );
+    // Right of every app tile, and outside the scrolling list.
+    final list = t.getRect(find.byType(ListView));
+    expect(t.getRect(square).left, greaterThanOrEqualTo(list.right));
+    expect(
+      find.descendant(
+        of: find.byType(ListView),
+        matching: find.text('All apps'),
+      ),
+      findsNothing,
+    );
+    expect(t.getSize(find.text('All apps')).height, greaterThan(0));
+  });
+
+  testWidgets('no_all_apps_tile_without_a_callback', (t) async {
+    await pumpBar(t, QuickAccessRow.apps);
+    await t.drag(find.byType(ListView), const Offset(-1000, 0));
+    await t.pumpAndSettle();
+    expect(find.bySemanticsLabel('All apps'), findsNothing);
+    expect(find.byKey(const ValueKey('quick_all_apps_square')), findsNothing);
+    // The list keeps its full gutter at the end.
+    final bar = t.getRect(find.byType(QuickAccessBar));
+    expect(
+      t.getRect(find.byType(QuickAppTile).last).right,
+      bar.right - AppSpacing.l,
+    );
+  });
+
+  testWidgets('the_all_apps_tile_is_only_in_the_apps_variant', (t) async {
+    for (final variant in [
+      QuickAccessRow.colourKeys,
+      QuickAccessRow.mediaKeys,
+      QuickAccessRow.none,
+    ]) {
+      await pumpBar(t, variant, onAllApps: () {});
+      expect(find.text('All apps'), findsNothing, reason: '$variant');
+    }
+  });
+
+  group('all_apps_tile_stays_pinned_with_six_apps', () {
+    for (final (width, scale) in [
+      (320.0, 1.0),
+      (360.0, 1.0),
+      (320.0, 2.0),
+      (360.0, 2.0),
+    ]) {
+      testWidgets('at_${width.toInt()}dp_and_${(scale * 100).toInt()}pc', (
+        t,
+      ) async {
+        for (final b in Brightness.values) {
+          var opened = 0;
+          await pumpBarWith(
+            t,
+            _sixApps,
+            width: width,
+            textScale: scale,
+            onAllApps: () => opened++,
+            brightness: b,
+          );
+          expect(t.takeException(), isNull, reason: b.name);
+          final square = find.byKey(const ValueKey('quick_all_apps_square'));
+          // In view and hit-testable at once, with no scrolling.
+          expect(square.hitTestable(), findsOneWidget, reason: b.name);
+          await t.tap(square);
+          expect(opened, 1, reason: b.name);
+
+          // At least 8 dp between the All apps tile and the apps next to it:
+          // clipped at the list's edge, and scrolled to its end.
+          final list = t.getRect(find.byType(ListView));
+          final all = t.getRect(square);
+          double gap() {
+            // The right edge of the app tiles that show, clipped to the list.
+            var visibleRight = list.left;
+            for (final tile in find.byType(QuickAppTile).evaluate()) {
+              final r = t.getRect(find.byWidget(tile.widget));
+              if (r.left >= list.right) continue;
+              visibleRight = math.max(
+                visibleRight,
+                math.min(r.right, list.right),
+              );
+            }
+            return all.left - visibleRight;
+          }
+
+          expect(gap(), greaterThanOrEqualTo(8), reason: '${b.name} at rest');
+          await t.drag(find.byType(ListView), const Offset(-1500, 0));
+          await t.pumpAndSettle();
+          expect(
+            gap(),
+            greaterThanOrEqualTo(8),
+            reason: '${b.name} scrolled to the end',
+          );
+          // Pinned: it did not move.
+          expect(t.getRect(square), all, reason: b.name);
+        }
+      });
+    }
   });
 }

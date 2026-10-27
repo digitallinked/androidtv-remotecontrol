@@ -8,17 +8,18 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
-import 'package:tv_remote/app/widgets/status_pill.dart';
+import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
 import 'package:tv_remote/core/device/theater_mode.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/app_database.dart' show SavedDevice;
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
-import 'package:tv_remote/features/apps/data/starter_apps.dart';
+import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/demo/presentation/tv_preview_card.dart';
 import 'package:tv_remote/features/keyboard/keyboard_sheet.dart';
 import 'package:tv_remote/features/remote/application/ime_requests.dart';
@@ -58,9 +59,19 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// A power action is in flight (see [_power]).
   bool _powering = false;
 
+  /// The navigation style the pad area shows or last showed. The pager reads
+  /// its first page once, so a style that settings changes to something else
+  /// is applied by giving the body a new key ([_bodyEpoch]); the user's own
+  /// swipes update this first and so never rebuild the pager.
+  late NavigationStyle _shownStyle;
+
+  /// Changes when the body must start afresh on the stored style.
+  int _bodyEpoch = 0;
+
   @override
   void initState() {
     super.initState();
+    _shownStyle = ref.read(settingsControllerProvider).navigationStyle;
     // Also fires for a state that is already there when the screen opens.
     ref.listenManual(
       connectionStateProvider,
@@ -76,8 +87,25 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     return state.value?.status ?? ConnectionStatus.disconnected;
   }
 
-  String _tvName(AppLocalizations l10n, RemoteSession session) =>
-      session.isDemo ? l10n.demoTvName : session.tvName;
+  /// The name to show for [session]'s TV: the saved label (so a rename shows
+  /// at once, without rebuilding the session), else the name the session
+  /// carries (Ruling P5-R9).
+  String _label(
+    AppLocalizations l10n,
+    RemoteSession session,
+    List<SavedDevice> devices,
+  ) {
+    if (session.isDemo) return l10n.demoTvName;
+    final serviceName = session.pairingTarget?.serviceName;
+    for (final device in devices) {
+      if (device.serviceName == serviceName) return device.label;
+    }
+    return session.tvName;
+  }
+
+  /// The saved TVs as last emitted; empty while loading.
+  List<SavedDevice> get _savedDevices =>
+      ref.read(savedDevicesProvider).value ?? const [];
 
   void _onConnectionState(
     AsyncValue<TvConnectionState>? previous,
@@ -104,7 +132,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final pairAgain = await showAppDialog<bool>(
       context: context,
       title: l10n.remoteIdentityChangedTitle,
-      message: l10n.remoteIdentityChangedMessage(_tvName(l10n, session)),
+      message: l10n.remoteIdentityChangedMessage(
+        _label(l10n, session, _savedDevices),
+      ),
       actions: [
         AppDialogAction(label: l10n.remoteNotNow, value: false),
         AppDialogAction(
@@ -120,9 +150,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   void _pairAgain(RemoteSession session) {
     final target = session.pairingTarget;
     if (!mounted || target == null) return;
-    unawaited(
-      context.push(AppRoutes.pair(target.serviceName), extra: target),
-    );
+    // No `extra`: the pairing screen looks the TV up again, because its
+    // address may have changed since it was saved (Ruling P5-R10 c).
+    unawaited(context.push(AppRoutes.pair(target.serviceName)));
   }
 
   /// Says why a press did nothing (Ruling P4-R3): one snackbar per refused
@@ -183,7 +213,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       final l10n = AppLocalizations.of(context);
       final controller = ref.read(powerControllerProvider);
       final session = controller.session;
-      final tvName = session == null ? '' : _tvName(l10n, session);
+      final tvName = session == null
+          ? ''
+          : _label(l10n, session, _savedDevices);
 
       final outcome = await controller.press();
       if (!mounted) return;
@@ -253,10 +285,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       PadPage.dpad => NavigationStyle.dpad,
       PadPage.numbers => null,
     };
-    if (style == null ||
-        ref.read(settingsControllerProvider).navigationStyle == style) {
-      return;
-    }
+    if (style == null) return;
+    _shownStyle = style;
+    if (ref.read(settingsControllerProvider).navigationStyle == style) return;
     unawaited(
       ref
           .read(settingsControllerProvider.notifier)
@@ -311,7 +342,21 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     // Watched, not read: the provider is autoDispose. Listening keeps the
     // power controller (which uses these actions) alive the same way.
     final input = ref.watch(remoteActionsProvider);
-    ref.listen(powerControllerProvider, (_, _) {});
+    ref
+      ..listen(powerControllerProvider, (_, _) {})
+      ..listen(appUsageTrackerProvider, (_, _) {})
+      // Settings (a page on top of this one) changed the style.
+      ..listen(
+        settingsControllerProvider.select((s) => s.navigationStyle),
+        (_, next) {
+          if (next != _shownStyle) {
+            setState(() {
+              _shownStyle = next;
+              _bodyEpoch++;
+            });
+          }
+        },
+      );
     final (navigationStyle, quickAccess) = ref.watch(
       settingsControllerProvider.select(
         (s) => (s.navigationStyle, s.quickAccessRow),
@@ -329,7 +374,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final connected = status == ConnectionStatus.connected;
     final canPairAgain = !reloading && session.pairingTarget != null;
 
-    var tvName = _tvName(l10n, session);
+    var tvName = _label(l10n, session, devices);
     var serviceName = session.pairingTarget?.serviceName;
     if (reloading && target is DeviceTarget) {
       serviceName = target.serviceName;
@@ -351,6 +396,15 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         toolbarHeight: 64,
+        leadingWidth: 56,
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: l10n.pageTitleSettings,
+          style: IconButton.styleFrom(
+            minimumSize: const Size.square(AppSizes.touchMin),
+          ),
+          onPressed: () => unawaited(context.push(AppRoutes.settings)),
+        ),
         titleSpacing: AppSpacing.s,
         title: DeviceSwitcher(
           currentName: tvName,
@@ -363,6 +417,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             ref.read(activeTargetProvider.notifier).activateDevice(name);
           },
           onAddTv: () => context.push(AppRoutes.discover),
+          onManageTvs: () => context.push(AppRoutes.devices),
         ),
         actions: [
           Padding(
@@ -377,22 +432,24 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _StatusStrip(
+            StatusStrip(
               status: status,
               onReconnect: reloading ? null : session.reconnect,
               onPairAgain: canPairAgain ? () => _pairAgain(session) : null,
             ),
             Expanded(
               child: RemoteBody(
+                key: ValueKey(_bodyEpoch),
                 input: input,
                 enabled: connected,
                 quickAccess: quickAccess,
-                apps: ref.watch(quickAccessAppsProvider),
+                apps: ref.watch(shortcutsProvider).value ?? const [],
                 currentApp: connected ? liveApp : null,
                 initialPage: initialPage,
                 onPageChanged: _onPageChanged,
                 volume: connected ? liveVolume : null,
                 onKeyboard: _openKeyboard,
+                onAllApps: () => unawaited(context.push(AppRoutes.apps)),
                 preview: session.isDemo ? const TvPreviewCard() : null,
               ),
             ),
@@ -409,38 +466,6 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     return KeepAwake(
       enabled: keepAwake,
       child: TheaterMode(enabled: theater, child: scaffold),
-    );
-  }
-}
-
-/// The row under the app bar that holds the connection pill: at least 48 dp
-/// high and start-aligned; the pill wraps at large text.
-class _StatusStrip extends StatelessWidget {
-  const _StatusStrip({
-    required this.status,
-    required this.onReconnect,
-    required this.onPairAgain,
-  });
-
-  final ConnectionStatus status;
-  final VoidCallback? onReconnect;
-  final VoidCallback? onPairAgain;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-        child: Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: StatusPill(
-            status: status,
-            onReconnect: onReconnect,
-            onPairAgain: onPairAgain,
-          ),
-        ),
-      ),
     );
   }
 }

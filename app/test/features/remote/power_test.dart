@@ -50,6 +50,7 @@ void main() {
   Future<void> pumpRemote(
     WidgetTester t, {
     String? wolMac,
+    String? nickname,
     Size size = const Size(390, 844),
     double textScale = 1,
     Brightness brightness = Brightness.light,
@@ -69,7 +70,7 @@ void main() {
       overrides: [
         remoteSessionProvider.overrideWith((ref) async => fake),
         savedDevicesProvider.overrideWith(
-          (ref) => Stream.value([savedTv(wolMac: wolMac)]),
+          (ref) => Stream.value([savedTv(wolMac: wolMac, nickname: nickname)]),
         ),
         hapticsProvider.overrideWithValue(haptics),
         wakeOnLanServiceProvider.overrideWithValue(wol),
@@ -165,6 +166,15 @@ void main() {
     expect(fake.reconnectCalls, 1);
     expect(haptics.events, ['heavy']);
     expect(fake.sentPresses, isEmpty);
+  });
+
+  testWidgets('waking_uses_the_saved_nickname', (t) async {
+    fake.emit(_offline);
+    await pumpRemote(t, wolMac: _mac, nickname: 'Lounge');
+    await holdPower(t);
+    // Renamed on the phone: the session still carries the TV's own name.
+    expect(find.text('Waking Lounge…'), findsOneWidget);
+    expect(find.textContaining('Living Room TV 3'), findsNothing);
   });
 
   testWidgets('a_second_hold_while_waking_is_ignored', (t) async {
