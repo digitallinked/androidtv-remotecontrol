@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:tv_remote/core/privacy/privacy_choices.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 
 void main() {

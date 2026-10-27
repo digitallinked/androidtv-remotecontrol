@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tv_remote/core/privacy/privacy_choices.dart';
 
 /// How the remote screen navigates the TV's menus.
 enum NavigationStyle {
@@ -51,6 +50,19 @@ enum ColourStyle {
 
   /// Deep dark blues; Premium.
   midnight,
+}
+
+/// Whether the user's region requires consent before data is shared (Ruling
+/// P6-R4). It comes from the ad consent form's status.
+enum ConsentRegion {
+  /// Not known yet: nothing is shared until the user chooses.
+  unknown,
+
+  /// Consent is required (for example the EEA or the UK).
+  required,
+
+  /// Consent is not required.
+  notRequired,
 }
 
 /// The last Premium entitlement the phone saw, kept for offline starts.

@@ -1,22 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
+import 'package:tv_remote/core/storage/settings_store.dart' show ConsentRegion;
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+export 'package:tv_remote/core/storage/settings_store.dart' show ConsentRegion;
+
 part 'privacy_choices.g.dart';
-
-/// Whether the user's region requires consent before data is shared (Ruling
-/// P6-R4). It comes from the ad consent form's status.
-enum ConsentRegion {
-  /// Not known yet: nothing is shared until the user chooses.
-  unknown,
-
-  /// Consent is required (for example the EEA or the UK).
-  required,
-
-  /// Consent is not required.
-  notRequired,
-}
 
 /// Whether to share, given the user's [choice] (`null` when never chosen) and
 /// the [region].

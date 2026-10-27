@@ -75,6 +75,11 @@ void main() {
       expect(t.takeException(), isNull, reason: row);
       final rect = t.getRect(find.text(row));
       expect(rect.left >= 0 && rect.right <= 320, isTrue, reason: row);
+      final tile = find.ancestor(
+        of: find.text(row),
+        matching: find.byType(ListTile),
+      );
+      expect(t.getSize(tile).height, greaterThanOrEqualTo(56), reason: row);
     }
   });
 }

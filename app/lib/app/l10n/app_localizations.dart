@@ -2161,7 +2161,7 @@ abstract class AppLocalizations {
   /// FAQ answer.
   ///
   /// In en, this message translates to:
-  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app never sends them to us. If you allow it in Settings → Privacy choices, the app sends anonymous usage statistics and crash reports, which never include them.'**
+  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.'**
   String get faqPrivacyA;
 
   /// About page.
