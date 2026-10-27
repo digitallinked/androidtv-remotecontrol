@@ -65,6 +65,32 @@ void main() {
     expect(sent.fatal, isTrue);
   });
 
+  test('flutter_errors_send_only_the_summary', () async {
+    await reporter().recordFlutterError(
+      FlutterErrorDetails(
+        exception: FlutterError.fromParts([
+          ErrorSummary('A widget failed'),
+          ErrorDescription('The field held hunter2 for Living Room TV 3'),
+        ]),
+      ),
+    );
+
+    final text = sink.errors.single.error.toString();
+    expect(text, 'FlutterError: A widget failed');
+  });
+
+  test('long_messages_and_reasons_are_capped', () async {
+    await reporter().recordError(
+      StateError('x' * 5000),
+      null,
+      reason: 'r' * 5000,
+    );
+
+    expect(sink.errors.single.error.toString().length, lessThanOrEqualTo(1024));
+    expect(sink.errors.single.reason!.length, lessThanOrEqualTo(1024));
+    expect(sink.errors.single.error.toString(), startsWith('StateError: '));
+  });
+
   test('flutter_errors_drop_their_information', () async {
     var collected = false;
     await reporter().recordFlutterError(

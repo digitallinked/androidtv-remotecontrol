@@ -61,12 +61,23 @@ class ScrubbingCrashReporter implements CrashReporter {
     bool fatal = false,
   }) => _send(
     details.exception.runtimeType,
-    details.exceptionAsString,
+    // A framework error's full text is a diagnostics dump that can quote
+    // widgets and values; only its summary line is sent.
+    details.exception is FlutterError
+        ? details.summary.toDescription
+        : details.exceptionAsString,
     details.stack,
     // Only the context's own description; `informationCollector` is dropped.
     reason: details.context?.toDescription(),
     fatal: fatal,
   );
+
+  /// The longest text sent. A cut is made after scrubbing, so it can never
+  /// split a pattern the scrubber would have recognised.
+  static const maxLength = 1024;
+
+  static String _clip(String text) =>
+      text.length <= maxLength ? text : text.substring(0, maxLength);
 
   Future<void> _send(
     Type type,
@@ -78,9 +89,9 @@ class ScrubbingCrashReporter implements CrashReporter {
     try {
       if (_isDebugBuild || !_enabled()) return;
       await _sink.recordError(
-        ScrubbedError('$type: ${_scrubber.scrub(message())}'),
+        ScrubbedError(_clip('$type: ${_scrubber.scrub(message())}')),
         stack,
-        reason: reason == null ? null : _scrubber.scrub(reason),
+        reason: reason == null ? null : _clip(_scrubber.scrub(reason)),
         fatal: fatal,
       );
     } on Object {

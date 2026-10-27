@@ -163,6 +163,77 @@ void main() {
     expect(s.scrub('write to someone@example.org now'), 'write to <email> now');
   });
 
+  group('names_with_quotes_and_brackets_do_not_leak', () {
+    const leaks = ['Mike', 'Sony', 'Bedroom'];
+    final saved = CrashScrubber(
+      knownTerms: () => const ["Mike's TV", 'Sony (Bedroom)'],
+    );
+    final unsaved = CrashScrubber();
+
+    final cases = <String, List<CrashScrubber>>{
+      "No route to Mike's TV._androidtvremote2._tcp.local.": [saved, unsaved],
+      'found Sony (Bedroom)._androidtvremote2._tcp.local.': [saved, unsaved],
+      "found 'Mike's TV'._androidtvremote2._tcp": [saved, unsaved],
+      "/pair/Mike's%20TV._androidtvremote2._tcp.local": [saved, unsaved],
+      "/pair/Mike's%20TV": [saved],
+      '/devices/Sony%20(Bedroom)': [saved],
+      "[<'Mike's TV'>]": [saved],
+      "key [<'Sony (Bedroom)'>] lost": [saved],
+      "Mike's TV, Sony (Bedroom)": [saved],
+    };
+    for (final entry in cases.entries) {
+      for (final scrubber in entry.value) {
+        test('${entry.key} ${scrubber == saved ? 'saved' : 'unsaved'}', () {
+          final out = scrubber.scrub(entry.key);
+          for (final leak in leaks) {
+            expect(out, isNot(contains(leak)), reason: out);
+          }
+        });
+      }
+    }
+
+    test('saved_names_go_before_the_service_rule', () {
+      expect(
+        saved.scrub("Mike's TV._androidtvremote2._tcp.local."),
+        isNot(contains("'s")),
+      );
+    });
+  });
+
+  group('ipv6_fallback', () {
+    final s = CrashScrubber();
+    test('long_colon_runs_are_addresses', () {
+      expect(s.scrub('addr 2001:DB8:85A3:0:0:8A2E:370:7334 x'), 'addr <ip> x');
+      expect(s.scrub('addr FE80:0:0:0:1C2B x'), 'addr <ip> x');
+      expect(s.scrub('addr 1:2:3:4:5:6:7 x'), 'addr <ip> x');
+      expect(s.scrub('addr 1:2:3:4 x'), 'addr <ip> x');
+    });
+    test('zones_are_removed_including_percent_encoded', () {
+      expect(s.scrub('fe80::1%25wlan0 down'), '<ip> down');
+      expect(s.scrub('fe80::1%wlan0 down'), '<ip> down');
+      expect(s.scrub('FE80::ABCD%25eth0'), '<ip>');
+    });
+    test('times_and_frames_survive', () {
+      for (final text in const [
+        'at 12:34:56 today',
+        'dart:async/future.dart:100:5',
+        '#3 _rootRun (dart:async/zone.dart:1399:13)',
+        'package:tv_remote/a.dart:12:34',
+      ]) {
+        expect(s.scrub(text), text);
+      }
+    });
+  });
+
+  test('scrubs_uuids', () {
+    final s = CrashScrubber();
+    expect(
+      s.scrub('id 123e4567-e89b-12d3-A456-426614174000 gone'),
+      'id <id> gone',
+    );
+    expect(s.scrub('a-b-c'), 'a-b-c');
+  });
+
   test('keeps_ordinary_text', () {
     final s = CrashScrubber(knownTerms: () => const ['Den']);
     for (final text in const [

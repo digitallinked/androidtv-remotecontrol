@@ -28,6 +28,10 @@ class RecordingCrashlyticsSink implements CrashlyticsSink {
   /// How often `deleteUnsentReports` was called.
   int deletes = 0;
 
+  /// Every `setCollectionEnabled` and `deleteUnsentReports` call, in order:
+  /// `enable:true`, `enable:false`, `delete`.
+  final List<String> calls = [];
+
   /// Whether the sink was never called.
   bool get untouched =>
       errors.isEmpty && collectionHistory.isEmpty && deletes == 0;
@@ -47,11 +51,13 @@ class RecordingCrashlyticsSink implements CrashlyticsSink {
   Future<void> setCollectionEnabled(bool enabled) async {
     if (throwOnCall) throw StateError('sink is broken');
     collectionHistory.add(enabled);
+    calls.add('enable:$enabled');
   }
 
   @override
   Future<void> deleteUnsentReports() async {
     if (throwOnCall) throw StateError('sink is broken');
     deletes++;
+    calls.add('delete');
   }
 }

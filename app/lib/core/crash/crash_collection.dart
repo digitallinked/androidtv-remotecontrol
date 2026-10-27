@@ -89,17 +89,24 @@ class CrashCollection extends _$CrashCollection {
     PrivacyChoices next,
   ) {
     final collect = next.shareCrashReports && !debugBuild;
-    if (collect != _collecting) {
-      _collecting = collect;
-      _fire(() => sink.setCollectionEnabled(collect));
+    // A final "no": the user said no, or consent is required and not given.
+    bool denied(PrivacyChoices? choices) =>
+        choices != null && choices.crashDecided && !choices.shareCrashReports;
+    // Whatever the device kept while the answer was a final no must never be
+    // sent: delete it when that answer starts (or is found at startup) and
+    // again before sharing turns on. The delete goes first.
+    final startsDenial = denied(next) && !denied(previous);
+    final atStartup = previous == null && denied(next);
+    final leavesDenial = denied(previous) && next.shareCrashReports;
+    final delete = startsDenial || atStartup || leavesDenial;
+    final change = collect != _collecting;
+    _collecting = collect;
+    if (delete || change) {
+      _fire(() async {
+        if (delete) await sink.deleteUnsentReports();
+        if (change) await sink.setCollectionEnabled(collect);
+      });
     }
-    // A "no" that is final now and was not before: whatever the device kept
-    // while collection was off must not be sent later.
-    final denied = next.crashDecided && !next.shareCrashReports;
-    final wasDenied =
-        previous == null ||
-        (previous.crashDecided && !previous.shareCrashReports);
-    if (denied && !wasDenied) _fire(sink.deleteUnsentReports);
   }
 
   void _fire(Future<void> Function() call) {

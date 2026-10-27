@@ -106,7 +106,40 @@ void main() {
     await flush(container);
 
     expect(sink.collectionHistory, [false, true]);
-    expect(sink.deletes, 0);
+    // Reports queued while the answer was a final no are deleted at startup
+    // and again before sharing turns on.
+    expect(sink.calls, ['delete', 'enable:false', 'delete', 'enable:true']);
+  });
+
+  test('a_final_no_at_startup_deletes_what_was_queued', () async {
+    await store.setShareCrashReports(false);
+    final container = await containerFor();
+    start(container);
+    await flush(container);
+
+    expect(sink.calls, ['delete', 'enable:false']);
+  });
+
+  test('turning_sharing_back_on_deletes_reports_queued_while_off', () async {
+    final container = await containerFor();
+    start(container);
+    await flush(container);
+    await setCrashChoice(container, false);
+    await flush(container);
+    sink.calls.clear();
+
+    await setCrashChoice(container, true);
+    await flush(container);
+
+    expect(sink.calls, ['delete', 'enable:true']);
+  });
+
+  test('an_undecided_start_keeps_what_was_queued', () async {
+    final container = await containerFor(region: ConsentRegion.unknown);
+    start(container);
+    await flush(container);
+
+    expect(sink.calls, ['enable:false']);
   });
 
   test('denying_after_an_unknown_region_deletes_what_was_stored', () async {
