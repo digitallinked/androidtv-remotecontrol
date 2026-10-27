@@ -28,17 +28,23 @@ const Duration interstitialQuietAfterTrouble = Duration(seconds: 60);
 /// The launch on which interstitials start; the first launch has none.
 const int interstitialFirstLaunch = 2;
 
+/// How long a loaded interstitial may wait. An older one is dropped: the SDK
+/// expires interstitials after an hour, and an expired ad can't be shown.
+const Duration interstitialMaxAge = Duration(hours: 1);
+
 /// Interstitial pacing (Ruling P6-R9). They are off unless Remote Config
 /// turns them on.
 ///
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
 ///
-/// The app keeps this provider listened to (`App` watches it): Riverpod
-/// pauses a provider nothing listens to, and the listeners below with it.
+/// The app starts this at launch and keeps it listened to (`App` watches
+/// it), so it hears about trouble from the start: Riverpod may pause the
+/// listeners inside a provider that nothing listens to.
 @Riverpod(keepAlive: true)
 class Interstitials extends _$Interstitials {
   LoadedInterstitial? _loaded;
+  DateTime? _loadedAt;
   Future<void>? _loading;
   DateTime? _lastTroubleAt;
   bool _wasConnected = false;
@@ -63,6 +69,8 @@ class Interstitials extends _$Interstitials {
         _lastTroubleAt = clock.now();
       })
       // Premium and consent arrive after start; each may allow the preload.
+      // So does the SDK starting, which on iOS only happens once the tracking
+      // question has been answered.
       // Premium arriving drops the ad that is waiting.
       ..listen(premiumProvider, (_, next) {
         if (next.isPremium) {
@@ -71,7 +79,10 @@ class Interstitials extends _$Interstitials {
           unawaited(_preload());
         }
       })
-      ..listen(consentControllerProvider, (_, _) => unawaited(_preload()));
+      ..listen(consentControllerProvider, (_, _) => unawaited(_preload()))
+      ..listen(adsControllerProvider, (_, started) {
+        if (started) unawaited(_preload());
+      });
     scheduleMicrotask(() {
       if (ref.mounted) unawaited(_preload());
     });
@@ -81,6 +92,7 @@ class Interstitials extends _$Interstitials {
   void _drop() {
     _loaded?.dispose();
     _loaded = null;
+    _loadedAt = null;
   }
 
   /// Whether an interstitial may load now: the same rules as showing one,
@@ -127,6 +139,7 @@ class Interstitials extends _$Interstitials {
         return;
       }
       _loaded = ad;
+      _loadedAt = clock.now();
     } on Object catch (error) {
       developer.log('interstitial preload failed', name: 'ads', error: error);
     }
@@ -150,7 +163,7 @@ class Interstitials extends _$Interstitials {
       final last = store.interstitialLastShownAt;
       final trouble = _lastTroubleAt;
       final isDemo = ref.read(remoteSessionProvider).value?.isDemo ?? false;
-      final ad = _loaded;
+      var ad = _loaded;
 
       if (!config.adsInterstitialEnabled) return false;
       if (!premium.known || premium.isPremium || isDemo) return false;
@@ -164,17 +177,32 @@ class Interstitials extends _$Interstitials {
           now.difference(trouble) < interstitialQuietAfterTrouble) {
         return false;
       }
+      final loadedAt = _loadedAt;
+      if (ad != null &&
+          loadedAt != null &&
+          now.difference(loadedAt) > interstitialMaxAge) {
+        _drop();
+        ad = null;
+      }
       if (ad == null) {
         unawaited(_preload());
         return false;
       }
 
       _loaded = null;
-      await store.setInterstitialLastShownAt(now);
-      await ad.show();
+      _loadedAt = null;
+      try {
+        await store.setInterstitialLastShownAt(now);
+      } on Object {
+        ad.dispose();
+        rethrow;
+      }
+      final shown = await ad.show();
       ad.dispose();
+      // An ad that could not be shown doesn't use up the interval.
+      if (!shown) await store.setInterstitialLastShownAt(last);
       if (ref.mounted) unawaited(_preload());
-      return true;
+      return shown;
     } on Object catch (error) {
       developer.log('interstitial failed', name: 'ads', error: error);
       return false;

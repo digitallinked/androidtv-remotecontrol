@@ -13,6 +13,9 @@ part of 'interstitials.dart';
 ///
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
+///
+/// The app keeps this provider listened to (`App` watches it): Riverpod
+/// pauses a provider nothing listens to, and the listeners below with it.
 
 @ProviderFor(Interstitials)
 final interstitialsProvider = InterstitialsProvider._();
@@ -22,6 +25,9 @@ final interstitialsProvider = InterstitialsProvider._();
 ///
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
+///
+/// The app keeps this provider listened to (`App` watches it): Riverpod
+/// pauses a provider nothing listens to, and the listeners below with it.
 final class InterstitialsProvider
     extends $NotifierProvider<Interstitials, void> {
   /// Interstitial pacing (Ruling P6-R9). They are off unless Remote Config
@@ -29,6 +35,9 @@ final class InterstitialsProvider
   ///
   /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
   /// an ad that isn't ready is simply not shown. Nothing here throws.
+  ///
+  /// The app keeps this provider listened to (`App` watches it): Riverpod
+  /// pauses a provider nothing listens to, and the listeners below with it.
   InterstitialsProvider._()
     : super(
         from: null,
@@ -56,13 +65,16 @@ final class InterstitialsProvider
   }
 }
 
-String _$interstitialsHash() => r'94080d503eb452bd51935da2a4a0bb9e217e2645';
+String _$interstitialsHash() => r'3995153ccdbcb1bb63086f48b317a7eb58f34fd7';
 
 /// Interstitial pacing (Ruling P6-R9). They are off unless Remote Config
 /// turns them on.
 ///
 /// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
 /// an ad that isn't ready is simply not shown. Nothing here throws.
+///
+/// The app keeps this provider listened to (`App` watches it): Riverpod
+/// pauses a provider nothing listens to, and the listeners below with it.
 
 abstract class _$Interstitials extends $Notifier<void> {
   void build();

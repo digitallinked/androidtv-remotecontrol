@@ -53,10 +53,10 @@ class App extends ConsumerWidget {
       // The first read starts the purchase service, so Premium is known
       // before any banner; the screens read it from then on.
       ..read(premiumProvider)
-      // Starts the interstitial pacing and keeps it listened to (Riverpod
-      // pauses a provider nothing listens to, and its own listeners with it):
-      // it hears about connection trouble from launch on, and keeps one ad
-      // loaded when interstitials are enabled.
+      // Starts the interstitial pacing at launch, so it hears about
+      // connection trouble from then on and keeps one ad loaded when
+      // interstitials are enabled. Watched, not read: Riverpod may pause the
+      // listeners inside a provider that nothing listens to.
       ..watch(interstitialsProvider);
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(

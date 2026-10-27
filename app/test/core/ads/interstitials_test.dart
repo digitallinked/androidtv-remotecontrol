@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/router.dart';
@@ -54,6 +55,15 @@ void settle(FakeAsync async) {
     ..elapse(Duration.zero);
 }
 
+/// A store whose write of the last-shown time fails.
+class _FailingStore extends SettingsStore {
+  _FailingStore(super.prefs);
+
+  @override
+  Future<void> setInterstitialLastShownAt(DateTime? value) =>
+      Future.error(StateError('disk full'));
+}
+
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
@@ -74,6 +84,7 @@ void main() {
     FakeAdsSdk sdk,
     FakeRemoteSession session,
     FakeConsentService consent,
+    FakeTrackingService trackingFake,
     Interstitials interstitials,
   })
   rig(
@@ -85,13 +96,15 @@ void main() {
     FakeConsentService? consent,
     TrackingStatus tracking = TrackingStatus.notApplicable,
     bool gather = true,
+    SettingsStore? settings,
   }) {
     final fakeSdk = sdk ?? FakeAdsSdk(loads: true);
     final fakeConsent = consent ?? FakeConsentService();
     final session = FakeRemoteSession(isDemo: demo, initial: _connected);
+    final trackingFake = FakeTrackingService(current: tracking);
     final container = ProviderContainer.test(
       overrides: [
-        settingsStoreProvider.overrideWithValue(store),
+        settingsStoreProvider.overrideWithValue(settings ?? store),
         adsSdkProvider.overrideWithValue(fakeSdk),
         adUnitIdsProvider.overrideWithValue(
           const AdUnitIds(
@@ -100,9 +113,7 @@ void main() {
           ),
         ),
         consentServiceProvider.overrideWithValue(fakeConsent),
-        trackingServiceProvider.overrideWithValue(
-          FakeTrackingService(current: tracking),
-        ),
+        trackingServiceProvider.overrideWithValue(trackingFake),
         premiumProvider.overrideWith(() => TestPremium(premium)),
         appConfigProvider.overrideWith(() => TestAppConfig(config)),
         remoteSessionProvider.overrideWith((ref) async => session),
@@ -124,6 +135,7 @@ void main() {
       sdk: fakeSdk,
       session: session,
       consent: fakeConsent,
+      trackingFake: trackingFake,
       interstitials: interstitials,
     );
   }
@@ -351,6 +363,78 @@ void main() {
       expect(show(async, r.interstitials), isFalse);
       expect(r.sdk.shows, 0);
       expect(store.interstitialLastShownAt, isNull);
+
+      // Nothing is stuck: the next chance loads again, and this time it works.
+      expect(r.sdk.interstitialLoads, 2);
+      r.sdk.failLoads = false;
+      expect(show(async, r.interstitials), isFalse);
+      expect(r.sdk.interstitialLoads, 3);
+      expect(show(async, r.interstitials), isTrue);
+    });
+  });
+
+  test('the_tracking_answer_arriving_starts_the_preload', () {
+    timed((async) {
+      final r = rig(async, tracking: TrackingStatus.notDetermined);
+      expect(r.sdk.interstitialLoads, 0);
+
+      // The banner's flow asked the question and then starts the SDK.
+      unawaited(r.trackingFake.request());
+      unawaited(r.container.read(adsControllerProvider.notifier).ready());
+      settle(async);
+
+      expect(r.sdk.interstitialLoads, 1);
+      expect(show(async, r.interstitials), isTrue);
+    });
+  });
+
+  test('a_stale_ad_is_not_shown', () {
+    timed((async) {
+      final r = rig(async);
+      expect(r.sdk.interstitialLoads, 1);
+
+      async.elapse(const Duration(minutes: 61));
+      expect(show(async, r.interstitials), isFalse);
+      expect(r.sdk.shows, 0);
+      expect(r.sdk.interstitialsDisposed, 1, reason: 'the old ad is released');
+      expect(r.sdk.interstitialLoads, 2, reason: 'a fresh one is on its way');
+
+      expect(show(async, r.interstitials), isTrue);
+      expect(r.sdk.shows, 1);
+    });
+  });
+
+  test('a_failed_show_does_not_use_up_the_interval', () {
+    timed((async) {
+      final r = rig(async);
+      r.sdk.failShows = true;
+      expect(show(async, r.interstitials), isFalse);
+      expect(r.sdk.shows, 0);
+      expect(store.interstitialLastShownAt, isNull);
+      expect(r.sdk.interstitialsDisposed, 1);
+
+      // Straight away, with a working ad: shown, as the interval is unused.
+      r.sdk.failShows = false;
+      expect(r.sdk.interstitialLoads, 2);
+      expect(show(async, r.interstitials), isTrue);
+      expect(r.sdk.shows, 1);
+    });
+  });
+
+  test('if_saving_the_time_fails_the_ad_is_released_and_not_shown', () async {
+    final failing = _FailingStore(
+      await SharedPreferencesWithCache.create(
+        cacheOptions: const SharedPreferencesWithCacheOptions(
+          allowList: SettingsStore.keys,
+        ),
+      ),
+    );
+    await failing.setLaunchCount(2);
+    timed((async) {
+      final r = rig(async, settings: failing);
+      expect(show(async, r.interstitials), isFalse);
+      expect(r.sdk.shows, 0);
+      expect(r.sdk.interstitialsDisposed, 1);
     });
   });
 

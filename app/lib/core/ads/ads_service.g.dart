@@ -101,16 +101,31 @@ String _$adUnitIdsHash() => r'c6af29ff44eca5bf6e8adeb5a088e7a701228b37';
 
 /// Decides when the ads SDK may start and when a banner may show (Ruling
 /// P6-R9).
+///
+/// The state is whether the SDK has started. The order is that of Ruling
+/// P6-R3: the consent step (which the remote screen runs, and nothing here
+/// starts), then on iOS the tracking question (which the banner asks, with
+/// its pre-prompt), then the SDK.
 
 @ProviderFor(AdsController)
 final adsControllerProvider = AdsControllerProvider._();
 
 /// Decides when the ads SDK may start and when a banner may show (Ruling
 /// P6-R9).
+///
+/// The state is whether the SDK has started. The order is that of Ruling
+/// P6-R3: the consent step (which the remote screen runs, and nothing here
+/// starts), then on iOS the tracking question (which the banner asks, with
+/// its pre-prompt), then the SDK.
 final class AdsControllerProvider
-    extends $NotifierProvider<AdsController, void> {
+    extends $NotifierProvider<AdsController, bool> {
   /// Decides when the ads SDK may start and when a banner may show (Ruling
   /// P6-R9).
+  ///
+  /// The state is whether the SDK has started. The order is that of Ruling
+  /// P6-R3: the consent step (which the remote screen runs, and nothing here
+  /// starts), then on iOS the tracking question (which the banner asks, with
+  /// its pre-prompt), then the SDK.
   AdsControllerProvider._()
     : super(
         from: null,
@@ -130,30 +145,35 @@ final class AdsControllerProvider
   AdsController create() => AdsController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(void value) {
+  Override overrideWithValue(bool value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<void>(value),
+      providerOverride: $SyncValueProvider<bool>(value),
     );
   }
 }
 
-String _$adsControllerHash() => r'73ba870a0f997da1135cb708d3da1fd3fab838ae';
+String _$adsControllerHash() => r'31077875589e89561defb6aef82a561f79355fc6';
 
 /// Decides when the ads SDK may start and when a banner may show (Ruling
 /// P6-R9).
+///
+/// The state is whether the SDK has started. The order is that of Ruling
+/// P6-R3: the consent step (which the remote screen runs, and nothing here
+/// starts), then on iOS the tracking question (which the banner asks, with
+/// its pre-prompt), then the SDK.
 
-abstract class _$AdsController extends $Notifier<void> {
-  void build();
+abstract class _$AdsController extends $Notifier<bool> {
+  bool build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<void, void>;
+    final ref = this.ref as $Ref<bool, bool>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<void, void>,
-              void,
+              AnyNotifier<bool, bool>,
+              bool,
               Object?,
               Object?
             >;

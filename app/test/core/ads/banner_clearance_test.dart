@@ -7,6 +7,7 @@ import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 
 import '../../helpers/ad_clearance.dart';
 import '../../helpers/fake_ads_sdk.dart';
+import '../../helpers/gather_consent.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
 
@@ -59,6 +60,7 @@ void main() {
                 ),
             ],
           );
+          await gatherConsent(t);
           final reason = '$name at $size, text $scale';
           expect(_banner, findsOneWidget, reason: reason);
 

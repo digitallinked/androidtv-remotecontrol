@@ -16,6 +16,7 @@ class FakeAdsSdk implements AdsSdk {
     this.loads = false,
     this.failLoads = false,
     this.failInitialize = false,
+    this.failShows = false,
     this.bannerHeight = 60,
     this.holdInterstitialLoad,
   });
@@ -29,6 +30,9 @@ class FakeAdsSdk implements AdsSdk {
 
   /// Whether [initialize] throws.
   bool failInitialize;
+
+  /// Whether an interstitial that loaded fails to show.
+  bool failShows;
 
   /// The height of the banners [bannerSize] answers with.
   int bannerHeight;
@@ -119,7 +123,11 @@ class _Interstitial implements LoadedInterstitial {
   final FakeAdsSdk _sdk;
 
   @override
-  Future<void> show() async => _sdk.shows++;
+  Future<bool> show() async {
+    if (_sdk.failShows) return false;
+    _sdk.shows++;
+    return true;
+  }
 
   @override
   void dispose() => _sdk.interstitialsDisposed++;

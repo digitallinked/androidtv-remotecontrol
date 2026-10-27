@@ -4,19 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/core/ads/ad_placement.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/tracking_preprompt.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 
-/// Where a [BannerSlot] sits. Only these two screens ever have one.
-enum AdPlacement {
-  /// The Apps screen (`/apps`).
-  apps,
-
-  /// The Settings hub (`/settings`).
-  settings,
-}
+export 'package:tv_remote/core/ads/ad_placement.dart';
 
 /// The banner ad (Ruling P5-R3 and P6-R9).
 ///
@@ -36,6 +30,14 @@ enum AdPlacement {
 ///
 /// Each slot loads its own ad and disposes it when it leaves. A change of
 /// width or orientation loads a new one, and Premium arriving removes it.
+///
+/// The slot only starts a load while its screen is the current route: not
+/// while a sub-page, dialog or sheet covers it, so nothing loads off stage
+/// and the tracking pre-prompt never opens over another page. An ad that is
+/// already loaded stays through a visit to a sub-page.
+///
+/// The slot waits for the consent step but never starts it (Ruling P6-C9):
+/// the remote screen gathers consent.
 class BannerSlot extends ConsumerStatefulWidget {
   /// Creates the slot for [placement].
   const BannerSlot({required this.placement, super.key});
@@ -65,6 +67,10 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
   AdBannerSize? _size;
   _Request? _requested;
 
+  /// Whether the screen is the current route, as of the last build. Loads run
+  /// outside a build and so read this, not the route.
+  bool _routeCurrent = true;
+
   /// Bumped whenever the ad is released, so a load that started earlier
   /// knows it is out of date.
   int _generation = 0;
@@ -90,7 +96,14 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
     }
   }
 
-  bool _current(int generation) => mounted && generation == _generation;
+  /// Stops a load that was started for [generation] because a page, dialog or
+  /// sheet now covers the screen. When the screen is current again the build
+  /// starts it afresh. Returns whether it stopped.
+  bool _stopIfCovered(int generation) {
+    if (_routeCurrent) return false;
+    if (generation == _generation) _requested = null;
+    return true;
+  }
 
   Future<void> _load(_Request request, int generation) async {
     final ads = ref.read(adsControllerProvider.notifier);
@@ -98,16 +111,21 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
     final unitId = ref.read(adUnitIdsProvider).banner;
     if (unitId == null) return;
 
+    // The order of Ruling P6-R3: consent (the remote screen gathers it), then
+    // the tracking question on iOS, then the SDK, then the ad.
+    final consented = await ads.consentAllowsAds();
+    if (!mounted || !consented || generation != _generation) return;
+    if (_stopIfCovered(generation)) return;
+    // Returns at once off iOS.
+    await ensureTrackingDecided(context, ref);
+    if (!mounted || generation != _generation) return;
     final ready = await ads.ready();
     if (!mounted || !ready || generation != _generation) return;
-    // On iOS the user is asked about tracking before the first ad request;
-    // elsewhere this returns at once.
-    await ensureTrackingDecided(context, ref);
-    if (!_current(generation)) return;
 
     final size = await sdk.bannerSize(request.orientation, request.width);
     if (!_current(generation) || size == null) return;
     if (!_tallEnough(size)) return;
+    if (_stopIfCovered(generation)) return;
 
     final banner = await sdk.loadBanner(unitId, size);
     if (!_current(generation)) {
@@ -121,13 +139,21 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
     });
   }
 
+  bool _current(int generation) => mounted && generation == _generation;
+
   /// Whether the screen keeps [BannerSlot._minContentHeight] for its content
-  /// after the app bar, the label band and a banner of [size].
+  /// after the system bars, the app bar, the label band and a banner of
+  /// [size].
+  ///
+  /// The bars are read from the view, not from this context: the scaffold and
+  /// the safe area around the slot have already taken them out of its own
+  /// `MediaQuery`.
   bool _tallEnough(AdBannerSize size) {
-    final media = MediaQuery.of(context);
+    final view = View.of(context);
+    final bars = MediaQueryData.fromView(view).viewPadding.vertical;
     final room =
-        media.size.height -
-        media.viewPadding.vertical -
+        MediaQuery.sizeOf(context).height -
+        bars -
         BannerSlot._appBarHeight -
         BannerSlot.clearance -
         size.height;
@@ -140,6 +166,9 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
       ..watch(premiumProvider)
       ..watch(appConfigProvider)
       ..watch(adUnitIdsProvider);
+    // Also rebuilds when the screen becomes current again.
+    final routeCurrent = ModalRoute.isCurrentOf(context) ?? true;
+    _routeCurrent = routeCurrent;
     final allowed = ref
         .read(adsControllerProvider.notifier)
         .bannerAllowedNow(widget.placement);
@@ -156,13 +185,15 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
         );
         if (request != _requested) {
           _release();
-          _requested = request;
-          final generation = _generation;
-          // After the frame: loading starts platform work and may open the
-          // tracking dialog, neither of which belongs in a layout pass.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_current(generation)) unawaited(_load(request, generation));
-          });
+          if (routeCurrent) {
+            _requested = request;
+            final generation = _generation;
+            // After the frame: loading starts platform work and may open the
+            // tracking dialog, neither of which belongs in a layout pass.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_current(generation)) unawaited(_load(request, generation));
+            });
+          }
         }
         final ad = _ad;
         final size = _size;

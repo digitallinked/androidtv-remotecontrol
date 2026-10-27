@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show ProviderSubscription;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/core/ads/ad_placement.dart';
 import 'package:tv_remote/core/ads/ad_unit_ids.dart';
-import 'package:tv_remote/core/ads/banner_slot.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/google_mobile_ads_sdk.dart';
+import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
@@ -48,9 +52,9 @@ abstract interface class LoadedBanner {
 
 /// An interstitial that has loaded and has not been shown.
 abstract interface class LoadedInterstitial {
-  /// Shows the ad full screen. Completes when it is closed, or when it could
-  /// not be shown. Never throws.
-  Future<void> show();
+  /// Shows the ad full screen. Completes when it is closed, with whether it
+  /// was shown at all (`false`: it could not be shown). Never throws.
+  Future<bool> show();
 
   /// Releases the ad.
   void dispose();
@@ -89,31 +93,77 @@ AdUnitIds adUnitIds(Ref ref) => AdUnitIds.resolve(
 
 /// Decides when the ads SDK may start and when a banner may show (Ruling
 /// P6-R9).
+///
+/// The state is whether the SDK has started. The order is that of Ruling
+/// P6-R3: the consent step (which the remote screen runs, and nothing here
+/// starts), then on iOS the tracking question (which the banner asks, with
+/// its pre-prompt), then the SDK.
 @Riverpod(keepAlive: true)
 class AdsController extends _$AdsController {
+  Future<void>? _gathered;
   Future<void>? _initialised;
 
   @override
-  void build() {}
+  bool build() => false;
 
-  /// Whether ads may load: consent has been gathered, the platform allows ad
-  /// requests, and the SDK has started. The SDK starts once, and never before
-  /// the consent step has finished. Never throws; any failure is `false`.
+  /// Completes when the consent step has finished. It never starts it: the
+  /// form belongs to the remote screen (Ruling P6-C9), so this waits.
+  Future<void> _waitForConsent() {
+    if (ref.read(consentControllerProvider).gathered) return Future.value();
+    return _gathered ??= () {
+      final done = Completer<void>();
+      late final ProviderSubscription<ConsentResult> subscription;
+      subscription = ref.container.listen(consentControllerProvider, (_, next) {
+        if (!next.gathered || done.isCompleted) return;
+        done.complete();
+        subscription.close();
+      });
+      return done.future;
+    }();
+  }
+
+  /// Waits for the consent step, then answers whether the platform allows ad
+  /// requests. Never throws and never starts the step; with no remote screen
+  /// to gather consent it keeps waiting.
+  Future<bool> consentAllowsAds() async {
+    try {
+      await _waitForConsent();
+      if (!ref.mounted) return false;
+      return ref.read(consentControllerProvider).canRequestAds;
+    } on Object catch (error) {
+      developer.log('consent could not be read', name: 'ads', error: error);
+      return false;
+    }
+  }
+
+  /// Whether ads may load: consent has been gathered and allows ad requests,
+  /// the tracking question (iOS) has been answered, and the SDK has started.
+  /// The SDK starts once, and never before those two. Never throws; any
+  /// failure is `false`.
+  ///
+  /// It waits for consent but does not start it. An unanswered tracking
+  /// question is `false` at once: this does not ask it either, as asking needs
+  /// a screen.
   Future<bool> ready() async {
     // Read before the first await: the caller (a screen) doesn't wait on a
     // container that has been disposed.
-    final consent = ref.read(consentControllerProvider.notifier);
     final sdk = ref.read(adsSdkProvider);
+    final tracking = ref.read(trackingServiceProvider);
     try {
-      await consent.ensureGathered();
+      if (!await consentAllowsAds() || !ref.mounted) return false;
+      if (await tracking.status() == TrackingStatus.notDetermined) return false;
       if (!ref.mounted) return false;
-      if (!ref.read(consentControllerProvider).canRequestAds) return false;
-      await (_initialised ??= sdk.initialize());
+      await (_initialised ??= _start(sdk));
       return true;
     } on Object catch (error) {
       developer.log('ads could not start', name: 'ads', error: error);
       return false;
     }
+  }
+
+  Future<void> _start(AdsSdk sdk) async {
+    await sdk.initialize();
+    if (ref.mounted) state = true;
   }
 
   /// Whether a banner may show on [placement] right now: there is a unit id,

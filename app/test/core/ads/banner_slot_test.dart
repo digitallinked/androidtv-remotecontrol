@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -5,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/core/ads/ad_unit_ids.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
@@ -18,6 +22,7 @@ import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import '../../helpers/fake_ads_sdk.dart';
 import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_tracking_service.dart';
+import '../../helpers/gather_consent.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_router_app.dart';
@@ -41,10 +46,20 @@ void main() {
     double textScale = 1,
     TextScaler? textScaler,
     Brightness brightness = Brightness.light,
+    EdgeInsets systemBars = EdgeInsets.zero,
+    bool gather = true,
   }) async {
     t.view
       ..physicalSize = size
-      ..devicePixelRatio = 1;
+      ..devicePixelRatio = 1
+      ..padding = FakeViewPadding(
+        top: systemBars.top,
+        bottom: systemBars.bottom,
+      )
+      ..viewPadding = FakeViewPadding(
+        top: systemBars.top,
+        bottom: systemBars.bottom,
+      );
     addTearDown(t.view.reset);
     await pumpRouterApp(
       t,
@@ -54,6 +69,8 @@ void main() {
       textScaler: textScaler,
       brightness: brightness,
     );
+    // The remote screen gathers consent in the app; here nothing else does.
+    if (gather) await gatherConsent(t);
   }
 
   group('without a loaded ad', () {
@@ -89,6 +106,7 @@ void main() {
       AppRoutes.onboarding,
       AppRoutes.manageApps,
       AppRoutes.devices,
+      AppRoutes.pair('Living Room TV'),
       AppRoutes.paywall(source: PaywallSource.settings),
     ]) {
       final sdk = FakeAdsSdk(loads: true);
@@ -99,7 +117,8 @@ void main() {
       expect(sdk.initializeCalls, 0, reason: location);
     }
     // A Settings sub-page sits on top of the hub, which stays built but off
-    // stage: nothing visible, no banner on the page itself.
+    // stage: nothing visible, no banner on the page itself, and the hub
+    // below loads nothing while it is covered.
     for (final location in [
       AppRoutes.settingsAppearance,
       AppRoutes.settingsRemoteLayout,
@@ -108,10 +127,146 @@ void main() {
       AppRoutes.settingsAbout,
       AppRoutes.settingsPrivacy,
     ]) {
-      await pumpAt(t, location, sdk: FakeAdsSdk(loads: true));
+      final sdk = FakeAdsSdk(loads: true);
+      await pumpAt(t, location, sdk: sdk);
       expect(find.byType(BannerSlot), findsNothing, reason: location);
       expect(_banner, findsNothing, reason: location);
+      expect(sdk.bannerLoads, 0, reason: location);
+      expect(sdk.initializeCalls, 0, reason: location);
     }
+  });
+
+  testWidgets('the_hub_loads_when_it_becomes_the_current_route_again', (
+    t,
+  ) async {
+    final sdk = FakeAdsSdk(loads: true);
+    await pumpAt(t, AppRoutes.settingsAbout, sdk: sdk);
+    expect(sdk.bannerLoads, 0);
+
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.byType(BannerSlot), findsOneWidget);
+    expect(_banner, findsOneWidget);
+    expect(sdk.bannerLoads, 1);
+
+    // A page pushed over the hub keeps its ad: no reload on the way back.
+    unawaited(
+      GoRouter.of(
+        t.element(find.byType(BannerSlot)),
+      ).push<void>(AppRoutes.settingsAbout),
+    );
+    await t.pumpAndSettle();
+    expect(sdk.bannerLoads, 1);
+    expect(sdk.disposed, 0);
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(_banner, findsOneWidget);
+    expect(sdk.bannerLoads, 1);
+    expect(sdk.disposed, 0);
+  });
+
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'a_dialog_or_sheet_over_the_screen_starts_no_load_and_no_preprompt',
+    (t) async {
+      for (final (location, placement) in [
+        (AppRoutes.apps, AdPlacement.apps),
+        (AppRoutes.settings, AdPlacement.settings),
+      ]) {
+        for (final sheet in [false, true]) {
+          final reason = '$location ${sheet ? 'sheet' : 'dialog'}';
+          final tracking = FakeTrackingService(
+            current: TrackingStatus.notDetermined,
+          );
+          final sdk = FakeAdsSdk(loads: true);
+          // Consent is still open when the dialog or sheet comes up.
+          await pumpAt(
+            t,
+            location,
+            sdk: sdk,
+            gather: false,
+            overrides: [trackingServiceProvider.overrideWithValue(tracking)],
+          );
+          final context = t.element(find.byType(Scaffold).first);
+          if (sheet) {
+            unawaited(
+              showAppSheet<void>(
+                context: context,
+                title: 'Sheet title',
+                builder: (_) => const Text('Sheet body'),
+              ),
+            );
+          } else {
+            unawaited(
+              showAppDialog<void>(
+                context: context,
+                title: 'Dialog title',
+                message: 'Dialog body',
+                actions: const [AppDialogAction(label: 'Got it', value: null)],
+              ),
+            );
+          }
+          await t.pumpAndSettle();
+          await gatherConsent(t);
+
+          // Covered: no pre-prompt, no SDK start, no load.
+          expect(
+            find.text('About ads in this app'),
+            findsNothing,
+            reason: reason,
+          );
+          expect(sdk.initializeCalls, 0, reason: reason);
+          expect(sdk.bannerLoads, 0, reason: reason);
+
+          // Closed: the screen is current again and carries on.
+          if (sheet) {
+            await t.tapAt(const Offset(10, 10));
+          } else {
+            await t.tap(find.text('Got it'));
+          }
+          await t.pumpAndSettle();
+          expect(
+            find.text('About ads in this app'),
+            findsOneWidget,
+            reason: reason,
+          );
+          expect(sdk.bannerLoads, 0, reason: reason);
+          await t.tap(find.text('Continue'));
+          await t.pumpAndSettle();
+          expect(sdk.bannerLoads, 1, reason: reason);
+          expect(_banner, findsOneWidget, reason: reason);
+          expect(_slot(placement), findsOneWidget);
+        }
+      }
+    },
+  );
+
+  testWidgets('ads_wait_for_consent_and_never_open_the_form_themselves', (
+    t,
+  ) async {
+    final hold = Completer<void>();
+    final consent = FakeConsentService(holdShowForm: hold);
+    final sdk = FakeAdsSdk(loads: true);
+    await pumpAt(
+      t,
+      AppRoutes.settings,
+      sdk: sdk,
+      gather: false,
+      overrides: [consentServiceProvider.overrideWithValue(consent)],
+    );
+    // The screen is up and allowed to show ads; nothing asked for the form.
+    expect(consent.showFormCalls, 0);
+    expect(sdk.initializeCalls, 0);
+    expect(sdk.bannerLoads, 0);
+
+    // The remote screen gathers; only then does the banner go on.
+    await gatherConsent(t);
+    expect(consent.showFormCalls, 1);
+    expect(sdk.bannerLoads, 0, reason: 'the form is still open');
+    hold.complete();
+    await t.pumpAndSettle();
+    expect(sdk.initializeCalls, 1);
+    expect(_banner, findsOneWidget);
   });
 
   testWidgets('banner_shows_on_apps_and_settings_when_allowed', (t) async {
@@ -260,8 +415,10 @@ void main() {
         overrides: [trackingServiceProvider.overrideWithValue(tracking)],
       );
 
-      // The pre-prompt is on screen; no ad has been asked for yet.
+      // The pre-prompt is on screen; the SDK has not started and no ad has
+      // been asked for (Ruling P6-C8: tracking first, then the SDK).
       expect(find.text('About ads in this app'), findsOneWidget);
+      expect(sdk.initializeCalls, 0);
       expect(sdk.bannerLoads, 0);
       expect(_banner, findsNothing);
       expect(tracking.requests, 0);
@@ -270,6 +427,7 @@ void main() {
       await t.pumpAndSettle();
 
       expect(tracking.requests, 1);
+      expect(sdk.initializeCalls, 1);
       expect(sdk.bannerUnits, [AdMobTestIds.iosBanner]);
       expect(_banner, findsOneWidget);
     },
@@ -340,6 +498,41 @@ void main() {
     await t.pumpAndSettle();
     expect(_banner, findsNothing);
     expect(sdk.disposed, 2);
+  });
+
+  testWidgets('system_bars_count_against_the_screen_height', (t) async {
+    // 844 x 390: without bars the content keeps 218 dp (390 - 64 - 48 - 60).
+    final open = FakeAdsSdk(loads: true);
+    await pumpAt(t, AppRoutes.settings, sdk: open, size: const Size(844, 390));
+    expect(open.bannerLoads, 1);
+    expect(_banner, findsOneWidget);
+
+    // A 24 dp status bar and a 48 dp navigation bar leave 146 dp: too small
+    // for a 60 dp banner. The slot sits inside the scaffold and a SafeArea,
+    // which have already removed the bars from their own MediaQuery.
+    final bars = FakeAdsSdk(loads: true);
+    await pumpAt(
+      t,
+      AppRoutes.settings,
+      sdk: bars,
+      size: const Size(844, 390),
+      systemBars: const EdgeInsets.only(top: 24, bottom: 48),
+    );
+    expect(bars.bannerSizeCalls, 1);
+    expect(bars.bannerLoads, 0);
+    expect(_banner, findsNothing);
+    expect(t.getSize(_slot(AdPlacement.settings)).height, 0);
+
+    // Bars that still leave room don't stop it.
+    final room = FakeAdsSdk(loads: true);
+    await pumpAt(
+      t,
+      AppRoutes.settings,
+      sdk: room,
+      size: const Size(844, 390),
+      systemBars: const EdgeInsets.only(top: 8, bottom: 8),
+    );
+    expect(room.bannerLoads, 1);
   });
 
   testWidgets('tiny_screens_skip_the_banner', (t) async {
