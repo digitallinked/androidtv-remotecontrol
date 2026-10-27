@@ -74,6 +74,74 @@ class LoggingCrashReporter implements CrashReporter {
   }
 }
 
+/// A [CrashReporter] that forwards to [delegate], which can be replaced while
+/// the app runs.
+///
+/// `main` installs the error handlers with one of these before anything else
+/// is started; once Firebase is ready the delegate is swapped for the real
+/// reporter, so errors from early startup are still caught.
+class DelegatingCrashReporter implements CrashReporter {
+  /// Creates a reporter that forwards to [delegate].
+  DelegatingCrashReporter(this.delegate);
+
+  /// Where reports go. Assign a new reporter to switch.
+  CrashReporter delegate;
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+    String? reason,
+  }) => delegate.recordError(error, stack, fatal: fatal, reason: reason);
+
+  @override
+  Future<void> recordFlutterError(
+    FlutterErrorDetails details, {
+    bool fatal = false,
+  }) => delegate.recordFlutterError(details, fatal: fatal);
+}
+
+/// A [CrashReporter] that calls each reporter in turn. One reporter's
+/// failure is swallowed and never stops the others.
+class CompositeCrashReporter implements CrashReporter {
+  /// Creates a reporter that fans out to [reporters].
+  CompositeCrashReporter(List<CrashReporter> reporters)
+    : _reporters = List.unmodifiable(reporters);
+
+  final List<CrashReporter> _reporters;
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+    String? reason,
+  }) async {
+    for (final reporter in _reporters) {
+      try {
+        await reporter.recordError(error, stack, fatal: fatal, reason: reason);
+      } on Object {
+        // One failing reporter must not hide the error from the others.
+      }
+    }
+  }
+
+  @override
+  Future<void> recordFlutterError(
+    FlutterErrorDetails details, {
+    bool fatal = false,
+  }) async {
+    for (final reporter in _reporters) {
+      try {
+        await reporter.recordFlutterError(details, fatal: fatal);
+      } on Object {
+        // One failing reporter must not hide the error from the others.
+      }
+    }
+  }
+}
+
 /// The app's crash reporter.
 @Riverpod(keepAlive: true)
 CrashReporter crashReporter(Ref ref) => const LoggingCrashReporter();

@@ -4,6 +4,26 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase config is git-ignored: app/android/app/src/<flavor>/google-services.json.
+// Without it the plugins aren't applied and the app runs on no-op services (Ruling P6-R2).
+val firebaseFlavors = listOf("dev", "prod").filter { file("src/$it/google-services.json").exists() }
+if (firebaseFlavors.isNotEmpty()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+    // A flavor without its own file (say prod, while only dev has one) still builds.
+    extensions.configure<com.google.gms.googleservices.GoogleServicesPlugin.GoogleServicesPluginConfig>("googleServices") {
+        missingGoogleServicesStrategy = com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
+    }
+    // Crashlytics' mapping upload reads the flavor's own google-services values, so a
+    // release build of a flavor without its file would fail; skip the upload for it.
+    val flavorsWithoutFirebase = listOf("dev", "prod") - firebaseFlavors.toSet()
+    tasks.configureEach {
+        if (name.startsWith("uploadCrashlyticsMappingFile") && flavorsWithoutFirebase.any { name.contains(it, ignoreCase = true) }) {
+            enabled = false
+        }
+    }
+}
+
 android {
     namespace = "com.digitallinked.atvremote"
     compileSdk = flutter.compileSdkVersion

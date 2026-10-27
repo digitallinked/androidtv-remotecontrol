@@ -11,7 +11,9 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
+import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/device/screen_services.dart';
+import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
@@ -128,6 +130,9 @@ Future<SettingsStore> pumpRouterApp(
           ),
         ),
         linkOpenerProvider.overrideWithValue(RecordingLinkOpener()),
+        // No services are configured in tests: Firebase is not started.
+        serviceConfigProvider.overrideWithValue(ServiceConfig.none),
+        firebaseStatusProvider.overrideWithValue(FirebaseStatus.notConfigured),
         // Premium is the free stub until a test overrides it.
         premiumProvider.overrideWith(() => TestPremium(PremiumState.free)),
         initialLocationProvider.overrideWithValue(initialLocation),

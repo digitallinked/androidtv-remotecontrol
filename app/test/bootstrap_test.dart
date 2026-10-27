@@ -4,11 +4,15 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/bootstrap.dart';
+import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 
@@ -177,6 +181,169 @@ void main() {
 
       expect(opens, 2);
       expect(find.text('Get started'), findsOneWidget);
+    });
+  });
+  group('Firebase startup', () {
+    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+    });
+
+    Future<Widget> root(
+      RecordingCrashReporter reporter,
+      Future<FirebaseStatus> Function(ServiceConfig) initFirebase, {
+      List<StartupStep> startupSteps = const [],
+    }) => buildRootWidget(
+      flavor: Flavor.dev,
+      crashReporter: reporter,
+      serviceConfig: const ServiceConfig(firebaseEnabled: true),
+      initFirebase: initFirebase,
+      startupSteps: startupSteps,
+      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+    );
+
+    ProviderContainer containerOf(WidgetTester tester) => tester
+        .widget<UncontrolledProviderScope>(
+          find.byType(UncontrolledProviderScope),
+        )
+        .container;
+
+    testWidgets('app_starts_when_firebase_init_fails', (tester) async {
+      final rec = RecordingCrashReporter();
+
+      final app = await root(rec, (_) async => throw StateError('no config'));
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(
+        containerOf(tester).read(firebaseStatusProvider),
+        FirebaseStatus.unavailable,
+      );
+      expect(rec.errors.single.reason, 'startup step 0');
+      expect(rec.errors.single.fatal, isFalse);
+    });
+
+    testWidgets('firebase_status_reaches_the_providers', (tester) async {
+      final rec = RecordingCrashReporter();
+      ServiceConfig? seen;
+
+      final app = await root(rec, (config) async {
+        seen = config;
+        return FirebaseStatus.ready;
+      });
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      final container = containerOf(tester);
+      expect(container.read(firebaseStatusProvider), FirebaseStatus.ready);
+      expect(container.read(serviceConfigProvider).firebaseEnabled, isTrue);
+      expect(seen?.firebaseEnabled, isTrue);
+      expect(rec.errors, isEmpty);
+    });
+
+    testWidgets('firebase_is_the_first_startup_step', (tester) async {
+      final order = <String>[];
+
+      await root(RecordingCrashReporter(), (_) async {
+        order.add('firebase');
+        return FirebaseStatus.ready;
+      }, startupSteps: [() async => order.add('later')]);
+
+      expect(order, ['firebase', 'later']);
+    });
+
+    testWidgets('a_hanging_firebase_init_does_not_block_the_first_frame', (
+      tester,
+    ) async {
+      final rec = RecordingCrashReporter();
+      Widget? app;
+      unawaited(
+        root(
+          rec,
+          (_) => Completer<FirebaseStatus>().future,
+        ).then((w) => app = w),
+      );
+
+      await tester.pump(const Duration(seconds: 6));
+      expect(app, isNotNull);
+      expect(rec.errors.single.reason, 'startup step 0');
+
+      await tester.pumpWidget(app!);
+      await tester.pumpAndSettle();
+      expect(find.text('Get started'), findsOneWidget);
+      expect(
+        containerOf(tester).read(firebaseStatusProvider),
+        FirebaseStatus.unavailable,
+      );
+    });
+
+    testWidgets('startup_that_never_finishes_shows_the_error_screen', (
+      tester,
+    ) async {
+      final rec = RecordingCrashReporter();
+      var hang = true;
+      await tester.pumpWidget(
+        StartupGate(
+          reporter: rec,
+          timeout: const Duration(seconds: 1),
+          build: () => hang
+              ? Completer<Widget>().future
+              : root(rec, (_) async => FirebaseStatus.notConfigured),
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+
+      expect(find.text('The app could not start'), findsOneWidget);
+      expect(rec.errors.single.fatal, isTrue);
+      expect(rec.errors.single.reason, 'startup timeout');
+
+      hang = false;
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('The app could not start'), findsNothing);
+      expect(find.text('Get started'), findsOneWidget);
+    });
+  });
+
+  group('crash reporters', () {
+    test('the_delegating_reporter_forwards_and_can_switch', () async {
+      final first = RecordingCrashReporter();
+      final second = RecordingCrashReporter();
+      final reporter = DelegatingCrashReporter(first);
+
+      await reporter.recordError('a', null, reason: 'one');
+      await reporter.recordFlutterError(
+        const FlutterErrorDetails(exception: 'f'),
+        fatal: true,
+      );
+      reporter.delegate = second;
+      await reporter.recordError('b', null, fatal: true);
+
+      expect(first.errors.single.reason, 'one');
+      expect(first.flutterErrors.single.fatal, isTrue);
+      expect(second.errors.single.fatal, isTrue);
+      expect(first.errors, hasLength(1));
+    });
+
+    test('the_composite_reporter_keeps_going_when_one_throws', () async {
+      final good = RecordingCrashReporter();
+      final reporter = CompositeCrashReporter([
+        RecordingCrashReporter(throwOnRecord: true),
+        good,
+      ]);
+
+      await reporter.recordError('x', null, reason: 'r');
+      await reporter.recordFlutterError(
+        const FlutterErrorDetails(exception: 'y'),
+      );
+
+      expect(good.errors.single.reason, 'r');
+      expect(good.flutterErrors, hasLength(1));
     });
   });
 }

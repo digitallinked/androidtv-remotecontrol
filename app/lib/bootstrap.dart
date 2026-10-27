@@ -9,8 +9,10 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/licenses.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
+import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -46,6 +48,10 @@ Future<void> runStartupSteps(
 /// Runs the startup steps, opens settings and the database, and builds the
 /// widget tree to run.
 ///
+/// Firebase is started first, as startup step 0 (Ruling P6-R3): a failure or
+/// a timeout leaves [firebaseStatusProvider] at [FirebaseStatus.unavailable]
+/// and is reported, and the passed [startupSteps] still run after it.
+///
 /// The database is opened by the provider graph, so the first screen is
 /// resolved through a single [ProviderContainer] that the app then keeps
 /// using. A second container would open a second database.
@@ -53,11 +59,22 @@ Future<Widget> buildRootWidget({
   required Flavor flavor,
   required CrashReporter crashReporter,
   List<StartupStep> startupSteps = const [],
+  ServiceConfig serviceConfig = ServiceConfig.none,
+  Future<FirebaseStatus> Function(ServiceConfig) initFirebase =
+      initializeFirebase,
   Future<SettingsStore> Function() openSettings = SettingsStore.open,
   AppDatabase Function() openDatabase = AppDatabase.open,
   @visibleForTesting List<Override> overrides = const [],
 }) async {
-  await runStartupSteps(startupSteps, reporter: crashReporter);
+  // Assumed failed until it answers: a throw or a timeout leaves it so.
+  var firebase = FirebaseStatus.unavailable;
+  await runStartupSteps([
+    () async {
+      firebase = await initFirebase(serviceConfig);
+    },
+    ...startupSteps,
+  ], reporter: crashReporter);
+  final firebaseResult = firebase;
   final settings = await openSettings();
 
   String? location;
@@ -65,6 +82,8 @@ Future<Widget> buildRootWidget({
     overrides: [
       flavorProvider.overrideWithValue(flavor),
       crashReporterProvider.overrideWithValue(crashReporter),
+      serviceConfigProvider.overrideWithValue(serviceConfig),
+      firebaseStatusProvider.overrideWithValue(firebaseResult),
       settingsStoreProvider.overrideWithValue(settings),
       appDatabaseProvider.overrideWith((ref) {
         final db = openDatabase();
@@ -122,14 +141,23 @@ class _RootHostState extends State<_RootHost> {
 /// The error screen has no localisation or provider dependencies, because
 /// those are exactly what may have failed to start.
 class StartupGate extends StatefulWidget {
-  /// Creates a gate around [build].
-  const StartupGate({required this.build, required this.reporter, super.key});
+  /// Creates a gate around [build]. Startup that takes longer than [timeout]
+  /// counts as failed.
+  const StartupGate({
+    required this.build,
+    required this.reporter,
+    this.timeout = const Duration(seconds: 20),
+    super.key,
+  });
 
   /// Builds the app, as [buildRootWidget] does.
   final Future<Widget> Function() build;
 
   /// Where a failure is reported.
   final CrashReporter reporter;
+
+  /// How long [build] may take before the error screen is shown.
+  final Duration timeout;
 
   @override
   State<StartupGate> createState() => _StartupGateState();
@@ -152,7 +180,7 @@ class _StartupGateState extends State<StartupGate> {
     _busy = true;
     if (_failed) setState(() => _failed = false);
     try {
-      final app = await widget.build();
+      final app = await widget.build().timeout(widget.timeout);
       if (mounted) setState(() => _app = app);
     } on Object catch (error, stack) {
       await safeRecordError(
@@ -160,7 +188,7 @@ class _StartupGateState extends State<StartupGate> {
         error,
         stack,
         fatal: true,
-        reason: 'startup',
+        reason: error is TimeoutException ? 'startup timeout' : 'startup',
       );
       if (mounted) setState(() => _failed = true);
     } finally {
@@ -232,13 +260,21 @@ Future<void> bootstrap(Flavor flavor) async {
     'Dart entry point is for the ${flavor.name} flavor but the native build '
     'is "$appFlavor".',
   );
-  const reporter = LoggingCrashReporter();
+  // Installed before anything else starts; once Firebase is ready the
+  // delegate becomes the Crashlytics reporter (Ruling P6-R3).
+  final reporter = DelegatingCrashReporter(const LoggingCrashReporter());
   installErrorHandlers(reporter);
   registerAppLicenses();
   runApp(
     StartupGate(
       reporter: reporter,
-      build: () => buildRootWidget(flavor: flavor, crashReporter: reporter),
+      build: () => buildRootWidget(
+        flavor: flavor,
+        crashReporter: reporter,
+        // `environment` differs from the default whenever defines are given.
+        // ignore: avoid_redundant_argument_values
+        serviceConfig: ServiceConfig.environment,
+      ),
     ),
   );
 }
