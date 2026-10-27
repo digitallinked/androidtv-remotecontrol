@@ -14,7 +14,7 @@ import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/privacy/privacy_choices.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
-import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/settings/application/feedback.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
 

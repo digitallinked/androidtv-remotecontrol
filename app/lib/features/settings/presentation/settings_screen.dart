@@ -7,7 +7,8 @@ import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
-import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/settings/application/feedback.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
 
@@ -24,6 +25,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final premium = ref.watch(premiumProvider.select((p) => p.isPremium));
     return Scaffold(
       appBar: AppBar(title: Text(l10n.pageTitleSettings)),
       body: ListView(
@@ -63,7 +65,9 @@ class SettingsScreen extends ConsumerWidget {
           SettingsNavTile(
             icon: Icons.workspace_premium_outlined,
             title: l10n.pageTitlePaywall,
-            subtitle: l10n.settingsPremiumSubtitle,
+            subtitle: premium
+                ? l10n.settingsPremiumActiveSubtitle
+                : l10n.settingsPremiumSubtitle,
             onTap: () => context.push(
               AppRoutes.paywall(source: PaywallSource.settings),
             ),

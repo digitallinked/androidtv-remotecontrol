@@ -37,4 +37,15 @@ abstract final class AppLinks {
           'https://play.google.com/store/apps/details'
           '?id=${flavor.applicationId}',
         );
+
+  /// The store page where the user manages or cancels a subscription on
+  /// [platform]: Google Play's subscription list for the application id of
+  /// [flavor] on Android, the App Store's account page on iOS.
+  static Uri manageSubscriptions(Flavor flavor, TargetPlatform platform) =>
+      platform == TargetPlatform.iOS
+      ? Uri.parse('https://apps.apple.com/account/subscriptions')
+      : Uri.parse(
+          'https://play.google.com/store/account/subscriptions'
+          '?package=${flavor.applicationId}',
+        );
 }

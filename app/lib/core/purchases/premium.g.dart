@@ -8,23 +8,38 @@ part of 'premium.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The user's Premium state.
+/// The user's Premium state (Ruling P6-R10).
 ///
-/// This is a stub that is always free. Task 6.7 replaces the body of
-/// [build] with the real entitlement and keeps this name and [PremiumState].
+/// It starts from the last entitlement the phone saw, so a Premium user never
+/// sees an ad while offline or before the store answers. With a configured
+/// service the answer is [PremiumState.known] on the first live entitlement,
+/// or after [premiumKnownTimeout]; with none (a build with no key) the cache
+/// is final at once. Every live answer rewrites the cache.
+///
+/// Nothing here throws into the UI: a failing store leaves the cached state.
 
 @ProviderFor(Premium)
 final premiumProvider = PremiumProvider._();
 
-/// The user's Premium state.
+/// The user's Premium state (Ruling P6-R10).
 ///
-/// This is a stub that is always free. Task 6.7 replaces the body of
-/// [build] with the real entitlement and keeps this name and [PremiumState].
+/// It starts from the last entitlement the phone saw, so a Premium user never
+/// sees an ad while offline or before the store answers. With a configured
+/// service the answer is [PremiumState.known] on the first live entitlement,
+/// or after [premiumKnownTimeout]; with none (a build with no key) the cache
+/// is final at once. Every live answer rewrites the cache.
+///
+/// Nothing here throws into the UI: a failing store leaves the cached state.
 final class PremiumProvider extends $NotifierProvider<Premium, PremiumState> {
-  /// The user's Premium state.
+  /// The user's Premium state (Ruling P6-R10).
   ///
-  /// This is a stub that is always free. Task 6.7 replaces the body of
-  /// [build] with the real entitlement and keeps this name and [PremiumState].
+  /// It starts from the last entitlement the phone saw, so a Premium user never
+  /// sees an ad while offline or before the store answers. With a configured
+  /// service the answer is [PremiumState.known] on the first live entitlement,
+  /// or after [premiumKnownTimeout]; with none (a build with no key) the cache
+  /// is final at once. Every live answer rewrites the cache.
+  ///
+  /// Nothing here throws into the UI: a failing store leaves the cached state.
   PremiumProvider._()
     : super(
         from: null,
@@ -52,12 +67,17 @@ final class PremiumProvider extends $NotifierProvider<Premium, PremiumState> {
   }
 }
 
-String _$premiumHash() => r'dc8b866e6576ed9fa838fbffcebe28030c5edffa';
+String _$premiumHash() => r'176fbc500ac53688f27366b52aad7c85649c3372';
 
-/// The user's Premium state.
+/// The user's Premium state (Ruling P6-R10).
 ///
-/// This is a stub that is always free. Task 6.7 replaces the body of
-/// [build] with the real entitlement and keeps this name and [PremiumState].
+/// It starts from the last entitlement the phone saw, so a Premium user never
+/// sees an ad while offline or before the store answers. With a configured
+/// service the answer is [PremiumState.known] on the first live entitlement,
+/// or after [premiumKnownTimeout]; with none (a build with no key) the cache
+/// is final at once. Every live answer rewrites the cache.
+///
+/// Nothing here throws into the UI: a failing store leaves the cached state.
 
 abstract class _$Premium extends $Notifier<PremiumState> {
   PremiumState build();

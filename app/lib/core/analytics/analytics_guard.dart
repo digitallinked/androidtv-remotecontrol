@@ -2,7 +2,7 @@ import 'package:atv_remote/atv_remote.dart' show RemoteCloseReason;
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/key_names.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
-import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 
 /// An analytics event broke the rules of Ruling P6-R6. Debug builds throw it
 /// so a test or a developer sees the mistake; release builds drop the event

@@ -20,7 +20,7 @@ import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/devices/presentation/devices_screen.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
-import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';

@@ -10,6 +10,7 @@ import 'package:tv_remote/app/theme/dynamic_color_support.dart';
 import 'package:tv_remote/app/theme/dynamic_scheme.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 
@@ -47,7 +48,10 @@ class App extends ConsumerWidget {
       ..read(dynamicColorSupportedProvider)
       // The first read starts the silent consent update (it shows nothing);
       // the consent form itself waits for the remote screen.
-      ..read(consentControllerProvider);
+      ..read(consentControllerProvider)
+      // The first read starts the purchase service, so Premium is known
+      // before any banner; the screens read it from then on.
+      ..read(premiumProvider);
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {

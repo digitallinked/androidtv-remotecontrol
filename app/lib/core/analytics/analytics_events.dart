@@ -2,7 +2,7 @@ import 'package:atv_remote/atv_remote.dart' show RemoteCloseReason;
 import 'package:flutter/foundation.dart';
 import 'package:tv_remote/core/analytics/key_names.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
-import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 
 /// `camelCase` as `snake_case`: `cantReachTv` becomes `cant_reach_tv`.
 String snakeCase(String camel) => camel.replaceAllMapped(

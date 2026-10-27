@@ -5,7 +5,7 @@ import 'package:tv_remote/core/analytics/analytics_guard.dart';
 import 'package:tv_remote/core/analytics/key_names.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
-import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 
 import '../../helpers/test_catalogue.dart';
 

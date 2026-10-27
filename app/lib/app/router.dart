@@ -15,6 +15,7 @@ import 'package:tv_remote/features/devices/presentation/edit_device_screen.dart'
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/settings/presentation/about_page.dart';

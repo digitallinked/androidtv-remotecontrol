@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/test_premium.dart';
 
 void main() {
   Finder appBarTitle(String title) =>
@@ -48,7 +51,8 @@ void main() {
       t.widget<PaywallScreen>(find.byType(PaywallScreen)).source,
       PaywallSource.settings,
     );
-    await t.pageBack();
+    // The paywall closes with a close button, not a back arrow.
+    await t.tap(find.byTooltip('Close'));
     await t.pumpAndSettle();
 
     await reveal(t, privacy);
@@ -81,5 +85,29 @@ void main() {
       );
       expect(t.getSize(tile).height, greaterThanOrEqualTo(56), reason: row);
     }
+  });
+
+  testWidgets('hub_premium_row_reflects_premium', (t) async {
+    t.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(t, initialLocation: AppRoutes.settings);
+    await reveal(t, find.text('Premium'));
+    expect(find.text('No ads and extra colour styles'), findsOneWidget);
+    expect(find.text('You have Premium. Thank you!'), findsNothing);
+
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.settings,
+      overrides: [
+        premiumProvider.overrideWith(
+          () => TestPremium(const PremiumState(isPremium: true, known: true)),
+        ),
+      ],
+    );
+    await reveal(t, find.text('Premium'));
+    expect(find.text('You have Premium. Thank you!'), findsOneWidget);
+    expect(find.text('No ads and extra colour styles'), findsNothing);
   });
 }
