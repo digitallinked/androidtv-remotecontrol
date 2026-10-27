@@ -9,6 +9,7 @@ import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/dynamic_color_support.dart';
 import 'package:tv_remote/app/theme/dynamic_scheme.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
+import 'package:tv_remote/core/ads/interstitials.dart';
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
@@ -51,7 +52,12 @@ class App extends ConsumerWidget {
       ..read(consentControllerProvider)
       // The first read starts the purchase service, so Premium is known
       // before any banner; the screens read it from then on.
-      ..read(premiumProvider);
+      ..read(premiumProvider)
+      // Starts the interstitial pacing and keeps it listened to (Riverpod
+      // pauses a provider nothing listens to, and its own listeners with it):
+      // it hears about connection trouble from launch on, and keeps one ad
+      // loaded when interstitials are enabled.
+      ..watch(interstitialsProvider);
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {

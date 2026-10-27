@@ -10,6 +10,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
@@ -29,6 +30,7 @@ import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
+import 'fake_ads_sdk.dart';
 import 'fake_consent_service.dart';
 import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
@@ -139,6 +141,10 @@ Future<SettingsStore> pumpRouterApp(
         // the Android answer (nothing to decide).
         consentServiceProvider.overrideWithValue(FakeConsentService()),
         trackingServiceProvider.overrideWithValue(FakeTrackingService()),
+        // The ads SDK starts but never loads, so every screen shows the
+        // zero-size banner slot of Phase 5; a test of ads passes
+        // `FakeAdsSdk(loads: true)`.
+        adsSdkProvider.overrideWithValue(FakeAdsSdk()),
         // Premium is the real notifier. No RevenueCat key is set, so the
         // purchase service is the unavailable one (free, known at once);
         // tests override `purchaseServiceProvider` or `premiumProvider`.
