@@ -42,7 +42,8 @@ void main() {
 
       async.elapse(const Duration(seconds: 4));
       expect(status, isNull);
-      async.elapse(const Duration(seconds: 2));
+      // Inside the 5 s startup step: a hang ends here, not in the step.
+      async.elapse(const Duration(milliseconds: 600));
       expect(status, FirebaseStatus.unavailable);
     });
   });

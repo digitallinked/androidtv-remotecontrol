@@ -7,18 +7,19 @@ import 'package:flutter_test/flutter_test.dart';
 /// nothing.
 const _adapters = <String, Set<String>>{
   'firebase_core': {'lib/core/firebase/firebase_bootstrap.dart'},
-  'firebase_crashlytics': {'lib/core/crash/crashlytics_reporter.dart'},
-  'firebase_analytics': {'lib/core/analytics/firebase_analytics_service.dart'},
-  'firebase_remote_config': {'lib/core/config/firebase_app_config.dart'},
-  'google_mobile_ads': {
-    'lib/core/ads/ads_service.dart',
-    'lib/core/ads/banner_slot.dart',
-    'lib/core/ads/consent_service.dart',
+  'firebase_crashlytics': {'lib/core/crash/crashlytics_sink.dart'},
+  'firebase_analytics': {'lib/core/analytics/firebase_analytics_sink.dart'},
+  'firebase_remote_config': {
+    'lib/core/config/firebase_remote_config_source.dart',
   },
-  'app_tracking_transparency': {'lib/core/ads/tracking_status.dart'},
-  'purchases_flutter': {'lib/core/purchases/purchase_service.dart'},
-  'in_app_review': {'lib/core/review/review_service.dart'},
-  'device_info_plus': {'lib/core/app_info/os_version.dart'},
+  'google_mobile_ads': {
+    'lib/core/ads/ump_consent_service.dart',
+    'lib/core/ads/google_mobile_ads_sdk.dart',
+  },
+  'app_tracking_transparency': {'lib/core/ads/att_tracking_service.dart'},
+  'purchases_flutter': {'lib/core/purchases/revenuecat_purchase_service.dart'},
+  'in_app_review': {'lib/core/review/in_app_review_requester.dart'},
+  'device_info_plus': {'lib/core/app_info/app_info.dart'},
 };
 
 Iterable<File> _dartFiles() => Directory('lib')
@@ -43,14 +44,5 @@ void main() {
       }
     }
     expect(offenders, isEmpty);
-  });
-
-  test('firebase_core_has_exactly_one_importer', () {
-    final importers = [
-      for (final file in _dartFiles())
-        if (file.readAsStringSync().contains('package:firebase_core/'))
-          file.path.replaceAll(r'\', '/'),
-    ];
-    expect(importers, ['lib/core/firebase/firebase_bootstrap.dart']);
   });
 }

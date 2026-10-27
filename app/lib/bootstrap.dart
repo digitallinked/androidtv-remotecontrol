@@ -168,6 +168,11 @@ class _StartupGateState extends State<StartupGate> {
   bool _failed = false;
   bool _busy = false;
 
+  /// The build in flight. After a timeout it keeps running, so Try again
+  /// waits for it instead of starting a second one (which would open the
+  /// database twice and leak the first container).
+  Future<Widget>? _pending;
+
   @override
   void initState() {
     super.initState();
@@ -179,16 +184,26 @@ class _StartupGateState extends State<StartupGate> {
     if (_busy) return;
     _busy = true;
     if (_failed) setState(() => _failed = false);
+    var timedOut = false;
     try {
-      final app = await widget.build().timeout(widget.timeout);
+      final app = await (_pending ??= widget.build()).timeout(
+        widget.timeout,
+        onTimeout: () {
+          timedOut = true;
+          throw TimeoutException('startup', widget.timeout);
+        },
+      );
+      _pending = null;
       if (mounted) setState(() => _app = app);
     } on Object catch (error, stack) {
+      // A build still running stays pending; one that failed is retried.
+      if (!timedOut) _pending = null;
       await safeRecordError(
         widget.reporter,
         error,
         stack,
         fatal: true,
-        reason: error is TimeoutException ? 'startup timeout' : 'startup',
+        reason: timedOut ? 'startup timeout' : 'startup',
       );
       if (mounted) setState(() => _failed = true);
     } finally {

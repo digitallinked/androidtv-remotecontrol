@@ -25,11 +25,12 @@ enum FirebaseStatus {
 /// (`google-services.json` or `GoogleService-Info.plist`), so this is only
 /// ever enabled in builds that have one (Ruling P6-R2). It never throws: a
 /// failure or a [timeout] gives [FirebaseStatus.unavailable] and the app runs
-/// on no-op services. [initializeApp] replaces the real call in tests.
+/// on no-op services. The default timeout is shorter than the 5 s startup step,
+/// so a hang always ends here. [initializeApp] replaces the real call in tests.
 Future<FirebaseStatus> initializeFirebase(
   ServiceConfig config, {
   Future<void> Function()? initializeApp,
-  Duration timeout = const Duration(seconds: 5),
+  Duration timeout = const Duration(milliseconds: 4500),
 }) async {
   if (!config.firebaseEnabled) return FirebaseStatus.notConfigured;
   try {

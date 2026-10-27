@@ -283,14 +283,16 @@ void main() {
       tester,
     ) async {
       final rec = RecordingCrashReporter();
-      var hang = true;
+      final slow = Completer<Widget>();
+      var builds = 0;
       await tester.pumpWidget(
         StartupGate(
           reporter: rec,
           timeout: const Duration(seconds: 1),
-          build: () => hang
-              ? Completer<Widget>().future
-              : root(rec, (_) async => FirebaseStatus.notConfigured),
+          build: () {
+            builds++;
+            return slow.future;
+          },
         ),
       );
 
@@ -301,12 +303,66 @@ void main() {
       expect(rec.errors.single.fatal, isTrue);
       expect(rec.errors.single.reason, 'startup timeout');
 
-      hang = false;
+      // Still running: Try again waits for it (and times out again) rather
+      // than starting a second build.
+      await tester.tap(find.text('Try again'));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(find.text('The app could not start'), findsOneWidget);
+      expect(rec.errors.map((e) => e.reason), [
+        'startup timeout',
+        'startup timeout',
+      ]);
+
+      // Once it finishes, Try again shows the app.
+      slow.complete(await root(rec, (_) async => FirebaseStatus.notConfigured));
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsNothing);
       expect(find.text('Get started'), findsOneWidget);
+      expect(builds, 1);
+    });
+
+    testWidgets('try_again_after_a_timeout_reuses_the_build_still_running', (
+      tester,
+    ) async {
+      final rec = RecordingCrashReporter();
+      var builds = 0;
+      var opens = 0;
+      await tester.pumpWidget(
+        StartupGate(
+          reporter: rec,
+          timeout: const Duration(seconds: 1),
+          build: () {
+            builds++;
+            // The Firebase step hangs until its own 5 s timeout.
+            return buildRootWidget(
+              flavor: Flavor.dev,
+              crashReporter: rec,
+              initFirebase: (_) => Completer<FirebaseStatus>().future,
+              openDatabase: () {
+                opens++;
+                return AppDatabase(NativeDatabase.memory());
+              },
+            );
+          },
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(find.text('The app could not start'), findsOneWidget);
+      expect(rec.errors.first.reason, 'startup timeout');
+
+      // The first build finishes after the gate gave up on it.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(builds, 1);
+      expect(opens, 1);
     });
   });
 

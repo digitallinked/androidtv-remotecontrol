@@ -6,7 +6,8 @@ plugins {
 
 // Firebase config is git-ignored: app/android/app/src/<flavor>/google-services.json.
 // Without it the plugins aren't applied and the app runs on no-op services (Ruling P6-R2).
-val firebaseFlavors = listOf("dev", "prod").filter { file("src/$it/google-services.json").exists() }
+val firebaseFlavorNames = listOf("dev", "prod")
+val firebaseFlavors = firebaseFlavorNames.filter { file("src/$it/google-services.json").exists() }
 if (firebaseFlavors.isNotEmpty()) {
     apply(plugin = "com.google.gms.google-services")
     apply(plugin = "com.google.firebase.crashlytics")
@@ -16,11 +17,21 @@ if (firebaseFlavors.isNotEmpty()) {
     }
     // Crashlytics' mapping upload reads the flavor's own google-services values, so a
     // release build of a flavor without its file would fail; skip the upload for it.
-    val flavorsWithoutFirebase = listOf("dev", "prod") - firebaseFlavors.toSet()
+    // Task names look like uploadCrashlyticsMappingFile<Flavor><BuildType>.
+    val uploadPrefixesWithoutFirebase = (firebaseFlavorNames - firebaseFlavors.toSet())
+        .map { "uploadCrashlyticsMappingFile" + it.replaceFirstChar(Char::uppercase) }
     tasks.configureEach {
-        if (name.startsWith("uploadCrashlyticsMappingFile") && flavorsWithoutFirebase.any { name.contains(it, ignoreCase = true) }) {
+        if (uploadPrefixesWithoutFirebase.any { name.startsWith(it) }) {
             enabled = false
         }
+    }
+} else {
+    // The Google Services plugin also finds a file in these places, but this script only
+    // looks in src/<flavor>/, so say so instead of silently running without Firebase.
+    val unsupportedLocations = listOf("", "src/debug/", "src/release/", "src/profile/") +
+        firebaseFlavorNames.flatMap { f -> listOf("Debug", "Release", "Profile").map { "src/$f$it/" } }
+    unsupportedLocations.filter { file(it + "google-services.json").exists() }.forEach {
+        logger.warn("WARNING: ignoring app/android/app/${it}google-services.json; move it to src/<flavor>/ (dev or prod) to enable Firebase.")
     }
 }
 
