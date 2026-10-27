@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/flavor.dart';
@@ -539,6 +540,68 @@ void main() {
     });
   });
 
+  group('Launch count', () {
+    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+    });
+
+    Future<Widget> root({
+      RecordingCrashReporter? reporter,
+      Future<SettingsStore> Function() openSettings = SettingsStore.open,
+    }) => buildRootWidget(
+      flavor: Flavor.dev,
+      crashReporter: reporter ?? RecordingCrashReporter(),
+      openSettings: openSettings,
+      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      overrides: fakeAdsOverrides(),
+    );
+
+    Future<int> storedLaunchCount() async =>
+        (await SettingsStore.open()).launchCount;
+
+    testWidgets('launch_count_increments_once_per_start', (tester) async {
+      await tester.pumpWidget(await root());
+      await tester.pumpAndSettle();
+      expect(await storedLaunchCount(), 1);
+
+      // Frames, rebuilds and settings changes are not launches.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(await storedLaunchCount(), 1);
+
+      // The next start.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(await root());
+      await tester.pumpAndSettle();
+      expect(await storedLaunchCount(), 2);
+    });
+
+    testWidgets('a_launch_count_that_cannot_be_written_does_not_stop_startup', (
+      tester,
+    ) async {
+      final reporter = RecordingCrashReporter();
+      await tester.pumpWidget(
+        await root(
+          reporter: reporter,
+          openSettings: () async => _NoLaunchCountStore(
+            await SharedPreferencesWithCache.create(
+              cacheOptions: const SharedPreferencesWithCacheOptions(
+                allowList: SettingsStore.keys,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(reporter.errors.single.reason, 'launch count');
+      expect(reporter.errors.single.fatal, isFalse);
+    });
+  });
+
   group('Crashlytics reporter', () {
     setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
@@ -713,4 +776,13 @@ class _OrderSource extends FakeConfigSource {
     _order.add('fetchForNextLaunch');
     return super.fetchForNextLaunch();
   }
+}
+
+/// A store whose launch count can't be written.
+class _NoLaunchCountStore extends SettingsStore {
+  _NoLaunchCountStore(super.prefs);
+
+  @override
+  Future<void> setLaunchCount(int value) =>
+      Future.error(StateError('disk full'));
 }

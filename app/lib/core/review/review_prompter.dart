@@ -1,0 +1,183 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:atv_remote/atv_remote.dart';
+import 'package:clock/clock.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/analytics/analytics_events.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/review/in_app_review_requester.dart';
+import 'package:tv_remote/core/session/lifecycle_observer.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_signals.dart';
+import 'package:tv_remote/core/storage/settings_store.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/remote/application/remote_actions.dart';
+
+part 'review_prompter.g.dart';
+
+/// The store's own review prompt (Google Play In-App Review, Apple's
+/// `SKStoreReviewController`).
+///
+/// The store decides whether the prompt actually appears; the app only asks.
+abstract interface class ReviewRequester {
+  /// Whether the review API can be asked on this phone right now.
+  Future<bool> isAvailable();
+
+  /// Asks the store to show its review prompt.
+  Future<void> request();
+}
+
+/// The review API: the `in_app_review` plugin.
+@Riverpod(keepAlive: true)
+ReviewRequester reviewRequester(Ref ref) => InAppReviewRequester();
+
+/// How long after a connection loss or a "Not connected" notice the review
+/// prompt is not asked.
+const Duration reviewQuietAfterTrouble = Duration(seconds: 60);
+
+/// The launch on which the review prompt may first be asked.
+const int reviewFirstLaunch = 2;
+
+/// The key press count is written to storage every this many presses (and
+/// when the app goes to the background).
+const int reviewPressSaveInterval = 10;
+
+/// The statuses that mean the connection is in trouble: lost, refused or
+/// unreachable.
+const Set<ConnectionStatus> _troubled = {
+  ConnectionStatus.reconnecting,
+  ConnectionStatus.needsPairing,
+  ConnectionStatus.offline,
+};
+
+/// Asks the store for its review prompt once the remote has proven itself
+/// (Ruling P6-R13).
+///
+/// The prompt is asked at most once per install, when all of these hold:
+/// - the key presses counted so far reach `review_prompt_min_key_presses`
+///   (Remote Config, 150 by default);
+/// - this is at least the second launch;
+/// - the session is not the demo;
+/// - a session has just started: the TV became connected from not being
+///   connected, and not as the recovery from a lost connection; and no
+///   connection trouble (a loss, a failed connect or a "Not connected"
+///   notice) happened in the last 60 s.
+///
+/// The press count lives in memory and is written every 10 presses and when
+/// the app goes to the background, so a key press never waits for storage.
+/// When the review API is unavailable nothing is marked, and the next clean
+/// start tries again. Nothing here throws.
+///
+/// The app starts this at launch and keeps it listened to (`App` watches
+/// it): Riverpod may pause the listeners inside a provider nothing listens
+/// to.
+@Riverpod(keepAlive: true)
+class ReviewPrompter extends _$ReviewPrompter {
+  late SettingsStore _store;
+  int _presses = 0;
+  int _saved = 0;
+  ConnectionStatus? _last;
+  DateTime? _lastTroubleAt;
+  bool _asking = false;
+
+  @override
+  void build() {
+    _store = ref.watch(settingsStoreProvider);
+    final signals = ref.watch(sessionSignalsProvider);
+    _presses = _saved = _store.reviewKeyPresses;
+    _last = null;
+    _lastTroubleAt = null;
+    _asking = false;
+
+    final paused = signals.visibility.listen((visibility) {
+      if (visibility == AppVisibility.background) unawaited(_save());
+    });
+    ref
+      ..onDispose(() {
+        unawaited(paused.cancel());
+        unawaited(_save());
+      })
+      // A status of the session that is going away says nothing about the
+      // new one, so a TV switch starts from a clean slate.
+      ..listen(remoteSessionProvider, (_, _) => _last = null)
+      ..listen(connectionStateProvider, (_, next) {
+        final status = next.value?.status;
+        if (next.isLoading || status == null) return;
+        final was = _last;
+        _last = status;
+        if (_troubled.contains(status)) {
+          _lastTroubleAt = clock.now();
+        } else if (status == ConnectionStatus.connected &&
+            was != ConnectionStatus.connected &&
+            !_troubled.contains(was)) {
+          unawaited(_maybePrompt());
+        }
+      })
+      ..listen(notConnectedNoticesProvider, (_, _) {
+        _lastTroubleAt = clock.now();
+      });
+  }
+
+  bool _isDemo() => ref.read(remoteSessionProvider).value?.isDemo ?? false;
+
+  /// Counts one key press sent to the TV. Presses in the demo don't count,
+  /// and none are counted once the prompt has been asked.
+  void countPress() {
+    try {
+      if (_isDemo()) return;
+      if (_store.reviewPromptShown) return;
+      _presses++;
+      if (_presses % reviewPressSaveInterval == 0) unawaited(_save());
+    } on Object catch (error) {
+      developer.log('review press not counted', name: 'review', error: error);
+    }
+  }
+
+  /// Writes the count if it changed since the last write. Never throws, and
+  /// works after dispose (it uses no `ref`).
+  Future<void> _save() async {
+    final value = _presses;
+    if (value == _saved) return;
+    try {
+      await _store.setReviewKeyPresses(value);
+      _saved = value;
+    } on Object catch (error) {
+      developer.log('review count not saved', name: 'review', error: error);
+    }
+  }
+
+  /// Asks for the review if Ruling P6-R13 allows it now. Never throws.
+  Future<void> _maybePrompt() async {
+    if (_asking) return;
+    try {
+      final store = _store;
+      if (store.reviewPromptShown || _isDemo()) return;
+      if (store.launchCount < reviewFirstLaunch) return;
+      final threshold = ref.read(appConfigProvider).reviewPromptMinKeyPresses;
+      if (_presses < threshold) return;
+      final trouble = _lastTroubleAt;
+      if (trouble != null &&
+          clock.now().difference(trouble) < reviewQuietAfterTrouble) {
+        return;
+      }
+
+      final requester = ref.read(reviewRequesterProvider);
+      final analytics = ref.read(appAnalyticsProvider.notifier);
+      _asking = true;
+      try {
+        if (!await requester.isAvailable() || !ref.mounted) return;
+        await requester.request();
+        // Asked: never again, even if this container is going away.
+        await store.setReviewPromptShown(true);
+        if (!ref.mounted) return;
+        analytics.log(const AnalyticsEvent.reviewPromptShown());
+      } finally {
+        _asking = false;
+      }
+    } on Object catch (error) {
+      developer.log('review prompt failed', name: 'review', error: error);
+    }
+  }
+}

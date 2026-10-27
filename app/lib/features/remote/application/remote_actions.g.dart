@@ -9,17 +9,19 @@ part of 'remote_actions.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Where sent commands are reported: a fan-out to everything that follows
-/// what the user does on the remote. Today that is analytics (key presses
+/// what the user does on the remote. That is analytics (key presses
 /// sampled, app launches by catalogue package; typed text is never logged,
-/// not even its length).
+/// not even its length) and the review prompter, which counts every key
+/// press (the demo's are ignored there).
 
 @ProviderFor(remoteActionListener)
 final remoteActionListenerProvider = RemoteActionListenerProvider._();
 
 /// Where sent commands are reported: a fan-out to everything that follows
-/// what the user does on the remote. Today that is analytics (key presses
+/// what the user does on the remote. That is analytics (key presses
 /// sampled, app launches by catalogue package; typed text is never logged,
-/// not even its length).
+/// not even its length) and the review prompter, which counts every key
+/// press (the demo's are ignored there).
 
 final class RemoteActionListenerProvider
     extends
@@ -30,9 +32,10 @@ final class RemoteActionListenerProvider
         >
     with $Provider<RemoteActionListener> {
   /// Where sent commands are reported: a fan-out to everything that follows
-  /// what the user does on the remote. Today that is analytics (key presses
+  /// what the user does on the remote. That is analytics (key presses
   /// sampled, app launches by catalogue package; typed text is never logged,
-  /// not even its length).
+  /// not even its length) and the review prompter, which counts every key
+  /// press (the demo's are ignored there).
   RemoteActionListenerProvider._()
     : super(
         from: null,
@@ -68,7 +71,7 @@ final class RemoteActionListenerProvider
 }
 
 String _$remoteActionListenerHash() =>
-    r'e45634618d394fc4fafd82a55bf0d4e5f8bf70e3';
+    r'80d252a7795f86a07e7829e470e397ce24c4d34b';
 
 /// Counts the presses that were refused because the TV isn't connected; the
 /// remote screen shows the "Not connected" snackbar for each bump.

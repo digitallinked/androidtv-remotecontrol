@@ -12,6 +12,7 @@ import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/interstitials.dart';
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/review/review_prompter.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 
@@ -54,7 +55,10 @@ class App extends ConsumerWidget {
       // connection trouble from then on and keeps one ad loaded when
       // interstitials are enabled. Watched, not read: Riverpod may pause the
       // listeners inside a provider that nothing listens to.
-      ..watch(interstitialsProvider);
+      ..watch(interstitialsProvider)
+      // Starts the review prompter at launch, so it counts presses and hears
+      // about connection trouble from then on. Watched for the same reason.
+      ..watch(reviewPrompterProvider);
     // The first read starts the purchase service, so Premium is known before
     // any banner. Watched, so a purchase or a lapse restyles the app at once.
     final premium = ref.watch(premiumProvider);

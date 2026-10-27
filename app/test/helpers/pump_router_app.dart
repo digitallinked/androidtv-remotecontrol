@@ -20,6 +20,7 @@ import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/review/review_prompter.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -36,6 +37,7 @@ import 'fake_ads_sdk.dart';
 import 'fake_consent_service.dart';
 import 'fake_pairing_client.dart';
 import 'fake_remote_client.dart';
+import 'fake_review_requester.dart';
 import 'fake_screen_services.dart';
 import 'fake_tracking_service.dart';
 import 'fake_tv_discovery.dart';
@@ -137,7 +139,7 @@ Future<SettingsStore> pumpRouterApp(
             appName: 'Remotely Dev',
             version: '1.0.0',
             buildNumber: '1',
-            os: 'android',
+            os: 'Android',
             osVersion: '12',
           ),
         ),
@@ -153,6 +155,8 @@ Future<SettingsStore> pumpRouterApp(
         // zero-size banner slot of Phase 5; a test of ads passes
         // `FakeAdsSdk(loads: true)`.
         adsSdkProvider.overrideWithValue(FakeAdsSdk()),
+        // The store's review API is there and records the requests.
+        reviewRequesterProvider.overrideWithValue(FakeReviewRequester()),
         // Premium is the real notifier. No RevenueCat key is set, so the
         // purchase service is the unavailable one (free, known at once);
         // tests override `purchaseServiceProvider` or `premiumProvider`.

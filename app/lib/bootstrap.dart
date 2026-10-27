@@ -62,6 +62,9 @@ Future<void> runStartupSteps(
 /// fetched on an earlier launch are activated, and a slow or failing Remote
 /// Config leaves the defaults in place.
 ///
+/// Each successful start adds one to the stored launch count; a count that
+/// can't be written is reported and doesn't stop the start.
+///
 /// The database is opened by the provider graph, so the first screen is
 /// resolved through a single [ProviderContainer] that the app then keeps
 /// using. A second container would open a second database.
@@ -116,6 +119,16 @@ Future<Widget> buildRootWidget({
   } on Object {
     container.dispose();
     rethrow;
+  }
+  // Counted once the start can no longer fail: Try again after a failed
+  // start is the same launch. The interstitial pacing and the review prompt
+  // read it.
+  try {
+    await settings.setLaunchCount(settings.launchCount + 1);
+  } on Object catch (error, stack) {
+    unawaited(
+      safeRecordError(crashReporter, error, stack, reason: 'launch count'),
+    );
   }
   if (firebaseResult == FirebaseStatus.ready &&
       crashReporter is DelegatingCrashReporter) {

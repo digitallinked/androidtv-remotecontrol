@@ -8,6 +8,7 @@ import 'package:tv_remote/core/analytics/analytics_guard.dart'
     show AnalyticsPolicyError;
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
+import 'package:tv_remote/core/review/review_prompter.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
@@ -93,15 +94,18 @@ final class TextSent extends RemoteActionEvent {
 typedef RemoteActionListener = void Function(RemoteActionEvent event);
 
 /// Where sent commands are reported: a fan-out to everything that follows
-/// what the user does on the remote. Today that is analytics (key presses
+/// what the user does on the remote. That is analytics (key presses
 /// sampled, app launches by catalogue package; typed text is never logged,
-/// not even its length).
+/// not even its length) and the review prompter, which counts every key
+/// press (the demo's are ignored there).
 @Riverpod(keepAlive: true)
 RemoteActionListener remoteActionListener(Ref ref) {
   final analytics = ref.watch(analyticsHooksProvider);
+  final review = ref.watch(reviewPrompterProvider.notifier);
   return (event) {
     switch (event) {
       case KeySent(:final keyCode):
+        review.countPress();
         analytics.keySent(keyCode);
       case AppLaunched(:final package):
         analytics.appLaunched(package);
