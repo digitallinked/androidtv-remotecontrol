@@ -112,12 +112,14 @@ void main() {
     expect(find.byType(AppsScreen), findsOneWidget);
   }
 
-  /// Lets work that ends on real (not fake-clock) async, like closing a
-  /// client, finish.
-  Future<void> letCloseFinish(WidgetTester t) async {
-    await t.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
+  /// Lets closing [client], which ends on real (not fake-clock) async,
+  /// finish: polls for it, for at most 100 ms.
+  Future<void> letCloseFinish(WidgetTester t, FakeRemoteClient client) async {
+    await t.runAsync(() async {
+      for (var i = 0; i < 50 && !client.closed; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 2));
+      }
+    });
     await t.pumpAndSettle();
   }
 
@@ -387,7 +389,7 @@ void main() {
     expect(find.byType(RemoteScreen), findsOneWidget);
     expect(appBarText('Bedroom TV'), findsOneWidget);
     expect(find.text('Connected'), findsOneWidget);
-    await letCloseFinish(t);
+    await letCloseFinish(t, first);
     expect(first.closed, isTrue);
     expect(clients.created.last.host, '192.168.0.21');
     expect(containerOf(t).read(activeTargetProvider), isNull);
@@ -404,7 +406,7 @@ void main() {
     expect(find.byType(RemoteScreen), findsOneWidget);
     expect(find.text('No TV selected'), findsOneWidget);
     expect(find.byType(RemoteBody), findsNothing);
-    await letCloseFinish(t);
+    await letCloseFinish(t, first);
     expect(first.closed, isTrue);
     expect(clients.created, hasLength(1));
   });
@@ -417,7 +419,10 @@ void main() {
 
     await openFromSettings(t, 'Your TVs');
     await tapAndSettle(t, find.text('Living Room TV 3'));
-    await t.enterText(find.byType(TextField).last, 'aa-bb-cc-dd-ee-f0');
+    await t.enterText(
+      find.widgetWithText(TextField, 'MAC address'),
+      'aa-bb-cc-dd-ee-f0',
+    );
     await tapAndSettle(t, find.widgetWithText(FilledButton, 'Save'));
     expect(devices.saved['Living Room TV 3']!.wolMac, 'AA:BB:CC:DD:EE:F0');
     await back(t, 3);
@@ -494,7 +499,7 @@ void main() {
     expect(find.byType(RemoteScreen), findsOneWidget);
     expect(appBarText('Living Room TV 3'), findsOneWidget);
     expect(find.text('Connected'), findsOneWidget);
-    await letCloseFinish(t);
+    await letCloseFinish(t, first);
     expect(first.closed, isTrue);
     final session = container.read(remoteSessionProvider).value!;
     expect(session.pairingTarget?.serviceName, 'Living Room TV 3');
@@ -659,25 +664,34 @@ void main() {
       AdPlacement.settings,
     );
 
-    // A child page on top of the hub or the Apps screen hides their slot.
+    // A child page on top of the hub or the Apps screen: its own page has no
+    // slot, and the parent's slot is still one slot (kept off screen under
+    // the child), never a second one.
     await pumpRoute(t, AppRoutes.settings);
     await tapAndSettle(t, find.text('Appearance'));
     expect(find.byType(BannerSlot), findsNothing);
+    expect(find.byType(BannerSlot, skipOffstage: false), findsOneWidget);
     await pumpRoute(t, AppRoutes.apps);
     await t.tap(find.byTooltip('Edit apps'));
     await t.pumpAndSettle();
     expect(find.byType(BannerSlot), findsNothing);
+    expect(find.byType(BannerSlot, skipOffstage: false), findsOneWidget);
   });
 
   /// Opens every sheet and dialog reachable from Apps, Edit apps, Your TVs,
   /// Settings and its pages, one at a time, and calls [check] with the name
-  /// of what is open.
+  /// of what is open. A dialog's name ends in "dialog".
   Future<void> forEachSheet(
     WidgetTester t,
     Future<void> Function(String name) check,
   ) async {
     Future<void> closeSheet() async {
       await t.tap(find.byTooltip('Close'));
+      await t.pumpAndSettle();
+    }
+
+    Future<void> closeDialog() async {
+      await t.tap(find.text('Cancel'));
       await t.pumpAndSettle();
     }
 
@@ -693,26 +707,46 @@ void main() {
     await t.pumpAndSettle();
     await check('edit shortcut editor');
     await closeSheet();
+    // And the reset confirmation, from the overflow menu.
+    await t.tap(find.byType(PopupMenuButton<void>));
+    await t.pumpAndSettle();
+    await tapAndSettle(t, find.text('Reset to suggested apps'));
+    await check('reset apps dialog');
+    await closeDialog();
 
     // Edit TV: the MAC help sheet.
     await pumpApp(t, location: AppRoutes.editDevice('Living Room TV 3'));
     await tapAndSettle(t, find.text('Where do I find it?'));
     await check('mac help sheet');
     await closeSheet();
+    await tapAndSettle(t, find.text('Remove TV'));
+    await check('remove tv dialog');
+    await closeDialog();
 
     // Help: troubleshooting.
     await pumpApp(t, location: AppRoutes.settingsHelp);
     await tapAndSettle(t, find.text('Show troubleshooting steps'));
     await check('troubleshooting sheet');
+    await closeSheet();
+
+    // Help: the feedback dialog.
+    await tapAndSettle(t, find.text('Send feedback'));
+    await check('feedback dialog');
+    await closeDialog();
   }
 
-  testWidgets('no_sheet_has_a_banner_slot', (t) async {
+  testWidgets('no_sheet_or_dialog_has_a_banner_slot', (t) async {
+    final seen = <String>[];
     await forEachSheet(t, (name) async {
-      expect(find.byType(BottomSheet), findsOneWidget, reason: name);
+      seen.add(name);
+      final overlay = name.endsWith('dialog')
+          ? find.byType(Dialog)
+          : find.byType(BottomSheet);
+      expect(overlay, findsOneWidget, reason: name);
       expect(find.byType(BannerSlot), findsNothing, reason: name);
       expect(
         find.descendant(
-          of: find.byType(BottomSheet),
+          of: overlay,
           matching: find.byType(BannerSlot),
           skipOffstage: false,
         ),
@@ -720,6 +754,11 @@ void main() {
         reason: name,
       );
     });
+    // The sweep reached the dialogs, not only the sheets.
+    expect(
+      seen,
+      containsAll(['reset apps dialog', 'remove tv dialog', 'feedback dialog']),
+    );
   });
 
   testWidgets('no_mic_button_anywhere', (t) async {

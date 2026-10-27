@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
 
 import '../helpers/in_memory_device_repository.dart';
+import '../helpers/in_memory_shortcut_repository.dart';
 import '../helpers/pump_router_app.dart';
 import '../helpers/test_devices.dart';
 
@@ -29,6 +32,12 @@ class _NonlinearScaler extends TextScaler {
 
   @override
   int get hashCode => 14;
+}
+
+/// A shortcut store whose stream always fails: the saved list can't be read.
+class _UnreadableShortcuts extends InMemoryShortcutRepository {
+  @override
+  Stream<List<AppEntry>> watchAll() => Stream.error(StateError('disk'));
 }
 
 /// Every Phase 5 screen, by the address that opens it.
@@ -56,12 +65,14 @@ void main() {
     double textScale = 1,
     TextScaler? textScaler,
     bool accessibleNavigation = false,
+    InMemoryShortcutRepository? shortcuts,
+    InMemoryDeviceRepository? devices,
   }) {
     t.view
       ..physicalSize = size
       ..devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    final devices = InMemoryDeviceRepository([savedTv()]);
+    final saved = devices ?? InMemoryDeviceRepository([savedTv()]);
     return pumpRouterApp(
       t,
       initialLocation: route,
@@ -69,11 +80,17 @@ void main() {
       textScale: textScale,
       textScaler: textScaler,
       accessibleNavigation: accessibleNavigation,
+      // Given shortcuts are used as they are: the list was seeded already.
+      prepareSettings: shortcuts == null
+          ? null
+          : (store) => store.setShortcutsSeeded(true),
       overrides: [
-        deviceRepositoryProvider.overrideWithValue(devices),
+        deviceRepositoryProvider.overrideWithValue(saved),
         savedDevicesProvider.overrideWith(
           (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
         ),
+        if (shortcuts != null)
+          shortcutRepositoryProvider.overrideWithValue(shortcuts),
       ],
     );
   }
@@ -110,16 +127,30 @@ void main() {
     double textScale = 1,
     TextScaler? textScaler,
   }) async {
-    Future<void> view(String route) => pump(
+    Future<void> view(
+      String route, {
+      InMemoryShortcutRepository? shortcuts,
+      InMemoryDeviceRepository? devices,
+    }) => pump(
       t,
       route,
       brightness: brightness,
       size: size,
       textScale: textScale,
       textScaler: textScaler,
+      shortcuts: shortcuts,
+      devices: devices,
     );
 
     Future<void> tapText(String text) async {
+      // A long page builds its rows lazily: scroll to one that isn't there.
+      if (find.text(text).evaluate().isEmpty) {
+        await t.scrollUntilVisible(
+          find.text(text),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+      }
       await t.ensureVisible(find.text(text));
       await t.pumpAndSettle();
       await t.tap(find.text(text));
@@ -135,6 +166,29 @@ void main() {
       await view(e.key);
       await check(e.value);
     }
+
+    // The Apps screen's other states: search results, no results, an empty
+    // list and a list that can't be read; Your TVs when it can't be read.
+    await view(AppRoutes.apps);
+    await t.enterText(find.byType(TextField), 'plex');
+    await t.pumpAndSettle();
+    expect(find.text('More apps'), findsOneWidget);
+    await check('apps_search_more_apps');
+    await t.enterText(find.byType(TextField), 'zzzz');
+    await t.pumpAndSettle();
+    await check('apps_search_no_match');
+    await view(AppRoutes.apps, shortcuts: InMemoryShortcutRepository());
+    expect(find.text('No apps yet'), findsOneWidget);
+    await check('apps_empty');
+    await view(AppRoutes.apps, shortcuts: _UnreadableShortcuts());
+    expect(find.text("Couldn't load your apps."), findsOneWidget);
+    await check('apps_load_failed');
+    await view(
+      AppRoutes.devices,
+      devices: InMemoryDeviceRepository()..watchError = StateError('disk'),
+    );
+    expect(find.text("Couldn't load your TVs."), findsOneWidget);
+    await check('devices_load_failed');
 
     // Sheets and dialogs.
     await view(AppRoutes.manageApps);
@@ -171,6 +225,10 @@ void main() {
     await view(AppRoutes.settingsHelp);
     await tapText('Show troubleshooting steps');
     await check('troubleshooting_sheet');
+    await close();
+    await tapText('Send feedback');
+    expect(find.text('Send feedback?'), findsOneWidget);
+    await check('feedback_dialog');
   }
 
   testWidgets('every_new_screen_fits_320dp_at_200_percent_text', (t) async {
@@ -193,5 +251,44 @@ void main() {
         textScaler: const _NonlinearScaler(),
       );
     }
+  });
+
+  testWidgets('every_sheet_dialog_and_state_meets_the_guidelines', (t) async {
+    final routeNames = _routes.values.toSet();
+    final semantics = t.ensureSemantics();
+    for (final b in Brightness.values) {
+      await forEachScreen(
+        t,
+        (name) async {
+          // The routes have their own tests above; these are what opens on
+          // top of them and the screens' other states.
+          if (routeNames.contains(name)) return;
+          final reason = '$name ${b.name}';
+          await expectLater(
+            t,
+            meetsGuideline(textContrastGuideline),
+            reason: reason,
+          );
+          await expectLater(
+            t,
+            meetsGuideline(androidTapTargetGuideline),
+            reason: reason,
+          );
+          await expectLater(
+            t,
+            meetsGuideline(iOSTapTargetGuideline),
+            reason: reason,
+          );
+          await expectLater(
+            t,
+            meetsGuideline(labeledTapTargetGuideline),
+            reason: reason,
+          );
+        },
+        brightness: b,
+        size: const Size(390, 844),
+      );
+    }
+    semantics.dispose();
   });
 }
