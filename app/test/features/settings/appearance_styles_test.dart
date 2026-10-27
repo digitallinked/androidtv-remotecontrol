@@ -1,5 +1,8 @@
+import 'dart:ui' show CheckedState, Tristate;
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -106,6 +109,43 @@ void main() {
       PaywallSource.themes,
     );
     expect(store.colourStyle, ColourStyle.standard);
+  });
+
+  testWidgets('a_locked_style_row_announces_premium_and_stays_actionable', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    await pumpStyles(t);
+
+    final row = find.ancestor(
+      of: styleRow('Ocean'),
+      matching: find.byType(RadioListTile<ColourStyle>),
+    );
+    final node = t.getSemantics(row);
+    final data = node.getSemanticsData();
+    // It names the style and says why it is locked, in words.
+    expect(node.label, contains('Ocean'));
+    expect(node.label, contains(_locked));
+    // It is still enabled and tappable (it opens the paywall), and it is a
+    // radio that is not selected: the lock never reads as "chosen".
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
+    expect(data.flagsCollection.isChecked, CheckedState.isFalse);
+
+    // Standard is the selected one and carries no lock text.
+    final standard = t.getSemantics(
+      find.ancestor(
+        of: styleRow('Standard'),
+        matching: find.byType(RadioListTile<ColourStyle>),
+      ),
+    );
+    expect(standard.label, isNot(contains(_locked)));
+    expect(
+      standard.getSemanticsData().flagsCollection.isChecked,
+      CheckedState.isTrue,
+    );
+    handle.dispose();
   });
 
   testWidgets('premium_users_apply_a_style_at_once', (t) async {

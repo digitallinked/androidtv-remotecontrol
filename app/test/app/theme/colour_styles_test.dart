@@ -56,6 +56,160 @@ void main() {
     }
   });
 
+  // Accent on the raised (key) surface is for icons and large glyphs, not for
+  // body text, so 3:1 is the requirement there. Two light palettes land a hair
+  // under 4.5:1 anyway: the Phase 2 standard accent (4.42) and Ember (4.39,
+  // fixed by P6-R12). They are pinned so they can't get worse unnoticed; any
+  // other style/brightness has to reach 4.5:1.
+  test('accent_is_readable_on_raised_surfaces_for_every_style', () {
+    const under4_5 = {
+      (ColourStyle.standard, Brightness.light),
+      (ColourStyle.ember, Brightness.light),
+    };
+    for (final s in ColourStyle.values) {
+      for (final b in Brightness.values) {
+        final c = colourStyleColors(s, b);
+        final ratio = contrastRatio(c.accent, c.surfaceRaised);
+        expect(
+          ratio,
+          greaterThanOrEqualTo(under4_5.contains((s, b)) ? 4.3 : 4.5),
+          reason: '$s $b accent on surfaceRaised',
+        );
+        expect(ratio, greaterThanOrEqualTo(3), reason: '$s $b non-text');
+      }
+    }
+  });
+
+  test('status_colours_have_3_to_1_non_text_contrast_in_every_style', () {
+    for (final s in ColourStyle.values) {
+      for (final b in Brightness.values) {
+        final c = colourStyleColors(s, b);
+        for (final (name, colour) in [
+          ('success', c.success),
+          ('warning', c.warning),
+          ('danger', c.danger),
+        ]) {
+          for (final bg in [c.bg, c.surface]) {
+            expect(
+              contrastRatio(colour, bg),
+              greaterThanOrEqualTo(3),
+              reason: '$s $b $name on $bg',
+            );
+          }
+        }
+      }
+    }
+  });
+
+  // The P6-R12 table, value by value: a palette is a design decision, so a
+  // change to any hex has to show up here on purpose.
+  // Order: bg, surface, surfaceRaised, outline, textPrimary, textSecondary,
+  // accent, onAccent.
+  const palettes = <(ColourStyle, Brightness, List<int>)>[
+    (
+      ColourStyle.ocean,
+      Brightness.dark,
+      [
+        0xFF0B1418,
+        0xFF101D22,
+        0xFF18282E,
+        0xFF24383F,
+        0xFFEFF6F7,
+        0xFF9FB4B9,
+        0xFF3FC6C6,
+        0xFF06181A,
+      ],
+    ),
+    (
+      ColourStyle.ocean,
+      Brightness.light,
+      [
+        0xFFF3F8F8,
+        0xFFFFFFFF,
+        0xFFE4EFEF,
+        0xFFC9DADB,
+        0xFF0E1A1C,
+        0xFF44575A,
+        0xFF00777A,
+        0xFFFFFFFF,
+      ],
+    ),
+    (
+      ColourStyle.ember,
+      Brightness.dark,
+      [
+        0xFF16110D,
+        0xFF1F1813,
+        0xFF2B221B,
+        0xFF3B2F25,
+        0xFFF8F2EC,
+        0xFFBFAF9F,
+        0xFFFF9F43,
+        0xFF1A0F05,
+      ],
+    ),
+    (
+      ColourStyle.ember,
+      Brightness.light,
+      [
+        0xFFFAF6F2,
+        0xFFFFFFFF,
+        0xFFF1E9E1,
+        0xFFE0D3C6,
+        0xFF1D1610,
+        0xFF5E4E40,
+        0xFFB34D00,
+        0xFFFFFFFF,
+      ],
+    ),
+    (
+      ColourStyle.midnight,
+      Brightness.dark,
+      [
+        0xFF000000,
+        0xFF0A0A0F,
+        0xFF16161F,
+        0xFF262633,
+        0xFFF1F0F7,
+        0xFFA9A6BD,
+        0xFFA98BFF,
+        0xFF120A26,
+      ],
+    ),
+    (
+      ColourStyle.midnight,
+      Brightness.light,
+      [
+        0xFFF5F4FA,
+        0xFFFFFFFF,
+        0xFFEAE8F3,
+        0xFFD4D1E3,
+        0xFF14121D,
+        0xFF4E4A63,
+        0xFF5B3FD1,
+        0xFFFFFFFF,
+      ],
+    ),
+  ];
+  for (final (style, brightness, hex) in palettes) {
+    test('palette_values_match_the_table_${style.name}_${brightness.name}', () {
+      final c = colourStyleColors(style, brightness);
+      expect(
+        [
+          c.bg,
+          c.surface,
+          c.surfaceRaised,
+          c.outline,
+          c.textPrimary,
+          c.textSecondary,
+          c.accent,
+          c.onAccent,
+        ],
+        [for (final v in hex) Color(v)],
+      );
+    });
+  }
+
   test('standard_is_the_unchanged_app_palette', () {
     expect(
       colourStyleColors(ColourStyle.standard, Brightness.light),
