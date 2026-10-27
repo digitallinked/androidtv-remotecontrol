@@ -30,13 +30,22 @@ final class PaywallUnavailable extends PaywallState {
   const PaywallUnavailable();
 }
 
+/// What the store is being asked for while the screen is busy.
+enum PaywallBusy {
+  /// A purchase is open.
+  purchasing,
+
+  /// Earlier purchases are being restored.
+  restoring,
+}
+
 /// The plans are on screen.
 final class PaywallReady extends PaywallState {
   /// Creates the state.
   const PaywallReady({
     required this.offer,
     required this.selected,
-    required this.busy,
+    this.busyWith,
     this.badgePercent,
   });
 
@@ -47,20 +56,28 @@ final class PaywallReady extends PaywallState {
   /// never pre-selected).
   final PremiumPlanKind? selected;
 
+  /// What the store is being asked for, or `null` when nothing is.
+  final PaywallBusy? busyWith;
+
   /// Whether a purchase or a restore is running.
-  final bool busy;
+  bool get busy => busyWith != null;
 
   /// The honest saving of the yearly plan to show as a badge, or `null`.
   final int? badgePercent;
 
-  /// A copy with [selected] or [busy] changed.
-  PaywallReady copyWith({
-    PremiumPlanKind? selected,
-    bool? busy,
-  }) => PaywallReady(
+  /// A copy with [selected] changed.
+  PaywallReady withSelected(PremiumPlanKind kind) => PaywallReady(
     offer: offer,
-    selected: selected ?? this.selected,
-    busy: busy ?? this.busy,
+    selected: kind,
+    busyWith: busyWith,
+    badgePercent: badgePercent,
+  );
+
+  /// A copy that is busy with [busy], or idle for `null`.
+  PaywallReady withBusy(PaywallBusy? busy) => PaywallReady(
+    offer: offer,
+    selected: selected,
+    busyWith: busy,
     badgePercent: badgePercent,
   );
 }
@@ -68,13 +85,16 @@ final class PaywallReady extends PaywallState {
 /// The user already has Premium.
 final class PaywallActive extends PaywallState {
   /// Creates the state.
-  const PaywallActive(this.premium, {this.busy = false});
+  const PaywallActive(this.premium, {this.busyWith});
 
   /// The Premium state being shown.
   final PremiumState premium;
 
+  /// What the store is being asked for, or `null` when nothing is.
+  final PaywallBusy? busyWith;
+
   /// Whether a restore is running.
-  final bool busy;
+  bool get busy => busyWith != null;
 }
 
 /// The plan to pre-select and the badge to show for [offer] (Ruling P6-R11).
@@ -103,7 +123,7 @@ final class PaywallActive extends PaywallState {
 /// still handed to [Premium] and counted.
 @riverpod
 class PaywallController extends _$PaywallController {
-  bool _busy = false;
+  PaywallBusy? _busyWith;
 
   @override
   PaywallState build(PaywallSource source) {
@@ -111,7 +131,11 @@ class PaywallController extends _$PaywallController {
     final variant = ref.read(appConfigProvider).paywallVariant;
     ref.listen<PremiumState>(premiumProvider, (previous, next) {
       if (next.isPremium) {
-        state = PaywallActive(next, busy: _busy);
+        // While the store is open the plans stay on screen: the screen
+        // closes itself when the purchase ends, and `_setBusy` catches the
+        // state up afterwards.
+        if (state is PaywallReady && _busyWith != null) return;
+        state = PaywallActive(next, busyWith: _busyWith);
       } else if (state is PaywallActive) {
         _reload(service);
       }
@@ -150,7 +174,6 @@ class PaywallController extends _$PaywallController {
     state = PaywallReady(
       offer: offer,
       selected: choice.selected,
-      busy: false,
       badgePercent: choice.badge,
     );
   }
@@ -161,7 +184,7 @@ class PaywallController extends _$PaywallController {
     final current = state;
     if (current is! PaywallReady || current.busy) return;
     if (current.offer.plan(kind) == null) return;
-    state = current.copyWith(selected: kind);
+    state = current.withSelected(kind);
   }
 
   /// Asks for the plans again after [PaywallUnavailable].
@@ -170,13 +193,19 @@ class PaywallController extends _$PaywallController {
     _reload(ref.read(purchaseServiceProvider));
   }
 
-  void _setBusy({required bool busy}) {
-    _busy = busy;
+  /// Marks the screen busy with [busy], or idle for `null`. Going idle also
+  /// catches the state up with Premium, which may have arrived meanwhile.
+  void _setBusy(PaywallBusy? busy) {
+    _busyWith = busy;
     if (!ref.mounted) return;
     final current = state;
+    final premium = ref.read(premiumProvider);
     state = switch (current) {
-      PaywallReady() => current.copyWith(busy: busy),
-      PaywallActive() => PaywallActive(current.premium, busy: busy),
+      PaywallReady() when busy == null && premium.isPremium => PaywallActive(
+        premium,
+      ),
+      PaywallReady() => current.withBusy(busy),
+      PaywallActive() => PaywallActive(current.premium, busyWith: busy),
       _ => current,
     };
   }
@@ -188,14 +217,14 @@ class PaywallController extends _$PaywallController {
   Future<PurchaseOutcome> purchase() async {
     final current = state;
     final kind = current is PaywallReady ? current.selected : null;
-    if (_busy || kind == null) return const PurchaseCancelled();
+    if (_busyWith != null || kind == null) return const PurchaseCancelled();
 
     // Everything the end of the purchase needs is taken now: the screen may
     // be closed while the store sheet is open.
     final service = ref.read(purchaseServiceProvider);
     final premium = ref.read(premiumProvider.notifier);
     final analytics = ref.read(appAnalyticsProvider.notifier);
-    _setBusy(busy: true);
+    _setBusy(PaywallBusy.purchasing);
     PurchaseOutcome outcome;
     try {
       outcome = await service.purchase(kind);
@@ -207,16 +236,20 @@ class PaywallController extends _$PaywallController {
       await premium.apply(entitlement);
       analytics.log(AnalyticsEvent.purchaseSuccess(kind.productId));
     }
-    _setBusy(busy: false);
+    _setBusy(null);
     return outcome;
   }
 
   /// Asks the store for earlier purchases. While it does, the screen is busy.
-  Future<RestoreOutcome> restore() async {
-    if (_busy) return RestoreOutcome.failed;
+  ///
+  /// Answers `null`, and does nothing, when the screen is already busy: the
+  /// caller then says nothing. The entitlement a successful restore finds
+  /// reaches [Premium] through the service's `entitlements` stream.
+  Future<RestoreOutcome?> restore() async {
+    if (_busyWith != null) return null;
     final service = ref.read(purchaseServiceProvider);
     final analytics = ref.read(appAnalyticsProvider.notifier);
-    _setBusy(busy: true);
+    _setBusy(PaywallBusy.restoring);
     RestoreOutcome outcome;
     try {
       outcome = await service.restore();
@@ -227,7 +260,7 @@ class PaywallController extends _$PaywallController {
     if (outcome == RestoreOutcome.restoredPremium) {
       analytics.log(const AnalyticsEvent.restoreSuccess());
     }
-    _setBusy(busy: false);
+    _setBusy(null);
     return outcome;
   }
 }

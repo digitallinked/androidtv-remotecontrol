@@ -36,7 +36,17 @@ class PaywallScreen extends ConsumerWidget {
     final children = switch (state) {
       PaywallLoading() => [const _Loading()],
       PaywallUnavailable() => [_Unavailable(source: source)],
-      PaywallReady() => [_Plans(source: source, state: state)],
+      PaywallReady() => [
+        _Plans(
+          source: source,
+          state: state,
+          // From this screen's own context: the plans below may be gone by
+          // the time a purchase ends, this screen is not.
+          onClose: () {
+            if (context.mounted) _close(context);
+          },
+        ),
+      ],
       PaywallActive() => [_Active(source: source, state: state)],
     };
     return Scaffold(
@@ -92,6 +102,8 @@ Future<void> _restore(
   final outcome = await ref
       .read(paywallControllerProvider(source).notifier)
       .restore();
+  // Nothing to say when the restore never ran (the screen was busy).
+  if (outcome == null) return;
   _say(
     messenger,
     switch (outcome) {
@@ -100,33 +112,6 @@ Future<void> _restore(
       RestoreOutcome.failed => l10n.paywallRestoreFailed,
     },
   );
-}
-
-/// The screen's centred icon in a soft accent disc.
-class _Emblem extends StatelessWidget {
-  const _Emblem({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = context.appColors.accent;
-    return ExcludeSemantics(
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: accent.withValues(alpha: 0.14),
-          ),
-          child: SizedBox.square(
-            dimension: 64,
-            child: Icon(icon, size: 32, color: accent),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _Loading extends StatelessWidget {
@@ -164,8 +149,6 @@ class _Unavailable extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: AppSpacing.l),
-        const _Emblem(icon: Icons.cloud_off_outlined),
         const SizedBox(height: AppSpacing.l),
         Semantics(
           header: true,
@@ -207,8 +190,6 @@ class _Active extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: AppSpacing.l),
-        const _Emblem(icon: Icons.workspace_premium_outlined),
-        const SizedBox(height: AppSpacing.l),
         Semantics(
           header: true,
           child: Text(
@@ -249,7 +230,7 @@ class _Active extends ConsumerWidget {
               : () => unawaited(_restore(context, ref, source)),
           child: Text(l10n.paywallRestore),
         ),
-        if (state.busy) const _Busy(),
+        if (state.busy) _Busy(state.busyWith!),
       ],
     );
   }
@@ -257,7 +238,9 @@ class _Active extends ConsumerWidget {
 
 /// "Confirming your purchase…" with a spinner, announced to screen readers.
 class _Busy extends StatelessWidget {
-  const _Busy();
+  const _Busy(this.busyWith);
+
+  final PaywallBusy busyWith;
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +258,10 @@ class _Busy extends StatelessWidget {
             const SizedBox(width: AppSpacing.m),
             Expanded(
               child: Text(
-                l10n.paywallPurchasing,
+                switch (busyWith) {
+                  PaywallBusy.purchasing => l10n.paywallPurchasing,
+                  PaywallBusy.restoring => l10n.paywallRestoring,
+                },
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
@@ -287,10 +273,17 @@ class _Busy extends StatelessWidget {
 }
 
 class _Plans extends ConsumerWidget {
-  const _Plans({required this.source, required this.state});
+  const _Plans({
+    required this.source,
+    required this.state,
+    required this.onClose,
+  });
 
   final PaywallSource source;
   final PaywallReady state;
+
+  /// Closes the paywall; a no-op once the paywall itself is gone.
+  final VoidCallback onClose;
 
   String _title(AppLocalizations l10n, PremiumPlanKind kind) => switch (kind) {
     PremiumPlanKind.monthly => l10n.paywallPlanMonthly,
@@ -319,7 +312,7 @@ class _Plans extends ConsumerWidget {
     switch (outcome) {
       case Purchased():
         _say(messenger, l10n.paywallWelcome);
-        if (context.mounted) _close(context);
+        onClose();
       case PurchaseCancelled():
         break;
       case PurchasePending():
@@ -362,8 +355,6 @@ class _Plans extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: AppSpacing.s),
-        const _Emblem(icon: Icons.workspace_premium_outlined),
-        const SizedBox(height: AppSpacing.l),
         Semantics(
           header: true,
           child: Text(
@@ -388,7 +379,7 @@ class _Plans extends ConsumerWidget {
         Text(l10n.paywallFreeForever, style: secondary),
         Padding(
           padding: const EdgeInsetsDirectional.only(
-            top: AppSpacing.xl,
+            top: AppSpacing.m,
             bottom: AppSpacing.s,
           ),
           child: Semantics(
@@ -414,6 +405,7 @@ class _Plans extends ConsumerWidget {
                   price: _price(l10n, plan),
                   terms: _terms(l10n, plan.kind),
                   selected: state.selected == plan.kind,
+                  enabled: !state.busy,
                   onTap: () => controller.select(plan.kind),
                   badges: [
                     if (plan.kind == PremiumPlanKind.yearly &&
@@ -428,7 +420,7 @@ class _Plans extends ConsumerWidget {
             ],
           ),
         ),
-        if (state.busy) const _Busy(),
+        if (state.busy) _Busy(state.busyWith!),
         const SizedBox(height: AppSpacing.m),
         FilledButton(
           onPressed: state.busy || state.selected == null

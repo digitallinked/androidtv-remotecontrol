@@ -13,7 +13,7 @@ void main() {
   for (final brightness in Brightness.values) {
     testWidgets('paywall_${brightness.name}', (t) async {
       t.view
-        ..physicalSize = const Size(390, 844)
+        ..physicalSize = const Size(390, 1700)
         ..devicePixelRatio = 1;
       addTearDown(t.view.reset);
       await pumpRouterApp(

@@ -87,9 +87,33 @@ void main() {
     expect(entitlementFrom(active: false).active, isFalse);
   });
 
-  test('an_unreadable_expiry_never_grants_lifetime', () {
-    final snapshot = entitlementFrom(active: true, expirationDate: 'soon');
-    expect(snapshot.active, isFalse);
+  test('an_unreadable_expiry_is_an_error_never_a_lifetime_purchase', () {
+    expect(
+      () => entitlementFrom(active: true, expirationDate: 'soon'),
+      throwsFormatException,
+    );
+    expect(
+      () => entitlementFrom(active: true, expirationDate: ''),
+      throwsFormatException,
+    );
+  });
+
+  test('an_unreadable_expiry_gives_no_answer_so_the_cache_stands', () {
+    // The adapter drops such an answer (and logs it), so Premium keeps the
+    // last value it knew instead of caching "free" or "lifetime".
+    expect(
+      tryEntitlementFrom(active: true, expirationDate: 'soon'),
+      isNull,
+    );
+    expect(
+      tryEntitlementFrom(
+        active: true,
+        expirationDate: '2026-11-27T09:30:00Z',
+      )?.expiresAt,
+      DateTime.utc(2026, 11, 27, 9, 30),
+    );
+    expect(tryEntitlementFrom(active: true)?.active, isTrue);
+    expect(tryEntitlementFrom(active: false)?.active, isFalse);
   });
 
   test('save_percent_is_honest', () {

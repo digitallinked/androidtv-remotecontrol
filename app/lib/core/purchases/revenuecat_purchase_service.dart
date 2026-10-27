@@ -32,8 +32,9 @@ PurchaseOutcome purchaseOutcomeFor(PurchasesErrorCode code) => switch (code) {
 /// [expirationDate] (an ISO 8601 text from RevenueCat; `null` for a lifetime
 /// purchase), parsed as UTC even when it carries no zone.
 ///
-/// An expiration date that can't be read is never taken for a lifetime
-/// purchase: the entitlement then counts as not active.
+/// Throws a [FormatException] when [expirationDate] is there but can't be
+/// read: an unreadable date is never taken for a lifetime purchase, and it is
+/// no reason to call the user free either. See [tryEntitlementFrom].
 EntitlementSnapshot entitlementFrom({
   required bool active,
   String? expirationDate,
@@ -44,7 +45,7 @@ EntitlementSnapshot entitlementFrom({
   }
   final parsed = DateTime.tryParse(expirationDate);
   if (parsed == null) {
-    return const EntitlementSnapshot(active: false);
+    throw const FormatException('unreadable entitlement expiry');
   }
   final utc = parsed.isUtc
       ? parsed
@@ -63,6 +64,30 @@ EntitlementSnapshot entitlementFrom({
     expiresAt: utc,
     willRenew: willRenew,
   );
+}
+
+/// [entitlementFrom], or `null` (after a log line) when the expiry can't be
+/// read. The adapter drops such an answer, so the last value the app knew,
+/// and its cache, stand.
+EntitlementSnapshot? tryEntitlementFrom({
+  required bool active,
+  String? expirationDate,
+  bool willRenew = false,
+}) {
+  try {
+    return entitlementFrom(
+      active: active,
+      expirationDate: expirationDate,
+      willRenew: willRenew,
+    );
+  } on FormatException catch (error) {
+    developer.log(
+      'entitlement ignored',
+      name: 'purchases',
+      error: error.message,
+    );
+    return null;
+  }
 }
 
 /// [PurchaseService] backed by RevenueCat's `purchases_flutter`.
@@ -137,13 +162,17 @@ class RevenueCatPurchaseService implements PurchaseService {
   }
 
   void _onCustomerInfo(CustomerInfo info) {
-    if (!_entitlements.isClosed) _entitlements.add(_snapshotOf(info));
+    final snapshot = _snapshotOf(info);
+    if (snapshot != null && !_entitlements.isClosed) {
+      _entitlements.add(snapshot);
+    }
   }
 
-  EntitlementSnapshot _snapshotOf(CustomerInfo info) {
+  /// What [info] says about Premium, or `null` when it can't be read.
+  EntitlementSnapshot? _snapshotOf(CustomerInfo info) {
     final entitlement = info.entitlements.active[premiumEntitlement];
     if (entitlement == null) return const EntitlementSnapshot(active: false);
-    return entitlementFrom(
+    return tryEntitlementFrom(
       active: true,
       expirationDate: entitlement.expirationDate,
       willRenew: entitlement.willRenew,
@@ -196,9 +225,11 @@ class RevenueCatPurchaseService implements PurchaseService {
       if (package == null) return const PurchaseFailed(PurchaseFailure.unknown);
       final result = await Purchases.purchase(PurchaseParams.package(package));
       final snapshot = _snapshotOf(result.customerInfo);
+      if (snapshot == null) return const PurchasePending();
       if (!_entitlements.isClosed) _entitlements.add(snapshot);
       // The store took the payment but RevenueCat doesn't show the
-      // entitlement yet; it arrives on [entitlements] when it does.
+      // entitlement yet (or not readably); the answer arrives on
+      // [entitlements] when it does.
       return snapshot.active ? Purchased(snapshot) : const PurchasePending();
     } on PlatformException catch (error) {
       return purchaseOutcomeFor(_codeOf(error));
@@ -213,6 +244,7 @@ class RevenueCatPurchaseService implements PurchaseService {
     try {
       if (!await _ready()) return RestoreOutcome.failed;
       final snapshot = _snapshotOf(await Purchases.restorePurchases());
+      if (snapshot == null) return RestoreOutcome.failed;
       if (!_entitlements.isClosed) _entitlements.add(snapshot);
       return snapshot.active
           ? RestoreOutcome.restoredPremium

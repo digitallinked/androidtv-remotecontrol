@@ -2572,6 +2572,12 @@ abstract class AppLocalizations {
   /// **'Confirming your purchase…'**
   String get paywallPurchasing;
 
+  /// Shown while restoring earlier purchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring your purchases…'**
+  String get paywallRestoring;
+
   /// Snackbar after a purchase.
   ///
   /// In en, this message translates to:

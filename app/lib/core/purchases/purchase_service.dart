@@ -209,6 +209,11 @@ abstract interface class PurchaseService {
   Future<PurchaseOutcome> purchase(PremiumPlanKind kind);
 
   /// Asks the store for this account's earlier purchases.
+  ///
+  /// The outcome carries no entitlement. An implementation that answers
+  /// [RestoreOutcome.restoredPremium] must first push the entitlement it
+  /// found onto [entitlements], where `Premium` applies it and writes the
+  /// cache.
   Future<RestoreOutcome> restore();
 }
 

@@ -246,6 +246,53 @@ void main() {
     expect(sink.events.last.params, isEmpty);
   });
 
+  test('a_restore_while_busy_is_ignored_quietly', () async {
+    final hold = Completer<void>();
+    fake
+      ..holdRestore = hold
+      ..nextRestore = RestoreOutcome.nothingToRestore;
+    final c = containerFor();
+    await settled(c);
+    final first = c.read(provider.notifier).restore();
+    await pumpEventQueue();
+    expect(ready(c.read(provider)).busyWith, PaywallBusy.restoring);
+
+    // Neither "failed" nor "nothing found": nothing is said at all.
+    expect(await c.read(provider.notifier).restore(), isNull);
+    expect(
+      await c.read(provider.notifier).purchase(),
+      isA<PurchaseCancelled>(),
+    );
+    expect(fake.restoreCalls, 1);
+    expect(fake.purchases, isEmpty);
+
+    hold.complete();
+    expect(await first, RestoreOutcome.nothingToRestore);
+    expect(ready(c.read(provider)).busyWith, isNull);
+  });
+
+  test('premium_arriving_during_a_purchase_waits_for_the_purchase', () async {
+    final hold = Completer<void>();
+    fake
+      ..emitBeforePurchaseReturns = true
+      ..holdPurchase = hold
+      ..nextPurchase = const Purchased(EntitlementSnapshot(active: true));
+    final c = containerFor();
+    await settled(c);
+    final pending = c.read(provider.notifier).purchase();
+    await pumpEventQueue();
+
+    expect(c.read(premiumProvider).isPremium, isTrue);
+    // Still the plans: the screen decides when to close.
+    final during = ready(c.read(provider));
+    expect(during.busyWith, PaywallBusy.purchasing);
+
+    hold.complete();
+    expect(await pending, isA<Purchased>());
+    expect(c.read(provider), isA<PaywallActive>());
+    expect(sink.eventNames, ['paywall_view', 'purchase_success']);
+  });
+
   test('restore_with_nothing_or_a_failure_logs_nothing', () async {
     final c = containerFor();
     await settled(c);

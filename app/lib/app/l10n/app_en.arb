@@ -1913,6 +1913,9 @@
   "paywallPurchasing": "Confirming your purchase…",
   "@paywallPurchasing": {
     "description": "In progress."
+  },  "paywallRestoring": "Restoring your purchases…",
+  "@paywallRestoring": {
+    "description": "Shown while restoring earlier purchases."
   },
   "paywallWelcome": "Welcome to Premium. Thank you!",
   "@paywallWelcome": {

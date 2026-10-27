@@ -1409,6 +1409,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallPurchasing => 'Confirming your purchase…';
 
   @override
+  String get paywallRestoring => 'Restoring your purchases…';
+
+  @override
   String get paywallWelcome => 'Welcome to Premium. Thank you!';
 
   @override

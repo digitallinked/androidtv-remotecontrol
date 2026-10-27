@@ -16,6 +16,7 @@ class FakePurchaseService implements PurchaseService {
     this.nextPurchase = const PurchaseCancelled(),
     this.nextRestore = RestoreOutcome.nothingToRestore,
     this.restoreSnapshot,
+    this.emitBeforePurchaseReturns = false,
     this.configureError,
     this.loadOfferError,
   });
@@ -38,6 +39,10 @@ class FakePurchaseService implements PurchaseService {
   /// When set, a [restore] that answers `restoredPremium` emits it, as the
   /// real service does.
   EntitlementSnapshot? restoreSnapshot;
+
+  /// Whether a purchase that answers [Purchased] first emits its entitlement
+  /// on [entitlements], as the real service does before it returns.
+  bool emitBeforePurchaseReturns;
 
   /// When set, [configure] throws it.
   Exception? configureError;
@@ -90,8 +95,12 @@ class FakePurchaseService implements PurchaseService {
   @override
   Future<PurchaseOutcome> purchase(PremiumPlanKind kind) async {
     purchases.add(kind);
+    final outcome = nextPurchase;
+    if (emitBeforePurchaseReturns && outcome is Purchased) {
+      emit(outcome.entitlement);
+    }
     await holdPurchase?.future;
-    return nextPurchase;
+    return outcome;
   }
 
   @override

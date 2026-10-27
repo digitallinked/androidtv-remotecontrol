@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show CheckedState;
+import 'dart:ui' show CheckedState, Tristate;
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -293,6 +293,42 @@ void main() {
       expect(sink.events.last.params, {'product': 'premium_yearly'});
     });
 
+    testWidgets(
+      'purchase_closes_when_premium_arrives_before_the_store_returns',
+      (
+        t,
+      ) async {
+        // The real service pushes the entitlement before `purchase` returns,
+        // and a frame can run in between.
+        final hold = Completer<void>();
+        fake
+          ..emitBeforePurchaseReturns = true
+          ..holdPurchase = hold
+          ..nextPurchase = const Purchased(EntitlementSnapshot(active: true));
+        await pumpPaywall(t, location: AppRoutes.settings);
+        await t.tap(find.text('Premium'));
+        await t.pumpAndSettle();
+        await t.tap(find.widgetWithText(FilledButton, 'Continue'));
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 50));
+        // Premium is already on, and the plans are still what the user sees.
+        expect(
+          ProviderScope.containerOf(
+            t.element(find.byType(PaywallScreen)),
+          ).read(premiumProvider).isPremium,
+          isTrue,
+        );
+        expect(find.text('Continue'), findsOneWidget);
+        expect(find.text('You have Premium'), findsNothing);
+
+        hold.complete();
+        await t.pumpAndSettle();
+        expect(find.byType(PaywallScreen), findsNothing);
+        expect(find.byType(SettingsScreen), findsOneWidget);
+        expect(snack(_welcome), findsOneWidget);
+      },
+    );
+
     testWidgets('cancelled_purchase_stays_quietly', (t) async {
       fake.nextPurchase = const PurchaseCancelled();
       await pumpPaywall(t);
@@ -390,6 +426,76 @@ void main() {
             .onPressed,
         isNotNull,
       );
+    });
+  });
+
+  group('busy', () {
+    testWidgets('a_restore_says_it_is_restoring_not_purchasing', (t) async {
+      final hold = Completer<void>();
+      fake.holdRestore = hold;
+      await pumpPaywall(t);
+      await t.tap(find.text('Restore purchases'));
+      await t.pump();
+      expect(find.text('Restoring your purchases…'), findsOneWidget);
+      expect(find.text('Confirming your purchase…'), findsNothing);
+      hold.complete();
+      await t.pumpAndSettle();
+      expect(find.text('Restoring your purchases…'), findsNothing);
+    });
+
+    testWidgets('restoring_from_the_premium_view_shows_the_same_message', (
+      t,
+    ) async {
+      final hold = Completer<void>();
+      fake.holdRestore = hold;
+      await pumpPaywall(t, cachedPremium: (active: true, expiresAt: null));
+      await t.tap(find.text('Restore purchases'));
+      await t.pump();
+      expect(find.text('Restoring your purchases…'), findsOneWidget);
+      hold.complete();
+      await t.pumpAndSettle();
+    });
+
+    testWidgets('plan_tiles_are_disabled_while_busy', (t) async {
+      final semantics = t.ensureSemantics();
+      final hold = Completer<void>();
+      fake.holdPurchase = hold;
+      await pumpPaywall(t);
+      expect(
+        t
+            .widgetList<Radio<PremiumPlanKind>>(
+              find.byType(Radio<PremiumPlanKind>),
+            )
+            .every((r) => r.enabled != false),
+        isTrue,
+      );
+      await t.tap(find.widgetWithText(FilledButton, 'Continue'));
+      await t.pump();
+
+      for (final r in t.widgetList<Radio<PremiumPlanKind>>(
+        find.byType(Radio<PremiumPlanKind>),
+      )) {
+        expect(r.enabled, isFalse);
+      }
+      for (final tile in t.widgetList<InkWell>(
+        find.descendant(
+          of: find.byType(PlanTile),
+          matching: find.byType(InkWell),
+        ),
+      )) {
+        expect(tile.onTap, isNull);
+      }
+      expect(
+        t
+            .getSemantics(find.byType(PlanTile).first)
+            .getSemanticsData()
+            .flagsCollection
+            .isEnabled,
+        Tristate.isFalse,
+      );
+      hold.complete();
+      await t.pumpAndSettle();
+      semantics.dispose();
     });
   });
 
@@ -505,6 +611,15 @@ void main() {
       expect(find.text('Loading plans…'), findsNothing);
       expect(find.text('RM 29.99 per year'), findsOneWidget);
     });
+  });
+
+  testWidgets('the_plans_start_above_the_fold_on_a_tall_phone', (t) async {
+    await pumpPaywall(t, size: const Size(390, 844));
+    // The test font is much wider than a real one, so this is a pessimistic
+    // view: even so the first plan starts well inside the screen.
+    final first = find.byType(PlanTile).first;
+    expect(t.getRect(first).top, lessThan(700));
+    expect(find.text('Choose a plan'), findsOneWidget);
   });
 
   group('layout', () {

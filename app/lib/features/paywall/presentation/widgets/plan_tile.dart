@@ -16,6 +16,7 @@ class PlanTile extends StatelessWidget {
     required this.price,
     required this.terms,
     required this.selected,
+    required this.enabled,
     required this.onTap,
     this.badges = const [],
     super.key,
@@ -35,6 +36,9 @@ class PlanTile extends StatelessWidget {
 
   /// Whether the plan is the selected one.
   final bool selected;
+
+  /// Whether the tile can be chosen. It can't while the store is open.
+  final bool enabled;
 
   /// Called when the tile is tapped (and the radio, through the group).
   final VoidCallback onTap;
@@ -65,7 +69,7 @@ class PlanTile extends StatelessWidget {
         shape: shape,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
           customBorder: shape,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
@@ -79,7 +83,7 @@ class PlanTile extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Radio<PremiumPlanKind>(value: kind),
+                  Radio<PremiumPlanKind>(value: kind, enabled: enabled),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Padding(
@@ -131,10 +135,11 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return DecoratedBox(
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: strong ? colors.accent : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.card),
-        border: Border.all(color: strong ? colors.accent : colors.outline),
+        shape: StadiumBorder(
+          side: BorderSide(color: strong ? colors.accent : colors.outline),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsetsDirectional.symmetric(
