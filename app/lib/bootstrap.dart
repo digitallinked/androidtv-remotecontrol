@@ -9,6 +9,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/licenses.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -26,11 +27,13 @@ typedef StartupStep = Future<void> Function();
 ///
 /// A step that throws or takes longer than [timeout] is reported to
 /// [reporter] as a non-fatal error with the reason `startup step N` and then
-/// skipped, so the remote still opens when a service is down or offline.
+/// skipped, so the remote still opens when a service is down or offline. The
+/// first step is number [firstIndex].
 Future<void> runStartupSteps(
   List<StartupStep> steps, {
   required CrashReporter reporter,
   Duration timeout = const Duration(seconds: 5),
+  int firstIndex = 0,
 }) async {
   for (var index = 0; index < steps.length; index++) {
     try {
@@ -40,7 +43,7 @@ Future<void> runStartupSteps(
         reporter,
         error,
         stack,
-        reason: 'startup step $index',
+        reason: 'startup step ${firstIndex + index}',
       );
     }
   }
@@ -52,6 +55,12 @@ Future<void> runStartupSteps(
 /// Firebase is started first, as startup step 0 (Ruling P6-R3): a failure or
 /// a timeout leaves [firebaseStatusProvider] at [FirebaseStatus.unavailable]
 /// and is reported, and the passed [startupSteps] still run after it.
+///
+/// Remote Config is the next step (Ruling P6-R7). It needs the provider
+/// container, so it runs once the container exists, as `startup step N` with
+/// N one past the steps before it. The 5 s bound of every step applies: values
+/// fetched on an earlier launch are activated, and a slow or failing Remote
+/// Config leaves the defaults in place.
 ///
 /// The database is opened by the provider graph, so the first screen is
 /// resolved through a single [ProviderContainer] that the app then keeps
@@ -112,6 +121,12 @@ Future<Widget> buildRootWidget({
       crashReporter is DelegatingCrashReporter) {
     _installCrashlytics(container, crashReporter);
   }
+  // Step after Firebase and the passed steps; see the note above.
+  await runStartupSteps(
+    [() => container.read(appConfigProvider.notifier).load()],
+    reporter: crashReporter,
+    firstIndex: 1 + startupSteps.length,
+  );
   return _RootHost(container: container);
 }
 

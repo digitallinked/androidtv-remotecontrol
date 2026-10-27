@@ -10,6 +10,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/bootstrap.dart';
+import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -18,6 +19,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+import 'helpers/fake_config_source.dart';
 import 'helpers/in_memory_device_repository.dart';
 import 'helpers/recording_crash_reporter.dart';
 import 'helpers/recording_crashlytics_sink.dart';
@@ -370,6 +372,127 @@ void main() {
     });
   });
 
+  group('Remote Config startup', () {
+    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+    });
+
+    Future<Widget> root(
+      RecordingCrashReporter reporter,
+      FakeConfigSource source, {
+      List<StartupStep> startupSteps = const [],
+    }) => buildRootWidget(
+      flavor: Flavor.dev,
+      crashReporter: reporter,
+      startupSteps: startupSteps,
+      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      overrides: [remoteConfigSourceProvider.overrideWithValue(source)],
+    );
+
+    ProviderContainer containerOf(WidgetTester tester) => tester
+        .widget<UncontrolledProviderScope>(
+          find.byType(UncontrolledProviderScope),
+        )
+        .container;
+
+    testWidgets('config_is_activated_before_the_first_frame', (tester) async {
+      final rec = RecordingCrashReporter();
+      final source = FakeConfigSource(
+        {'min_supported_version': '2.0.0', 'ads_banner_enabled': false},
+        fetched: {'min_supported_version': '3.0.0'},
+      );
+
+      await tester.pumpWidget(await root(rec, source));
+      await tester.pumpAndSettle();
+
+      final config = containerOf(tester).read(appConfigProvider);
+      expect(config.minSupportedVersion, '2.0.0');
+      expect(config.adsBannerEnabled, isFalse);
+      // The download was started for the next launch only.
+      expect(source.calls, ['activateCached', 'fetchForNextLaunch']);
+      expect(rec.errors, isEmpty);
+    });
+
+    testWidgets('config_never_blocks_startup', (tester) async {
+      final rec = RecordingCrashReporter();
+      final source = FakeConfigSource(
+        {'min_supported_version': '9.0.0'},
+        activateBlock: Completer<void>().future,
+      );
+      Widget? app;
+      unawaited(root(rec, source).then((w) => app = w));
+
+      await tester.pump(const Duration(seconds: 4));
+      expect(app, isNull);
+      await tester.pump(const Duration(seconds: 2));
+      expect(app, isNotNull);
+      // The slow step is reported as the one after Firebase (step 0).
+      expect(rec.errors.single.reason, 'startup step 1');
+      expect(rec.errors.single.fatal, isFalse);
+
+      await tester.pumpWidget(app!);
+      await tester.pumpAndSettle();
+      expect(find.text('Get started'), findsOneWidget);
+      expect(
+        containerOf(tester).read(appConfigProvider),
+        AppConfigValues.defaults,
+      );
+    });
+
+    testWidgets('a_failing_config_source_starts_the_app_on_defaults', (
+      tester,
+    ) async {
+      final rec = RecordingCrashReporter();
+      final source = FakeConfigSource(
+        const {},
+        activateError: StateError('no play services'),
+      );
+
+      await tester.pumpWidget(await root(rec, source));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Get started'), findsOneWidget);
+      expect(
+        containerOf(tester).read(appConfigProvider),
+        AppConfigValues.defaults,
+      );
+    });
+
+    testWidgets('config_runs_after_firebase_and_the_passed_steps', (
+      tester,
+    ) async {
+      final order = <String>[];
+      final source = _OrderSource(order);
+
+      await root(
+        RecordingCrashReporter(),
+        source,
+        startupSteps: [() async => order.add('step')],
+      );
+
+      expect(order, ['step', 'activateCached', 'fetchForNextLaunch']);
+    });
+
+    testWidgets('without_firebase_the_app_runs_on_defaults', (tester) async {
+      final app = await buildRootWidget(
+        flavor: Flavor.dev,
+        crashReporter: RecordingCrashReporter(),
+        openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      );
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      final container = containerOf(tester);
+      expect(
+        container.read(remoteConfigSourceProvider),
+        isA<DefaultsOnlyConfigSource>(),
+      );
+      expect(container.read(appConfigProvider), AppConfigValues.defaults);
+    });
+  });
+
   group('Crashlytics reporter', () {
     setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
@@ -523,4 +646,23 @@ void main() {
       expect(good.flutterErrors, hasLength(1));
     });
   });
+}
+
+/// A [FakeConfigSource] that notes its calls in a list shared with the test.
+class _OrderSource extends FakeConfigSource {
+  _OrderSource(this._order) : super(const {});
+
+  final List<String> _order;
+
+  @override
+  Future<void> activateCached() {
+    _order.add('activateCached');
+    return super.activateCached();
+  }
+
+  @override
+  Future<void> fetchForNextLaunch() {
+    _order.add('fetchForNextLaunch');
+    return super.fetchForNextLaunch();
+  }
 }
