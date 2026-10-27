@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
@@ -12,6 +13,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
 import '../../../helpers/fake_remote_session.dart';
+import '../../../helpers/recording_analytics_sink.dart';
 import '../../../helpers/recording_haptics.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
@@ -172,10 +174,23 @@ void main() {
     ]);
   });
 
-  test('the_default_listener_ignores_text_and_needs_no_session', () {
+  test('the_default_listener_ignores_text_and_needs_no_session', () async {
+    // The default listener goes through the analytics hooks, which listen to
+    // the session. Without a stub that builds the real session and opens the
+    // real database, and its late error lands after the test has passed.
+    final sink = RecordingAnalyticsSink();
     final c = ProviderContainer.test(
-      overrides: [settingsStoreProvider.overrideWithValue(store)],
+      overrides: [
+        settingsStoreProvider.overrideWithValue(store),
+        remoteSessionProvider.overrideWith((ref) async => null),
+        analyticsSinkProvider.overrideWithValue(sink),
+      ],
     );
     c.read(remoteActionListenerProvider)(const TextSent(1));
+    await pumpEventQueue();
+
+    // Typed text is never reported.
+    expect(sink.events, isEmpty);
+    expect(sink.screens, isEmpty);
   });
 }

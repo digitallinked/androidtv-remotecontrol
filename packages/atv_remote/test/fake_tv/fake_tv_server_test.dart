@@ -413,14 +413,15 @@ void main() {
   );
 
   test('pings the client and sees its responses', () async {
-    final tv = await _start(
-      sendPings: true,
-      pingInterval: const Duration(milliseconds: 50),
-    );
+    final tv = await _start();
     await _pair(tv, _clientA);
     final peer = await _connectRemote(tv, _clientA);
+    await tv.waitForActiveClient();
     expect(tv.clientAnsweredLastPing, isFalse);
 
+    // Pings are sent by hand, so the test decides when each one is sent and
+    // no timer tick can arrive late and look like a missed answer.
+    tv.ping();
     final first = await peer.nextRemote();
     expect(first.hasRemotePingRequest(), isTrue);
     final n = first.remotePingRequest.val1;
@@ -429,6 +430,7 @@ void main() {
     );
     await _eventually(() => tv.clientAnsweredLastPing);
 
+    tv.ping();
     final second = await peer.nextRemote();
     expect(second.remotePingRequest.val1, n + 1);
   });
@@ -489,12 +491,11 @@ void main() {
   });
 
   test('clientAnsweredLastPing is false after the client is dropped', () async {
-    final tv = await _start(
-      sendPings: true,
-      pingInterval: const Duration(milliseconds: 50),
-    );
+    final tv = await _start();
     await _pair(tv, _clientA);
     final peer = await _connectRemote(tv, _clientA);
+    await tv.waitForActiveClient();
+    tv.ping();
     final ping = await peer.nextRemote();
     peer.sendRemote(
       RemoteMessage(
@@ -511,12 +512,11 @@ void main() {
   });
 
   test('clientAnsweredLastPing is false after the client hangs up', () async {
-    final tv = await _start(
-      sendPings: true,
-      pingInterval: const Duration(milliseconds: 50),
-    );
+    final tv = await _start();
     await _pair(tv, _clientA);
     final peer = await _connectRemote(tv, _clientA);
+    await tv.waitForActiveClient();
+    tv.ping();
     final ping = await peer.nextRemote();
     peer.sendRemote(
       RemoteMessage(
