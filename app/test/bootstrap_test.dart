@@ -10,8 +10,10 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/bootstrap.dart';
+import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/config/update_gate.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
@@ -395,6 +397,15 @@ void main() {
       overrides: [
         ...fakeAdsOverrides(),
         remoteConfigSourceProvider.overrideWithValue(source),
+        appInfoProvider.overrideWith(
+          (ref) async => const AppInfo(
+            appName: 'Remotely Dev',
+            version: '1.0.0',
+            buildNumber: '1',
+            os: 'android',
+            osVersion: '12',
+          ),
+        ),
       ],
     );
 
@@ -446,6 +457,33 @@ void main() {
         containerOf(tester).read(appConfigProvider),
         AppConfigValues.defaults,
       );
+    });
+
+    testWidgets('a_config_that_activates_after_the_bound_changes_nothing', (
+      tester,
+    ) async {
+      final rec = RecordingCrashReporter();
+      final slow = Completer<void>();
+      final source = FakeConfigSource(
+        {'min_supported_version': '9.0.0', 'ads_banner_enabled': false},
+        activateBlock: slow.future,
+      );
+      Widget? app;
+      unawaited(root(rec, source).then((w) => app = w));
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpWidget(app!);
+      await tester.pumpAndSettle();
+
+      // The platform answers at 7 s, well into the session.
+      await tester.pump(const Duration(seconds: 1));
+      slow.complete();
+      await tester.pumpAndSettle();
+
+      final container = containerOf(tester);
+      expect(container.read(appConfigProvider), AppConfigValues.defaults);
+      expect(container.read(updateRequiredProvider), isFalse);
+      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Update required'), findsNothing);
     });
 
     testWidgets('a_failing_config_source_starts_the_app_on_defaults', (

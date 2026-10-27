@@ -30,6 +30,7 @@ class FirebaseRemoteConfigSource implements RemoteConfigSource {
         ),
       );
       await config.setDefaults(AppConfigValues.defaultsMap);
+      await config.ensureInitialized();
       await config.activate();
     } on Object catch (error) {
       _log('activate failed', error);

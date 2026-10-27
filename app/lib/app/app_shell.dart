@@ -32,16 +32,35 @@ class UpdateGate extends ConsumerWidget {
       ref.watch(updateRequiredProvider) ? const _UpdateRequiredScreen() : child;
 }
 
-class _UpdateRequiredScreen extends ConsumerWidget {
+class _UpdateRequiredScreen extends ConsumerStatefulWidget {
   const _UpdateRequiredScreen();
 
-  Future<void> _openStore(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<_UpdateRequiredScreen> createState() =>
+      _UpdateRequiredScreenState();
+}
+
+class _UpdateRequiredScreenState extends ConsumerState<_UpdateRequiredScreen> {
+  /// A store page is being opened; a second tap meanwhile does nothing.
+  bool _opening = false;
+
+  Future<void> _openStore() async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      await _launchStore();
+    } finally {
+      _opening = false;
+    }
+  }
+
+  Future<void> _launchStore() async {
     final listing = AppLinks.storeListing(
       ref.read(flavorProvider),
       defaultTargetPlatform,
     );
     final opened = await ref.read(linkOpenerProvider).open(listing);
-    if (opened || !context.mounted) return;
+    if (opened || !mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -52,10 +71,13 @@ class _UpdateRequiredScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    // Back must not reach a screen behind this one.
+    // This gate sits above the Navigator, so the router is out of the tree
+    // while it shows: system Back finds no route to pop and leaves the app,
+    // and a relaunch is gated again. Nothing behind this screen can be
+    // reached. The PopScope is a harmless guard, not the mechanism.
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -83,7 +105,7 @@ class _UpdateRequiredScreen extends ConsumerWidget {
                       style: theme.textTheme.bodyLarge,
                     ),
                     FilledButton(
-                      onPressed: () => _openStore(context, ref),
+                      onPressed: _openStore,
                       child: Text(l10n.updateRequiredAction),
                     ),
                   ],

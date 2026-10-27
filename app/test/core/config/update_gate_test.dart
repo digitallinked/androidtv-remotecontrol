@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -45,6 +48,23 @@ class _NonlinearScaler extends TextScaler {
   int get hashCode => 14;
 }
 
+/// A [LinkOpener] whose answer waits for [finish].
+class _SlowOpener extends RecordingLinkOpener {
+  Completer<void> _gate = Completer<void>();
+
+  void finish() {
+    _gate.complete();
+    _gate = Completer<void>();
+  }
+
+  @override
+  Future<bool> open(Uri uri) async {
+    opened.add(uri);
+    await _gate.future;
+    return true;
+  }
+}
+
 void main() {
   // Some tests pump the app several times.
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
@@ -64,12 +84,13 @@ void main() {
     double textScale = 1,
     TextScaler? textScaler,
     Size size = const Size(390, 844),
+    RecordingLinkOpener? linkOpener,
   }) async {
     t.view
       ..physicalSize = size
       ..devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    final opener = RecordingLinkOpener();
+    final opener = linkOpener ?? RecordingLinkOpener();
     final session = FakeRemoteSession(initial: _connected);
     await pumpRouterApp(
       t,
@@ -102,13 +123,26 @@ void main() {
     expect(find.byType(RemoteBody), findsNothing);
     expect(find.byType(RemoteScreen), findsNothing);
 
-    // Back doesn't reach the app behind it.
-    expect(
-      find.byWidgetPredicate((w) => w is PopScope && !w.canPop),
-      findsOneWidget,
+    // The router is out of the tree, so Back has no route to pop: the system
+    // leaves the app, and a relaunch is gated again.
+    expect(find.byType(Navigator), findsNothing);
+    final left = <String>[];
+    t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        left.add(call.method);
+        return null;
+      },
+    );
+    addTearDown(
+      () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
     );
     await t.binding.handlePopRoute();
     await t.pumpAndSettle();
+    expect(left, contains('SystemNavigator.pop'));
     expect(find.text('Update required'), findsOneWidget);
     expect(find.byType(RemoteBody), findsNothing);
 
@@ -117,6 +151,25 @@ void main() {
 
     expect(opener.opened.single, androidListing);
     expect(find.textContaining("Couldn't open the store"), findsNothing);
+  });
+
+  testWidgets('a_double_tap_opens_the_store_once', (t) async {
+    final opener = _SlowOpener();
+    await pumpGate(t, {'min_supported_version': '9.0.0'}, linkOpener: opener);
+
+    await t.tap(find.text('Update'));
+    await t.tap(find.text('Update'));
+    await t.pump();
+    expect(opener.opened, hasLength(1));
+
+    // Once the first one is done, the button works again.
+    opener.finish();
+    await t.pumpAndSettle();
+    await t.tap(find.text('Update'));
+    await t.pump();
+    expect(opener.opened, hasLength(2));
+    opener.finish();
+    await t.pumpAndSettle();
   });
 
   testWidgets('the_screen_has_a_title_a_reason_and_one_action', (t) async {

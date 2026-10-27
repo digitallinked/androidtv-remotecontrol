@@ -43,8 +43,8 @@ void main() {
     final values = _read(const {
       'ads_banner_enabled': false,
       'ads_interstitial_enabled': true,
-      'ads_interstitial_min_interval_s': 30,
-      'review_prompt_min_key_presses': 0,
+      'ads_interstitial_min_interval_s': 120,
+      'review_prompt_min_key_presses': 5,
       'paywall_variant': 'b',
       'min_supported_version': '2.1.0',
       'catalogue_version': 7,
@@ -52,8 +52,8 @@ void main() {
 
     expect(values.adsBannerEnabled, isFalse);
     expect(values.adsInterstitialEnabled, isTrue);
-    expect(values.adsInterstitialMinInterval, const Duration(seconds: 30));
-    expect(values.reviewPromptMinKeyPresses, 0);
+    expect(values.adsInterstitialMinInterval, const Duration(seconds: 120));
+    expect(values.reviewPromptMinKeyPresses, 5);
     expect(values.paywallVariant, 'b');
     expect(values.minSupportedVersion, '2.1.0');
     expect(values.catalogueVersion, 7);
@@ -109,6 +109,88 @@ void main() {
     // The fetch changed the values for the next launch, not this session.
     expect(source.values['paywall_variant'], 'c');
     expect(container.read(appConfigProvider).paywallVariant, 'b');
+  });
+
+  test('a_late_activation_after_the_seal_changes_nothing', () async {
+    final slow = Completer<void>();
+    final source = FakeConfigSource({
+      'min_supported_version': '9.0.0',
+      'ads_banner_enabled': false,
+    }, activateBlock: slow.future);
+    final container = _container(source)..listen(appConfigProvider, (_, _) {});
+    final notifier = container.read(appConfigProvider.notifier);
+
+    final loading = notifier.load();
+    // Startup gave up on the step and went on.
+    notifier.seal();
+    slow.complete();
+    await loading;
+    await pumpEventQueue();
+
+    expect(container.read(appConfigProvider), AppConfigValues.defaults);
+    // Only the download for the next launch still starts.
+    expect(source.calls, ['activateCached', 'fetchForNextLaunch']);
+  });
+
+  test('a_second_load_changes_nothing', () async {
+    final source = FakeConfigSource({'paywall_variant': 'b'});
+    final container = _container(source)..listen(appConfigProvider, (_, _) {});
+    final notifier = container.read(appConfigProvider.notifier);
+    await notifier.load();
+    await pumpEventQueue();
+
+    source.values['paywall_variant'] = 'c';
+    await notifier.load();
+    await pumpEventQueue();
+
+    expect(container.read(appConfigProvider).paywallVariant, 'b');
+    expect(source.calls, ['activateCached', 'fetchForNextLaunch']);
+  });
+
+  test('load_after_the_seal_does_nothing', () async {
+    final source = FakeConfigSource({'paywall_variant': 'b'});
+    final container = _container(source)..listen(appConfigProvider, (_, _) {});
+    container.read(appConfigProvider.notifier).seal();
+
+    await container.read(appConfigProvider.notifier).load();
+
+    expect(source.calls, isEmpty);
+    expect(container.read(appConfigProvider), AppConfigValues.defaults);
+  });
+
+  test('the_paywall_variant_is_a_trimmed_plain_token', () {
+    expect(_read(const {'paywall_variant': 'b '}).paywallVariant, 'b');
+    expect(
+      _read(const {'paywall_variant': ' v2.1_x '}).paywallVariant,
+      'v2.1_x',
+    );
+    for (final bad in ['new-year', 'a b', 'ä', 'x' * 101, '', '   ']) {
+      expect(
+        _read({'paywall_variant': bad}).paywallVariant,
+        'a',
+        reason: bad,
+      );
+    }
+    expect(_read({'paywall_variant': 'x' * 100}).paywallVariant, 'x' * 100);
+  });
+
+  test('numbers_outside_their_range_fall_back', () {
+    Duration interval(Object v) => _read({
+      'ads_interstitial_min_interval_s': v,
+    }).adsInterstitialMinInterval;
+    int presses(Object v) =>
+        _read({'review_prompt_min_key_presses': v}).reviewPromptMinKeyPresses;
+
+    expect(interval(60), const Duration(seconds: 60));
+    expect(interval(604800), const Duration(days: 7));
+    for (final bad in [0, 1, 59, 604801, 1000000000000000, -1]) {
+      expect(interval(bad), const Duration(seconds: 600), reason: '$bad');
+    }
+    expect(presses(1), 1);
+    expect(presses(10000), 10000);
+    for (final bad in [0, 10001, 1000000000000000, -1]) {
+      expect(presses(bad), 150, reason: '$bad');
+    }
   });
 
   test('the_download_is_not_waited_for', () async {

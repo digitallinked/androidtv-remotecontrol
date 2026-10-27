@@ -12,8 +12,11 @@ part 'app_config.g.dart';
 /// The Remote Config values the app reads, each with its in-code default
 /// (Ruling P6-R7).
 ///
-/// A value of the wrong type, a negative number or a blank string falls back
-/// to the default of that key alone.
+/// A value of the wrong type, a number outside its sane range or a blank
+/// string falls back to the default of that key alone. The interstitial
+/// interval must be 60 s to 7 days, the review threshold 1 to 10000 key
+/// presses, and the paywall variant a plain token (letters, digits, `_`, `.`,
+/// at most 100 characters; surrounding spaces are trimmed).
 @immutable
 class AppConfigValues {
   const AppConfigValues._({
@@ -43,9 +46,11 @@ class AppConfigValues {
       return value is bool ? value : fallback;
     }
 
-    int count(String key, int fallback) {
+    int count(String key, int fallback, {int min = 0, int? max}) {
       final value = raw(key);
-      return value is int && value >= 0 ? value : fallback;
+      return value is int && value >= min && (max == null || value <= max)
+          ? value
+          : fallback;
     }
 
     String text(String key, String fallback) {
@@ -53,18 +58,37 @@ class AppConfigValues {
       return value is String && value.trim().isNotEmpty ? value : fallback;
     }
 
+    // Goes into analytics as a parameter, so it must be a plain token.
+    String token(String key, String fallback) {
+      final value = raw(key);
+      final trimmed = value is String ? value.trim() : '';
+      return _plainToken.hasMatch(trimmed) ? trimmed : fallback;
+    }
+
     return AppConfigValues._(
       adsBannerEnabled: boolean(_adsBanner, fallback: true),
       adsInterstitialEnabled: boolean(_adsInterstitial, fallback: false),
       adsInterstitialMinInterval: Duration(
-        seconds: count(_interstitialInterval, 600),
+        seconds: count(
+          _interstitialInterval,
+          600,
+          min: 60,
+          max: Duration.secondsPerDay * 7,
+        ),
       ),
-      reviewPromptMinKeyPresses: count(_reviewKeyPresses, 150),
-      paywallVariant: text(_paywallVariant, 'a'),
+      reviewPromptMinKeyPresses: count(
+        _reviewKeyPresses,
+        150,
+        min: 1,
+        max: 10000,
+      ),
+      paywallVariant: token(_paywallVariant, 'a'),
       minSupportedVersion: text(_minSupportedVersion, '1.0.0'),
       catalogueVersion: count(_catalogueVersion, 1),
     );
   }
+
+  static final _plainToken = RegExp(r'^[A-Za-z0-9_.]{1,100}$');
 
   static const _adsBanner = 'ads_banner_enabled';
   static const _adsInterstitial = 'ads_interstitial_enabled';
@@ -197,20 +221,32 @@ RemoteConfigSource remoteConfigSource(Ref ref) {
 /// nothing flips mid-session.
 @Riverpod(keepAlive: true)
 class AppConfig extends _$AppConfig {
+  bool _started = false;
+  bool _sealed = false;
+
   @override
   AppConfigValues build() => AppConfigValues.defaults;
+
+  /// Ends the window in which [load] may set the state. Startup calls it
+  /// once the config step has finished or been given up on, so a [load] that
+  /// is still waiting on a slow platform never changes the values mid-session
+  /// (Ruling P6-R7). The download for the next launch still starts then.
+  void seal() => _sealed = true;
 
   /// Activates the cached values, sets the state from them and starts a
   /// download for the next launch without waiting for it.
   ///
-  /// Never throws: a failing source keeps the defaults. Startup bounds the
-  /// time this may take.
+  /// Runs once: a second call, or a call after [seal], does nothing. Never
+  /// throws: a failing source keeps the defaults. Startup bounds the time this
+  /// may take; if the bound passes first, the state stays as it is.
   Future<void> load() async {
+    if (_started || _sealed) return;
+    _started = true;
     final source = ref.read(remoteConfigSourceProvider);
     try {
       await source.activateCached();
       if (!ref.mounted) return;
-      state = AppConfigValues.read(source.value);
+      if (!_sealed) state = AppConfigValues.read(source.value);
     } on Object catch (error) {
       developer.log('Remote Config failed', name: 'config', error: error);
     }

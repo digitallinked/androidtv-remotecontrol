@@ -127,6 +127,9 @@ Future<Widget> buildRootWidget({
     reporter: crashReporter,
     firstIndex: 1 + startupSteps.length,
   );
+  // A load still waiting on a slow platform must not change the values once
+  // the app is running (Ruling P6-R7).
+  container.read(appConfigProvider.notifier).seal();
   return _RootHost(container: container);
 }
 
