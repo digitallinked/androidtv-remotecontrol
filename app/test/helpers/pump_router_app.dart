@@ -9,7 +9,7 @@ import 'package:tv_remote/app/app_shell.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
-import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/app/theme/colour_styles.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
@@ -19,9 +19,11 @@ import 'package:tv_remote/core/device/screen_services.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
@@ -68,6 +70,11 @@ import 'test_identity.dart';
 /// [textScaler] replaces the linear [textScale] with a scaler of your own, for
 /// the non-linear curves of Android 14+.
 ///
+/// The theme follows the stored colour style and Premium exactly as `App`
+/// does; [brightness] stands in for the system theme. [dynamicScheme] stands
+/// in for the phone's wallpaper colours and applies while the "Colours from
+/// wallpaper" setting is on.
+///
 /// With [settle] false it pumps one frame instead of waiting for the app to
 /// go idle: a screen with a running progress indicator never goes idle, and
 /// `pumpAndSettle` would then run the fake clock forward until the screen
@@ -83,6 +90,7 @@ Future<SettingsStore> pumpRouterApp(
   bool settle = true,
   Future<void> Function(SettingsStore store)? prepareSettings,
   bool accessibleNavigation = false,
+  ColorScheme? dynamicScheme,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
@@ -161,7 +169,14 @@ Future<SettingsStore> pumpRouterApp(
       child: Consumer(
         builder: (_, ref, _) => MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          theme: buildAppTheme(brightness: brightness),
+          theme: buildSettingsTheme(
+            brightness: brightness,
+            settings: ref.watch(settingsControllerProvider),
+            premium: ref.watch(premiumProvider),
+            dynamicScheme: ref.watch(settingsControllerProvider).dynamicColor
+                ? dynamicScheme
+                : null,
+          ),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, app) => MediaQuery(

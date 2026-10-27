@@ -6,12 +6,18 @@ import 'package:tv_remote/app/theme/tokens.dart';
 /// When [dynamicScheme] is given (Material You), its colours replace the
 /// accent and surface tokens; status and TV-key colours always come from the
 /// tokens, and `error` keeps the accessible danger-text token.
+///
+/// [colours] replaces the base palette (a colour style); the tokens that
+/// [dynamicScheme] overrides still come from the scheme.
 ThemeData buildAppTheme({
   required Brightness brightness,
   ColorScheme? dynamicScheme,
+  AppColors? colours,
 }) => _buildTheme(
   brightness: brightness,
-  base: brightness == Brightness.dark ? AppColors.dark : AppColors.light,
+  base:
+      colours ??
+      (brightness == Brightness.dark ? AppColors.dark : AppColors.light),
   dynamicScheme: dynamicScheme,
 );
 

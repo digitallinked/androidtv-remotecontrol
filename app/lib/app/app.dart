@@ -5,7 +5,7 @@ import 'package:tv_remote/app/app_shell.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
-import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/app/theme/colour_styles.dart';
 import 'package:tv_remote/app/theme/dynamic_color_support.dart';
 import 'package:tv_remote/app/theme/dynamic_scheme.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
@@ -50,14 +50,14 @@ class App extends ConsumerWidget {
       // The first read starts the silent consent update (it shows nothing);
       // the consent form itself waits for the remote screen.
       ..read(consentControllerProvider)
-      // The first read starts the purchase service, so Premium is known
-      // before any banner; the screens read it from then on.
-      ..read(premiumProvider)
       // Starts the interstitial pacing at launch, so it hears about
       // connection trouble from then on and keeps one ad loaded when
       // interstitials are enabled. Watched, not read: Riverpod may pause the
       // listeners inside a provider that nothing listens to.
       ..watch(interstitialsProvider);
+    // The first read starts the purchase service, so Premium is known before
+    // any banner. Watched, so a purchase or a lapse restyles the app at once.
+    final premium = ref.watch(premiumProvider);
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
@@ -65,14 +65,18 @@ class App extends ConsumerWidget {
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
           title: title,
-          theme: buildAppTheme(
+          theme: buildSettingsTheme(
             brightness: Brightness.light,
+            settings: settings,
+            premium: premium,
             dynamicScheme: useDynamic
                 ? colorSchemeFromDynamic(lightDynamic)
                 : null,
           ),
-          darkTheme: buildAppTheme(
+          darkTheme: buildSettingsTheme(
             brightness: Brightness.dark,
+            settings: settings,
+            premium: premium,
             dynamicScheme: useDynamic
                 ? colorSchemeFromDynamic(darkDynamic)
                 : null,
