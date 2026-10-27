@@ -14,6 +14,7 @@ import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/device/screen_services.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -37,6 +38,7 @@ import 'recording_haptics.dart';
 import 'recording_link_opener.dart';
 import 'test_catalogue.dart';
 import 'test_identity.dart';
+import 'test_premium.dart';
 
 /// Pumps the real router app at [initialLocation] and returns the settings
 /// store it runs on (backed by in-memory preferences and an in-memory
@@ -126,6 +128,8 @@ Future<SettingsStore> pumpRouterApp(
           ),
         ),
         linkOpenerProvider.overrideWithValue(RecordingLinkOpener()),
+        // Premium is the free stub until a test overrides it.
+        premiumProvider.overrideWith(() => TestPremium(PremiumState.free)),
         initialLocationProvider.overrideWithValue(initialLocation),
         tvDiscoveryFactoryProvider.overrideWithValue(
           FakeTvDiscoveries().create,

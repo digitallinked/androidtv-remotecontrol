@@ -7,6 +7,7 @@ import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 import 'package:tv_remote/features/settings/application/feedback.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
 
@@ -58,6 +59,20 @@ class SettingsScreen extends ConsumerWidget {
             title: l10n.pageTitleAppearance,
             subtitle: l10n.settingsAppearanceSubtitle,
             onTap: () => context.push(AppRoutes.settingsAppearance),
+          ),
+          SettingsNavTile(
+            icon: Icons.workspace_premium_outlined,
+            title: l10n.pageTitlePaywall,
+            subtitle: l10n.settingsPremiumSubtitle,
+            onTap: () => context.push(
+              AppRoutes.paywall(source: PaywallSource.settings),
+            ),
+          ),
+          SettingsNavTile(
+            icon: Icons.shield_outlined,
+            title: l10n.pageTitlePrivacyChoices,
+            subtitle: l10n.settingsPrivacyChoicesSubtitle,
+            onTap: () => context.push(AppRoutes.settingsPrivacy),
           ),
           SettingsSectionHeader(l10n.settingsSectionSupport),
           SettingsNavTile(

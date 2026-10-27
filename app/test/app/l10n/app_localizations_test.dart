@@ -18,4 +18,12 @@ void main() {
     expect(l.aboutVersion('1.0.0', '1'), 'Version 1.0.0 (1)');
     expect(l.pageTitleDevices, 'Your TVs');
   });
+
+  test('phase_6_strings_load', () async {
+    final l = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(l.paywallPricePerMonth('RM 9.90'), 'RM 9.90 per month');
+    expect(l.paywallSavePercent(40), 'Save 40%');
+    expect(l.faqPrivacyA, contains('Privacy choices'));
+    expect(l.pageTitlePrivacyChoices, 'Privacy choices');
+  });
 }

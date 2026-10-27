@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tv_remote/core/privacy/privacy_choices.dart';
 
 /// How the remote screen navigates the TV's menus.
 enum NavigationStyle {
@@ -37,6 +38,24 @@ enum ThemePreference {
   dark,
 }
 
+/// The colour palette the app uses (Ruling P6-R12). Only [standard] is free.
+enum ColourStyle {
+  /// The app's own palette; free.
+  standard,
+
+  /// Cool blues; Premium.
+  ocean,
+
+  /// Warm oranges; Premium.
+  ember,
+
+  /// Deep dark blues; Premium.
+  midnight,
+}
+
+/// The last Premium entitlement the phone saw, kept for offline starts.
+typedef CachedPremium = ({bool active, DateTime? expiresAt});
+
 /// A snapshot of every user setting.
 @immutable
 class AppSettings {
@@ -53,6 +72,9 @@ class AppSettings {
     required this.localeCode,
     required this.autoOpenKeyboard,
     required this.onboardingComplete,
+    required this.colourStyle,
+    required this.shareUsageStats,
+    required this.shareCrashReports,
   });
 
   /// The settings of a fresh install.
@@ -68,6 +90,9 @@ class AppSettings {
     localeCode: null,
     autoOpenKeyboard: true,
     onboardingComplete: false,
+    colourStyle: ColourStyle.standard,
+    shareUsageStats: null,
+    shareCrashReports: null,
   );
 
   /// Touchpad or D-pad navigation.
@@ -103,6 +128,16 @@ class AppSettings {
   /// Whether the first-run onboarding has been finished.
   final bool onboardingComplete;
 
+  /// The chosen colour style. Premium shows it; losing Premium keeps it.
+  final ColourStyle colourStyle;
+
+  /// The user's choice on sharing usage statistics, or `null` if never
+  /// chosen (the consent region then decides).
+  final bool? shareUsageStats;
+
+  /// The user's choice on sharing crash reports, or `null` if never chosen.
+  final bool? shareCrashReports;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -117,7 +152,10 @@ class AppSettings {
           other.dynamicColor == dynamicColor &&
           other.localeCode == localeCode &&
           other.autoOpenKeyboard == autoOpenKeyboard &&
-          other.onboardingComplete == onboardingComplete;
+          other.onboardingComplete == onboardingComplete &&
+          other.colourStyle == colourStyle &&
+          other.shareUsageStats == shareUsageStats &&
+          other.shareCrashReports == shareCrashReports;
 
   @override
   int get hashCode => Object.hash(
@@ -132,6 +170,9 @@ class AppSettings {
     localeCode,
     autoOpenKeyboard,
     onboardingComplete,
+    colourStyle,
+    shareUsageStats,
+    shareCrashReports,
   );
 
   @override
@@ -142,7 +183,9 @@ class AppSettings {
       'keepScreenAwake: $keepScreenAwake, theaterMode: $theaterMode, '
       'themePreference: $themePreference, dynamicColor: $dynamicColor, '
       'localeCode: $localeCode, autoOpenKeyboard: $autoOpenKeyboard, '
-      'onboardingComplete: $onboardingComplete)';
+      'onboardingComplete: $onboardingComplete, colourStyle: $colourStyle, '
+      'shareUsageStats: $shareUsageStats, '
+      'shareCrashReports: $shareCrashReports)';
 }
 
 /// Reads and writes [AppSettings] in shared preferences.
@@ -172,6 +215,17 @@ class SettingsStore {
   static const _autoOpenKeyboardKey = 'settings.auto_open_keyboard';
   static const _onboardingCompleteKey = 'settings.onboarding_complete';
   static const _shortcutsSeededKey = 'apps.shortcuts_seeded';
+  static const _colourStyleKey = 'settings.colour_style';
+  static const _shareUsageKey = 'privacy.share_usage';
+  static const _shareCrashesKey = 'privacy.share_crashes';
+  static const _consentRegionKey = 'privacy.consent_region';
+  static const _attPrepromptShownKey = 'privacy.att_preprompt_shown';
+  static const _premiumActiveKey = 'premium.active';
+  static const _premiumExpiresAtKey = 'premium.expires_at';
+  static const _interstitialLastShownKey = 'ads.interstitial_last_shown_at';
+  static const _reviewKeyPressesKey = 'review.key_presses';
+  static const _launchCountKey = 'review.launch_count';
+  static const _reviewPromptShownKey = 'review.prompt_shown';
 
   /// Every preference key this store uses.
   static const Set<String> keys = {
@@ -187,6 +241,17 @@ class SettingsStore {
     _autoOpenKeyboardKey,
     _onboardingCompleteKey,
     _shortcutsSeededKey,
+    _colourStyleKey,
+    _shareUsageKey,
+    _shareCrashesKey,
+    _consentRegionKey,
+    _attPrepromptShownKey,
+    _premiumActiveKey,
+    _premiumExpiresAtKey,
+    _interstitialLastShownKey,
+    _reviewKeyPressesKey,
+    _launchCountKey,
+    _reviewPromptShownKey,
   };
 
   final SharedPreferencesWithCache _prefs;
@@ -195,6 +260,30 @@ class SettingsStore {
     final value = _prefs.get(key);
     return value is bool ? value : fallback;
   }
+
+  bool? _optionalBool(String key) {
+    final value = _prefs.get(key);
+    return value is bool ? value : null;
+  }
+
+  int _int(String key) {
+    final value = _prefs.get(key);
+    return value is int && value >= 0 ? value : 0;
+  }
+
+  DateTime? _utcMillis(String key) {
+    final value = _prefs.get(key);
+    return value is int
+        ? DateTime.fromMillisecondsSinceEpoch(value, isUtc: true)
+        : null;
+  }
+
+  Future<void> _setOptionalBool(String key, bool? value) =>
+      value == null ? _prefs.remove(key) : _prefs.setBool(key, value);
+
+  Future<void> _setUtcMillis(String key, DateTime? value) => value == null
+      ? _prefs.remove(key)
+      : _prefs.setInt(key, value.toUtc().millisecondsSinceEpoch);
 
   T _enum<T extends Enum>(String key, List<T> values, T fallback) {
     final value = _prefs.get(key);
@@ -331,6 +420,97 @@ class SettingsStore {
   Future<void> setShortcutsSeeded(bool value) =>
       _prefs.setBool(_shortcutsSeededKey, value);
 
+  /// The chosen colour style.
+  ColourStyle get colourStyle => _enum(
+    _colourStyleKey,
+    ColourStyle.values,
+    AppSettings.defaults.colourStyle,
+  );
+
+  /// Stores [value] as the colour style.
+  Future<void> setColourStyle(ColourStyle value) =>
+      _prefs.setString(_colourStyleKey, value.name);
+
+  /// The user's choice on sharing usage statistics, or `null` if never
+  /// chosen.
+  bool? get shareUsageStats => _optionalBool(_shareUsageKey);
+
+  /// Stores the usage-statistics choice; `null` removes it.
+  // ignore: avoid_positional_boolean_parameters
+  Future<void> setShareUsageStats(bool? value) =>
+      _setOptionalBool(_shareUsageKey, value);
+
+  /// The user's choice on sharing crash reports, or `null` if never chosen.
+  bool? get shareCrashReports => _optionalBool(_shareCrashesKey);
+
+  /// Stores the crash-report choice; `null` removes it.
+  // ignore: avoid_positional_boolean_parameters
+  Future<void> setShareCrashReports(bool? value) =>
+      _setOptionalBool(_shareCrashesKey, value);
+
+  /// Whether the user's region requires consent. Not part of [AppSettings]:
+  /// it is app state, written from the consent form's status.
+  ConsentRegion get consentRegion => _enum(
+    _consentRegionKey,
+    ConsentRegion.values,
+    ConsentRegion.unknown,
+  );
+
+  /// Stores the consent region.
+  Future<void> setConsentRegion(ConsentRegion value) =>
+      _prefs.setString(_consentRegionKey, value.name);
+
+  /// Whether the tracking pre-prompt has been shown (app state).
+  bool get trackingPrepromptShown =>
+      _bool(_attPrepromptShownKey, fallback: false);
+
+  /// Stores whether the tracking pre-prompt has been shown.
+  // ignore: avoid_positional_boolean_parameters
+  Future<void> setTrackingPrepromptShown(bool value) =>
+      _prefs.setBool(_attPrepromptShownKey, value);
+
+  /// The last Premium entitlement seen (app state), for offline starts.
+  CachedPremium get cachedPremium => (
+    active: _bool(_premiumActiveKey, fallback: false),
+    expiresAt: _utcMillis(_premiumExpiresAtKey),
+  );
+
+  /// Stores [value] as the cached entitlement; a `null` expiry removes it.
+  Future<void> setCachedPremium(CachedPremium value) async {
+    await _prefs.setBool(_premiumActiveKey, value.active);
+    await _setUtcMillis(_premiumExpiresAtKey, value.expiresAt);
+  }
+
+  /// When an interstitial ad last showed (app state), or `null`.
+  DateTime? get interstitialLastShownAt =>
+      _utcMillis(_interstitialLastShownKey);
+
+  /// Stores when an interstitial ad last showed; `null` removes it.
+  Future<void> setInterstitialLastShownAt(DateTime? value) =>
+      _setUtcMillis(_interstitialLastShownKey, value);
+
+  /// Key presses counted towards the review prompt (app state).
+  int get reviewKeyPresses => _int(_reviewKeyPressesKey);
+
+  /// Stores the key-press count.
+  Future<void> setReviewKeyPresses(int value) =>
+      _prefs.setInt(_reviewKeyPressesKey, value);
+
+  /// How many times the app has launched (app state).
+  int get launchCount => _int(_launchCountKey);
+
+  /// Stores the launch count.
+  Future<void> setLaunchCount(int value) =>
+      _prefs.setInt(_launchCountKey, value);
+
+  /// Whether the review prompt has been asked (app state).
+  bool get reviewPromptShown => _bool(_reviewPromptShownKey, fallback: false);
+
+  /// Stores whether the review prompt has been asked.
+  // ignore: avoid_positional_boolean_parameters
+  Future<void> setReviewPromptShown(bool value) =>
+      _prefs.setBool(_reviewPromptShownKey, value);
+
   /// Reads every setting at once.
   AppSettings snapshot() => AppSettings(
     navigationStyle: navigationStyle,
@@ -344,5 +524,8 @@ class SettingsStore {
     localeCode: localeCode,
     autoOpenKeyboard: autoOpenKeyboard,
     onboardingComplete: onboardingComplete,
+    colourStyle: colourStyle,
+    shareUsageStats: shareUsageStats,
+    shareCrashReports: shareCrashReports,
   );
 }

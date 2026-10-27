@@ -20,6 +20,7 @@ import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/devices/presentation/devices_screen.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
@@ -633,7 +634,8 @@ void main() {
     AppRoutes.settingsRemoteBehaviour: 0,
     AppRoutes.settingsHelp: 0,
     AppRoutes.settingsAbout: 0,
-    AppRoutes.paywall(source: 'test'): 0,
+    AppRoutes.paywall(source: PaywallSource.unknown): 0,
+    AppRoutes.settingsPrivacy: 0,
   };
 
   /// Pumps [route], tolerating the screens that never settle.
