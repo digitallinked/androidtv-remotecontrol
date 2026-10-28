@@ -12,6 +12,7 @@ import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
 import 'package:tv_remote/core/device/theater_mode.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';

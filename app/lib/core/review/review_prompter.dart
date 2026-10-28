@@ -4,16 +4,19 @@ import 'dart:developer' as developer;
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/review/in_app_review_requester.dart';
 import 'package:tv_remote/core/session/lifecycle_observer.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
-import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
 part 'review_prompter.g.dart';
 
@@ -25,8 +28,11 @@ abstract interface class ReviewRequester {
   /// Whether the review API can be asked on this phone right now.
   Future<bool> isAvailable();
 
-  /// Asks the store to show its review prompt.
-  Future<void> request();
+  /// Asks the store to show its review prompt. Answers whether the request
+  /// went through: `false` means it failed and nothing was shown. `true`
+  /// means the store had its chance; whether a prompt actually appeared is
+  /// the store's decision and is never reported back.
+  Future<bool> request();
 }
 
 /// The review API: the `in_app_review` plugin.
@@ -63,12 +69,17 @@ const Set<ConnectionStatus> _troubled = {
 /// - a session has just started: the TV became connected from not being
 ///   connected, and not as the recovery from a lost connection; and no
 ///   connection trouble (a loss, a failed connect or a "Not connected"
-///   notice) happened in the last 60 s.
+///   notice) happened in the last 60 s;
+/// - the ad consent step of this launch has finished without showing its
+///   form (Ruling P6-C11): two system dialogs never stack. While the step is
+///   still running the prompt waits for it, and asks if the TV is still
+///   connected when it ends. After a shown form, never this launch.
 ///
 /// The press count lives in memory and is written every 10 presses and when
 /// the app goes to the background, so a key press never waits for storage.
-/// When the review API is unavailable nothing is marked, and the next clean
-/// start tries again. Nothing here throws.
+/// When the review API is unavailable, or the request fails (Ruling P6-C12),
+/// nothing is marked and the next clean start tries again. Nothing here
+/// throws.
 ///
 /// The app starts this at launch and keeps it listened to (`App` watches
 /// it): Riverpod may pause the listeners inside a provider nothing listens
@@ -81,6 +92,7 @@ class ReviewPrompter extends _$ReviewPrompter {
   ConnectionStatus? _last;
   DateTime? _lastTroubleAt;
   bool _asking = false;
+  bool _awaitingConsent = false;
 
   @override
   void build() {
@@ -90,6 +102,7 @@ class ReviewPrompter extends _$ReviewPrompter {
     _last = null;
     _lastTroubleAt = null;
     _asking = false;
+    _awaitingConsent = false;
 
     final paused = signals.visibility.listen((visibility) {
       if (visibility == AppVisibility.background) unawaited(_save());
@@ -117,6 +130,15 @@ class ReviewPrompter extends _$ReviewPrompter {
       })
       ..listen(notConnectedNoticesProvider, (_, _) {
         _lastTroubleAt = clock.now();
+      })
+      // A prompt held back by the consent step gets its chance when the step
+      // ends, if the session it was for is still connected.
+      ..listen(consentControllerProvider, (_, next) {
+        if (!_awaitingConsent || !next.gathered) return;
+        _awaitingConsent = false;
+        if (!next.formShown && _last == ConnectionStatus.connected) {
+          unawaited(_maybePrompt());
+        }
       });
   }
 
@@ -155,6 +177,14 @@ class ReviewPrompter extends _$ReviewPrompter {
       final store = _store;
       if (store.reviewPromptShown || _isDemo()) return;
       if (store.launchCount < reviewFirstLaunch) return;
+      // Never on a launch whose consent form is pending or was shown. A
+      // pending step is waited for (see the listener in `build`).
+      final consent = ref.read(consentControllerProvider);
+      if (!consent.gathered) {
+        _awaitingConsent = true;
+        return;
+      }
+      if (consent.formShown) return;
       final threshold = ref.read(appConfigProvider).reviewPromptMinKeyPresses;
       if (_presses < threshold) return;
       final trouble = _lastTroubleAt;
@@ -165,12 +195,26 @@ class ReviewPrompter extends _$ReviewPrompter {
 
       final requester = ref.read(reviewRequesterProvider);
       final analytics = ref.read(appAnalyticsProvider.notifier);
+      final reporter = ref.read(crashReporterProvider);
       _asking = true;
       try {
         if (!await requester.isAvailable() || !ref.mounted) return;
-        await requester.request();
-        // Asked: never again, even if this container is going away.
-        await store.setReviewPromptShown(true);
+        // A failed request showed nothing: nothing is marked, and the next
+        // clean start may ask again (Ruling P6-C12).
+        if (!await requester.request()) return;
+        try {
+          // Asked: never again, even if this container is going away.
+          await store.setReviewPromptShown(true);
+        } on Object catch (error, stack) {
+          // The next clean start would ask again; the store's own quota
+          // limits that. Worth knowing about, so it is reported.
+          await safeRecordError(
+            reporter,
+            error,
+            stack,
+            reason: 'review prompt flag',
+          );
+        }
         if (!ref.mounted) return;
         analytics.log(const AnalyticsEvent.reviewPromptShown());
       } finally {

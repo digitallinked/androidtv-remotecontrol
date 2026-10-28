@@ -9,9 +9,9 @@ import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
-import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
 part 'interstitials.g.dart';
 

@@ -403,7 +403,7 @@ void main() {
             appName: 'Remotely Dev',
             version: '1.0.0',
             buildNumber: '1',
-            os: 'android',
+            os: 'Android',
             osVersion: '12',
           ),
         ),
@@ -577,6 +577,63 @@ void main() {
       await tester.pumpAndSettle();
       expect(await storedLaunchCount(), 2);
     });
+
+    testWidgets('try_again_after_a_failed_start_counts_one_launch', (
+      tester,
+    ) async {
+      final reporter = RecordingCrashReporter();
+      var broken = true;
+      await tester.pumpWidget(
+        StartupGate(
+          reporter: reporter,
+          build: () => buildRootWidget(
+            flavor: Flavor.dev,
+            crashReporter: reporter,
+            // The first start fails while it resolves the first screen.
+            openDatabase: () {
+              if (broken) throw StateError('database is locked');
+              return AppDatabase(NativeDatabase.memory());
+            },
+            overrides: fakeAdsOverrides(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('The app could not start'), findsOneWidget);
+      expect(await storedLaunchCount(), 0);
+
+      broken = false;
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Get started'), findsOneWidget);
+      expect(await storedLaunchCount(), 1);
+    });
+
+    testWidgets(
+      'a_launch_count_write_that_never_finishes_does_not_hold_startup',
+      (
+        tester,
+      ) async {
+        Widget? app;
+        unawaited(
+          root(
+            openSettings: () async => _StuckLaunchCountStore(
+              await SharedPreferencesWithCache.create(
+                cacheOptions: const SharedPreferencesWithCacheOptions(
+                  allowList: SettingsStore.keys,
+                ),
+              ),
+            ),
+          ).then((w) => app = w),
+        );
+        await tester.pump(const Duration(seconds: 1));
+        expect(app, isNotNull, reason: 'startup does not wait for the write');
+
+        await tester.pumpWidget(app!);
+        await tester.pumpAndSettle();
+        expect(find.text('Get started'), findsOneWidget);
+      },
+    );
 
     testWidgets('a_launch_count_that_cannot_be_written_does_not_stop_startup', (
       tester,
@@ -776,6 +833,15 @@ class _OrderSource extends FakeConfigSource {
     _order.add('fetchForNextLaunch');
     return super.fetchForNextLaunch();
   }
+}
+
+/// A store whose launch count write never finishes (a stuck platform
+/// channel).
+class _StuckLaunchCountStore extends SettingsStore {
+  _StuckLaunchCountStore(super.prefs);
+
+  @override
+  Future<void> setLaunchCount(int value) => Completer<void>().future;
 }
 
 /// A store whose launch count can't be written.

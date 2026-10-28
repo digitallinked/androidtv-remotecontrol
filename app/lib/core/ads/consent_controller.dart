@@ -17,13 +17,15 @@ class ConsentResult {
     required this.canRequestAds,
     required this.privacyOptionsRequired,
     required this.gathered,
+    this.formShown = false,
   });
 
   /// Before anything is known: ads may not load.
   const ConsentResult.notGathered(this.region)
     : canRequestAds = false,
       privacyOptionsRequired = false,
-      gathered = false;
+      gathered = false,
+      formShown = false;
 
   /// The region consent was resolved for.
   final ConsentRegion region;
@@ -38,6 +40,10 @@ class ConsentResult {
   /// failed). Ads wait for it.
   final bool gathered;
 
+  /// Whether the consent form was shown to the user on this launch. The
+  /// review prompt never follows it in the same launch (Ruling P6-C11).
+  final bool formShown;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -45,16 +51,23 @@ class ConsentResult {
           other.region == region &&
           other.canRequestAds == canRequestAds &&
           other.privacyOptionsRequired == privacyOptionsRequired &&
-          other.gathered == gathered;
+          other.gathered == gathered &&
+          other.formShown == formShown;
 
   @override
-  int get hashCode =>
-      Object.hash(region, canRequestAds, privacyOptionsRequired, gathered);
+  int get hashCode => Object.hash(
+    region,
+    canRequestAds,
+    privacyOptionsRequired,
+    gathered,
+    formShown,
+  );
 
   @override
   String toString() =>
       'ConsentResult(region: $region, canRequestAds: $canRequestAds, '
-      'privacyOptionsRequired: $privacyOptionsRequired, gathered: $gathered)';
+      'privacyOptionsRequired: $privacyOptionsRequired, gathered: $gathered, '
+      'formShown: $formShown)';
 }
 
 /// Runs the ad consent steps once per launch (Ruling P6-R3 and P6-R8).
@@ -106,6 +119,7 @@ class ConsentController extends _$ConsentController {
       canRequestAds: state.canRequestAds,
       privacyOptionsRequired: options,
       gathered: state.gathered,
+      formShown: state.formShown,
     );
   }
 
@@ -122,7 +136,10 @@ class ConsentController extends _$ConsentController {
     if (!ref.mounted) return _disposed;
     // A failed form is not an error here: the platform may still allow ads
     // from an earlier choice, and `canRequestAds` says.
-    await _guard(service.showFormIfRequired, ConsentFormOutcome.failed);
+    final outcome = await _guard(
+      service.showFormIfRequired,
+      ConsentFormOutcome.failed,
+    );
     if (!ref.mounted) return _disposed;
     final canRequest = await _guard(service.canRequestAds, false);
     if (!ref.mounted) return _disposed;
@@ -133,6 +150,7 @@ class ConsentController extends _$ConsentController {
       canRequestAds: canRequest,
       privacyOptionsRequired: options,
       gathered: true,
+      formShown: outcome == ConsentFormOutcome.shown,
     );
     state = result;
     return result;
@@ -155,6 +173,7 @@ class ConsentController extends _$ConsentController {
         canRequestAds: canRequest && state.gathered,
         privacyOptionsRequired: state.privacyOptionsRequired,
         gathered: state.gathered,
+        formShown: state.formShown,
       );
     }
     return shown;

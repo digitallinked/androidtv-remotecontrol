@@ -123,13 +123,20 @@ Future<Widget> buildRootWidget({
   // Counted once the start can no longer fail: Try again after a failed
   // start is the same launch. The interstitial pacing and the review prompt
   // read it.
-  try {
-    await settings.setLaunchCount(settings.launchCount + 1);
-  } on Object catch (error, stack) {
-    unawaited(
-      safeRecordError(crashReporter, error, stack, reason: 'launch count'),
-    );
-  }
+  // Not awaited: the store's cache has the new value at once, and a stuck
+  // platform write must not hold the first frame.
+  unawaited(
+    Future.sync(
+      () => settings.setLaunchCount(settings.launchCount + 1),
+    ).catchError(
+      (Object error, StackTrace stack) => safeRecordError(
+        crashReporter,
+        error,
+        stack,
+        reason: 'launch count',
+      ),
+    ),
+  );
   if (firebaseResult == FirebaseStatus.ready &&
       crashReporter is DelegatingCrashReporter) {
     _installCrashlytics(container, crashReporter);

@@ -13,7 +13,7 @@ const _info = AppInfo(
   appName: 'Remotely Dev',
   version: '1.0.0',
   buildNumber: '1',
-  os: 'android',
+  os: 'Android',
   osVersion: '12',
 );
 

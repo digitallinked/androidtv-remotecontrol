@@ -65,7 +65,7 @@ final class ConsentControllerProvider
   }
 }
 
-String _$consentControllerHash() => r'f29260aebe5d6f0a4b1d2591f2a9fef87c19a923';
+String _$consentControllerHash() => r'3645316d6cf2fd4e088cddb06c9fa8716134e47a';
 
 /// Runs the ad consent steps once per launch (Ruling P6-R3 and P6-R8).
 ///

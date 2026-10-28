@@ -9,6 +9,7 @@ import 'package:tv_remote/core/analytics/analytics_guard.dart'
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/review/review_prompter.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
@@ -113,17 +114,6 @@ RemoteActionListener remoteActionListener(Ref ref) {
         break;
     }
   };
-}
-
-/// Counts the presses that were refused because the TV isn't connected; the
-/// remote screen shows the "Not connected" snackbar for each bump.
-@Riverpod(keepAlive: true)
-class NotConnectedNotices extends _$NotConnectedNotices {
-  @override
-  int build() => 0;
-
-  /// Records one more refused command.
-  void notify() => state++;
 }
 
 /// Every press of a remote control goes through here: it sends the key,

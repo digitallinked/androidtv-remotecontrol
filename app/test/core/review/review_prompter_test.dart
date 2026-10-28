@@ -5,22 +5,28 @@ import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
+import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/review/review_prompter.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
-import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
 import '../../helpers/fake_config_source.dart';
+import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_review_requester.dart';
 import '../../helpers/manual_session_signals.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crash_reporter.dart';
 
 const _disconnected = TvConnectionState(status: ConnectionStatus.disconnected);
 const _connecting = TvConnectionState(status: ConnectionStatus.connecting);
@@ -48,6 +54,7 @@ void main() {
   late SettingsStore store;
   late RecordingAnalyticsSink sink;
   late FakeReviewRequester requester;
+  late RecordingCrashReporter reporter;
 
   final start = DateTime.utc(2026, 10, 28, 12);
 
@@ -67,14 +74,27 @@ void main() {
     settle(async);
     sink = RecordingAnalyticsSink();
     requester = FakeReviewRequester();
+    reporter = RecordingCrashReporter();
+  }
+
+  /// A new launch reads the stored values again, as a restarted app does: a
+  /// fresh store over the same preferences.
+  void reopenStore(FakeAsync async) {
+    unawaited(SettingsStore.open().then((s) => store = s));
+    settle(async);
   }
 
   /// One launch of the app on [store]: the configuration is activated and
   /// the prompter is started and kept listened to, as `App` does.
+  ///
+  /// The ad consent comes from [consent] (by default no form is needed), and
+  /// with [gather] the consent step runs, as the remote screen starts it.
   _Rig launch(
     FakeAsync async, {
     Map<String, Object?> config = const {},
     bool demo = false,
+    FakeConsentService? consent,
+    bool gather = true,
   }) {
     final session = FakeRemoteSession(isDemo: demo);
     final signals = ManualSessionSignals();
@@ -85,6 +105,10 @@ void main() {
         remoteSessionProvider.overrideWith((ref) async => session),
         sessionSignalsProvider.overrideWithValue(signals),
         reviewRequesterProvider.overrideWithValue(requester),
+        consentServiceProvider.overrideWithValue(
+          consent ?? FakeConsentService(),
+        ),
+        crashReporterProvider.overrideWithValue(reporter),
         analyticsSinkProvider.overrideWithValue(sink),
         // The guard throws, as in a debug build.
         analyticsDebugBuildProvider.overrideWithValue(true),
@@ -98,6 +122,12 @@ void main() {
       ..listen(appAnalyticsProvider, (_, _) {})
       ..listen(reviewPrompterProvider, (_, _) {});
     settle(async);
+    if (gather) {
+      unawaited(
+        container.read(consentControllerProvider.notifier).ensureGathered(),
+      );
+      settle(async);
+    }
     return (
       container: container,
       session: session,
@@ -173,9 +203,14 @@ void main() {
       async.elapse(const Duration(seconds: 20));
       connect(async, r);
       expect(requester.requests, 0, reason: 'a loss 30 s ago');
+      // 59 s after the loss is still too soon.
+      disconnect(async, r);
+      async.elapse(const Duration(seconds: 29));
+      connect(async, r);
+      expect(requester.requests, 0, reason: 'a loss 59 s ago');
       // Once 60 s have passed, the next clean start may ask.
       disconnect(async, r);
-      async.elapse(const Duration(seconds: 30));
+      async.elapse(const Duration(seconds: 1));
       connect(async, r);
       expect(requester.requests, 1, reason: 'a loss 60 s ago');
 
@@ -285,12 +320,23 @@ void main() {
       expect(store.reviewPromptShown, isFalse);
       expect(reviewEvents(), isEmpty);
 
-      // It tries again on the next clean start.
-      requester.available = true;
+      // A request the plugin reports as failed marks nothing either.
+      requester
+        ..available = true
+        ..requestSucceeds = false;
       disconnect(async, r);
       connect(async, r);
       expect(requester.requests, 1);
+      expect(store.reviewPromptShown, isFalse);
+      expect(reviewEvents(), isEmpty);
+
+      // It tries again on the next clean start.
+      requester.requestSucceeds = true;
+      disconnect(async, r);
+      connect(async, r);
+      expect(requester.requests, 2);
       expect(store.reviewPromptShown, isTrue);
+      expect(reviewEvents(), ['review_prompt_shown']);
     });
   });
 
@@ -306,6 +352,9 @@ void main() {
 
       // The next launch carries on from 25: 124 more is one short.
       r.container.dispose();
+      settle(async);
+      reopenStore(async);
+      expect(store.reviewKeyPresses, 25);
       final again = launch(async);
       press(async, again, 124);
       connect(async, again);
@@ -317,4 +366,146 @@ void main() {
       expect(requester.requests, 1);
     });
   });
+
+  test('presses_are_saved_when_the_app_closes', () {
+    timed((async) {
+      install(async);
+      final r = launch(async);
+      press(async, r, 25);
+      expect(store.reviewKeyPresses, 20);
+
+      r.container.dispose();
+      settle(async);
+      reopenStore(async);
+      expect(store.reviewKeyPresses, 25);
+    });
+  });
+
+  test('two_quick_session_starts_ask_once', () {
+    timed((async) {
+      install(async, presses: 150);
+      final hold = Completer<void>();
+      requester.holdAvailability = hold;
+      final r = launch(async);
+      connect(async, r);
+      disconnect(async, r);
+      connect(async, r);
+      disconnect(async, r);
+      connect(async, r);
+      expect(requester.availabilityChecks, 1);
+
+      hold.complete();
+      settle(async);
+      expect(requester.requests, 1);
+      expect(reviewEvents(), hasLength(1));
+    });
+  });
+
+  test('a_flag_that_cannot_be_stored_is_reported', () {
+    timed((async) {
+      install(async, presses: 150);
+      unawaited(
+        SharedPreferencesWithCache.create(
+          cacheOptions: const SharedPreferencesWithCacheOptions(
+            allowList: SettingsStore.keys,
+          ),
+        ).then((prefs) => store = _NoFlagStore(prefs)),
+      );
+      settle(async);
+      final r = launch(async);
+      connect(async, r);
+
+      expect(requester.requests, 1);
+      expect(reporter.errors, hasLength(1));
+      expect(reporter.errors.single.fatal, isFalse);
+      expect(reporter.errors.single.reason, 'review prompt flag');
+    });
+  });
+
+  group('no_review_prompt_on_a_consent_form_launch', () {
+    test('form_shown', () {
+      timed((async) {
+        install(async, presses: 150);
+        final r = launch(
+          async,
+          consent: FakeConsentService(formOutcome: ConsentFormOutcome.shown),
+        );
+        connect(async, r);
+        disconnect(async, r);
+        async.elapse(const Duration(minutes: 5));
+        connect(async, r);
+        expect(requester.availabilityChecks, 0);
+        expect(requester.requests, 0);
+        expect(store.reviewPromptShown, isFalse);
+      });
+    });
+
+    test('pending_then_not_needed_asks_once', () {
+      timed((async) {
+        install(async, presses: 150);
+        final hold = Completer<void>();
+        final r = launch(
+          async,
+          consent: FakeConsentService(holdShowForm: hold),
+        );
+        connect(async, r);
+        expect(requester.availabilityChecks, 0, reason: 'consent pending');
+        expect(requester.requests, 0);
+
+        hold.complete();
+        settle(async);
+        expect(requester.requests, 1);
+        expect(reviewEvents(), hasLength(1));
+      });
+    });
+
+    test('pending_then_form_shown_never_asks', () {
+      timed((async) {
+        install(async, presses: 150);
+        final hold = Completer<void>();
+        final r = launch(
+          async,
+          consent: FakeConsentService(
+            holdShowForm: hold,
+            formOutcome: ConsentFormOutcome.shown,
+          ),
+        );
+        connect(async, r);
+        hold.complete();
+        settle(async);
+        disconnect(async, r);
+        connect(async, r);
+        expect(requester.availabilityChecks, 0);
+        expect(requester.requests, 0);
+      });
+    });
+
+    test('pending_while_disconnected_waits_for_the_next_start', () {
+      timed((async) {
+        install(async, presses: 150);
+        final hold = Completer<void>();
+        final r = launch(
+          async,
+          consent: FakeConsentService(holdShowForm: hold),
+        );
+        connect(async, r);
+        disconnect(async, r);
+        hold.complete();
+        settle(async);
+        expect(requester.requests, 0, reason: 'no longer connected');
+
+        connect(async, r);
+        expect(requester.requests, 1);
+      });
+    });
+  });
+}
+
+/// A store whose review flag can't be written.
+class _NoFlagStore extends SettingsStore {
+  _NoFlagStore(super.prefs);
+
+  @override
+  Future<void> setReviewPromptShown(bool value) =>
+      Future.error(StateError('disk full'));
 }

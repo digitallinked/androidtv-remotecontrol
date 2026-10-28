@@ -20,10 +20,10 @@ import 'package:tv_remote/core/ads/interstitials.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
-import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
 import '../../helpers/fake_ads_sdk.dart';
 import '../../helpers/fake_consent_service.dart';
