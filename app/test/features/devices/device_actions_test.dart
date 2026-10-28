@@ -169,6 +169,10 @@ void main() {
 
     expect(repo.saved['A']!.nickname, 'Den');
     expect(repo.saved['A']!.wolMac, 'AA:BB:CC:DD:EE:F0');
+
+    // Removing works through the same held actions.
+    await actions.delete('B');
+    expect(repo.saved.keys, ['A']);
   });
 
   test('write_errors_propagate', () async {

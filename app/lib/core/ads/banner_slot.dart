@@ -8,6 +8,8 @@ import 'package:tv_remote/core/ads/ad_placement.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/tracking_preprompt.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 
 export 'package:tv_remote/core/ads/ad_placement.dart';
@@ -108,6 +110,7 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
   Future<void> _load(_Request request, int generation) async {
     final ads = ref.read(adsControllerProvider.notifier);
     final sdk = ref.read(adsSdkProvider);
+    final reporter = ref.read(crashReporterProvider);
     final unitId = ref.read(adUnitIdsProvider).banner;
     if (unitId == null) return;
 
@@ -122,12 +125,27 @@ class _BannerSlotState extends ConsumerState<BannerSlot> {
     final ready = await ads.ready();
     if (!mounted || !ready || generation != _generation) return;
 
-    final size = await sdk.bannerSize(request.orientation, request.width);
+    // The SDK promises not to throw; if it does anyway, that is a failed
+    // load: no space, no retry this visit, and a report that holds nothing
+    // about the TV (the reason is fixed, the error is the SDK's own).
+    final AdBannerSize? size;
+    try {
+      size = await sdk.bannerSize(request.orientation, request.width);
+    } on Object catch (error, stack) {
+      await safeRecordError(reporter, error, stack, reason: 'banner load');
+      return;
+    }
     if (!_current(generation) || size == null) return;
     if (!_tallEnough(size)) return;
     if (_stopIfCovered(generation)) return;
 
-    final banner = await sdk.loadBanner(unitId, size);
+    final LoadedBanner? banner;
+    try {
+      banner = await sdk.loadBanner(unitId, size);
+    } on Object catch (error, stack) {
+      await safeRecordError(reporter, error, stack, reason: 'banner load');
+      return;
+    }
     if (!_current(generation)) {
       banner?.dispose();
       return;

@@ -17,6 +17,8 @@ class FakeAdsSdk implements AdsSdk {
     this.failLoads = false,
     this.failInitialize = false,
     this.failShows = false,
+    this.throwBannerSize = false,
+    this.throwLoadBanner = false,
     this.bannerHeight = 60,
     this.holdInterstitialLoad,
   });
@@ -33,6 +35,13 @@ class FakeAdsSdk implements AdsSdk {
 
   /// Whether an interstitial that loaded fails to show.
   bool failShows;
+
+  /// Whether [bannerSize] throws, breaking the "never throws" contract the
+  /// real adapter keeps.
+  bool throwBannerSize;
+
+  /// Whether [loadBanner] throws, breaking the same contract.
+  bool throwLoadBanner;
 
   /// The height of the banners [bannerSize] answers with.
   int bannerHeight;
@@ -76,6 +85,7 @@ class FakeAdsSdk implements AdsSdk {
   @override
   Future<AdBannerSize?> bannerSize(Orientation orientation, int width) async {
     bannerSizeCalls++;
+    if (throwBannerSize) throw StateError('banner size');
     return AdBannerSize(width: width, height: bannerHeight);
   }
 
@@ -83,6 +93,7 @@ class FakeAdsSdk implements AdsSdk {
   Future<LoadedBanner?> loadBanner(String unitId, AdBannerSize size) async {
     bannerLoads++;
     bannerUnits.add(unitId);
+    if (throwLoadBanner) throw StateError('banner load');
     if (!loads || failLoads) return null;
     return _Banner(this, size);
   }

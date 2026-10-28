@@ -14,11 +14,15 @@ part 'device_actions.g.dart';
 /// a MAC address). Everything a later call needs is therefore taken when the
 /// actions are created, not read from the provider's `Ref` at call time.
 class DeviceActions {
-  /// Creates the actions over [_ref].
-  DeviceActions(this._ref) : _repository = _ref.read(deviceRepositoryProvider);
+  /// Creates the actions over [ref].
+  DeviceActions(Ref ref)
+    : _repository = ref.read(deviceRepositoryProvider),
+      _container = ref.container;
 
-  final Ref _ref;
   final DeviceRepository _repository;
+
+  /// Where the session and the target live; both are kept alive there.
+  final ProviderContainer _container;
 
   /// Shows [nickname] instead of the TV's own name. It is trimmed; an empty
   /// one clears the nickname.
@@ -44,9 +48,9 @@ class DeviceActions {
   Future<void> delete(String serviceName) async {
     // Everything is taken before the first await: this provider may be
     // disposed meanwhile (nothing watches it).
-    final container = _ref.container;
-    final repository = _ref.read(deviceRepositoryProvider);
-    final target = _ref.read(activeTargetProvider);
+    final container = _container;
+    final repository = _repository;
+    final target = container.read(activeTargetProvider);
     // Read only if it exists: reading would start a session just to close it.
     final sessionState = container.exists(remoteSessionProvider)
         ? container.read(remoteSessionProvider)

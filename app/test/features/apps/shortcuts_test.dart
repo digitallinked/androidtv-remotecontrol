@@ -189,6 +189,29 @@ void main() {
   });
 
   group('actions', () {
+    test('actions_taken_before_an_await_still_write_afterwards', () async {
+      // A screen that takes the actions once and awaits between two writes
+      // outlives the provider: nothing else watches it here.
+      final c = makeContainer();
+      await c.read(shortcutsProvider.future);
+      final actions = c.read(shortcutActionsProvider);
+      const extra = AppEntry(package: 'com.extra.app', name: 'Extra');
+
+      expect(await actions.add(extra), isTrue);
+      await pumpEventQueue();
+      expect(c.exists(shortcutActionsProvider), isFalse);
+      await actions.update(
+        const AppEntry(package: 'com.extra.app', name: 'Renamed'),
+      );
+      expect(shortcutRepo.apps.last.name, 'Renamed');
+      await actions.reorder(['com.extra.app']);
+      await actions.remove('com.extra.app');
+      await actions.replaceAll(const [extra]);
+      expect(_packages(shortcutRepo.apps), ['com.extra.app']);
+      await actions.resetToDefaults();
+      expect(_packages(shortcutRepo.apps), myRow);
+    });
+
     test('reset_restores_region_defaults', () async {
       final c = makeContainer();
       await c.read(shortcutsProvider.future);

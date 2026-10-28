@@ -16,6 +16,7 @@ import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 
@@ -26,6 +27,7 @@ import '../../helpers/gather_consent.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_app_config.dart';
 import '../../helpers/test_premium.dart';
 
@@ -462,6 +464,41 @@ void main() {
     expect(_banner, findsOneWidget);
     expect(withId.bannerUnits, ['prod-banner-android']);
   });
+
+  for (final (name, sdk) in [
+    ('size', () => FakeAdsSdk(loads: true, throwBannerSize: true)),
+    ('load', () => FakeAdsSdk(loads: true, throwLoadBanner: true)),
+  ]) {
+    testWidgets('a_banner_sdk_that_throws_on_${name}_leaves_an_empty_slot', (
+      t,
+    ) async {
+      final ads = sdk();
+      final reporter = RecordingCrashReporter();
+      await pumpAt(
+        t,
+        AppRoutes.settings,
+        sdk: ads,
+        overrides: [crashReporterProvider.overrideWithValue(reporter)],
+      );
+      // The SDK started; the throw came after it.
+      expect(ads.initializeCalls, 1);
+      expect(t.takeException(), isNull);
+      expect(_banner, findsNothing);
+      expect(t.getSize(_slot(AdPlacement.settings)).height, 0);
+      // Reported once, as a non-fatal error with nothing about the TV.
+      expect(reporter.errors, hasLength(1));
+      expect(reporter.errors.single.fatal, isFalse);
+      expect(reporter.errors.single.reason, 'banner load');
+
+      // A failed load: not retried while the visit lasts.
+      final calls = ads.bannerSizeCalls + ads.bannerLoads;
+      await t.pump(const Duration(seconds: 30));
+      await t.pumpAndSettle();
+      expect(ads.bannerSizeCalls + ads.bannerLoads, calls);
+      expect(t.takeException(), isNull);
+      expect(_banner, findsNothing);
+    });
+  }
 
   testWidgets('failed_load_takes_no_space', (t) async {
     final sdk = FakeAdsSdk(loads: true, failLoads: true);
