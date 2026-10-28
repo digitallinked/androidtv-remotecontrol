@@ -9,7 +9,9 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -27,6 +29,7 @@ import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.da
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
+import '../helpers/fake_ads_sdk.dart';
 import '../helpers/fake_remote_client.dart';
 import '../helpers/fake_tv_discovery.dart';
 import '../helpers/fake_wake_on_lan.dart';
@@ -639,21 +642,53 @@ void main() {
   };
 
   /// Pumps [route], tolerating the screens that never settle.
-  Future<void> pumpRoute(WidgetTester t, String route) async {
+  ///
+  /// With [gather] the consent step then runs, as the remote runs it, so a
+  /// banner that may load does.
+  Future<void> pumpRoute(
+    WidgetTester t,
+    String route, {
+    List<Override> overrides = const [],
+    bool gather = false,
+  }) async {
     final live =
         route == AppRoutes.discover ||
         route == AppRoutes.pair('Living Room TV 3');
-    await pumpApp(t, location: route, settle: !live);
+    await pumpApp(t, location: route, settle: !live, overrides: overrides);
+    if (gather) {
+      unawaited(
+        containerOf(
+          t,
+        ).read(consentControllerProvider.notifier).ensureGathered(),
+      );
+    }
     if (live) {
       await t.pump();
       await t.pump(const Duration(milliseconds: 400));
+      await t.pump();
+    } else {
+      await t.pumpAndSettle();
     }
   }
 
   testWidgets('banner_slot_only_on_apps_and_the_settings_hub', (t) async {
+    // Ads load at once and consent allows them, so a slot that may show an
+    // ad shows one.
     for (final e in bannerRoutes.entries) {
-      await pumpRoute(t, e.key);
+      final sdk = FakeAdsSdk(loads: true);
+      await pumpRoute(
+        t,
+        e.key,
+        overrides: [adsSdkProvider.overrideWithValue(sdk)],
+        gather: true,
+      );
       expect(find.byType(BannerSlot), findsNWidgets(e.value), reason: e.key);
+      expect(
+        find.byKey(const ValueKey('fake_banner')),
+        findsNWidgets(e.value),
+        reason: e.key,
+      );
+      expect(sdk.bannerLoads, e.value, reason: e.key);
     }
     await pumpRoute(t, AppRoutes.apps);
     expect(
