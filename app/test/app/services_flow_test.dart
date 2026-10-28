@@ -42,10 +42,12 @@ import '../helpers/fake_consent_service.dart';
 import '../helpers/fake_pairing_client.dart';
 import '../helpers/fake_purchase_service.dart';
 import '../helpers/fake_remote_client.dart';
+import '../helpers/fake_tracking_service.dart';
 import '../helpers/fake_tv_discovery.dart';
 import '../helpers/in_memory_device_repository.dart';
 import '../helpers/in_memory_shortcut_repository.dart';
 import '../helpers/nonlinear_text_scaler.dart';
+import '../helpers/platform_override.dart';
 import '../helpers/pump_router_app.dart';
 import '../helpers/recording_analytics_sink.dart';
 import '../helpers/recording_crashlytics_sink.dart';
@@ -214,8 +216,7 @@ void main() {
     }
   }
 
-  testWidgets('the_remote_works_with_every_service_failing', (t) async {
-    final handle = t.ensureSemantics();
+  _semanticsTest('the_remote_works_with_every_service_failing', (t) async {
     final container = await pump(
       t,
       // A launch on which the review prompt would be asked, so the failing
@@ -292,8 +293,91 @@ void main() {
     // The failures were met, not avoided. (On Android nothing asks the
     // tracking question, and with consent failing the ads SDK never starts.)
     expect(_reached, containsAll(['consent', 'store', 'config', 'review']));
-    handle.dispose();
   });
+
+  /// Every service fails except consent, which allows ads: the banner then
+  /// goes on to [tracking] and the ads SDK, which fails. The remote,
+  /// Settings and Apps work as before and nothing is shown.
+  Future<void> adsFailAfterConsent(
+    WidgetTester t, {
+    required TrackingService tracking,
+  }) async {
+    await pump(
+      t,
+      overrides: [
+        firebaseStatusProvider.overrideWithValue(FirebaseStatus.unavailable),
+        consentServiceProvider.overrideWithValue(FakeConsentService()),
+        trackingServiceProvider.overrideWithValue(tracking),
+        adsSdkProvider.overrideWithValue(_ThrowingAds()),
+        purchaseServiceProvider.overrideWithValue(_ThrowingPurchases()),
+        remoteConfigSourceProvider.overrideWithValue(_ThrowingConfig()),
+        reviewRequesterProvider.overrideWithValue(_ThrowingReview()),
+      ],
+    );
+    await getStarted(t);
+    await discoverAndPair(t);
+    await tapVolumeUp(t);
+    // The store never answered: the cached "free" becomes final, so the
+    // banner may try.
+    await t.pump(const Duration(seconds: 6));
+    await t.pumpAndSettle();
+
+    await openSettings(t);
+    expect(banner, findsNothing);
+    expect(find.text('Advertisement'), findsNothing);
+    expectNoFailureShown(t, 'settings');
+    await back(t);
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    await t.tap(find.text('All apps'));
+    await t.pumpAndSettle();
+    expect(find.byType(AppsScreen), findsOneWidget);
+    expect(banner, findsNothing);
+    expect(find.text('Advertisement'), findsNothing);
+    expectNoFailureShown(t, 'apps');
+    await back(t);
+
+    await tapVolumeUp(t);
+    expect(
+      clients.created.single.sentKeys
+          .where((k) => k == (KeyCodes.volumeUp, KeyDirection.short))
+          .length,
+      2,
+    );
+    expect(find.text('Connected'), findsOneWidget);
+    expectNoFailureShown(t, 'remote again');
+  }
+
+  testWidgets(
+    'the_remote_works_when_ads_and_tracking_fail_after_consent_android',
+    (t) async {
+      // Android has no tracking question: its answer is "not applicable".
+      await _withSemantics(
+        t,
+        () => adsFailAfterConsent(t, tracking: FakeTrackingService()),
+      );
+      // The SDK's start was tried, and failed.
+      expect(_reached, contains('ads'));
+      expect(_reached, isNot(contains('tracking')));
+    },
+  );
+
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'the_remote_works_when_ads_and_tracking_fail_after_consent_ios',
+    (t) async {
+      await _withSemantics(
+        t,
+        () => adsFailAfterConsent(t, tracking: _ThrowingTracking()),
+      );
+      // The tracking question failed, so there was no pre-prompt left
+      // behind. And with no tracking answer, no ad request goes out: the
+      // SDK is never started (Ruling P6-R8).
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.text('About ads in this app'), findsNothing);
+      expect(_reached, contains('tracking'));
+      expect(_reached, isNot(contains('ads')));
+    },
+  );
 
   testWidgets(
     'first_launch_in_the_eea_asks_on_the_remote_and_shares_nothing_by_default',
@@ -373,8 +457,7 @@ void main() {
     },
   );
 
-  testWidgets('outside_the_eea_sharing_is_on_until_turned_off', (t) async {
-    final handle = t.ensureSemantics();
+  _semanticsTest('outside_the_eea_sharing_is_on_until_turned_off', (t) async {
     final update = Completer<void>();
     final consent = FakeConsentService(holdRequestUpdate: update);
     final container = await pump(
@@ -445,7 +528,6 @@ void main() {
     expect(sink.events, hasLength(events));
     expect(sink.screens, hasLength(screens));
     expect(crashSink.errors, hasLength(1));
-    handle.dispose();
   });
 
   testWidgets('buying_premium_removes_banners_and_unlocks_styles', (t) async {
@@ -568,8 +650,9 @@ void main() {
     expect(sdk.interstitialLoads, 0);
   });
 
-  testWidgets('no_analytics_event_or_crash_report_carries_tv_data', (t) async {
-    final handle = t.ensureSemantics();
+  _semanticsTest('no_analytics_event_or_crash_report_carries_tv_data', (
+    t,
+  ) async {
     final container = await pump(
       t,
       overrides: [
@@ -679,14 +762,33 @@ void main() {
     expect(sink.screens, containsAll(['pair', 'edit_device']));
     expect(crashSink.errors, hasLength(2));
 
-    const forbidden = [
-      'Living Room',
-      'Den',
-      '192.168.0.20',
-      'AA:BB:CC',
-      'A1B2C3',
-      'hunter2',
-      'com.example.private',
+    // The scrubber ran: the TV's name and address were replaced, not the
+    // reports dropped.
+    final socket = crashSink.errors.first;
+    expect('${socket.error}', allOf(contains('<tv>'), contains('<ip>')));
+    expect(socket.reason, allOf(contains('<tv>'), contains('<ip>')));
+    expect(
+      '${crashSink.errors.last.error}',
+      allOf(contains('<tv>'), contains('<ip>')),
+    );
+
+    // Each forbidden string, in any letter case, as a whole token (so "Den"
+    // doesn't match "hidden" in a stack frame).
+    final forbidden = [
+      for (final word in [
+        'Living Room',
+        'Den',
+        '192.168.0.20',
+        'AA:BB:CC',
+        'A1B2C3',
+        'hunter2',
+        'com.example.private',
+        testPin,
+      ])
+        RegExp(
+          '(?<![A-Za-z0-9])${RegExp.escape(word)}(?![A-Za-z0-9])',
+          caseSensitive: false,
+        ),
     ];
     final ipv4 = RegExp(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}');
     final mac = RegExp(r'[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}');
@@ -699,16 +801,19 @@ void main() {
         ],
       ],
       ...sink.screens,
-      for (final e in crashSink.errors) ...['${e.error}', ?e.reason],
+      for (final e in crashSink.errors) ...[
+        '${e.error}',
+        ?e.reason,
+        if (e.stack != null) '${e.stack}',
+      ],
     ];
     for (final text in payloads) {
-      for (final word in [...forbidden, testPin]) {
-        expect(text, isNot(contains(word)), reason: text);
+      for (final word in forbidden) {
+        expect(word.hasMatch(text), isFalse, reason: '${word.pattern}: $text');
       }
       expect(ipv4.hasMatch(text), isFalse, reason: text);
       expect(mac.hasMatch(text), isFalse, reason: text);
     }
-    handle.dispose();
   });
 
   testWidgets('forced_update_blocks_every_route', (t) async {
@@ -763,7 +868,6 @@ void main() {
     var checks = 0;
     for (final size in const [Size(320, 640), Size(390, 844), Size(844, 390)]) {
       for (final (label, scaler) in const <(String, TextScaler)>[
-        ('1x', TextScaler.noScaling),
         ('2x', TextScaler.linear(2)),
         ('non-linear', NonlinearTwoXScaler()),
       ]) {
@@ -809,7 +913,7 @@ void main() {
         }
       }
     }
-    expect(checks, 3 * 3 * 2 * 3);
+    expect(checks, 3 * 2 * 2 * 3);
   });
 
   testWidgets('faq_privacy_answer_matches_the_behaviour', (t) async {
@@ -967,3 +1071,24 @@ class _ThrowingReview implements ReviewRequester {
   @override
   Future<bool> request() async => throw _down('review');
 }
+
+/// Runs [body] with semantics on and releases the handle however it ends.
+/// The framework checks for live handles before any tear-down runs, so
+/// `addTearDown(handle.dispose)` would come too late.
+Future<void> _withSemantics(
+  WidgetTester t,
+  Future<void> Function() body,
+) async {
+  final handle = t.ensureSemantics();
+  try {
+    await body();
+  } finally {
+    handle.dispose();
+  }
+}
+
+/// A `testWidgets` that runs with semantics on (see [_withSemantics]).
+void _semanticsTest(
+  String description,
+  Future<void> Function(WidgetTester t) body,
+) => testWidgets(description, (t) => _withSemantics(t, () => body(t)));

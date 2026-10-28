@@ -33,6 +33,13 @@ typedef _Screen = ({
   List<String> texts,
 });
 
+/// The tracking pre-prompt's message (`trackingPrepromptBody`).
+const String _prepromptBody =
+    'The free app shows a small ad at the bottom of this screen. Next, your '
+    'iPhone asks whether the app may use your activity in other apps to '
+    'choose ads. You see the same number of ads whatever you choose, and the '
+    'remote works the same.';
+
 final Map<String, _Screen> _screens = {
   'paywall_ready': (
     route: AppRoutes.paywall(source: PaywallSource.settings),
@@ -124,7 +131,11 @@ final Map<String, _Screen> _screens = {
     ],
     ios: true,
     banner: true,
-    texts: ['Continue'],
+    texts: [
+      'About ads in this app',
+      _prepromptBody,
+      'Continue',
+    ],
   ),
 };
 
@@ -155,6 +166,12 @@ void main() {
     if (screen.banner) await gatherConsent(t);
     if (name == 'tracking_preprompt') {
       expect(find.byType(Dialog), findsOneWidget, reason: name);
+    } else if (screen.banner) {
+      expect(
+        find.byKey(const ValueKey('fake_banner')),
+        findsOneWidget,
+        reason: name,
+      );
     }
   }
 
@@ -177,24 +194,22 @@ void main() {
   for (final b in Brightness.values) {
     for (final name in _screens.keys) {
       final ios = _screens[name]!.ios;
-      testWidgets('${name}_meets_text_contrast_${b.name}', (t) async {
-        final semantics = t.ensureSemantics();
+      _semanticsTest('${name}_meets_text_contrast_${b.name}', (t) async {
         await on(ios: ios, () async {
           await open(t, name, brightness: b);
           await expectLater(t, meetsGuideline(textContrastGuideline));
         });
-        semantics.dispose();
       });
 
-      testWidgets('${name}_meets_tap_target_guidelines_${b.name}', (t) async {
-        final semantics = t.ensureSemantics();
+      _semanticsTest('${name}_meets_tap_target_guidelines_${b.name}', (
+        t,
+      ) async {
         await on(ios: ios, () async {
           await open(t, name, brightness: b);
           await expectLater(t, meetsGuideline(androidTapTargetGuideline));
           await expectLater(t, meetsGuideline(iOSTapTargetGuideline));
           await expectLater(t, meetsGuideline(labeledTapTargetGuideline));
         });
-        semantics.dispose();
       });
     }
   }
@@ -229,13 +244,39 @@ void main() {
             await t.pumpAndSettle();
             expect(t.takeException(), isNull, reason: '$reason $text');
             final rect = t.getRect(finder.first);
+            final why = '$reason "$text" at $rect';
             expect(
-              rect.left >= 0 &&
-                  rect.top >= 0 &&
-                  rect.right <= size.width &&
-                  rect.bottom <= size.height,
+              rect.left >= 0 && rect.right <= size.width,
               isTrue,
-              reason: '$reason "$text" at $rect',
+              reason: why,
+            );
+            if (rect.height <= size.height) {
+              expect(
+                rect.top >= 0 && rect.bottom <= size.height,
+                isTrue,
+                reason: why,
+              );
+              continue;
+            }
+            // A paragraph taller than the screen (the pre-prompt's body at
+            // 200% in a dialog) must scroll: its first and its last line can
+            // each be brought onto the screen.
+            final position = Scrollable.of(
+              t.element(finder.first),
+            ).position;
+            position.jumpTo(position.minScrollExtent);
+            await t.pump();
+            expect(
+              t.getRect(finder.first).top,
+              greaterThanOrEqualTo(0),
+              reason: why,
+            );
+            position.jumpTo(position.maxScrollExtent);
+            await t.pump();
+            expect(
+              t.getRect(finder.first).bottom,
+              lessThanOrEqualTo(size.height),
+              reason: why,
             );
           }
         });
@@ -251,8 +292,7 @@ void main() {
     await fitEverywhere(t, const NonlinearTwoXScaler());
   });
 
-  testWidgets('the_banner_is_announced_once_as_an_advertisement', (t) async {
-    final semantics = t.ensureSemantics();
+  _semanticsTest('the_banner_is_announced_once_as_an_advertisement', (t) async {
     for (final route in [AppRoutes.settings, AppRoutes.apps]) {
       t.view
         ..physicalSize = const Size(390, 844)
@@ -291,6 +331,26 @@ void main() {
         reason: route,
       );
     }
-    semantics.dispose();
   });
 }
+
+/// Runs [body] with semantics on and releases the handle however it ends.
+/// The framework checks for live handles before any tear-down runs, so
+/// `addTearDown(handle.dispose)` would come too late.
+Future<void> _withSemantics(
+  WidgetTester t,
+  Future<void> Function() body,
+) async {
+  final handle = t.ensureSemantics();
+  try {
+    await body();
+  } finally {
+    handle.dispose();
+  }
+}
+
+/// A `testWidgets` that runs with semantics on (see [_withSemantics]).
+void _semanticsTest(
+  String description,
+  Future<void> Function(WidgetTester t) body,
+) => testWidgets(description, (t) => _withSemantics(t, () => body(t)));
