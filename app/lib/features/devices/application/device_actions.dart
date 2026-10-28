@@ -1,34 +1,39 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
 part 'device_actions.g.dart';
 
 /// Changes to the saved TVs. Storage errors propagate to the caller, which
 /// shows the "couldn't save" message.
+///
+/// Nothing watches the provider, so it can be disposed while a caller still
+/// holds these actions across an await (the edit page saves a name and then
+/// a MAC address). Everything a later call needs is therefore taken when the
+/// actions are created, not read from the provider's `Ref` at call time.
 class DeviceActions {
   /// Creates the actions over [_ref].
-  DeviceActions(this._ref);
+  DeviceActions(this._ref) : _repository = _ref.read(deviceRepositoryProvider);
 
   final Ref _ref;
+  final DeviceRepository _repository;
 
   /// Shows [nickname] instead of the TV's own name. It is trimmed; an empty
   /// one clears the nickname.
   Future<void> rename(String serviceName, String? nickname) {
     final trimmed = nickname?.trim();
-    return _ref
-        .read(deviceRepositoryProvider)
-        .setNickname(
-          serviceName,
-          trimmed == null || trimmed.isEmpty ? null : trimmed,
-        );
+    return _repository.setNickname(
+      serviceName,
+      trimmed == null || trimmed.isEmpty ? null : trimmed,
+    );
   }
 
   /// Stores the Wake-on-LAN MAC address of [serviceName] (already normalised
   /// by `parseMac`); `null` clears it.
   Future<void> setWolMac(String serviceName, String? mac) =>
-      _ref.read(deviceRepositoryProvider).setWolMac(serviceName, mac);
+      _repository.setWolMac(serviceName, mac);
 
   /// Forgets the TV [serviceName] and its trusted key (Ruling P5-R9).
   ///
