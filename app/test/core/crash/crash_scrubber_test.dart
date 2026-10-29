@@ -72,6 +72,24 @@ void main() {
     for (final entry in cases.entries) {
       test(entry.key, () => expect(s.scrub(entry.key), entry.value));
     }
+
+    // `Uri.encodeComponent` leaves `!~*'()` literal, so the whole segment
+    // goes, brackets included, whether or not the TV is saved.
+    test('/pair/Sony%20(Bedroom)', () {
+      final out = s.scrub('/pair/Sony%20(Bedroom)');
+      expect(out, '/pair/<tv>');
+      expect(out, isNot(contains('Bedroom')));
+    });
+
+    test("/devices/Mike's%20TV!%20*Den*", () {
+      expect(s.scrub("/devices/Mike's%20TV!%20*Den*"), '/devices/<tv>');
+    });
+
+    test('error at (location: /pair/Living%20Room%20(2))', () {
+      final out = s.scrub('error at (location: /pair/Living%20Room%20(2))');
+      expect(out, isNot(contains('Living')));
+      expect(out, isNot(contains('2)')));
+    });
   });
 
   test('scrubs_mac_in_every_format', () {
