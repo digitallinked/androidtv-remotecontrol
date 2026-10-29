@@ -336,6 +336,41 @@ void main() {
       expect(builds, 1);
     });
 
+    testWidgets(
+      'a_build_that_fails_after_its_timeout_is_retried_on_the_first_tap',
+      (tester) async {
+        final rec = RecordingCrashReporter();
+        final first = Completer<Widget>();
+        var builds = 0;
+        await tester.pumpWidget(
+          StartupGate(
+            reporter: rec,
+            build: () {
+              builds++;
+              if (builds == 1) return first.future;
+              return root(rec, (_) async => FirebaseStatus.notConfigured);
+            },
+          ),
+        );
+
+        await tester.pump(const Duration(seconds: 20));
+        await tester.pump();
+        expect(find.text('The app could not start'), findsOneWidget);
+
+        // The first build fails after the gate gave up on it.
+        first.completeError(StateError('late failure'));
+        await tester.pump();
+
+        // One tap starts a fresh build instead of re-reporting the old failure.
+        await tester.tap(find.text('Try again'));
+        await tester.pumpAndSettle();
+
+        expect(builds, 2);
+        expect(find.text('The app could not start'), findsNothing);
+        expect(find.text('Get started'), findsOneWidget);
+      },
+    );
+
     testWidgets('try_again_after_a_timeout_reuses_the_build_still_running', (
       tester,
     ) async {

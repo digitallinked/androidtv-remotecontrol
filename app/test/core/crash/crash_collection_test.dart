@@ -120,6 +120,19 @@ void main() {
     expect(sink.calls, ['delete', 'enable:false']);
   });
 
+  test('a_failing_delete_never_skips_the_crash_switch', () async {
+    sink = RecordingCrashlyticsSink(throwOnDelete: true);
+    final container = await containerFor();
+    start(container);
+    await flush(container);
+    expect(sink.calls, ['enable:true']);
+
+    await setCrashChoice(container, false);
+    await flush(container);
+
+    expect(sink.calls, ['enable:true', 'delete', 'enable:false']);
+  });
+
   test('turning_sharing_back_on_deletes_reports_queued_while_off', () async {
     final container = await containerFor();
     start(container);

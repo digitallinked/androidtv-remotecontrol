@@ -14,10 +14,16 @@ typedef SunkError = ({
 /// failing sink.
 class RecordingCrashlyticsSink implements CrashlyticsSink {
   /// Creates a recording sink.
-  RecordingCrashlyticsSink({this.throwOnCall = false});
+  RecordingCrashlyticsSink({
+    this.throwOnCall = false,
+    this.throwOnDelete = false,
+  });
 
   /// Whether every call throws instead of recording.
   final bool throwOnCall;
+
+  /// Whether `deleteUnsentReports` throws (after recording the call).
+  final bool throwOnDelete;
 
   /// Errors passed to `recordError`.
   final List<SunkError> errors = [];
@@ -59,5 +65,6 @@ class RecordingCrashlyticsSink implements CrashlyticsSink {
     if (throwOnCall) throw StateError('sink is broken');
     deletes++;
     calls.add('delete');
+    if (throwOnDelete) throw StateError('delete failed');
   }
 }

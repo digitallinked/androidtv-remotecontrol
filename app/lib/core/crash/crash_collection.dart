@@ -103,8 +103,12 @@ class CrashCollection extends _$CrashCollection {
     _collecting = collect;
     if (delete || change) {
       _fire(() async {
-        if (delete) await sink.deleteUnsentReports();
-        if (change) await sink.setCollectionEnabled(collect);
+        // A failing delete never skips the switch.
+        try {
+          if (delete) await sink.deleteUnsentReports();
+        } finally {
+          if (change) await sink.setCollectionEnabled(collect);
+        }
       });
     }
   }

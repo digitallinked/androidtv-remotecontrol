@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/core/analytics/analytics_strings.dart';
 import 'package:tv_remote/core/config/firebase_remote_config_source.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 
@@ -58,11 +59,12 @@ class AppConfigValues {
       return value is String && value.trim().isNotEmpty ? value : fallback;
     }
 
-    // Goes into analytics as a parameter, so it must be a plain token.
+    // Goes into analytics as a parameter, so it must pass the guard's
+    // string rules.
     String token(String key, String fallback) {
       final value = raw(key);
       final trimmed = value is String ? value.trim() : '';
-      return _plainToken.hasMatch(trimmed) ? trimmed : fallback;
+      return analyticsStringViolations(trimmed).isEmpty ? trimmed : fallback;
     }
 
     return AppConfigValues._(
@@ -87,8 +89,6 @@ class AppConfigValues {
       catalogueVersion: count(_catalogueVersion, 1),
     );
   }
-
-  static final _plainToken = RegExp(r'^[A-Za-z0-9_.]{1,100}$');
 
   static const _adsBanner = 'ads_banner_enabled';
   static const _adsInterstitial = 'ads_interstitial_enabled';

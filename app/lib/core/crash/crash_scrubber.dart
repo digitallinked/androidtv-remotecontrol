@@ -9,17 +9,20 @@
 /// 4. Links that can carry typed text or a package name (`mailto:`,
 ///    `market:`, `intent:`, `tel:`, `sms:`) become `<uri>`.
 /// 5. The saved TVs' names (a `%20` or `+` counts as a space) become `<tv>`.
-///    This runs before the service-name rule so that a saved name with a
-///    quote or a bracket is removed whole.
-/// 6. mDNS service names (with the whole instance label before them) and
+///    This runs before the route-path and service-name rules so that a saved
+///    name with a quote or a bracket is removed whole.
+/// 6. The TV segment of a route path (`/pair/<name>`, `/devices/<name>`)
+///    becomes `<tv>`: it holds the TV's name URL-encoded, which the
+///    saved-name rule can't match, and a discovered TV isn't saved at all.
+/// 7. mDNS service names (with the whole instance label before them) and
 ///    `*.local` host names become `<host>`.
-/// 7. `manual:<address>` entries become `<tv>`.
-/// 8. E-mail addresses become `<email>`.
-/// 9. MAC addresses, in `:`, `-`, dotted and bare form, become `<mac>`.
-/// 10. IPv6 addresses (valid forms, then any run of four or more hex groups
+/// 8. `manual:<address>` entries become `<tv>`.
+/// 9. E-mail addresses become `<email>`.
+/// 10. MAC addresses, in `:`, `-`, dotted and bare form, become `<mac>`.
+/// 11. IPv6 addresses (valid forms, then any run of four or more hex groups
 ///     joined by colons) and IPv4 addresses become `<ip>`.
-/// 11. Hex runs of 12 or more characters become `<hex>`.
-/// 12. 6-character hex tokens that contain a digit (pairing codes) become
+/// 12. Hex runs of 12 or more characters become `<hex>`.
+/// 13. 6-character hex tokens that contain a digit (pairing codes) become
 ///     `<code>`.
 ///
 /// It prefers removing too much to removing too little: a time such as
@@ -37,6 +40,11 @@ class CrashScrubber {
   );
   static final _base64 = RegExp('[A-Za-z0-9+/]{40,}={0,2}');
   static final _uri = RegExp(r'\b(?:mailto|market|intent|tel|sms):\S+');
+  // A route location's TV segment. A path inside a file name such as
+  // `features/devices/...` is left alone: the slash must not follow a word.
+  static final _routePath = RegExp(
+    r'''(?<![\w.\-/])(/(?:pair|devices)/)[^\s/?#"'<>()\[\],;]+''',
+  );
   // The instance label sits in front of the service type and may hold spaces,
   // quotes, commas and brackets, so up to 63 characters before it (the mDNS
   // limit) go too, stopping only at characters that end a field.
@@ -101,6 +109,7 @@ class CrashScrubber {
         })
         .replaceAll(_uri, '<uri>');
     return _scrubKnownTerms(out)
+        .replaceAllMapped(_routePath, (m) => '${m[1]}<tv>')
         .replaceAll(_serviceName, '<host>')
         .replaceAll(_localHost, '<host>')
         .replaceAll(_manual, '<tv>')

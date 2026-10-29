@@ -51,6 +51,29 @@ void main() {
     });
   });
 
+  group('route_paths', () {
+    // A route location carries the TV's name URL-encoded, which the saved-term
+    // rule can't match, and a discovered TV is not saved at all.
+    final s = CrashScrubber();
+
+    test('no routes for location: /pair/Mike%27s%20TV', () {
+      final out = s.scrub('no routes for location: /pair/Mike%27s%20TV');
+      expect(out, contains('/pair/<tv>'));
+      expect(out, isNot(contains('Mike')));
+    });
+
+    const cases = <String, String>{
+      '/devices/manual%3A192.168.0.5': '/devices/<tv>',
+      '/pair/Den?x=1': '/pair/<tv>?x=1',
+      'package:tv_remote/features/devices/presentation/edit_device_screen.dart':
+          'package:tv_remote/features/devices/presentation/edit_device_screen.dart',
+      '/devices/<tv>': '/devices/<tv>',
+    };
+    for (final entry in cases.entries) {
+      test(entry.key, () => expect(s.scrub(entry.key), entry.value));
+    }
+  });
+
   test('scrubs_mac_in_every_format', () {
     final s = CrashScrubber();
     for (final mac in const [

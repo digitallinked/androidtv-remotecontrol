@@ -1,5 +1,6 @@
 import 'package:atv_remote/atv_remote.dart' show RemoteCloseReason;
 import 'package:tv_remote/core/analytics/analytics_events.dart';
+import 'package:tv_remote/core/analytics/analytics_strings.dart';
 import 'package:tv_remote/core/analytics/key_names.dart';
 import 'package:tv_remote/features/pairing/application/pairing_state.dart';
 import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
@@ -87,27 +88,6 @@ final Map<String, Map<String, _Param>> _catalogue = {
 /// The names of every event in the catalogue.
 Set<String> get analyticsEventNames => _catalogue.keys.toSet();
 
-final RegExp _plain = RegExp(r'^[A-Za-z0-9_.]{1,100}$');
-final RegExp _ipv4 = RegExp(r'(?<![0-9])\d{1,3}(?:\.\d{1,3}){3}(?![0-9])');
-final RegExp _ipv6 = RegExp('[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,}');
-final RegExp _mac = RegExp(
-  r'(?:[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2})'
-  r'|(?:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4})',
-);
-final RegExp _hexRun = RegExp('[0-9A-Fa-f]{12,}');
-
-/// The reasons [value] is not a safe string, without repeating it.
-List<String> _stringViolations(String value) => [
-  if (_ipv4.hasMatch(value)) 'contains an IPv4 address',
-  if (_ipv6.hasMatch(value)) 'contains an IPv6 address',
-  if (_mac.hasMatch(value)) 'contains a MAC address',
-  if (_hexRun.hasMatch(value)) 'contains a long hex run',
-  if (value.contains('manual:')) 'contains a manual TV marker',
-  if (value.contains('.local')) 'contains a host name',
-  if (value.contains('_tcp')) 'contains a service name',
-  if (!_plain.hasMatch(value)) 'is not a short plain token',
-];
-
 /// The ways an event named [name] with [params] breaks Ruling P6-R6; empty
 /// when it is fine.
 ///
@@ -148,7 +128,9 @@ List<String> analyticsViolations(
       problems.add('$where is not a string');
       continue;
     }
-    problems.addAll(_stringViolations(value).map((p) => '$where $p'));
+    problems.addAll(
+      analyticsStringViolations(value).map((p) => '$where $p'),
+    );
     switch (param.kind) {
       case _Kind.oneOf:
         if (!param.values.contains(value)) {
@@ -170,6 +152,6 @@ final RegExp _screenName = RegExp(r'^[a-z][a-z0-9_]{0,39}$');
 /// The ways [name] is not a plain route name; empty when it is fine. Paths
 /// (and with them TV names and addresses) never pass.
 List<String> analyticsScreenViolations(String name) => [
-  ..._stringViolations(name).map((p) => 'screen name $p'),
+  ...analyticsStringViolations(name).map((p) => 'screen name $p'),
   if (!_screenName.hasMatch(name)) 'screen name is not a route name',
 ];

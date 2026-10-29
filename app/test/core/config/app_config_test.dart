@@ -174,6 +174,28 @@ void main() {
     expect(_read({'paywall_variant': 'x' * 100}).paywallVariant, 'x' * 100);
   });
 
+  test('paywall_variant_that_breaks_the_analytics_rules_falls_back', () {
+    // It goes into `paywall_view` as a parameter, so the guard's string
+    // rules apply (a debug build would otherwise throw on the paywall).
+    for (final bad in [
+      '192.168.0.1',
+      'aabbccddeeff00',
+      'tv.local',
+      'x_tcp',
+      'manual:x',
+      'a b',
+    ]) {
+      expect(
+        _read({'paywall_variant': bad}).paywallVariant,
+        'a',
+        reason: bad,
+      );
+    }
+    for (final good in ['b', 'v2.1']) {
+      expect(_read({'paywall_variant': good}).paywallVariant, good);
+    }
+  });
+
   test('numbers_outside_their_range_fall_back', () {
     Duration interval(Object v) => _read({
       'ads_interstitial_min_interval_s': v,

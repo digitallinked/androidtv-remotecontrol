@@ -262,7 +262,23 @@ class _StartupGateState extends State<StartupGate> {
       if (mounted) setState(() => _app = app);
     } on Object catch (error, stack) {
       // A build still running stays pending; one that failed is retried.
-      if (!timedOut) _pending = null;
+      if (timedOut) {
+        // If it fails later, forget it, so the first Try again builds anew
+        // instead of re-reporting the old failure.
+        final stillRunning = _pending;
+        if (stillRunning != null) {
+          unawaited(
+            stillRunning.then<void>(
+              (_) {},
+              onError: (Object _, StackTrace _) {
+                if (identical(_pending, stillRunning)) _pending = null;
+              },
+            ),
+          );
+        }
+      } else {
+        _pending = null;
+      }
       await safeRecordError(
         widget.reporter,
         error,
