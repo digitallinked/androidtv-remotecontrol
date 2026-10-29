@@ -28,6 +28,12 @@ void main() {
     expect(l.pageTitlePrivacyChoices, 'Privacy choices');
   });
 
+  test('phase_7_strings_load', () async {
+    final l = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(l.onboardingProgress(2, 3), 'Card 2 of 3');
+    expect(l.onboardingContinue, 'Continue');
+  });
+
   test('arb_has_no_lone_carriage_returns', () {
     // A lone CR survives gen-l10n and the format check, and joins two lines
     // into one for tools that only split on LF.

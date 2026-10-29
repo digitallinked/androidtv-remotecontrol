@@ -65,7 +65,7 @@ void main() {
     await t.pumpAndSettle();
 
     // Onboarding is on screen: the update ran, the form did not.
-    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Find your TV'), findsOneWidget);
     expect(consent.requestUpdateCalls, 1);
     expect(consent.showFormCalls, 0);
   });
@@ -79,7 +79,7 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Find your TV'), findsOneWidget);
   });
 
   testWidgets('app_opens_discover_after_onboarding', (t) async {
@@ -95,7 +95,7 @@ void main() {
     await t.pumpWidget(await _root());
     await t.pumpAndSettle();
 
-    final context = t.element(find.text('Get started'));
+    final context = t.element(find.text('Find your TV'));
     expect(Theme.of(context).brightness, Brightness.dark);
     expect(Theme.of(context).scaffoldBackgroundColor, AppColors.dark.bg);
   });
@@ -105,7 +105,7 @@ void main() {
     await t.pumpWidget(await _root());
     await t.pumpAndSettle();
 
-    final context = t.element(find.text('Get started'));
+    final context = t.element(find.text('Find your TV'));
     expect(Theme.of(context).colorScheme.primary, AppColors.light.accent);
   });
 

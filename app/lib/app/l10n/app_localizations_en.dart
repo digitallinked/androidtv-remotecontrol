@@ -38,17 +38,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closeAction => 'Close';
 
   @override
-  String get onboardingTitle => 'Control your TV from your phone';
-
-  @override
-  String get onboardingBody =>
-      'Find your Android TV on this Wi-Fi network and pair it in a few seconds.';
-
-  @override
   String get onboardingGetStarted => 'Get started';
 
   @override
   String get onboardingTryDemo => 'Try demo';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String onboardingProgress(int current, int total) {
+    return 'Card $current of $total';
+  }
+
+  @override
+  String get onboardingConnectTitle => 'Find your TV';
+
+  @override
+  String get onboardingConnectBody =>
+      'Your phone finds your Android TV on the same Wi-Fi network. Pair once with the code your TV shows.';
+
+  @override
+  String get onboardingConnectNote =>
+      'The app only looks on your Wi-Fi network. It never asks for your location.';
+
+  @override
+  String get onboardingControlTitle => 'Control it from your phone';
+
+  @override
+  String get onboardingControlBody =>
+      'Swipe the touchpad or use the D-pad, change the volume and type with your phone\'s keyboard.';
+
+  @override
+  String get onboardingAppsTitle => 'Open apps in one tap';
+
+  @override
+  String get onboardingAppsBody =>
+      'Keep your favourite TV apps in a row on the remote and open them without searching.';
+
+  @override
+  String get onboardingLocalNetworkTitle => 'Allow local network access';
+
+  @override
+  String get onboardingLocalNetworkBody =>
+      'Next, your iPhone asks to let this app find devices on your local network. Choose Allow so the app can find your TV. You can change this later in Settings → Privacy & Security → Local Network.';
+
+  @override
+  String get onboardingContinue => 'Continue';
 
   @override
   String get demoBadgeLabel => 'Demo mode';

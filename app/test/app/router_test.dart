@@ -26,7 +26,11 @@ void main() {
     t,
   ) async {
     final store = await pumpRouterApp(t, initialLocation: AppRoutes.onboarding);
-    expect(find.text('Control your TV from your phone'), findsOneWidget);
+    expect(find.text('Find your TV'), findsOneWidget);
+    for (var i = 0; i < 2; i++) {
+      await t.tap(find.text('Next'));
+      await t.pumpAndSettle();
+    }
     await t.tap(find.text('Get started'));
     await t.pumpAndSettle();
     expect(find.text('Choose your TV'), findsOneWidget);

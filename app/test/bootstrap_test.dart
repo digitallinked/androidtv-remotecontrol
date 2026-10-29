@@ -104,7 +104,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsOneWidget);
-      expect(find.text('Get started'), findsNothing);
+      expect(find.text('Find your TV'), findsNothing);
       expect(reporter.errors, hasLength(1));
       expect(reporter.errors.single.fatal, isTrue);
       expect(
@@ -124,7 +124,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsNothing);
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(reporter.errors, hasLength(1));
       semantics.dispose();
     }
@@ -191,7 +191,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(opens, 2);
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
     });
   });
   group('Firebase startup', () {
@@ -228,7 +228,7 @@ void main() {
       await tester.pumpWidget(app);
       await tester.pumpAndSettle();
 
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(
         containerOf(tester).read(firebaseStatusProvider),
         FirebaseStatus.unavailable,
@@ -284,7 +284,7 @@ void main() {
 
       await tester.pumpWidget(app!);
       await tester.pumpAndSettle();
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(
         containerOf(tester).read(firebaseStatusProvider),
         FirebaseStatus.unavailable,
@@ -332,7 +332,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsNothing);
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(builds, 1);
     });
 
@@ -367,7 +367,7 @@ void main() {
 
         expect(builds, 2);
         expect(find.text('The app could not start'), findsNothing);
-        expect(find.text('Get started'), findsOneWidget);
+        expect(find.text('Find your TV'), findsOneWidget);
       },
     );
 
@@ -408,7 +408,7 @@ void main() {
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(builds, 1);
       expect(opens, 1);
     });
@@ -488,7 +488,7 @@ void main() {
 
       await tester.pumpWidget(app!);
       await tester.pumpAndSettle();
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(
         containerOf(tester).read(appConfigProvider),
         AppConfigValues.defaults,
@@ -518,7 +518,7 @@ void main() {
       final container = containerOf(tester);
       expect(container.read(appConfigProvider), AppConfigValues.defaults);
       expect(container.read(updateRequiredProvider), isFalse);
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(find.text('Update required'), findsNothing);
     });
 
@@ -534,7 +534,7 @@ void main() {
       await tester.pumpWidget(await root(rec, source));
       await tester.pumpAndSettle();
 
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(
         containerOf(tester).read(appConfigProvider),
         AppConfigValues.defaults,
@@ -640,7 +640,7 @@ void main() {
       broken = false;
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(await storedLaunchCount(), 1);
     });
 
@@ -666,7 +666,7 @@ void main() {
 
         await tester.pumpWidget(app!);
         await tester.pumpAndSettle();
-        expect(find.text('Get started'), findsOneWidget);
+        expect(find.text('Find your TV'), findsOneWidget);
       },
     );
 
@@ -688,7 +688,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(reporter.errors.single.reason, 'launch count');
       expect(reporter.errors.single.fatal, isFalse);
     });
@@ -807,7 +807,7 @@ void main() {
       await tester.pumpWidget(app);
       await tester.pumpAndSettle();
 
-      expect(find.text('Get started'), findsOneWidget);
+      expect(find.text('Find your TV'), findsOneWidget);
       expect(reporter.delegate, same(logging));
       expect(logging.errors.single.reason, 'crash reporter setup');
     });
