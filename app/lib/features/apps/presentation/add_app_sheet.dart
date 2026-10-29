@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -37,7 +38,7 @@ Future<void> showAddAppSheet(BuildContext context) async {
   if (result is String) {
     messenger
       ..removeCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(result)));
+      ..showAppSnackBar(SnackBar(content: Text(result)));
   } else if (result is _OpenEditor && context.mounted) {
     await showCustomShortcutEditor(context);
   }

@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 /// at all under reduce motion (Ruling P7-R4).
 ///
 /// It returns the page unchanged while `MediaQuery.disableAnimationsOf` is
-/// set where the page is built. The [AppPageTransitionsBuilder.instant] form
-/// also has a zero duration, so the route's own animation finishes in the
-/// frame it starts: `withReducedMotion` puts that form in the theme while
-/// reduce motion is on.
+/// set where the page is built; on iOS and macOS the Cupertino transition is
+/// still built, standing still, so the edge swipe-back keeps working.
+///
+/// The [AppPageTransitionsBuilder.instant] form also has a zero duration, so
+/// the route's own animation finishes in the frame it starts:
+/// `withReducedMotion` puts that form in the theme while reduce motion is on.
 class AppPageTransitionsBuilder extends PageTransitionsBuilder {
   /// Wraps [inner], with [inner]'s durations.
   const AppPageTransitionsBuilder(this.inner) : instant = false;
@@ -61,7 +63,21 @@ class AppPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    if (MediaQuery.disableAnimationsOf(context)) return child;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      // iOS keeps its edge swipe-back under reduce motion, as iOS itself
+      // does: the gesture lives inside the Cupertino transition, so build it
+      // with animations that stand still and the page paints in place.
+      if (inner is CupertinoPageTransitionsBuilder) {
+        return inner.buildTransitions(
+          route,
+          context,
+          kAlwaysCompleteAnimation,
+          kAlwaysDismissedAnimation,
+          child,
+        );
+      }
+      return child;
+    }
     return inner.buildTransitions(
       route,
       context,

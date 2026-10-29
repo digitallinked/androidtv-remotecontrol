@@ -11,6 +11,7 @@ import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/mac_address.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
@@ -140,6 +141,9 @@ class PowerController {
       final device = await devices.find(target.serviceName);
       final mac = device?.wolMac;
       if (device == null || mac == null) return PowerOutcome.needsMac;
+      // A damaged stored MAC would make `wake` throw before sending:
+      // nothing goes out, so no haptic.
+      if (parseMac(mac) == null) return PowerOutcome.wakeFailed;
       // The power action's one heavy haptic: something is being sent.
       if (hapticsEnabled) unawaited(haptics.heavy());
       if (!await wakeOnLan.wake(mac: mac, tvHost: device.lastHost)) {

@@ -8,6 +8,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
@@ -194,7 +195,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         ? ConnectionStatus.connecting
         : _statusOf(ref.read(connectionStateProvider));
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
-    final bar = messenger.showSnackBar(
+    final bar = messenger.showAppSnackBar(
       SnackBar(
         content: Text(l10n.remoteNotConnected),
         // Offline and needs-pairing have an action in the status pill;
@@ -221,7 +222,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showAppSnackBar(SnackBar(content: Text(message)));
   }
 
   /// The power key was held (Ruling P4-R10): the controller powers the TV or

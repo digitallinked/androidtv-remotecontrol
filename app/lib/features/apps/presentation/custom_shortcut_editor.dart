@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/package_names.dart';
@@ -38,7 +39,7 @@ Future<void> showCustomShortcutEditor(
   if (message != null) {
     messenger
       ..removeCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showAppSnackBar(SnackBar(content: Text(message)));
   }
 }
 

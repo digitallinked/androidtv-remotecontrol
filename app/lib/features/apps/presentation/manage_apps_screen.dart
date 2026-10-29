@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/add_app_sheet.dart';
@@ -64,7 +65,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       _anyFailed = true;
       messenger
         ..removeCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failed)));
+        ..showAppSnackBar(SnackBar(content: Text(failed)));
     }
     _writes--;
     if (mounted && _writes == 0) _settle();
@@ -130,7 +131,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     if (!ok) return;
     messenger
       ..removeCurrentSnackBar()
-      ..showSnackBar(
+      ..showAppSnackBar(
         SnackBar(
           content: Text(l10n.manageAppsRemoved(app.name)),
           action: SnackBarAction(
@@ -170,7 +171,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       if (restored == null) return;
       await container.read(shortcutActionsProvider).replaceAll(restored);
     } on Object {
-      messenger.showSnackBar(
+      messenger.showAppSnackBar(
         SnackBar(content: Text(l10n.manageAppsSaveFailed)),
       );
     } finally {

@@ -6,6 +6,7 @@ import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 
@@ -97,5 +98,5 @@ Future<void> openExternal(
 void _showSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..clearSnackBars()
-    ..showSnackBar(SnackBar(content: Text(message)));
+    ..showAppSnackBar(SnackBar(content: Text(message)));
 }

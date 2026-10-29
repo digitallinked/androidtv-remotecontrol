@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
@@ -103,5 +104,5 @@ Future<void> _sendTestCrash(BuildContext context, WidgetRef ref) async {
   );
   messenger
     ..clearSnackBars()
-    ..showSnackBar(SnackBar(content: Text(l10n.aboutTestCrashSent)));
+    ..showAppSnackBar(SnackBar(content: Text(l10n.aboutTestCrashSent)));
 }

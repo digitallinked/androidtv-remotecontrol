@@ -398,6 +398,14 @@ void main() {
       expect(wol.wakes, hasLength(1));
     });
 
+    test('no_heavy_haptic_for_a_malformed_stored_mac', () async {
+      // parseMac normalises on save, so this only comes from a damaged row.
+      await repo.upsert(savedTv(wolMac: 'not a mac'));
+      expect(await controller().press(), PowerOutcome.wakeFailed);
+      expect(heavies(), 0, reason: 'nothing was sent');
+      expect(wol.wakes, isEmpty);
+    });
+
     test('no_heavy_haptic_for_needs_mac', () async {
       await repo.upsert(savedTv());
       expect(await controller().press(), PowerOutcome.needsMac);

@@ -6,6 +6,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/config/update_gate.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/features/demo/presentation/demo_badge.dart';
@@ -67,7 +68,7 @@ class _UpdateRequiredScreenState extends ConsumerState<_UpdateRequiredScreen> {
     if (opened || !mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
+      ..showAppSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context).updateRequiredFailed),
         ),

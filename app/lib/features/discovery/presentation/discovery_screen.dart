@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -176,11 +177,11 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
             tv: tv,
           );
         } on Object {
-          messenger.showSnackBar(SnackBar(content: Text(failed)));
+          messenger.showAppSnackBar(SnackBar(content: Text(failed)));
           return;
         }
         if (!adopted) {
-          messenger.showSnackBar(SnackBar(content: Text(failed)));
+          messenger.showAppSnackBar(SnackBar(content: Text(failed)));
           return;
         }
       }

@@ -28,7 +28,9 @@ Future<void> pumpApp(
       builder: (context, app) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: textScaler ?? TextScaler.linear(textScale),
-          disableAnimations: disableAnimations,
+          // Keeps a platform-level flag a test may have set.
+          disableAnimations:
+              disableAnimations || MediaQuery.disableAnimationsOf(context),
         ),
         child: ReduceMotionTheme(child: app!),
       ),

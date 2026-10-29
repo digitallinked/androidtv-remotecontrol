@@ -8,6 +8,7 @@ import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
@@ -79,7 +80,7 @@ class _PrivacyChoicesPageState extends ConsumerState<PrivacyChoicesPage> {
     if (shown || !mounted) return;
     messenger
       ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(l10n.privacyAdChoicesFailed)));
+      ..showAppSnackBar(SnackBar(content: Text(l10n.privacyAdChoicesFailed)));
   }
 
   String? _trackingText(AppLocalizations l10n, TrackingStatus status) =>

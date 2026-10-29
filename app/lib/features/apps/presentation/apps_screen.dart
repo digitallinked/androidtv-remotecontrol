@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
 import 'package:tv_remote/core/session/not_connected_notices.dart';
@@ -63,7 +64,7 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
       return;
     }
     final l10n = AppLocalizations.of(context);
-    final bar = ScaffoldMessenger.of(context).showSnackBar(
+    final bar = ScaffoldMessenger.of(context).showAppSnackBar(
       SnackBar(
         content: Text(l10n.remoteNotConnected),
         // Offline and needs-pairing have an action in the status strip; a

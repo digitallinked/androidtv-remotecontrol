@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/tv/manual_tv.dart';
 import 'package:tv_remote/features/discovery/presentation/widgets/troubleshooting_sheet.dart';
 import 'package:tv_remote/features/pairing/application/pairing_controller.dart';
@@ -300,7 +301,7 @@ class _CodeEntryState extends State<_CodeEntry> {
     } else {
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(l10n.pairNothingToPaste)));
+        ..showAppSnackBar(SnackBar(content: Text(l10n.pairNothingToPaste)));
     }
   }
 

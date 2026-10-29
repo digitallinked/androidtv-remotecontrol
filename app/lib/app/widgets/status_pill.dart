@@ -184,6 +184,10 @@ class _Resize extends StatelessWidget {
 
 /// Cross-fades from one child to the next (told apart by their keys), with
 /// the outgoing child out of semantics and out of reach of the finger.
+///
+/// "Outgoing" is read from each child's own animation, which runs in reverse
+/// while it leaves. Comparing keys would wrongly revive a child still fading
+/// out after a quick A → B → A, leaving two live buttons.
 class _CrossFade extends StatelessWidget {
   const _CrossFade({required this.duration, required this.child});
 
@@ -208,12 +212,25 @@ class _CrossFade extends StatelessWidget {
           ?current,
         ],
       ),
-      transitionBuilder: (child, animation) {
-        final fade = FadeTransition(opacity: animation, child: child);
-        if (child.key == this.child.key) return fade;
-        return ExcludeSemantics(child: IgnorePointer(child: fade));
-      },
+      transitionBuilder: _transition,
       child: child,
+    );
+  }
+
+  static Widget _transition(Widget child, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, faded) {
+        final leaving = switch (animation.status) {
+          AnimationStatus.reverse || AnimationStatus.dismissed => true,
+          AnimationStatus.forward || AnimationStatus.completed => false,
+        };
+        return ExcludeSemantics(
+          excluding: leaving,
+          child: IgnorePointer(ignoring: leaving, child: faded),
+        );
+      },
+      child: FadeTransition(opacity: animation, child: child),
     );
   }
 }

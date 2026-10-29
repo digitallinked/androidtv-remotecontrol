@@ -72,7 +72,8 @@ void main() {
       ).push(AppRoutes.pair(tvToPair.serviceName), extra: tvToPair),
     );
     await t.pump();
-    await t.pump(const Duration(milliseconds: 400));
+    // Past the 450 ms page transition (the spinner never settles).
+    await t.pump(const Duration(milliseconds: 500));
   }
 
   /// Opens pairing from the bare route, without an extra.
@@ -340,7 +341,8 @@ void main() {
     expect(fakes.created.single.closed, isFalse);
     routerOf(t).pop();
     await t.pump();
-    await t.pump(const Duration(milliseconds: 400));
+    // Past the 450 ms page transition (the spinner never settles).
+    await t.pump(const Duration(milliseconds: 500));
     expect(fakes.created.single.closed, isTrue);
     expect(find.byType(PairingScreen), findsNothing);
   });
@@ -382,7 +384,8 @@ void main() {
 
     await t.tap(find.text('Back to TVs'));
     await t.pump();
-    await t.pump(const Duration(milliseconds: 400));
+    // Past the 450 ms page transition (the spinner never settles).
+    await t.pump(const Duration(milliseconds: 500));
     expect(find.text('Choose your TV'), findsOneWidget);
   });
 

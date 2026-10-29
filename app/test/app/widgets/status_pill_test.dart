@@ -251,4 +251,34 @@ void main() {
     expect(dotColour(t), AppColors.light.danger);
     expect(t.hasRunningAnimations, isFalse);
   });
+
+  testWidgets('a_quick_back_and_forth_leaves_one_live_action', (t) async {
+    final h = t.ensureSemantics();
+    var taps = 0;
+    Widget pill(ConnectionStatus s) =>
+        StatusPill(status: s, onReconnect: () => taps++);
+    await pumpApp(t, pill(ConnectionStatus.offline));
+    await pumpApp(t, pill(ConnectionStatus.reconnecting));
+    await t.pump(const Duration(milliseconds: 50));
+    await pumpApp(t, pill(ConnectionStatus.offline));
+    await t.pump(const Duration(milliseconds: 50));
+    // The first "Reconnect" is still fading out while the new one fades in.
+    expect(find.text('Reconnect'), findsNWidgets(2));
+    expect(find.semantics.byLabel('Reconnect'), findsOne);
+    final live = find.text('Reconnect').evaluate().where((e) {
+      var ignored = false;
+      e.visitAncestorElements((a) {
+        final w = a.widget;
+        if (w is IgnorePointer && w.ignoring) ignored = true;
+        return !ignored;
+      });
+      return !ignored;
+    });
+    expect(live, hasLength(1));
+    await t.pumpAndSettle();
+    expect(find.text('Reconnect'), findsOneWidget);
+    await t.tap(find.text('Reconnect'));
+    expect(taps, 1);
+    h.dispose();
+  });
 }

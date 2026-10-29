@@ -7,6 +7,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/mac_address.dart';
@@ -166,7 +167,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showAppSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _save() async {
@@ -260,7 +261,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     }
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(removed)));
+      ..showAppSnackBar(SnackBar(content: Text(removed)));
   }
 
   @override
