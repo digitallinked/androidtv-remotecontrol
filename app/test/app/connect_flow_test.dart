@@ -144,6 +144,8 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await t.pump();
+    // The pill cross-fades to the new state.
+    await t.pump(const Duration(milliseconds: 250));
     expect(find.text('Connected'), findsNothing);
 
     signals.foreground();

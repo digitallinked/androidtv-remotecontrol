@@ -300,6 +300,8 @@ class _StartupGateState extends State<StartupGate> {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(brightness: Brightness.light),
       darkTheme: buildAppTheme(brightness: Brightness.dark),
+      builder: (context, child) =>
+          ReduceMotionTheme(child: child ?? const SizedBox.shrink()),
       home: _failed
           ? _StartupErrorScreen(onRetry: _start)
           : const Scaffold(body: SizedBox.expand()),

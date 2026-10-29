@@ -114,4 +114,40 @@ void main() {
       lessThanOrEqualTo(screenBottom - 300),
     );
   });
+
+  testWidgets('reduce_motion_opens_and_closes_the_sheet_in_one_frame', (
+    t,
+  ) async {
+    await pumpApp(
+      t,
+      _Opener(onResult: (_) {}, body: const Text('Sheet body')),
+      disableAnimations: true,
+    );
+    await t.tap(find.text('open'));
+    await t.pump();
+    final sheet = find.byType(BottomSheet);
+    expect(sheet, findsOneWidget);
+    expect(ModalRoute.of(t.element(sheet))!.animation!.value, 1);
+    expect(t.hasRunningAnimations, isFalse);
+
+    await t.tap(find.byTooltip('Close'));
+    await t.pump();
+    expect(sheet, findsNothing);
+    expect(t.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('with_motion_the_sheet_animates_in', (t) async {
+    await pumpApp(
+      t,
+      _Opener(onResult: (_) {}, body: const Text('Sheet body')),
+    );
+    await t.tap(find.text('open'));
+    await t.pump();
+    final sheet = find.byType(BottomSheet);
+    expect(sheet, findsOneWidget);
+    expect(ModalRoute.of(t.element(sheet))!.animation!.value, lessThan(1));
+    expect(t.hasRunningAnimations, isTrue);
+    await t.pumpAndSettle();
+    expect(ModalRoute.of(t.element(sheet))!.animation!.value, 1);
+  });
 }

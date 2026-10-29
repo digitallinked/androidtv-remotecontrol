@@ -319,6 +319,12 @@ abstract final class AppMotion {
 
   /// Scale applied to a pressed key.
   static const double pressScale = 0.94;
+
+  /// [d], or [Duration.zero] when the user asked for reduced motion
+  /// (Ruling P7-R4): every implicit animation takes its duration from here,
+  /// so with reduce motion on the new state shows in the same frame.
+  static Duration durationOf(BuildContext context, Duration d) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
 }
 
 /// WCAG contrast ratio between [a] and [b], from 1 to 21.

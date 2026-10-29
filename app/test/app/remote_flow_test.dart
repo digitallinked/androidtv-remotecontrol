@@ -128,6 +128,8 @@ void main() {
     await gesture.up();
     await t.pump();
     expect(t.takeException(), isNull);
+    // The pill cross-fades to the new state.
+    await t.pump(const Duration(milliseconds: 250));
     expect(find.text('Connected'), findsNothing);
 
     await t.tap(find.bySemanticsLabel('Home'));

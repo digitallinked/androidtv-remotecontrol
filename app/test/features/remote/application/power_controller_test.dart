@@ -125,7 +125,7 @@ void main() {
     expect(await controller().press(), PowerOutcome.needsMac);
     expect(wol.wakes, isEmpty);
     expect(fake.reconnectCalls, 0);
-    expect(haptics.events, ['heavy']);
+    expect(haptics.events, isEmpty, reason: 'nothing was sent');
   });
 
   test('save_mac_and_wake_stores_then_wakes_once_with_one_haptic', () async {
@@ -136,7 +136,7 @@ void main() {
     expect((await repo.find('Living Room TV 3'))!.wolMac, 'AA:BB:CC:DD:EE:F0');
     expect(wol.wakes, [('AA:BB:CC:DD:EE:F0', '192.168.0.20')]);
     expect(fake.reconnectCalls, 1);
-    expect(haptics.events, ['heavy'], reason: 'press() fired it, not save');
+    expect(haptics.events, ['heavy'], reason: 'the save fired it, at the send');
   });
 
   test('save_failure_is_rethrown_and_nothing_is_sent', () async {

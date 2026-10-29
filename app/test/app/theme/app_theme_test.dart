@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
+import 'package:tv_remote/app/theme/page_transitions.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 
 void main() {
@@ -136,6 +138,70 @@ void main() {
         ).extension<AppColors>()!;
         expect(contrastRatio(c.textSecondary, c.bg), greaterThanOrEqualTo(4.5));
       }
+    }
+  });
+
+  test('every_platform_uses_the_reduce_motion_page_builder', () {
+    for (final theme in [
+      buildAppTheme(brightness: Brightness.light),
+      buildAppTheme(brightness: Brightness.dark),
+      buildAppTheme(
+        brightness: Brightness.dark,
+        dynamicScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00FF00),
+          brightness: Brightness.dark,
+        ),
+      ),
+      buildTheaterTheme(),
+    ]) {
+      final builders = theme.pageTransitionsTheme.builders;
+      for (final platform in TargetPlatform.values) {
+        expect(
+          builders[platform],
+          isA<AppPageTransitionsBuilder>(),
+          reason: '$platform',
+        );
+      }
+      PageTransitionsBuilder innerOf(TargetPlatform p) =>
+          (builders[p]! as AppPageTransitionsBuilder).inner;
+      expect(
+        innerOf(TargetPlatform.android),
+        isA<PredictiveBackPageTransitionsBuilder>(),
+      );
+      expect(
+        innerOf(TargetPlatform.iOS),
+        isA<CupertinoPageTransitionsBuilder>(),
+      );
+      expect(
+        innerOf(TargetPlatform.macOS),
+        isA<CupertinoPageTransitionsBuilder>(),
+      );
+      for (final p in const [
+        TargetPlatform.fuchsia,
+        TargetPlatform.linux,
+        TargetPlatform.windows,
+      ]) {
+        expect(innerOf(p), isA<FadeForwardsPageTransitionsBuilder>());
+      }
+      // The ripple is on until reduce motion takes it away.
+      expect(theme.splashFactory, isNot(NoSplash.splashFactory));
+    }
+  });
+
+  test('reduced_motion_theme_has_no_splash_and_instant_pages', () {
+    final theme = withReducedMotion(
+      buildAppTheme(brightness: Brightness.light),
+    );
+    expect(theme.splashFactory, NoSplash.splashFactory);
+    for (final platform in TargetPlatform.values) {
+      final builder = theme.pageTransitionsTheme.builders[platform];
+      expect(builder, isA<AppPageTransitionsBuilder>(), reason: '$platform');
+      expect(builder!.transitionDuration, Duration.zero, reason: '$platform');
+      expect(
+        builder.reverseTransitionDuration,
+        Duration.zero,
+        reason: '$platform',
+      );
     }
   });
 }

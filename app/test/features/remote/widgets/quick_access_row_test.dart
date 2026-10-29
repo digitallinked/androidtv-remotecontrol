@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -498,6 +499,54 @@ void main() {
           expect(t.getRect(square), all, reason: b.name);
         }
       });
+    }
+  });
+
+  testWidgets('pressing_a_tile_scales_its_square', (t) async {
+    for (final reduceMotion in [false, true]) {
+      var taps = 0;
+      await pumpApp(
+        t,
+        QuickAppTile(
+          app: _apps.first,
+          isCurrent: true,
+          onTap: () => taps++,
+        ),
+        disableAnimations: reduceMotion,
+      );
+      final square = find.ancestor(
+        of: find.byKey(const ValueKey('quick_app_square')),
+        matching: find.byType(AnimatedScale),
+      );
+      expect(square, findsOneWidget);
+      expect(t.widget<AnimatedScale>(square).scale, 1);
+      // The dot rides on the square; the name keeps its size.
+      expect(
+        find.descendant(
+          of: square,
+          matching: find.byKey(const ValueKey('quick_app_current_dot')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(of: find.text('Netflix'), matching: square),
+        findsNothing,
+      );
+
+      final press = await t.startGesture(
+        t.getCenter(find.byKey(const ValueKey('quick_app_square'))),
+      );
+      await t.pump(kPressTimeout);
+      expect(t.widget<AnimatedScale>(square).scale, AppMotion.pressScale);
+      expect(
+        t.widget<AnimatedScale>(square).duration,
+        reduceMotion ? Duration.zero : AppMotion.fast,
+      );
+      await press.up();
+      await t.pump();
+      expect(t.widget<AnimatedScale>(square).scale, 1);
+      expect(taps, 1);
+      await t.pumpAndSettle();
     }
   });
 }

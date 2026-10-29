@@ -34,8 +34,11 @@ void main() {
       t,
       StatusPill(status: ConnectionStatus.reconnecting, onReconnect: () {}),
     );
+    // A status change cross-fades; the new state is what is left after it.
+    await t.pumpAndSettle();
     expect(find.text('Reconnect'), findsNothing);
     await pumpApp(t, const StatusPill(status: ConnectionStatus.offline));
+    await t.pumpAndSettle();
     expect(find.text('Reconnect'), findsNothing);
   });
 
@@ -63,14 +66,17 @@ void main() {
     for (final status in ConnectionStatus.values) {
       if (status == ConnectionStatus.needsPairing) continue;
       await pumpApp(t, StatusPill(status: status, onPairAgain: () {}));
+      await t.pumpAndSettle();
       expect(find.text('Pair again'), findsNothing, reason: status.name);
     }
     await pumpApp(t, const StatusPill(status: ConnectionStatus.needsPairing));
+    await t.pumpAndSettle();
     expect(find.text('Pair again'), findsNothing);
     await pumpApp(
       t,
       StatusPill(status: ConnectionStatus.needsPairing, onReconnect: () {}),
     );
+    await t.pumpAndSettle();
     expect(find.text('Pair again'), findsNothing);
     expect(find.text('Reconnect'), findsNothing);
   });
@@ -116,6 +122,7 @@ void main() {
     };
     for (final e in colours.entries) {
       await pumpApp(t, StatusPill(status: e.key));
+      await t.pumpAndSettle();
       final dot = t.widget<DecoratedBox>(find.byKey(StatusPill.dotKey));
       expect((dot.decoration as BoxDecoration).color, e.value);
       expect(t.getSize(find.byKey(StatusPill.dotKey)), const Size(8, 8));
@@ -135,5 +142,113 @@ void main() {
       textScale: 2,
     );
     expect(t.takeException(), isNull);
+  });
+
+  /// The opacity [text] is painted with: the product of every fade above it.
+  double opacityOf(WidgetTester t, String text) {
+    var opacity = 1.0;
+    t.element(find.text(text)).visitAncestorElements((e) {
+      final w = e.widget;
+      if (w is FadeTransition) opacity *= w.opacity.value;
+      if (w is Opacity) opacity *= w.opacity;
+      return true;
+    });
+    return opacity;
+  }
+
+  Color dotColour(WidgetTester t) =>
+      (t.widget<DecoratedBox>(find.byKey(StatusPill.dotKey)).decoration
+              as BoxDecoration)
+          .color!;
+
+  testWidgets('status_change_cross_fades_in_200ms', (t) async {
+    await pumpApp(t, const StatusPill(status: ConnectionStatus.connected));
+    await pumpApp(t, const StatusPill(status: ConnectionStatus.offline));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.text('Connected'), findsOneWidget);
+    expect(find.text('Offline'), findsOneWidget);
+    for (final label in ['Connected', 'Offline']) {
+      expect(opacityOf(t, label), inExclusiveRange(0, 1), reason: label);
+    }
+    await t.pump(const Duration(milliseconds: 100));
+    // At 200 ms only 'Offline' shows; the faded-out label leaves the tree on
+    // the next tick.
+    expect(opacityOf(t, 'Connected'), 0);
+    expect(opacityOf(t, 'Offline'), 1);
+    await t.pump(const Duration(milliseconds: 1));
+    expect(find.text('Connected'), findsNothing);
+    expect(find.text('Offline'), findsOneWidget);
+    expect(t.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('status_change_shows_the_action_with_the_label', (t) async {
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.connected, onReconnect: () {}),
+    );
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.offline, onReconnect: () {}),
+    );
+    await t.pump(const Duration(milliseconds: 100));
+    expect(opacityOf(t, 'Reconnect'), inExclusiveRange(0, 1));
+    await t.pumpAndSettle();
+    expect(opacityOf(t, 'Reconnect'), 1);
+    expect(t.getSize(find.byType(TextButton)).height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('status_pill_stays_one_live_region_while_animating', (t) async {
+    final h = t.ensureSemantics();
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.connected, onPairAgain: () {}),
+    );
+    await pumpApp(
+      t,
+      StatusPill(status: ConnectionStatus.needsPairing, onPairAgain: () {}),
+    );
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.text('Connected'), findsOneWidget, reason: 'mid-transition');
+    final live = find.semantics.byPredicate(
+      (node) => node.getSemanticsData().flagsCollection.isLiveRegion,
+    );
+    expect(live, findsOne);
+    expect(
+      live.evaluate().single.getSemanticsData().label,
+      'Connection: Needs pairing',
+    );
+    expect(find.semantics.byLabel('Connection: Connected'), findsNothing);
+    h.dispose();
+  });
+
+  testWidgets('dot_colour_tweens_to_the_new_status', (t) async {
+    const c = AppColors.light;
+    await pumpApp(t, const StatusPill(status: ConnectionStatus.connected));
+    expect(dotColour(t), c.success);
+    await pumpApp(t, const StatusPill(status: ConnectionStatus.offline));
+    await t.pump(const Duration(milliseconds: 100));
+    final mid = dotColour(t);
+    expect(mid, isNot(c.success));
+    expect(mid, isNot(c.danger));
+    expect(mid.r, inInclusiveRange(c.success.r, c.danger.r));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(dotColour(t), c.danger);
+  });
+
+  testWidgets('reduce_motion_shows_the_new_status_in_one_frame', (t) async {
+    await pumpApp(
+      t,
+      const StatusPill(status: ConnectionStatus.connected),
+      disableAnimations: true,
+    );
+    await pumpApp(
+      t,
+      const StatusPill(status: ConnectionStatus.offline),
+      disableAnimations: true,
+    );
+    expect(find.text('Connected'), findsNothing);
+    expect(find.text('Offline'), findsOneWidget);
+    expect(dotColour(t), AppColors.light.danger);
+    expect(t.hasRunningAnimations, isFalse);
   });
 }

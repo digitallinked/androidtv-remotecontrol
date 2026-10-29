@@ -425,4 +425,116 @@ void main() {
       expect(t.renderObject<RenderParagraph>(hint).didExceedMaxLines, isTrue);
     }
   });
+
+  /// The rings the pad paints now, as (centre, radius, alpha).
+  List<(Offset, double, double)> rings(WidgetTester t) {
+    final found = <(Offset, double, double)>[];
+    expect(
+      find.byKey(Touchpad.trailKey),
+      paints..everything((method, args) {
+        if (method == #drawCircle) {
+          final paint = args[2] as Paint;
+          expect(paint.style, PaintingStyle.stroke);
+          found.add((args[0] as Offset, args[1] as double, paint.color.a));
+        }
+        return true;
+      }),
+    );
+    return found;
+  }
+
+  testWidgets('tap_paints_a_pulse_that_fades_in_200ms', (t) async {
+    await pumpPad(t);
+    final origin = t.getTopLeft(find.byType(Touchpad));
+    const local = Offset(100, 140);
+    await t.tapAt(origin + local);
+    await t.pump();
+    expect(rec.calls, ['tap:${KeyCodes.dpadCenter}']);
+    var now = rings(t);
+    expect(now, hasLength(1));
+    expect(now.single.$1, local);
+    expect(now.single.$2, lessThan(1));
+    expect(now.single.$3, closeTo(0.35, 0.01));
+    expect(t.hasRunningAnimations, isTrue);
+
+    await t.pump(const Duration(milliseconds: 100));
+    now = rings(t);
+    expect(now, hasLength(1));
+    expect(now.single.$1, local);
+    expect(now.single.$2, inExclusiveRange(1, 24));
+    expect(now.single.$3, inExclusiveRange(0, 0.35));
+
+    await t.pump(const Duration(milliseconds: 110));
+    expect(find.byKey(Touchpad.trailKey), paintsNothing);
+    // The tap's trail point outlives the pulse by 50 ms; then all is still.
+    await t.pump(const Duration(milliseconds: 50));
+    expect(t.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('two_finger_back_paints_a_pulse', (t) async {
+    await pumpPad(t);
+    final g1 = await t.startGesture(centre(t) - const Offset(30, 0));
+    final g2 = await t.startGesture(centre(t) + const Offset(30, 0));
+    await t.pump(const Duration(milliseconds: 50));
+    await g1.up();
+    await g2.up();
+    await t.pump();
+    expect(rec.calls, ['tap:${KeyCodes.back}']);
+    expect(rings(t), hasLength(1));
+  });
+
+  testWidgets('a_swipe_paints_no_pulse', (t) async {
+    await pumpPad(t);
+    final g = await t.startGesture(centre(t));
+    await g.moveBy(const Offset(30, 0));
+    await g.up();
+    await t.pump();
+    expect(rec.calls, ['tap:${KeyCodes.dpadRight}']);
+    expect(rings(t), isEmpty);
+  });
+
+  testWidgets('reduce_motion_paints_no_pulse', (t) async {
+    await pumpPad(t, disableAnimations: true);
+    await t.tap(find.byType(Touchpad));
+    await t.pump();
+    expect(rec.calls, ['tap:${KeyCodes.dpadCenter}']);
+    expect(find.byKey(Touchpad.trailKey), paintsNothing);
+    expect(t.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('a_flick_past_the_slop_between_move_and_up_is_not_a_tap', (
+    t,
+  ) async {
+    await pumpPad(t);
+    final origin = t.getTopLeft(find.byType(Touchpad));
+    final pointer = TestPointer(7);
+    t.binding.handlePointerEvent(pointer.down(origin + const Offset(100, 100)));
+    t.binding.handlePointerEvent(
+      pointer.move(origin + const Offset(102, 100)),
+    );
+    // The finger lifts past the slop, with no move event in between.
+    t.binding.handlePointerEvent(
+      PointerUpEvent(
+        pointer: 7,
+        position: origin + const Offset(100 + kTouchSlop + 4, 100),
+      ),
+    );
+    await t.pump(kLongPressTimeout);
+    expect(rec.calls, isEmpty);
+  });
+
+  testWidgets('a_tap_whose_up_stays_inside_the_slop_still_taps', (t) async {
+    await pumpPad(t);
+    final origin = t.getTopLeft(find.byType(Touchpad));
+    final pointer = TestPointer(8);
+    t.binding.handlePointerEvent(pointer.down(origin + const Offset(100, 100)));
+    t.binding.handlePointerEvent(
+      PointerUpEvent(
+        pointer: 8,
+        position: origin + const Offset(100 + kTouchSlop - 4, 100),
+      ),
+    );
+    await t.pump();
+    expect(rec.calls, ['tap:${KeyCodes.dpadCenter}']);
+  });
 }

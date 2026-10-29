@@ -9,8 +9,9 @@ import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 ///
 /// It never draws a logo. The tile is [width]
 /// dp wide. When [isCurrent], an accent dot marks the square and the spoken
-/// label says the app is on the TV now.
-class QuickAppTile extends StatelessWidget {
+/// label says the app is on the TV now. While the square is pressed it scales
+/// to [AppMotion.pressScale] (Ruling P7-R5).
+class QuickAppTile extends StatefulWidget {
   /// Creates a tile for [app].
   const QuickAppTile({
     required this.app,
@@ -51,10 +52,20 @@ class QuickAppTile extends StatelessWidget {
   }
 
   @override
+  State<QuickAppTile> createState() => _QuickAppTileState();
+}
+
+class _QuickAppTileState extends State<QuickAppTile> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = context.appColors;
     final text = Theme.of(context).textTheme;
+    final app = widget.app;
+    final isCurrent = widget.isCurrent;
+    final onTap = widget.onTap;
 
     return Semantics(
       button: true,
@@ -64,42 +75,49 @@ class QuickAppTile extends StatelessWidget {
       excludeSemantics: true,
       onTap: onTap,
       child: SizedBox(
-        width: width,
+        width: QuickAppTile.width,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           spacing: AppSpacing.xs,
           children: [
-            SizedBox.square(
-              key: const ValueKey('quick_app_square'),
-              dimension: squareSize,
-              child: Stack(
-                children: [
-                  Positioned.fill(child: AppIconSquare(app: app)),
-                  // The ink of a tap draws over the square.
-                  Positioned.fill(
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: InkWell(
-                        onTap: onTap,
-                        borderRadius: BorderRadius.circular(AppRadii.key),
-                      ),
-                    ),
-                  ),
-                  if (isCurrent)
-                    Positioned(
-                      top: AppSpacing.s,
-                      right: AppSpacing.s,
-                      child: Container(
-                        key: const ValueKey('quick_app_current_dot'),
-                        width: dotSize,
-                        height: dotSize,
-                        decoration: BoxDecoration(
-                          color: colors.accent,
-                          shape: BoxShape.circle,
+            AnimatedScale(
+              scale: _pressed ? AppMotion.pressScale : 1,
+              duration: AppMotion.durationOf(context, AppMotion.fast),
+              curve: AppMotion.curve,
+              child: SizedBox.square(
+                key: const ValueKey('quick_app_square'),
+                dimension: QuickAppTile.squareSize,
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: AppIconSquare(app: app)),
+                    // The ink of a tap draws over the square.
+                    Positioned.fill(
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          onTap: onTap,
+                          onHighlightChanged: (pressed) =>
+                              setState(() => _pressed = pressed),
+                          borderRadius: BorderRadius.circular(AppRadii.key),
                         ),
                       ),
                     ),
-                ],
+                    if (isCurrent)
+                      PositionedDirectional(
+                        top: AppSpacing.s,
+                        end: AppSpacing.s,
+                        child: Container(
+                          key: const ValueKey('quick_app_current_dot'),
+                          width: QuickAppTile.dotSize,
+                          height: QuickAppTile.dotSize,
+                          decoration: BoxDecoration(
+                            color: colors.accent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             GestureDetector(

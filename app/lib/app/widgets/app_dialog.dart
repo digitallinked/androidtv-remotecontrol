@@ -105,7 +105,8 @@ class AppDialog<T> extends StatelessWidget {
 /// when the dialog is dismissed by tapping outside it.
 ///
 /// With [barrierDismissible] false only an action closes the dialog: neither
-/// the barrier nor the system Back button does.
+/// the barrier nor the system Back button does. Under reduce motion it opens
+/// and closes without animating (Ruling P7-R4).
 Future<T?> showAppDialog<T>({
   required BuildContext context,
   required String title,
@@ -116,6 +117,9 @@ Future<T?> showAppDialog<T>({
   return showDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
+    animationStyle: MediaQuery.disableAnimationsOf(context)
+        ? AnimationStyle.noAnimation
+        : null,
     builder: (_) {
       final dialog = AppDialog<T>(
         title: title,

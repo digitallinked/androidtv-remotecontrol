@@ -90,8 +90,9 @@ class AppIconSquare extends StatelessWidget {
 /// It fills the grid cell and the whole tile is one button. The name takes up
 /// to two lines. [AppTile.heightOf] is the cell height that holds both lines
 /// at the ambient text size. When [isCurrent], an accent dot marks the square
-/// and the spoken label says the app is on the TV now.
-class AppTile extends StatelessWidget {
+/// and the spoken label says the app is on the TV now. While pressed, the
+/// square scales to [AppMotion.pressScale] (Ruling P7-R5).
+class AppTile extends StatefulWidget {
   /// Creates a tile for [app].
   const AppTile({
     required this.app,
@@ -131,10 +132,20 @@ class AppTile extends StatelessWidget {
   }
 
   @override
+  State<AppTile> createState() => _AppTileState();
+}
+
+class _AppTileState extends State<AppTile> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = context.appColors;
     final text = Theme.of(context).textTheme;
+    final app = widget.app;
+    final isCurrent = widget.isCurrent;
+    final onTap = widget.onTap;
 
     return Semantics(
       button: true,
@@ -147,34 +158,40 @@ class AppTile extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
+          onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
           borderRadius: BorderRadius.circular(AppRadii.key),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xs),
             child: Column(
               spacing: AppSpacing.xs,
               children: [
-                Stack(
-                  children: [
-                    AppIconSquare(app: app),
-                    if (isCurrent)
-                      PositionedDirectional(
-                        top: AppSpacing.s,
-                        end: AppSpacing.s,
-                        child: Container(
-                          key: const ValueKey('app_tile_current_dot'),
-                          width: dotSize,
-                          height: dotSize,
-                          decoration: BoxDecoration(
-                            color: colors.accent,
-                            shape: BoxShape.circle,
+                AnimatedScale(
+                  scale: _pressed ? AppMotion.pressScale : 1,
+                  duration: AppMotion.durationOf(context, AppMotion.fast),
+                  curve: AppMotion.curve,
+                  child: Stack(
+                    children: [
+                      AppIconSquare(app: app),
+                      if (isCurrent)
+                        PositionedDirectional(
+                          top: AppSpacing.s,
+                          end: AppSpacing.s,
+                          child: Container(
+                            key: const ValueKey('app_tile_current_dot'),
+                            width: AppTile.dotSize,
+                            height: AppTile.dotSize,
+                            decoration: BoxDecoration(
+                              color: colors.accent,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
                 Text(
                   app.name,
-                  maxLines: nameLines,
+                  maxLines: AppTile.nameLines,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: text.labelMedium?.copyWith(color: colors.textPrimary),

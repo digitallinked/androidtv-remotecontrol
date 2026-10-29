@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -362,5 +363,48 @@ void main() {
         epsilon: 2,
       ),
     );
+  });
+
+  testWidgets('pressing_a_tile_scales_its_square', (t) async {
+    for (final reduceMotion in [false, true]) {
+      var taps = 0;
+      await pumpApp(
+        t,
+        SizedBox(
+          width: 96,
+          height: 120,
+          child: AppTile(
+            app: const AppEntry(package: 'a.b', name: 'Films'),
+            isCurrent: false,
+            onTap: () => taps++,
+          ),
+        ),
+        disableAnimations: reduceMotion,
+      );
+      final square = find.ancestor(
+        of: find.byType(AppIconSquare),
+        matching: find.byType(AnimatedScale),
+      );
+      expect(square, findsOneWidget);
+      expect(t.widget<AnimatedScale>(square).scale, 1);
+
+      final press = await t.startGesture(t.getCenter(find.byType(AppTile)));
+      await t.pump(kPressTimeout);
+      expect(t.widget<AnimatedScale>(square).scale, AppMotion.pressScale);
+      expect(
+        t.widget<AnimatedScale>(square).duration,
+        reduceMotion ? Duration.zero : AppMotion.fast,
+      );
+      // The name is not part of the square and keeps its size.
+      expect(
+        find.ancestor(of: find.text('Films'), matching: square),
+        findsNothing,
+      );
+      await press.up();
+      await t.pump();
+      expect(t.widget<AnimatedScale>(square).scale, 1);
+      expect(taps, 1);
+      await t.pumpAndSettle();
+    }
   });
 }

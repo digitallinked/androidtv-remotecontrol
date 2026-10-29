@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tv_remote/app/theme/page_transitions.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 
 /// Builds the app [ThemeData] for [brightness] from the design tokens.
@@ -28,6 +29,41 @@ ThemeData buildTheaterTheme() => _buildTheme(
   base: AppColors.theater,
   dynamicScheme: null,
 );
+
+/// [theme] for a user who asked for reduced motion (Rulings P7-R4, P7-C1):
+/// no ink ripple anywhere, and pages that change in one frame. Everything
+/// else, colours included, is [theme]'s.
+ThemeData withReducedMotion(ThemeData theme) => theme.copyWith(
+  splashFactory: NoSplash.splashFactory,
+  pageTransitionsTheme: instantPageTransitionsTheme,
+);
+
+/// Applies [withReducedMotion] to the ambient theme below it while
+/// `MediaQuery.disableAnimationsOf` is set, and passes the theme on unchanged
+/// otherwise.
+///
+/// The app shell puts it around the navigator, so every page, sheet and
+/// dialog of the app gets it, whichever colour style or brightness is in use.
+/// The tree below keeps its shape when the setting changes, so no state is
+/// lost.
+class ReduceMotionTheme extends StatelessWidget {
+  /// Creates the wrapper around [child].
+  const ReduceMotionTheme({required this.child, super.key});
+
+  /// The part of the app the rule applies to.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: MediaQuery.disableAnimationsOf(context)
+          ? withReducedMotion(theme)
+          : theme,
+      child: child,
+    );
+  }
+}
 
 ThemeData _buildTheme({
   required Brightness brightness,
@@ -102,6 +138,7 @@ ThemeData _buildTheme({
     textButtonTheme: const TextButtonThemeData(
       style: ButtonStyle(minimumSize: buttonSize),
     ),
+    pageTransitionsTheme: appPageTransitionsTheme,
     extensions: [t],
   );
 }

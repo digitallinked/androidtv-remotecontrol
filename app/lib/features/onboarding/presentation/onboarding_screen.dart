@@ -105,11 +105,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    // Under reduce motion the buttons show their pressed colour without the
-    // ink ripple, so nothing on this screen animates.
-    final style = MediaQuery.disableAnimationsOf(context)
-        ? const ButtonStyle(splashFactory: NoSplash.splashFactory)
-        : null;
     return PopScope(
       // Back on a later card shows the card before; on the first it leaves
       // the app as usual.
@@ -134,7 +129,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     child: _isLast
                         ? null
                         : TextButton(
-                            style: style,
                             onPressed: () => unawaited(_finish(_Exit.skip)),
                             child: Text(l10n.onboardingSkip),
                           ),
@@ -165,7 +159,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        style: style,
                         onPressed: _isLast
                             ? () => unawaited(_finish(_Exit.getStarted))
                             : () => _goTo(_index + 1),
@@ -179,7 +172,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     const SizedBox(height: AppSpacing.s),
                     TextButton(
-                      style: style,
                       onPressed: () => unawaited(_finish(_Exit.demo)),
                       child: Text(l10n.onboardingTryDemo),
                     ),

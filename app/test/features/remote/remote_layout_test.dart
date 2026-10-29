@@ -388,6 +388,8 @@ void main() {
     container.read(activeTargetProvider.notifier).activateDevice('Bedroom TV');
     await t.pump();
     await t.pump();
+    // The pill cross-fades to the new state.
+    await t.pump(const Duration(milliseconds: 250));
 
     expect(find.byType(RemoteBody), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
