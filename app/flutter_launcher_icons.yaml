@@ -1,0 +1,16 @@
+# Launcher icons from our own branding masters (Ruling P7-R6).
+# Regenerate with tool/brand.ps1 or tool/brand.sh; one icon serves both flavors.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/icon_full.png
+  adaptive_icon_background: "#3D5AFE"
+  adaptive_icon_foreground: assets/branding/icon_foreground.png
+  adaptive_icon_monochrome: assets/branding/icon_foreground.png
+  # The foreground master is already drawn on the 108-unit adaptive canvas,
+  # so it gets no extra inset (the generator's default is 16%).
+  adaptive_icon_foreground_inset: 0
+  # The generator can't parse build.gradle.kts, so it is told the minSdk.
+  min_sdk_android: 24
+  remove_alpha_ios: true
+  background_color_ios: "#3D5AFE"
