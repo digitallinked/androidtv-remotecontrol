@@ -329,6 +329,27 @@ void main() {
       },
     );
 
+    testWidgets('a_purchase_closes_without_showing_you_have_premium', (
+      t,
+    ) async {
+      fake.nextPurchase = const Purchased(EntitlementSnapshot(active: true));
+      await pumpPaywall(t, location: AppRoutes.settings);
+      await t.tap(find.text('Premium'));
+      await t.pumpAndSettle();
+
+      await t.tap(find.widgetWithText(FilledButton, 'Continue'));
+      // Frame by frame through the purchase and the pop: the plans ride the
+      // exit transition, never "You have Premium".
+      for (var frame = 0; frame < 120; frame++) {
+        await t.pump(const Duration(milliseconds: 16));
+        expect(find.text('You have Premium'), findsNothing, reason: '$frame');
+      }
+      await t.pumpAndSettle();
+      expect(find.text('You have Premium'), findsNothing);
+      expect(find.byType(PaywallScreen), findsNothing);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+    });
+
     testWidgets('cancelled_purchase_stays_quietly', (t) async {
       fake.nextPurchase = const PurchaseCancelled();
       await pumpPaywall(t);

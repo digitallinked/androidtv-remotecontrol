@@ -236,7 +236,8 @@ class _Active extends ConsumerWidget {
   }
 }
 
-/// "Confirming your purchase…" with a spinner, announced to screen readers.
+/// The purchase or restore in progress ("Confirming your purchase…" or
+/// "Restoring your purchases…") with a spinner, announced to screen readers.
 class _Busy extends StatelessWidget {
   const _Busy(this.busyWith);
 

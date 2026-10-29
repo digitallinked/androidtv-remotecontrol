@@ -1913,7 +1913,8 @@
   "paywallPurchasing": "Confirming your purchase…",
   "@paywallPurchasing": {
     "description": "In progress."
-  },  "paywallRestoring": "Restoring your purchases…",
+  },
+  "paywallRestoring": "Restoring your purchases…",
   "@paywallRestoring": {
     "description": "Shown while restoring earlier purchases."
   },

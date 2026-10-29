@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
@@ -159,9 +160,56 @@ void main() {
     expect(c.read(premiumProvider).isPremium, isTrue);
     expect(c.read(premiumProvider).lifetime, isTrue);
     expect(store.cachedPremium, (active: true, expiresAt: null));
-    expect(c.read(provider), isA<PaywallActive>());
+    // The screen closes itself on Purchased: the plans ride the exit.
+    expect(ready(c.read(provider)).busy, isFalse);
     expect(sink.eventNames, ['paywall_view', 'purchase_success']);
     expect(sink.events.last.params, {'product': 'premium_yearly'});
+  });
+
+  test('a_purchase_leaves_the_plans_for_the_close', () async {
+    fake.nextPurchase = const Purchased(EntitlementSnapshot(active: true));
+    final c = containerFor();
+    await settled(c);
+    expect(await c.read(provider.notifier).purchase(), isA<Purchased>());
+    await pumpEventQueue();
+
+    final state = c.read(provider);
+    expect(state, isA<PaywallReady>());
+    expect((state as PaywallReady).busy, isFalse);
+  });
+
+  test('a_throwing_analytics_log_never_leaves_the_paywall_busy', () async {
+    fake
+      ..nextPurchase = const Purchased(EntitlementSnapshot(active: true))
+      ..nextRestore = RestoreOutcome.restoredPremium;
+    final c = containerFor(
+      overrides: [appAnalyticsProvider.overrideWith(_ThrowingAnalytics.new)],
+    );
+    await settled(c);
+
+    try {
+      await c.read(provider.notifier).purchase();
+    } on Object {
+      // The log's error may reach the caller; the state is what matters.
+    }
+    await pumpEventQueue();
+    expect(ready(c.read(provider)).busy, isFalse);
+
+    try {
+      await c.read(provider.notifier).restore();
+    } on Object {
+      // As above.
+    }
+    await pumpEventQueue();
+    final state = c.read(provider);
+    expect(
+      switch (state) {
+        PaywallReady() => state.busy,
+        PaywallActive() => state.busyWith != null,
+        _ => false,
+      },
+      isFalse,
+    );
   });
 
   test('busy_while_the_store_is_open_and_a_second_tap_is_ignored', () async {
@@ -289,7 +337,8 @@ void main() {
 
     hold.complete();
     expect(await pending, isA<Purchased>());
-    expect(c.read(provider), isA<PaywallActive>());
+    // The plans stay for the close; the screen closes itself.
+    expect(ready(c.read(provider)).busy, isFalse);
     expect(sink.eventNames, ['paywall_view', 'purchase_success']);
   });
 
@@ -336,4 +385,13 @@ class _ThrowingService extends FakePurchaseService {
   @override
   Future<PurchaseOutcome> purchase(PremiumPlanKind kind) =>
       throw StateError('boom');
+}
+
+/// An analytics door whose `log` throws for the purchase and restore events.
+class _ThrowingAnalytics extends AppAnalytics {
+  @override
+  void log(AnalyticsEvent event) {
+    if (event.name == 'paywall_view') return super.log(event);
+    throw StateError('log failed');
+  }
 }

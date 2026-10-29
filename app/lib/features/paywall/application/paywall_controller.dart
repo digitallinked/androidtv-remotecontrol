@@ -194,16 +194,17 @@ class PaywallController extends _$PaywallController {
   }
 
   /// Marks the screen busy with [busy], or idle for `null`. Going idle also
-  /// catches the state up with Premium, which may have arrived meanwhile.
-  void _setBusy(PaywallBusy? busy) {
+  /// catches the state up with Premium, which may have arrived meanwhile,
+  /// unless [keepPlans]: after a purchase the screen closes itself, and the
+  /// plans, not "You have Premium", ride the exit transition.
+  void _setBusy(PaywallBusy? busy, {bool keepPlans = false}) {
     _busyWith = busy;
     if (!ref.mounted) return;
     final current = state;
     final premium = ref.read(premiumProvider);
     state = switch (current) {
-      PaywallReady() when busy == null && premium.isPremium => PaywallActive(
-        premium,
-      ),
+      PaywallReady() when busy == null && premium.isPremium && !keepPlans =>
+        PaywallActive(premium),
       PaywallReady() => current.withBusy(busy),
       PaywallActive() => PaywallActive(current.premium, busyWith: busy),
       _ => current,
@@ -225,18 +226,21 @@ class PaywallController extends _$PaywallController {
     final premium = ref.read(premiumProvider.notifier);
     final analytics = ref.read(appAnalyticsProvider.notifier);
     _setBusy(PaywallBusy.purchasing);
-    PurchaseOutcome outcome;
+    PurchaseOutcome outcome = const PurchaseFailed(PurchaseFailure.unknown);
     try {
-      outcome = await service.purchase(kind);
-    } on Object catch (error) {
-      developer.log('purchase failed', name: 'paywall', error: error);
-      outcome = const PurchaseFailed(PurchaseFailure.unknown);
+      try {
+        outcome = await service.purchase(kind);
+      } on Object catch (error) {
+        developer.log('purchase failed', name: 'paywall', error: error);
+        outcome = const PurchaseFailed(PurchaseFailure.unknown);
+      }
+      if (outcome case Purchased(:final entitlement)) {
+        await premium.apply(entitlement);
+        analytics.log(AnalyticsEvent.purchaseSuccess(kind.productId));
+      }
+    } finally {
+      _setBusy(null, keepPlans: outcome is Purchased);
     }
-    if (outcome case Purchased(:final entitlement)) {
-      await premium.apply(entitlement);
-      analytics.log(AnalyticsEvent.purchaseSuccess(kind.productId));
-    }
-    _setBusy(null);
     return outcome;
   }
 
@@ -252,15 +256,18 @@ class PaywallController extends _$PaywallController {
     _setBusy(PaywallBusy.restoring);
     RestoreOutcome outcome;
     try {
-      outcome = await service.restore();
-    } on Object catch (error) {
-      developer.log('restore failed', name: 'paywall', error: error);
-      outcome = RestoreOutcome.failed;
+      try {
+        outcome = await service.restore();
+      } on Object catch (error) {
+        developer.log('restore failed', name: 'paywall', error: error);
+        outcome = RestoreOutcome.failed;
+      }
+      if (outcome == RestoreOutcome.restoredPremium) {
+        analytics.log(const AnalyticsEvent.restoreSuccess());
+      }
+    } finally {
+      _setBusy(null);
     }
-    if (outcome == RestoreOutcome.restoredPremium) {
-      analytics.log(const AnalyticsEvent.restoreSuccess());
-    }
-    _setBusy(null);
     return outcome;
   }
 }

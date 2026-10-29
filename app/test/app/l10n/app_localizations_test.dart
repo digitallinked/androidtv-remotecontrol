@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -25,5 +26,17 @@ void main() {
     expect(l.paywallSavePercent(40), 'Save 40%');
     expect(l.faqPrivacyA, contains('Privacy choices'));
     expect(l.pageTitlePrivacyChoices, 'Privacy choices');
+  });
+
+  test('arb_has_no_lone_carriage_returns', () {
+    // A lone CR survives gen-l10n and the format check, and joins two lines
+    // into one for tools that only split on LF.
+    final bytes = File('lib/app/l10n/app_en.arb').readAsBytesSync();
+    final lone = <int>[
+      for (var i = 0; i < bytes.length; i++)
+        if (bytes[i] == 0x0D && (i + 1 >= bytes.length || bytes[i + 1] != 0x0A))
+          i,
+    ];
+    expect(lone, isEmpty, reason: 'byte offsets of lone CRs');
   });
 }
