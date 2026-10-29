@@ -3,8 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tv_remote/app/l10n/app_localizations.dart';
-import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -12,6 +10,7 @@ import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 
 import '../../../helpers/key_input_recorder.dart';
+import '../../../helpers/nonlinear_text_scaler.dart';
 import '../../../helpers/pump_app.dart';
 
 /// The five apps the quick row tests show.
@@ -28,36 +27,6 @@ const List<AppEntry> _sixApps = [
   ..._apps,
   AppEntry(package: 'com.example.sixth', name: 'Plex'),
 ];
-
-/// Android 14's non-linear 200% font curve (its font scale converter): small
-/// sizes double, large ones grow less, so a line is not `size * 2`.
-class _NonlinearTwoX extends TextScaler {
-  const _NonlinearTwoX();
-
-  static const List<double> _from = [8, 10, 12, 14, 18, 20, 24, 30, 100];
-  static const List<double> _to = [16, 20, 24, 26, 30, 34, 36, 38, 100];
-
-  @override
-  double scale(double fontSize) {
-    if (fontSize <= _from.first) return fontSize * 2;
-    for (var i = 1; i < _from.length; i++) {
-      if (fontSize <= _from[i]) {
-        final f = (fontSize - _from[i - 1]) / (_from[i] - _from[i - 1]);
-        return _to[i - 1] + f * (_to[i] - _to[i - 1]);
-      }
-    }
-    return fontSize;
-  }
-
-  @override
-  double get textScaleFactor => 2;
-
-  @override
-  bool operator ==(Object other) => other is _NonlinearTwoX;
-
-  @override
-  int get hashCode => 2;
-}
 
 void main() {
   late KeyInputRecorder rec;
@@ -279,46 +248,83 @@ void main() {
     expect(gap, greaterThanOrEqualTo(8));
   });
 
-  testWidgets('app_tiles_fit_under_a_non_linear_200_percent_font_curve', (
-    t,
-  ) async {
+  testWidgets('quick_tile_names_take_two_lines_at_200_percent', (t) async {
+    const name = 'Amazon Prime Video Kids';
+    await pumpBarWith(t, const [
+      AppEntry(package: 'a.b', name: name),
+      ..._apps,
+    ], textScale: 2);
+    expect(t.takeException(), isNull);
+    final context = t.element(find.byType(QuickAccessBar));
+    final width = QuickAppTile.widthOf(context);
+    expect(width, greaterThan(QuickAppTile.width));
+    expect(width, lessThanOrEqualTo(112));
+    expect(QuickAppTile.nameLinesOf(context), 2);
+    expect(t.widget<Text>(find.text(name)).maxLines, 2);
+    for (final tile in find.byType(QuickAppTile).evaluate()) {
+      expect(t.getSize(find.byWidget(tile.widget)).width, width);
+    }
+    final bar = t.getRect(find.byType(ListView));
+    expect(bar.height, QuickAppTile.heightOf(context));
+    // The long name takes both lines and stays inside the row.
+    final label = t.getRect(find.text(name));
+    expect(label.bottom, lessThanOrEqualTo(bar.bottom));
+    expect(label.height, greaterThan(40));
+  });
+
+  testWidgets('quick_tiles_are_unchanged_at_100_percent', (t) async {
+    await pumpBar(t, QuickAccessRow.apps, onAllApps: () {});
+    final context = t.element(find.byType(QuickAccessBar));
+    expect(QuickAppTile.widthOf(context), 72);
+    expect(QuickAppTile.nameLinesOf(context), 1);
+    expect(t.widget<Text>(find.text('Netflix')).maxLines, 1);
+    expect(t.widget<Text>(find.text('All apps')).maxLines, 1);
+    expect(t.getSize(find.byType(QuickAppTile).first).width, 72);
+    expect(
+      t.getSize(find.byType(ListView)).height,
+      QuickAppTile.squareSize + AppSpacing.xs + 16,
+    );
+  });
+
+  testWidgets('quick_tiles_fit_a_non_linear_text_scaler', (t) async {
     t.view
       ..physicalSize = const Size(320, 700)
       ..devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    await t.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: buildAppTheme(brightness: Brightness.light),
-        builder: (context, app) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const _NonlinearTwoX()),
-          child: app!,
-        ),
-        home: Scaffold(
-          body: QuickAccessBar(
-            variant: QuickAccessRow.apps,
-            input: rec,
-            apps: _apps,
-          ),
-        ),
+    const name = 'Amazon Prime Video Kids';
+    await pumpApp(
+      t,
+      QuickAccessBar(
+        variant: QuickAccessRow.apps,
+        input: rec,
+        apps: const [
+          AppEntry(package: 'a.b', name: name),
+          ..._apps,
+        ],
+        onAllApps: () {},
       ),
+      textScaler: const NonlinearTwoXScaler(),
     );
     expect(t.takeException(), isNull);
+    final context = t.element(find.byType(QuickAccessBar));
+    expect(QuickAppTile.nameLinesOf(context), 2);
+    final width = QuickAppTile.widthOf(context);
+    expect(width, greaterThan(72));
+    expect(width, lessThanOrEqualTo(112));
     final bar = t.getRect(find.byType(ListView));
-    final tile = find.byType(QuickAppTile).first;
-    final name = t.getRect(
-      find.descendant(of: tile, matching: find.text('Netflix')),
-    );
-    expect(name.bottom, lessThanOrEqualTo(bar.bottom));
-    // The bar is the tile's height: a square, a gap and the name's line.
+    expect(bar.height, QuickAppTile.heightOf(context));
+    for (final text in [name, 'Netflix', 'All apps']) {
+      final r = t.getRect(find.text(text));
+      expect(r.bottom, lessThanOrEqualTo(bar.bottom), reason: text);
+    }
+    // The bar is the tile's height: a square, a gap and the name's two lines.
     expect(
       bar.height,
       moreOrLessEquals(
-        QuickAppTile.squareSize + AppSpacing.xs + name.height,
-        epsilon: 1,
+        QuickAppTile.squareSize +
+            AppSpacing.xs +
+            t.getSize(find.text(name)).height,
+        epsilon: 2,
       ),
     );
   });

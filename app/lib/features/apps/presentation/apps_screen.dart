@@ -16,6 +16,7 @@ import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/domain/name_search.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
@@ -100,6 +101,22 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
 
   void _openEditApps() => unawaited(context.push(AppRoutes.manageApps));
 
+  /// The apps in [mine] whose name or package contains [needle], ranked by
+  /// [nameMatchRank] and in list order within a rank (Ruling P7-R10).
+  static List<AppEntry> _filter(List<AppEntry> mine, String needle) {
+    final ranked = [
+      for (final app in mine)
+        if (app.name.toLowerCase().contains(needle) ||
+            app.package.toLowerCase().contains(needle))
+          (app: app, rank: nameMatchRank(app.name, needle)),
+    ];
+    return [
+      for (var rank = 0; rank <= kNoNameMatch; rank++)
+        for (final hit in ranked)
+          if (hit.rank == rank) hit.app,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -124,14 +141,7 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
 
     final mine = shortcuts.value ?? const <AppEntry>[];
     final needle = query.toLowerCase();
-    final yourApps = searching
-        ? [
-            for (final app in mine)
-              if (app.name.toLowerCase().contains(needle) ||
-                  app.package.toLowerCase().contains(needle))
-                app,
-          ]
-        : mine;
+    final yourApps = searching ? _filter(mine, needle) : mine;
     final listed = {for (final app in mine) app.package};
     final moreApps = searching && catalogue != null
         ? [
@@ -147,7 +157,21 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
         shortcuts.hasError && !shortcuts.hasValue && !shortcuts.isLoading;
     final listEmpty = mine.isEmpty && !searching && !loadingList && !loadFailed;
 
+    // A state that fills the screen keeps the banner clearance inside it, so
+    // it doesn't scroll when it fits (Ruling P7-R11).
+    Widget fill(Widget child) => SliverFillRemaining(
+      hasScrollBody: false,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(
+          bottom: BannerSlot.clearance,
+        ),
+        child: child,
+      ),
+    );
+    final fillsScreen = loadingList || loadFailed || listEmpty;
+
     Widget slivers() => CustomScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       slivers: [
         SliverToBoxAdapter(
           child: StatusStrip(
@@ -162,22 +186,11 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
         ),
         SliverToBoxAdapter(child: _searchField(l10n)),
         if (loadingList)
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(child: CircularProgressIndicator()),
-          )
+          fill(const Center(child: CircularProgressIndicator()))
         else if (loadFailed)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: _LoadFailed(
-              onRetry: () => ref.invalidate(shortcutsProvider),
-            ),
-          )
+          fill(_LoadFailed(onRetry: () => ref.invalidate(shortcutsProvider)))
         else if (listEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: _EmptyList(onAdd: _openEditApps),
-          )
+          fill(_EmptyList(onAdd: _openEditApps))
         else ...[
           if (yourApps.isNotEmpty) ...[
             _Header(l10n.appsYourApps),
@@ -202,9 +215,10 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
             ),
         ],
         // The banner never covers the last row.
-        const SliverToBoxAdapter(
-          child: SizedBox(height: BannerSlot.clearance),
-        ),
+        if (!fillsScreen)
+          const SliverToBoxAdapter(
+            child: SizedBox(height: BannerSlot.clearance),
+          ),
       ],
     );
 

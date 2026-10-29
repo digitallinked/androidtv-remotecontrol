@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/domain/name_search.dart';
 
 /// The region marker for apps offered everywhere.
 const String kAllRegions = '*';
@@ -173,24 +174,29 @@ class AppCatalogue {
   }
 
   /// Apps whose name or package contains [query], ignoring case; none for a
-  /// blank query. Apps offered in [region] come first, each group keeping
+  /// blank query.
+  ///
+  /// They are ordered by [nameMatchRank] (a name that starts with the query
+  /// first, then a later word that does, then any other match; Ruling
+  /// P7-R10), then the apps offered in [region] before the others, then
   /// catalogue order.
   List<CatalogueApp> search(String query, {String? region}) {
     final needle = query.trim().toLowerCase();
     if (needle.isEmpty) {
       return const [];
     }
-    final hits = [
+    final ranked = [
       for (final a in apps)
         if (a.name.toLowerCase().contains(needle) ||
             a.package.toLowerCase().contains(needle))
-          a,
+          (app: a, rank: nameMatchRank(a.name, needle)),
     ];
     return [
-      for (final a in hits)
-        if (a.isAvailableIn(region)) a,
-      for (final a in hits)
-        if (!a.isAvailableIn(region)) a,
+      for (var rank = 0; rank <= kNoNameMatch; rank++)
+        for (final available in const [true, false])
+          for (final hit in ranked)
+            if (hit.rank == rank && hit.app.isAvailableIn(region) == available)
+              hit.app,
     ];
   }
 

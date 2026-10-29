@@ -125,7 +125,7 @@ class _AllAppsTile extends StatelessWidget {
       excludeSemantics: true,
       onTap: onTap,
       child: SizedBox(
-        width: QuickAppTile.width,
+        width: QuickAppTile.widthOf(context),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           spacing: AppSpacing.xs,
@@ -153,7 +153,7 @@ class _AllAppsTile extends StatelessWidget {
               onTap: onTap,
               child: Text(
                 label,
-                maxLines: 1,
+                maxLines: QuickAppTile.nameLinesOf(context),
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(

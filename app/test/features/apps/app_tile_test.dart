@@ -365,6 +365,58 @@ void main() {
     );
   });
 
+  testWidgets('now_on_tv_dot_has_a_contrasting_ring', (t) async {
+    for (final b in Brightness.values) {
+      final colors = b == Brightness.light ? AppColors.light : AppColors.dark;
+      for (final custom in <Color?>[null, ...kShortcutColors]) {
+        final reason = '${b.name} $custom';
+        await pumpApp(
+          t,
+          SizedBox(
+            width: 96,
+            height: 130,
+            child: AppTile(
+              app: AppEntry(
+                package: 'a.b',
+                name: 'Plex',
+                isCustom: custom != null,
+                customColor: custom,
+              ),
+              isCurrent: true,
+              onTap: () {},
+            ),
+          ),
+          brightness: b,
+        );
+        // The theme animates from the previous brightness.
+        await t.pumpAndSettle();
+        final fill = _fillOf(t);
+        expect(fill, custom ?? colors.surfaceRaised, reason: reason);
+        final dot = find.byType(NowOnTvDot);
+        expect(dot, findsOneWidget, reason: reason);
+        expect(
+          contrastRatio(t.widget<NowOnTvDot>(dot).ringColor, fill),
+          greaterThanOrEqualTo(4.5),
+          reason: reason,
+        );
+        expect(t.getSize(dot), const Size.square(NowOnTvDot.size));
+        expect(NowOnTvDot.size, 12);
+        final inner = find.byKey(const ValueKey('app_tile_current_dot'));
+        expect(
+          find.descendant(of: dot, matching: inner),
+          findsOneWidget,
+          reason: reason,
+        );
+        expect(t.getSize(inner), const Size(8, 8), reason: reason);
+        final decoration =
+            t.widget<Container>(inner).decoration! as BoxDecoration;
+        expect(decoration.color, colors.accent, reason: reason);
+        // The ring and the dot share a centre.
+        expect(t.getCenter(inner), t.getCenter(dot), reason: reason);
+      }
+    }
+  });
+
   testWidgets('pressing_a_tile_scales_its_square', (t) async {
     for (final reduceMotion in [false, true]) {
       var taps = 0;

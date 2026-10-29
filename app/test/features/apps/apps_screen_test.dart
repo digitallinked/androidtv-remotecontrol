@@ -354,6 +354,8 @@ void main() {
   });
 
   // Catalogue order puts Disney+ Hotstar first; in India JioHotstar leads.
+  // "startv" is in both packages and in neither name, so both have the same
+  // name rank and only the region orders them (Ruling P7-R10).
   for (final (region, expected) in [
     (null, ['Disney+ Hotstar', 'JioHotstar']),
     ('IN', ['JioHotstar', 'Disney+ Hotstar']),
@@ -373,13 +375,80 @@ void main() {
           deviceRegionProvider.overrideWithValue(region),
         ],
       );
-      await search(t, 'hotstar');
+      await search(t, 'startv');
       expect([
         for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
           tile.app.name,
       ], expected);
     });
   }
+
+  testWidgets('your_apps_filter_ranks_prefix_first', (t) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(const [
+            AppEntry(package: 'com.example.amazon', name: 'Amazon Prime Video'),
+            AppEntry(package: 'com.example.prime', name: 'Prime Video'),
+          ]),
+        ),
+      ],
+    );
+    await search(t, 'pr');
+    expect(find.text('Your apps'), findsOneWidget);
+    final names = [
+      for (final tile in t.widgetList<AppTile>(
+        find.descendant(
+          of: find.byType(SliverGrid).first,
+          matching: find.byType(AppTile),
+        ),
+      ))
+        tile.app.name,
+    ];
+    expect(names, ['Prime Video', 'Amazon Prime Video']);
+  });
+
+  testWidgets('empty_list_fits_without_scrolling', (t) async {
+    t.view
+      ..physicalSize = const Size(390, 800)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+      ],
+    );
+    expect(find.text('No apps yet'), findsOneWidget);
+    final scrollable = t.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(scrollable.position.maxScrollExtent, 0);
+  });
+
+  testWidgets('dragging_the_list_closes_the_keyboard', (t) async {
+    await pumpApps(t);
+    expect(
+      t
+          .widget<CustomScrollView>(find.byType(CustomScrollView))
+          .keyboardDismissBehavior,
+      ScrollViewKeyboardDismissBehavior.onDrag,
+    );
+  });
 
   testWidgets('edit_action_opens_edit_apps', (t) async {
     await pumpApps(t);
