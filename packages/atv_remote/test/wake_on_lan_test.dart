@@ -111,6 +111,9 @@ void main() {
       } on FormatException catch (e) {
         expect(e.source, isNull);
         expect(e.toString(), isNot(contains('GG')));
+        // Not even the valid part of it.
+        expect(e.toString(), isNot(contains('11:22:33')));
+        expect(e.message, isNot(contains('11:22:33')));
       }
     });
 

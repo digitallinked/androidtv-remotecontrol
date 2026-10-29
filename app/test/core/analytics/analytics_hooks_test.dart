@@ -151,6 +151,8 @@ void main() {
     expect(sink.events[2].params, isEmpty);
   });
 
+  // A fallback check: the real TvConnection always sets lastError when it
+  // leaves connected; this pins the `unknown` mapping only.
   test('connect_lost_without_a_reason_is_unknown', () async {
     await start();
     session.emit(_connected);

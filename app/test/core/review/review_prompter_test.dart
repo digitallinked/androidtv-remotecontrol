@@ -459,6 +459,53 @@ void main() {
       });
     });
 
+    test('pending_then_trouble_within_a_minute_does_not_ask', () {
+      timed((async) {
+        install(async, presses: 150);
+        final hold = Completer<void>();
+        final r = launch(
+          async,
+          consent: FakeConsentService(holdShowForm: hold),
+        );
+        connect(async, r);
+        // A drop and a reconnect while the consent form is still pending:
+        // connected again at T.
+        r.session.emit(_reconnecting);
+        settle(async);
+        r.session.emit(_connected);
+        settle(async);
+
+        async.elapse(const Duration(seconds: 10));
+        hold.complete();
+        settle(async);
+        expect(requester.requests, 0);
+        expect(reviewEvents(), isEmpty);
+      });
+    });
+
+    test('pending_then_quiet_for_a_minute_asks', () {
+      timed((async) {
+        install(async, presses: 150);
+        final hold = Completer<void>();
+        final r = launch(
+          async,
+          consent: FakeConsentService(holdShowForm: hold),
+        );
+        connect(async, r);
+        r.session.emit(_reconnecting);
+        settle(async);
+        r.session.emit(_connected);
+        settle(async);
+
+        // Still connected and a quiet minute has passed when consent ends.
+        async.elapse(const Duration(seconds: 61));
+        hold.complete();
+        settle(async);
+        expect(requester.requests, 1);
+        expect(reviewEvents(), hasLength(1));
+      });
+    });
+
     test('pending_then_form_shown_never_asks', () {
       timed((async) {
         install(async, presses: 150);
