@@ -1,13 +1,16 @@
+import 'dart:async';
+
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/types.dart';
 
 /// In-memory preferences whose every `set*` throws `StateError('write
-/// failed')` while [failing] is true. Reads always work.
+/// failed')` while [failing] is true, or never completes while [stalling]
+/// is true. Reads always work.
 ///
 /// A store keeps the platform it opened on, so open the store on this one
 /// (set `SharedPreferencesAsyncPlatform.instance` first), with [failing]
 /// false if the test writes its starting settings, and turn [failing] on
-/// once the screen is up.
+/// once the screen is up (or [stalling], for a platform write that hangs).
 base class FailingSharedPreferencesAsync
     extends InMemorySharedPreferencesAsync {
   /// Creates empty preferences that fail writes while [failing].
@@ -16,8 +19,20 @@ base class FailingSharedPreferencesAsync
   /// Whether writes throw.
   bool failing;
 
-  Future<bool> _write(Future<bool> Function() write) async {
-    if (failing) throw StateError('write failed');
+  /// Whether writes hang: their futures never complete.
+  bool stalling = false;
+
+  int _pendingWrites = 0;
+
+  /// How many writes are hanging.
+  int get pendingWrites => _pendingWrites;
+
+  Future<bool> _write(Future<bool> Function() write) {
+    if (failing) return Future.error(StateError('write failed'));
+    if (stalling) {
+      _pendingWrites++;
+      return Completer<bool>().future;
+    }
     return write();
   }
 

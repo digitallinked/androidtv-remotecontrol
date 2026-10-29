@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -135,7 +136,9 @@ void main() {
       );
       expect(find.text('Get started'), findsOneWidget);
       expect(find.text('Next'), findsNothing);
-      expect(find.text('Skip'), findsNothing);
+      // Skip keeps its row's height but can't be seen, tapped or read.
+      expect(find.text('Skip').hitTestable(), findsNothing);
+      expect(find.semantics.byLabel('Skip'), findsNothing);
       expect(find.text('Try demo'), findsOneWidget);
     } finally {
       handle.dispose();
@@ -230,27 +233,81 @@ void main() {
     }
   });
 
-  testWidgets('get_started_still_navigates_when_the_write_fails', (t) async {
-    // The store holds on to the preferences it opened on, so it opens on
-    // ones that start failing once the screen is up.
-    final prefs = FailingSharedPreferencesAsync(failing: false);
+  /// Opens the settings store on [prefs] with analytics allowed, and pumps
+  /// onboarding on it. The store holds on to the preferences it opened on,
+  /// so a test makes them fail or stall once the screen is up.
+  Future<SettingsStore> pumpOn(
+    WidgetTester t,
+    FailingSharedPreferencesAsync prefs,
+  ) async {
     SharedPreferencesAsyncPlatform.instance = prefs;
     final store = await SettingsStore.open();
     await store.setConsentRegion(ConsentRegion.notRequired);
     await pump(t, extra: [settingsStoreProvider.overrideWithValue(store)]);
-    prefs.failing = true;
+    return store;
+  }
+
+  /// Each way out of onboarding: how to take it, and the screen it opens.
+  final exits = <String, (Future<void> Function(WidgetTester), Type)>{
+    'skip': (
+      (t) async {
+        await t.tap(find.text('Skip'));
+        await t.pumpAndSettle();
+      },
+      DiscoveryScreen,
+    ),
+    'get_started': (
+      (t) async {
+        await toLastCard(t);
+        await t.tap(find.text('Get started'));
+        await t.pumpAndSettle();
+      },
+      DiscoveryScreen,
+    ),
+    'try_demo': (
+      (t) async {
+        await t.tap(find.text('Try demo'));
+        await settleDemo(t);
+      },
+      RemoteScreen,
+    ),
+  };
+
+  for (final MapEntry(key: name, value: (leave, screen)) in exits.entries) {
+    testWidgets('${name}_still_navigates_when_the_write_fails', (t) async {
+      final prefs = FailingSharedPreferencesAsync(failing: false);
+      await pumpOn(t, prefs);
+      prefs.failing = true;
+
+      await leave(t);
+
+      expect(t.takeException(), isNull);
+      expect(find.byType(screen), findsOneWidget);
+      final error = crashes.errors.single;
+      expect(error.reason, 'onboarding write');
+      expect(error.fatal, isFalse);
+      expect(error.error, isA<StateError>());
+      expect(sink.eventNames, ['onboarding_complete']);
+    });
+  }
+
+  testWidgets('get_started_does_not_wait_for_a_stalled_write', (t) async {
+    final prefs = FailingSharedPreferencesAsync(failing: false);
+    final store = await pumpOn(t, prefs);
+    prefs.stalling = true;
 
     await toLastCard(t);
     await t.tap(find.text('Get started'));
     await t.pumpAndSettle();
 
+    // The write never completed, and the user is on the TV list anyway.
+    expect(prefs.pendingWrites, 1);
     expect(t.takeException(), isNull);
     expect(find.byType(DiscoveryScreen), findsOneWidget);
-    final error = crashes.errors.single;
-    expect(error.reason, 'onboarding write');
-    expect(error.fatal, isFalse);
-    expect(error.error, isA<StateError>());
     expect(sink.eventNames, ['onboarding_complete']);
+    expect(crashes.errors, isEmpty);
+    // The store's cache already reads the flag as set.
+    expect(store.onboardingComplete, isTrue);
   });
 
   testWidgets('a_double_tap_finishes_once', (t) async {
@@ -266,6 +323,71 @@ void main() {
       sink.screens.where((s) => s == AppRouteNames.discover),
       hasLength(1),
     );
+  });
+
+  testWidgets('a_quick_second_next_never_finishes_onboarding', (t) async {
+    await pump(t);
+    await next(t);
+    await t.tap(find.text('Next'));
+    await t.pump();
+    // Past halfway the indicator and the button already show card 3 while
+    // the page is still moving.
+    await t.pump(const Duration(milliseconds: 120));
+    expect(find.text('Get started'), findsOneWidget);
+    expect(t.hasRunningAnimations, isTrue);
+    await t.tap(find.text('Get started'));
+    await t.pumpAndSettle();
+
+    expect(find.text(_appsTitle), findsOneWidget);
+    expect(find.byType(DiscoveryScreen), findsNothing);
+    expect(sink.eventNames, isEmpty);
+  });
+
+  testWidgets('back_on_the_first_card_leaves_onboarding', (t) async {
+    final calls = <String>[];
+    t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        calls.add(call.method);
+        return null;
+      },
+    );
+    addTearDown(
+      () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await pump(t);
+    await next(t);
+
+    await t.binding.handlePopRoute();
+    await t.pumpAndSettle();
+    expect(find.text(_connectTitle), findsOneWidget);
+    expect(calls, isNot(contains('SystemNavigator.pop')));
+
+    await t.binding.handlePopRoute();
+    await t.pumpAndSettle();
+    expect(calls, contains('SystemNavigator.pop'));
+  });
+
+  testWidgets('the_skip_row_keeps_its_height_on_every_card', (t) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    // iOS accessibility sizes reach about 3x; there Skip is over 48 dp.
+    await pump(t, textScaler: const TextScaler.linear(3));
+    // Only the Skip row sits above the cards, so their top edge is its
+    // height. (The bottom edge can move: in the test font "Get started"
+    // wraps at this size where "Next" doesn't.)
+    final tops = <double>[];
+    for (var card = 0; card < 3; card++) {
+      tops.add(t.getTopLeft(find.byType(PageView)).dy);
+      if (card < 2) await next(t);
+    }
+    expect(tops.toSet(), hasLength(1), reason: '$tops');
+    expect(tops.first, greaterThan(48));
   });
 
   testWidgets('connect_card_says_no_location_is_needed', (t) async {
@@ -427,7 +549,11 @@ void main() {
         // its last line can each be brought into view.
         final position = scrollable.position..jumpTo(0);
         await t.pump();
-        expect(t.getRect(finder).top, greaterThanOrEqualTo(viewport.top));
+        expect(
+          t.getRect(finder).top,
+          greaterThanOrEqualTo(viewport.top),
+          reason: why,
+        );
         position.jumpTo(position.maxScrollExtent);
         await t.pump();
         expect(

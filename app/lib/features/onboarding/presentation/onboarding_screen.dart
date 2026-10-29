@@ -27,8 +27,9 @@ enum _Exit { skip, getStarted, demo }
 /// Skip and Get started open the TV list; Try demo opens the remote on the
 /// simulated TV. On iOS, Skip and Get started first explain the Local
 /// Network prompt that discovery is about to trigger (Ruling P7-R3).
-/// Finishing never waits on the stored flag being written: a failed write
-/// is reported, and onboarding simply shows again on the next launch.
+/// Finishing never waits on the stored flag being written: the write is
+/// started and the screen moves on. A failed write is reported, and
+/// onboarding simply shows again on the next launch.
 class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates the onboarding screen.
   const OnboardingScreen({super.key});
@@ -45,6 +46,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _finishing = false;
 
   bool get _isLast => _index == _cards.length - 1;
+
+  /// Whether the cards are between two pages (a swipe or Next's
+  /// animation). The indicator and the primary button switch halfway, so a
+  /// tap then could finish onboarding by accident.
+  bool get _paging {
+    final page = _pages.hasClients ? _pages.page : null;
+    return page != null && (page - page.round()).abs() > 0.001;
+  }
+
+  /// Next, or Get started on the last card; ignored while paging.
+  void _primary() {
+    if (_paging) return;
+    if (_isLast) {
+      unawaited(_finish(_Exit.getStarted));
+    } else {
+      _goTo(_index + 1);
+    }
+  }
 
   @override
   void dispose() {
@@ -68,8 +87,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   /// Leaves onboarding by [exit]: the iOS explainer (not for the demo), then
-  /// the stored flag, then the analytics event, then the navigation. A
-  /// second call while one runs does nothing.
+  /// the stored flag's write is started, then the analytics event, then the
+  /// navigation. A second call while one runs does nothing.
   Future<void> _finish(_Exit exit) async {
     if (_finishing) return;
     _finishing = true;
@@ -85,14 +104,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (exit != _Exit.demo && defaultTargetPlatform == TargetPlatform.iOS) {
       await showLocalNetworkExplainer(context);
     }
-    try {
-      await settings.update((s) => s.setOnboardingComplete(true));
-    } on Object catch (error, stack) {
-      // Onboarding shows again on the next launch; that beats a dead button.
-      unawaited(
-        safeRecordError(reporter, error, stack, reason: 'onboarding write'),
-      );
+    // Not awaited: a platform write that hangs must not hold the user here.
+    // The store's cache reads the flag as set at once.
+    Future<void> write() async {
+      try {
+        await settings.update((s) => s.setOnboardingComplete(true));
+      } on Object catch (error, stack) {
+        // Onboarding shows again on the next launch; that beats a dead
+        // button.
+        await safeRecordError(
+          reporter,
+          error,
+          stack,
+          reason: 'onboarding write',
+        );
+      }
     }
+
+    unawaited(write());
     analytics.log(const AnalyticsEvent.onboardingComplete());
     if (exit == _Exit.demo) {
       target.startDemo();
@@ -126,12 +155,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   child: Align(
                     alignment: AlignmentDirectional.centerEnd,
-                    child: _isLast
-                        ? null
-                        : TextButton(
-                            onPressed: () => unawaited(_finish(_Exit.skip)),
-                            child: Text(l10n.onboardingSkip),
-                          ),
+                    // On the last card Skip is hidden but keeps its size, so
+                    // the cards don't change height at large text.
+                    child: Visibility(
+                      visible: !_isLast,
+                      maintainSize: true,
+                      maintainAnimation: true,
+                      maintainState: true,
+                      child: TextButton(
+                        onPressed: () => unawaited(_finish(_Exit.skip)),
+                        child: Text(l10n.onboardingSkip),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -159,9 +194,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _isLast
-                            ? () => unawaited(_finish(_Exit.getStarted))
-                            : () => _goTo(_index + 1),
+                        onPressed: _primary,
                         child: Text(
                           _isLast
                               ? l10n.onboardingGetStarted
