@@ -6,7 +6,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../app"
 
 echo '== masters =='
-flutter test --update-goldens --tags golden test/branding
+# No tag filter: the untagged brand_mark_test.dart writes brand_icon.svg.
+flutter test --update-goldens test/branding
 
 echo '== launcher icons =='
 flutter pub run flutter_launcher_icons -f flutter_launcher_icons.yaml

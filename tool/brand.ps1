@@ -12,16 +12,17 @@ function Invoke-Step {
 Push-Location (Join-Path (Join-Path $PSScriptRoot '..') 'app')
 try {
     Write-Host '== masters =='
-    Invoke-Step flutter @('test', '--update-goldens', '--tags', 'golden', 'test/branding')
+    # No tag filter: the untagged brand_mark_test.dart writes brand_icon.svg.
+    Invoke-Step flutter @('test', '--update-goldens', 'test/branding')
 
     Write-Host '== launcher icons =='
     Invoke-Step flutter @('pub', 'run', 'flutter_launcher_icons', '-f', 'flutter_launcher_icons.yaml')
     # flutter_launcher_icons 0.14.4 sets every build setting whose name contains
     # ASSETCATALOG to the icon name, including this boolean; put it back.
     $pbx = (Resolve-Path 'ios/Runner.xcodeproj/project.pbxproj').Path
-    $text = [IO.File]::ReadAllText($pbx)
-    $text = $text.Replace('ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;', 'ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;')
-    [IO.File]::WriteAllText($pbx, $text)
+    $orig = [IO.File]::ReadAllText($pbx)
+    $text = $orig.Replace('ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;', 'ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;')
+    if ($text -cne $orig) { [IO.File]::WriteAllText($pbx, $text) }
 
     Write-Host '== native splash =='
     Invoke-Step flutter @('pub', 'run', 'flutter_native_splash:create', '--path=flutter_native_splash.yaml')

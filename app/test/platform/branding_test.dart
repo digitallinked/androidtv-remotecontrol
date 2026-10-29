@@ -140,23 +140,32 @@ void main() {
   });
 
   test('icon_and_splash_configs_use_only_our_masters', () {
-    final pathValue = RegExp(
-      r'^\s*(?:image\w*|adaptive_icon_(?:foreground|monochrome))\s*:\s*"?([^"\s#]+)"?',
+    // Every `key: value` line. Whatever the key (image, image_dark, branding,
+    // branding_dark, background_image, adaptive_icon_foreground, ...), a value
+    // that looks like a file path must be one of our masters.
+    final entry = RegExp(
+      r'^[ \t]*([A-Za-z0-9_]+)[ \t]*:[ \t]*(.*?)[ \t]*(?:#.*)?$',
       multiLine: true,
     );
-    var count = 0;
+    final looksLikePath = RegExp(r'[/\\]|\.[A-Za-z0-9]{2,4}$');
+    final paths = <String>[];
     for (final f in [
       'flutter_launcher_icons.yaml',
       'flutter_native_splash.yaml',
     ]) {
-      for (final m in pathValue.allMatches(read(f))) {
-        count++;
-        expect(m.group(1), startsWith('assets/branding/'), reason: f);
+      for (final m in entry.allMatches(read(f))) {
+        // Quotes are dropped; a quoted colour such as "#3D5AFE" is cut at
+        // its `#` by the comment group and never looks like a path.
+        final value = m.group(2)!.replaceAll(RegExp(r'''^["']|["']$'''), '');
+        if (!looksLikePath.hasMatch(value)) continue;
+        paths.add(value);
+        expect(value, startsWith('assets/branding/'), reason: '$f ${m[1]}');
+        expect(File(value).existsSync(), isTrue, reason: '$f ${m[1]}');
       }
     }
     // image_path, adaptive foreground and monochrome; the splash image and
     // image_dark, and the Android 12 image and image_dark.
-    expect(count, 7);
+    expect(paths, hasLength(7));
   });
 
   test('ios_marketing_icon_has_no_alpha', () {

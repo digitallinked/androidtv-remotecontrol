@@ -143,3 +143,10 @@ class BrandMarkPainter extends CustomPainter {
       oldDelegate.background != background ||
       oldDelegate.zoom != zoom;
 }
+
+/// The painter of the `icon_foreground` master: the adaptive foreground and
+/// the monochrome layer. The golden test renders it and the safe-zone test
+/// scans it, so both always see the same zoom.
+const BrandMarkPainter iconForegroundPainter = BrandMarkPainter(
+  color: Color(0xFFFFFFFF),
+);

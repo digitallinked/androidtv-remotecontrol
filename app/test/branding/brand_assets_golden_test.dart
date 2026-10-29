@@ -1,9 +1,6 @@
 @Tags(['golden'])
 library;
 
-import 'dart:io';
-import 'dart:math' as math;
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -62,7 +59,7 @@ void main() {
       t,
       name: 'icon_foreground',
       px: 1024,
-      painter: const BrandMarkPainter(color: _white),
+      painter: iconForegroundPainter,
     );
   });
 
@@ -113,49 +110,5 @@ void main() {
       px: 1152,
       painter: const BrandMarkPainter(color: _accentDark),
     );
-  });
-
-  test('brand_svg_matches_the_painter_geometry', () {
-    final file = File('assets/branding/brand_icon.svg');
-    final svg = BrandMarkGeometry.svg(
-      color: '#FFFFFF',
-      background: '#3D5AFE',
-      zoom: 1.3,
-    );
-    if (autoUpdateGoldenFiles) {
-      file.writeAsStringSync(svg);
-    } else {
-      expect(file.readAsStringSync(), svg);
-    }
-  });
-
-  test('the_mark_stays_inside_the_adaptive_safe_zone', () {
-    const c = Offset(54, 54);
-    final path = BrandMarkGeometry.path(1, c);
-    final b = path.getBounds();
-    // The bounding box fits the 66-unit square around the safe circle.
-    for (final corner in [
-      b.topLeft,
-      b.topRight,
-      b.bottomLeft,
-      b.bottomRight,
-    ]) {
-      expect((corner.dx - c.dx).abs(), lessThanOrEqualTo(33));
-      expect((corner.dy - c.dy).abs(), lessThanOrEqualTo(33));
-    }
-    // And every filled point lies inside the safe circle (radius 33).
-    var filled = 0;
-    var farthest = 0.0;
-    for (var x = b.left; x <= b.right; x += 0.5) {
-      for (var y = b.top; y <= b.bottom; y += 0.5) {
-        final p = Offset(x, y);
-        if (path.contains(p)) {
-          filled++;
-          farthest = math.max(farthest, (p - c).distance);
-        }
-      }
-    }
-    expect(filled, greaterThan(0));
-    expect(farthest, lessThanOrEqualTo(33));
   });
 }
