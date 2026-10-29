@@ -4,6 +4,73 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #45 — 2026-10-29 — Interface↔adapter import pairs are the accepted cycle shape
+- Each SDK has an interface file that holds the provider and builds its adapter. The adapter imports the interface. The pairs are `consent_service`↔`ump_consent_service`, `tracking_service`↔`att_tracking_service`, `ads_service`↔`google_mobile_ads_sdk`, `app_config`↔`firebase_remote_config_source`, `purchase_service`↔`revenuecat_purchase_service`/`unavailable_purchase_service` and `review_prompter`↔`in_app_review_requester`.
+- `test/platform/vendor_imports_test.dart` keeps each SDK import in exactly one adapter file, so vendor types never leak.
+- **Revisit:** if a pair grows a third member or the cycle check becomes a CI gate.
+
+### #44 — 2026-10-29 — Phase 6 pins
+- firebase_core 5.1.0, firebase_analytics 13.0.1, firebase_crashlytics 6.0.1, firebase_remote_config 7.0.1;
+- google_mobile_ads 9.2.0, app_tracking_transparency 2.0.7, purchases_flutter 10.18.1;
+- in_app_review 2.0.12, device_info_plus 13.3.0.
+- Gradle plugins: google-services 4.5.0 and firebase-crashlytics 3.0.8 (AGP 9.0.1). All pins are exact.
+
+### #43 — 2026-10-29 — Review prompt (P6-R13, P6-C11, P6-C12)
+- `in_app_review` is asked at most once per install, and only when all of these hold:
+  - cumulative key presses ≥ `review_prompt_min_key_presses` (Remote Config, default 150);
+  - launch count ≥ 2;
+  - not the demo;
+  - a non-demo session has just become `connected` at the start of a session (a recovery doesn't count);
+  - there was no connection trouble or not-connected notice in the previous 60 s.
+- The press count is kept in memory and written every 10 presses, on pause and on dispose.
+- `ReviewRequester.request()` returns `bool`. The flag and the `review_prompt_shown` event are written only on `true`, so a failed request marks nothing.
+- No prompt on a launch where the UMP consent form is pending or was shown (`ConsentResult.formShown`). While consent is pending, the prompt is deferred and every condition is re-checked once consent is gathered.
+- The launch count is written, not awaited, after the initial route resolves, so "Try again" never counts twice.
+
+### #42 — 2026-10-29 — Premium, paywall and colour styles (P6-R10–R12, P6-C6, P6-C7, P6-C10)
+- RevenueCat Premium. The entitlement is cached, so offline Premium users never see an ad flash. `known` settles within 5 s.
+- The paywall is one scroll view with plans in the order monthly → yearly → lifetime. Restore shows "Restoring your purchases…". After a purchase the plans stay on screen through the close (no "You have Premium" flash), and the screen is never left busy.
+- Four colour styles (standard plus three Premium) with the P6-R12 hex values, pinned by tests. A free user tapping a locked style opens the paywall. The real `App` applies the style only for Premium users.
+- The Ember light accent is 4.39:1 on `surfaceRaised` and is kept. Standard light is already 4.42:1 there, and both pass 3:1 for icons and large text. Phase 8 audits any accent body text across all styles.
+
+### #41 — 2026-10-29 — Consent, ATT and ads (P6-R8, P6-R9, P6-C8, P6-C9, P6-C13)
+- Ads wait for the consent step, which only the remote screen starts. `AdsController.ready()` waits for consent and never shows the UMP form. The form step has no timeout, so a hanging form means no ads that launch.
+- The ATT decision comes before the SDK starts. An undetermined or unreadable ATT status means no SDK start.
+- The pre-prompt is shown at most once per install. If iOS never showed its question (it shows nothing while the app is inactive), iOS is asked again on the next banner visit, with no second pre-prompt.
+- "Ad privacy choices" is shown whenever UMP requires it, Premium included.
+- Banners only on `/apps` and the `/settings` hub, labelled "Advertisement", with a 48 dp clearance from navigation controls. A banner SDK that throws leaves an empty slot. Interstitials are paced by Remote Config and are off by default.
+- A malformed prod AdMob app id fails the Gradle build.
+- Don't create the UMP IDFA explainer message, because our pre-prompt owns the ATT flow. Publish the UMP GDPR message before Firebase is enabled in prod.
+- **Revisit:** whether a cached-Premium user should skip the UMP form (Phase 7 ruling).
+
+### #40 — 2026-10-29 — Remote Config (P6-R7)
+- Fetched values apply from the next launch. Config is activated within 5 s at startup, then sealed.
+- Ranges: interstitial interval 60 s–7 d; review presses 1–10000 (default 150). `paywall_variant` must be a safe token, checked with the analytics guard's string rules.
+
+### #39 — 2026-10-29 — Privacy: analytics, crash reports, buffering (P6-R4–R6)
+- Choices are tri-state. Effective sharing = `choice ?? (UMP region == notRequired)`. UMP ad consent never counts as analytics consent, and Analytics `ad_*` consent is always denied.
+- Events wait in a 50-event buffer while undecided. They are flushed on yes and dropped on no. Sends wait until the collection switch has reached the platform.
+- Debug builds never send crash reports.
+- Every crash report goes through the scrubber. Its rule order is documented in `crash_scrubber.dart`: PEM, UUID, base64, URIs, then the whole TV segment of `/pair/` and `/devices/` route paths (everything `Uri.encodeComponent` can produce, so a bracketed name never partly leaks), then saved names, mDNS hosts, `manual:` entries, email, MAC, IPv6 (valid forms plus a four-group fallback) and IPv4, hex runs, and pairing codes. Over-scrubbing is accepted; a partial name is not.
+- The analytics guard allows only the exact P6-R6 event catalogue. No TV names, IPs, MACs, codes, typed text, custom packages or route paths are ever sent. Turning analytics off disables native collection even if the consent call fails.
+- Remote Config fetches regardless of the choices: the kill switches need it, and it carries only the Firebase Installation ID.
+
+### #38 — 2026-10-29 — Phase 6 config and startup order (P6-R2, P6-R3)
+- 9 env keys come from `--dart-define-from-file=env/<flavor>.json`. Only `env/example.json` is committed.
+- Native Firebase config is git-ignored per flavor, and the Gradle plugins apply only when that flavor's file exists. AdMob app ids come from `app/android/secrets.properties` and `app/ios/Flutter/Secrets.xcconfig` (both git-ignored), with test-id fallbacks for non-prod builds.
+- iOS floor 15.0 (Firebase iOS SDK 13); minSdk 24.
+- Startup order:
+  1. Firebase (bounded at 4.5 s)
+  2. Remote Config activate (5 s, then sealed)
+  3. the first frame
+  4. UMP silent update and RevenueCat, in parallel
+  5. the consent form on `/remote`
+  6. the ATT pre-prompt and system prompt
+  7. the ads SDK
+  8. the banner
+
+  `StartupGate` is bounded at 20 s and retries on the next tap after a failed build. Premium is known before any ad.
+
 ### #37 — 2026-10-27 — Phase 5 package pins
 - url_launcher 6.3.3 and package_info_plus 10.2.2 (both behind injectable providers: `linkOpenerProvider`, `appInfoProvider`). Android manifest `<queries>` adds SENDTO `mailto` and VIEW `https`; no iOS `LSApplicationQueriesSchemes` needed.
 - `pumpRouterApp` supplies safe defaults for every platform-backed provider (flavor, app info, link opener, screen services, haptics, …); new platform providers get a default there.
