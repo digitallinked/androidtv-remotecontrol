@@ -4,6 +4,30 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 6 gotchas (services & monetisation)
+- **Firebase and Analytics:**
+  - Native Crashlytics initialises from its config file whatever `FIREBASE_ENABLED` says, and its collection override persists across launches.
+  - **(unverified)** Firebase Analytics doesn't keep events logged while collection is off. `setAnalyticsCollectionEnabled` persists natively and overrides the manifest default.
+- **Riverpod:**
+  - `ref.listen` inside a notifier that nothing listens to never fires; hold a `container.listen`.
+  - App-wide hooks keep `connectionStateProvider` alive and build `remoteSessionProvider` at startup. App-level tests that read analytics must override `remoteSessionProvider`, or they open the real drift DB in Documents.
+  - Auto-dispose "actions" objects must take their dependencies in the constructor. A held instance outlives its `Ref`, and a lazy `_ref.read` after an await throws (Edit TV dropped the MAC when the name and MAC were saved together).
+- **Crash scrubber:** saved-term scrubbing must run before prefix-consuming rules. A `%XX` escape ends in a hex digit, which defeats `\p{L}\p{N}` lookarounds.
+- **AdMob, UMP and ATT:**
+  - In `google_mobile_ads` 9.2.0, consent forms await dismissal before they complete. `InterstitialAd.load` returns before `onAdLoaded`, so read the ad only after the gate.
+  - **(unverified)** iOS ATT `requestTrackingAuthorization` shows nothing and returns `notDetermined` while the app isn't active.
+  - **(unverified)** UMP reports `notRequired` in the EEA when no GDPR message is published, which would turn analytics on by default. Publish the message before enabling Firebase in prod, and check with `UMP_DEBUG_GEOGRAPHY=eea`.
+  - Debug builds with real prod ad ids need registered test devices.
+  - The `in_app_review` 2.0.12 Android `requestReview` can fail with "In-App Review API unavailable" after `isAvailable()` said yes. Treat that as not asked.
+- **Navigation:**
+  - Navigate from a stable ancestor (router/navigator) captured before an await, not from a context that may unmount.
+  - go_router puts `GoRoute.name` in `route.settings.name`, and the route observer also sees parent pages.
+- **Windows:** normalise line endings before scripted edits. A lone `\r` survives gen-l10n and check.ps1.
+- **Widget tests:**
+  - `addTearDown(handle.dispose)` for a `SemanticsHandle` runs after Flutter's handle check; dispose it in try/finally.
+  - Socket tests on a loaded machine need setup budgets of about 20 s around TLS handshakes; keep the asserted timings tight. Drive the fake TV's pings by hand rather than polling a ~75 ms state window.
+- Source: Tasks 6.1–6.11 and the Phase 6 final review.
+
 ### Phase 5 gotchas (apps, devices, settings)
 - Reading `.future` of an autoDispose provider with no listener throws "disposed during loading state". Hold a `container.listen(...)` subscription across the await.
 - A `ref.watch(x.future)` that is awaited only after another await needs `.ignore()`, or its failure surfaces as an unhandled error.

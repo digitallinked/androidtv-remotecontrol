@@ -2161,7 +2161,7 @@ abstract class AppLocalizations {
   /// FAQ answer.
   ///
   /// In en, this message translates to:
-  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app doesn\'t send them to us.'**
+  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.'**
   String get faqPrivacyA;
 
   /// About page.
@@ -2229,6 +2229,498 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No email app found. Write to us at {email}.'**
   String feedbackNoEmailApp(String email);
+
+  /// Hub Premium row, free user.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads and extra colour styles'**
+  String get settingsPremiumSubtitle;
+
+  /// Hub Premium row, Premium user.
+  ///
+  /// In en, this message translates to:
+  /// **'You have Premium. Thank you!'**
+  String get settingsPremiumActiveSubtitle;
+
+  /// Page title and hub row.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy choices'**
+  String get pageTitlePrivacyChoices;
+
+  /// Hub row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage statistics, crash reports and ads'**
+  String get settingsPrivacyChoicesSubtitle;
+
+  /// About row, dev flavor only.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a test crash report'**
+  String get aboutTestCrash;
+
+  /// Snackbar after the dev test crash.
+  ///
+  /// In en, this message translates to:
+  /// **'Test crash report sent. It shows in Crashlytics within a few minutes.'**
+  String get aboutTestCrashSent;
+
+  /// Page intro.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what the app may share. Your TV\'s name, network address and MAC address never leave this phone.'**
+  String get privacyIntro;
+
+  /// Section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Help improve the app'**
+  String get privacySectionImprove;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Share usage statistics'**
+  String get privacyUsageTitle;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous counts of the screens and features you use. Never what you type or anything about your TV.'**
+  String get privacyUsageSubtitle;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Share crash reports'**
+  String get privacyCrashTitle;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent when something goes wrong, so it can be fixed. Names, addresses and codes are removed first.'**
+  String get privacyCrashSubtitle;
+
+  /// Note when Firebase is off.
+  ///
+  /// In en, this message translates to:
+  /// **'This build of the app doesn\'t send usage statistics or crash reports.'**
+  String get privacyServicesOff;
+
+  /// Section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Ads'**
+  String get privacySectionAds;
+
+  /// Ads section text, free user.
+  ///
+  /// In en, this message translates to:
+  /// **'The free app shows a banner ad at the bottom of the Apps and Settings screens only.'**
+  String get privacyAdsInfo;
+
+  /// Ads section text, Premium user.
+  ///
+  /// In en, this message translates to:
+  /// **'You have Premium, so the app shows no ads.'**
+  String get privacyAdsPremium;
+
+  /// Row → consent options form.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad privacy choices'**
+  String get privacyAdChoices;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how ads are picked for you.'**
+  String get privacyAdChoicesSubtitle;
+
+  /// Snackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open ad privacy choices. Check your internet connection and try again.'**
+  String get privacyAdChoicesFailed;
+
+  /// Row → paywall (source privacy).
+  ///
+  /// In en, this message translates to:
+  /// **'Remove ads with Premium'**
+  String get privacyRemoveAds;
+
+  /// IOS status row.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad tracking'**
+  String get privacyTrackingTitle;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed. You can change this in your iPhone\'s Settings.'**
+  String get privacyTrackingAllowed;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed. You can change this in your iPhone\'s Settings.'**
+  String get privacyTrackingDenied;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not chosen yet. The app asks before it first shows an ad.'**
+  String get privacyTrackingNotDetermined;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turned off on this iPhone.'**
+  String get privacyTrackingRestricted;
+
+  /// Semantics hint of the tracking row.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens your phone\'s Settings'**
+  String get privacyOpensSettings;
+
+  /// Dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'About ads in this app'**
+  String get trackingPrepromptTitle;
+
+  /// Dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'The free app shows a small ad at the bottom of this screen. Next, your iPhone asks whether the app may use your activity in other apps to choose ads. You see the same number of ads whatever you choose, and the remote works the same.'**
+  String get trackingPrepromptBody;
+
+  /// The only action.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get trackingPrepromptContinue;
+
+  /// Label band above the banner; its semantics label.
+  ///
+  /// In en, this message translates to:
+  /// **'Advertisement'**
+  String get adLabel;
+
+  /// Headline.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the remote yours'**
+  String get paywallHeadline;
+
+  /// Text under the headline.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium removes ads, adds colour styles and supports the app\'s development.'**
+  String get paywallSubhead;
+
+  /// Benefit title.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads'**
+  String get paywallBenefitNoAds;
+
+  /// Benefit text.
+  ///
+  /// In en, this message translates to:
+  /// **'No banner on the Apps and Settings screens.'**
+  String get paywallBenefitNoAdsBody;
+
+  /// Benefit title.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour styles'**
+  String get paywallBenefitStyles;
+
+  /// Benefit text.
+  ///
+  /// In en, this message translates to:
+  /// **'Ocean, Ember and Midnight, in light and dark.'**
+  String get paywallBenefitStylesBody;
+
+  /// Honest note.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.'**
+  String get paywallFreeForever;
+
+  /// Radio group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a plan'**
+  String get paywallChoosePlan;
+
+  /// Plan title.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get paywallPlanMonthly;
+
+  /// Plan title.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get paywallPlanYearly;
+
+  /// Plan title.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime'**
+  String get paywallPlanLifetime;
+
+  /// Plan price.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} per month'**
+  String paywallPricePerMonth(String price);
+
+  /// Plan price.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} per year'**
+  String paywallPricePerYear(String price);
+
+  /// Lifetime price.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}, one payment'**
+  String paywallPriceOnce(String price);
+
+  /// Monthly terms.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews every month until you cancel.'**
+  String get paywallRenewsMonthly;
+
+  /// Yearly terms.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews every year until you cancel.'**
+  String get paywallRenewsYearly;
+
+  /// Lifetime terms.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay once. No subscription.'**
+  String get paywallLifetimeTerms;
+
+  /// Badge on yearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Best value'**
+  String get paywallBestValue;
+
+  /// Badge text (`percent`: `int`).
+  ///
+  /// In en, this message translates to:
+  /// **'Save {percent}%'**
+  String paywallSavePercent(int percent);
+
+  /// Purchase button.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get paywallContinue;
+
+  /// Restore button.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get paywallRestore;
+
+  /// Billing terms, Android.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, and you keep Premium until the end of the period you paid for.'**
+  String get paywallTermsAndroid;
+
+  /// Billing terms, iOS.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is charged to your Apple ID. Subscriptions renew automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel them in your Apple ID settings.'**
+  String get paywallTermsIos;
+
+  /// Loading state.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading plans…'**
+  String get paywallLoading;
+
+  /// No offering.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium isn\'t available right now'**
+  String get paywallUnavailableTitle;
+
+  /// No offering (button reuses `commonRetry`).
+  ///
+  /// In en, this message translates to:
+  /// **'Check your internet connection and try again.'**
+  String get paywallUnavailableBody;
+
+  /// In progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming your purchase…'**
+  String get paywallPurchasing;
+
+  /// Shown while restoring earlier purchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring your purchases…'**
+  String get paywallRestoring;
+
+  /// Snackbar after a purchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Premium. Thank you!'**
+  String get paywallWelcome;
+
+  /// Pending purchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Your purchase is waiting for approval. Premium starts as soon as it\'s complete.'**
+  String get paywallPending;
+
+  /// Unknown or store failure.
+  ///
+  /// In en, this message translates to:
+  /// **'The purchase didn\'t go through. Try again.'**
+  String get paywallFailed;
+
+  /// Network failure.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the store. Check your internet connection and try again.'**
+  String get paywallNetworkError;
+
+  /// Purchases disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases aren\'t allowed on this phone.'**
+  String get paywallNotAllowed;
+
+  /// Already owned.
+  ///
+  /// In en, this message translates to:
+  /// **'You already own Premium. Tap Restore purchases to get it back.'**
+  String get paywallAlreadyOwned;
+
+  /// Restore success.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases restored. You have Premium.'**
+  String get paywallRestored;
+
+  /// Restore found nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchases found for this account.'**
+  String get paywallNothingToRestore;
+
+  /// Restore failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t restore purchases. Try again.'**
+  String get paywallRestoreFailed;
+
+  /// Already-Premium state.
+  ///
+  /// In en, this message translates to:
+  /// **'You have Premium'**
+  String get paywallActiveTitle;
+
+  /// Already-Premium state.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for supporting the app. There are no ads, and every colour style is yours.'**
+  String get paywallActiveBody;
+
+  /// Already Premium, lifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Premium: it never expires.'**
+  String get paywallActiveLifetime;
+
+  /// Opens the store's subscription page.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage subscription'**
+  String get paywallManageSubscription;
+
+  /// Group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour style'**
+  String get appearanceStyle;
+
+  /// Style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get appearanceStyleStandard;
+
+  /// Style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Ocean'**
+  String get appearanceStyleOcean;
+
+  /// Style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Ember'**
+  String get appearanceStyleEmber;
+
+  /// Style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Midnight'**
+  String get appearanceStyleMidnight;
+
+  /// Subtitle of a locked style.
+  ///
+  /// In en, this message translates to:
+  /// **'Included with Premium'**
+  String get appearanceStyleLocked;
+
+  /// Note while dynamic colour is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours from wallpaper are on, so colour styles don\'t show.'**
+  String get appearanceStyleWallpaperOn;
+
+  /// Blocking screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Update required'**
+  String get updateRequiredTitle;
+
+  /// Blocking screen text.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of the app is too old to keep working reliably. Update to the latest version to continue.'**
+  String get updateRequiredBody;
+
+  /// Opens the store listing.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateRequiredAction;
+
+  /// Snackbar when the link fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the store. Update the app from your phone\'s app store.'**
+  String get updateRequiredFailed;
 }
 
 class _AppLocalizationsDelegate

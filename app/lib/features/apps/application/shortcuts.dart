@@ -7,6 +7,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/apps/data/app_usage_repository.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
+import 'package:tv_remote/features/apps/data/shortcut_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/recommendations.dart';
 
@@ -55,42 +56,47 @@ Stream<List<AppEntry>> shortcuts(Ref ref) async* {
 
 /// Changes to the shortcut list. Storage errors propagate to the caller,
 /// which shows the "couldn't save" message.
+///
+/// A caller may hold these actions across an await after the provider has
+/// been disposed (nothing has to watch it), so everything a call needs is
+/// taken when the actions are created, not read from the provider's `Ref`
+/// at call time.
 class ShortcutActions {
-  /// Creates the actions over [_ref].
-  ShortcutActions(this._ref);
+  /// Creates the actions over [ref].
+  ShortcutActions(Ref ref)
+    : _repository = ref.read(shortcutRepositoryProvider),
+      _container = ref.container;
 
-  final Ref _ref;
+  final ShortcutRepository _repository;
+
+  /// Where the catalogue and the region are read for a reset.
+  final ProviderContainer _container;
 
   /// Appends [app]; `false` when its package is already on the list.
-  Future<bool> add(AppEntry app) =>
-      _ref.read(shortcutRepositoryProvider).add(app);
+  Future<bool> add(AppEntry app) => _repository.add(app);
 
   /// Changes the shortcut with [app]'s package.
-  Future<void> update(AppEntry app) =>
-      _ref.read(shortcutRepositoryProvider).update(app);
+  Future<void> update(AppEntry app) => _repository.update(app);
 
   /// Removes the shortcut with [package].
-  Future<void> remove(String package) =>
-      _ref.read(shortcutRepositoryProvider).remove(package);
+  Future<void> remove(String package) => _repository.remove(package);
 
   /// Puts [packages] first, in that order.
-  Future<void> reorder(List<String> packages) =>
-      _ref.read(shortcutRepositoryProvider).reorder(packages);
+  Future<void> reorder(List<String> packages) => _repository.reorder(packages);
 
   /// Replaces the whole list with [apps].
-  Future<void> replaceAll(List<AppEntry> apps) =>
-      _ref.read(shortcutRepositoryProvider).replaceAll(apps);
+  Future<void> replaceAll(List<AppEntry> apps) => _repository.replaceAll(apps);
 
   /// Replaces the list with the default row of the phone's current region.
   Future<void> resetToDefaults() async {
-    // Everything is taken before the first await: this provider may be
-    // disposed meanwhile. The region is re-read because it is kept alive.
-    final repository = _ref.read(shortcutRepositoryProvider);
-    final catalogueFuture = _ref.read(catalogueProvider.future);
-    _ref.invalidate(deviceRegionProvider);
-    final region = _ref.read(deviceRegionProvider);
+    // Everything is read before the first await. The region is re-read
+    // because it is kept alive.
+    final container = _container;
+    final catalogueFuture = container.read(catalogueProvider.future);
+    container.invalidate(deviceRegionProvider);
+    final region = container.read(deviceRegionProvider);
     final catalogue = await catalogueFuture;
-    await repository.replaceAll(catalogue.defaultShortcutsFor(region));
+    await _repository.replaceAll(catalogue.defaultShortcutsFor(region));
   }
 }
 

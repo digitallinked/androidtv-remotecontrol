@@ -5,7 +5,8 @@ import 'package:tv_remote/app/theme/app_theme.dart';
 
 /// Pumps [child] inside a themed [MaterialApp].
 ///
-/// [textScale] and [disableAnimations] override the ambient `MediaQuery`.
+/// [textScale] and [disableAnimations] override the ambient `MediaQuery`. A
+/// [textScaler] replaces the linear [textScale], for non-linear curves.
 /// With [wrapInScaffold] the child is centred in a `Scaffold`; otherwise it is
 /// the app's `home` as given.
 Future<void> pumpApp(
@@ -13,6 +14,7 @@ Future<void> pumpApp(
   Widget child, {
   Brightness brightness = Brightness.light,
   double textScale = 1,
+  TextScaler? textScaler,
   bool disableAnimations = false,
   bool wrapInScaffold = true,
 }) {
@@ -24,7 +26,7 @@ Future<void> pumpApp(
       theme: buildAppTheme(brightness: brightness),
       builder: (context, app) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(textScale),
+          textScaler: textScaler ?? TextScaler.linear(textScale),
           disableAnimations: disableAnimations,
         ),
         child: app!,

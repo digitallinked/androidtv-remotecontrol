@@ -1,0 +1,222 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:atv_remote/atv_remote.dart';
+import 'package:clock/clock.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/ads/ads_service.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
+import 'package:tv_remote/core/ads/tracking_service.dart';
+import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
+
+part 'interstitials.g.dart';
+
+/// Where an interstitial may be shown (Ruling P6-R9). There is one place.
+enum InterstitialTrigger {
+  /// The user left the Settings hub.
+  leftSettings,
+}
+
+/// How long after a connection loss or a "Not connected" notice no
+/// interstitial shows.
+const Duration interstitialQuietAfterTrouble = Duration(seconds: 60);
+
+/// The launch on which interstitials start; the first launch has none.
+const int interstitialFirstLaunch = 2;
+
+/// How long a loaded interstitial may wait. An older one is dropped: the SDK
+/// expires interstitials after an hour, and an expired ad can't be shown.
+const Duration interstitialMaxAge = Duration(hours: 1);
+
+/// Interstitial pacing (Ruling P6-R9). They are off unless Remote Config
+/// turns them on.
+///
+/// One ad is kept loaded in advance, so [maybeShow] never waits for a load:
+/// an ad that isn't ready is simply not shown. Nothing here throws.
+///
+/// The app starts this at launch and keeps it listened to (`App` watches
+/// it), so it hears about trouble from the start: Riverpod may pause the
+/// listeners inside a provider that nothing listens to.
+@Riverpod(keepAlive: true)
+class Interstitials extends _$Interstitials {
+  LoadedInterstitial? _loaded;
+  DateTime? _loadedAt;
+  Future<void>? _loading;
+  DateTime? _lastTroubleAt;
+  bool _wasConnected = false;
+
+  @override
+  void build() {
+    ref
+      ..onDispose(_drop)
+      ..listen(connectionStateProvider, (_, next) {
+        final status = next.value?.status;
+        if (next.isLoading || status == null) return;
+        if (status == ConnectionStatus.connected) {
+          _wasConnected = true;
+        } else if (_wasConnected) {
+          // Any way out of "connected" counts, the app's own disconnects
+          // included: the cost of a missed ad is nothing.
+          _wasConnected = false;
+          _lastTroubleAt = clock.now();
+        }
+      })
+      ..listen(notConnectedNoticesProvider, (_, _) {
+        _lastTroubleAt = clock.now();
+      })
+      // Premium and consent arrive after start; each may allow the preload.
+      // So does the SDK starting, which on iOS only happens once the tracking
+      // question has been answered.
+      // Premium arriving drops the ad that is waiting.
+      ..listen(premiumProvider, (_, next) {
+        if (next.isPremium) {
+          _drop();
+        } else {
+          unawaited(_preload());
+        }
+      })
+      ..listen(consentControllerProvider, (_, _) => unawaited(_preload()))
+      ..listen(adsControllerProvider, (_, started) {
+        if (started) unawaited(_preload());
+      });
+    scheduleMicrotask(() {
+      if (ref.mounted) unawaited(_preload());
+    });
+  }
+
+  /// Releases the loaded ad, if any.
+  void _drop() {
+    _loaded?.dispose();
+    _loaded = null;
+    _loadedAt = null;
+  }
+
+  /// Whether an interstitial may load now: the same rules as showing one,
+  /// except the ones about time and trouble.
+  ///
+  /// It does not start the consent form: the preload waits until the form
+  /// step has finished.
+  Future<bool> _mayLoad() async {
+    if (!ref.read(appConfigProvider).adsInterstitialEnabled) return false;
+    if (ref.read(adUnitIdsProvider).interstitial == null) return false;
+    final premium = ref.read(premiumProvider);
+    if (!premium.known || premium.isPremium) return false;
+    final store = ref.read(settingsStoreProvider);
+    if (store.launchCount < interstitialFirstLaunch) return false;
+    final consent = ref.read(consentControllerProvider);
+    if (!consent.gathered || !consent.canRequestAds) return false;
+    // Before the system question has been answered, no ad request may go out
+    // (Ruling P6-R8): the banner makes the decision first.
+    final tracking = ref.read(trackingServiceProvider);
+    return await tracking.status() != TrackingStatus.notDetermined;
+  }
+
+  /// Loads the next ad if none is loaded or loading. Never throws.
+  Future<void> _preload() {
+    if (_loaded != null) return Future.value();
+    return _loading ??= _load().whenComplete(() => _loading = null);
+  }
+
+  Future<void> _load() async {
+    try {
+      if (!await _mayLoad() || !ref.mounted) return;
+      final unitId = ref.read(adUnitIdsProvider).interstitial;
+      final sdk = ref.read(adsSdkProvider);
+      if (unitId == null) return;
+      if (!await ref.read(adsControllerProvider.notifier).ready()) return;
+      if (!ref.mounted) return;
+      final ad = await sdk.loadInterstitial(unitId);
+      if (ad == null) return;
+      // Premium may have arrived, or the container gone, while it loaded.
+      if (!ref.mounted ||
+          _loaded != null ||
+          ref.read(premiumProvider).isPremium) {
+        ad.dispose();
+        return;
+      }
+      _loaded = ad;
+      _loadedAt = clock.now();
+    } on Object catch (error) {
+      developer.log('interstitial preload failed', name: 'ads', error: error);
+    }
+  }
+
+  /// Shows the loaded interstitial for [trigger] if every rule holds, and
+  /// returns whether it did. It never waits for a load: with no ad ready it
+  /// returns `false` at once and starts loading the next one.
+  ///
+  /// The rules: Remote Config has them on; the user is known not to have
+  /// Premium and is not in the demo; ads may be requested; this is at least
+  /// the second launch; the minimum interval since the last one has passed
+  /// (it survives restarts); and no connection loss or "Not connected"
+  /// notice happened in the last 60 s.
+  Future<bool> maybeShow(InterstitialTrigger trigger) async {
+    try {
+      final config = ref.read(appConfigProvider);
+      final premium = ref.read(premiumProvider);
+      final store = ref.read(settingsStoreProvider);
+      final now = clock.now();
+      final last = store.interstitialLastShownAt;
+      final trouble = _lastTroubleAt;
+      final isDemo = ref.read(remoteSessionProvider).value?.isDemo ?? false;
+      var ad = _loaded;
+
+      if (!config.adsInterstitialEnabled) return false;
+      if (!premium.known || premium.isPremium || isDemo) return false;
+      if (!ref.read(consentControllerProvider).canRequestAds) return false;
+      if (store.launchCount < interstitialFirstLaunch) return false;
+      if (last != null &&
+          now.difference(last) < config.adsInterstitialMinInterval) {
+        return false;
+      }
+      if (trouble != null &&
+          now.difference(trouble) < interstitialQuietAfterTrouble) {
+        return false;
+      }
+      final loadedAt = _loadedAt;
+      if (ad != null &&
+          loadedAt != null &&
+          now.difference(loadedAt) > interstitialMaxAge) {
+        _drop();
+        ad = null;
+      }
+      if (ad == null) {
+        unawaited(_preload());
+        return false;
+      }
+
+      _loaded = null;
+      _loadedAt = null;
+      try {
+        await store.setInterstitialLastShownAt(now);
+      } on Object {
+        ad.dispose();
+        rethrow;
+      }
+      final shown = await ad.show();
+      ad.dispose();
+      // An ad that could not be shown doesn't use up the interval.
+      if (!shown) {
+        try {
+          await store.setInterstitialLastShownAt(last);
+        } on Object catch (error) {
+          // Not worth losing the next ad over.
+          developer.log(
+            'could not restore the time',
+            name: 'ads',
+            error: error,
+          );
+        }
+      }
+      if (ref.mounted) unawaited(_preload());
+      return shown;
+    } on Object catch (error) {
+      developer.log('interstitial failed', name: 'ads', error: error);
+      return false;
+    }
+  }
+}

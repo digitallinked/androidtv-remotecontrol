@@ -76,7 +76,7 @@ final class PairingControllerProvider
   }
 }
 
-String _$pairingControllerHash() => r'c8f892ec58ea6aa41cb8b852be20a843809c51f3';
+String _$pairingControllerHash() => r'f51214ee03e0fbd7bcd2cac4e9b6d957672a019f';
 
 /// Pairs this phone with one TV while the pairing screen is open.
 ///

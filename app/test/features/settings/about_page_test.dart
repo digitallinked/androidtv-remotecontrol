@@ -4,14 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 
 const _info = AppInfo(
   appName: 'Remotely Dev',
   version: '1.0.0',
   buildNumber: '1',
-  os: 'android',
+  os: 'Android',
   osVersion: '12',
 );
 
@@ -22,6 +24,8 @@ void main() {
     Size size = const Size(390, 844),
     double textScale = 1,
     Brightness brightness = Brightness.light,
+    Flavor flavor = Flavor.dev,
+    CrashReporter? reporter,
   }) async {
     t.view
       ..physicalSize = size
@@ -33,8 +37,9 @@ void main() {
       textScale: textScale,
       brightness: brightness,
       overrides: [
-        flavorProvider.overrideWithValue(Flavor.dev),
+        flavorProvider.overrideWithValue(flavor),
         appInfo ?? appInfoProvider.overrideWith((ref) async => _info),
+        if (reporter != null) crashReporterProvider.overrideWithValue(reporter),
       ],
     );
   }
@@ -69,6 +74,47 @@ void main() {
 
     expect(find.byType(LicensePage), findsOneWidget);
     expect(find.text('Remotely Dev'), findsWidgets);
+  });
+
+  testWidgets('dev_build_offers_a_test_crash_report', (t) async {
+    final reporter = RecordingCrashReporter();
+    await pumpAbout(t, reporter: reporter);
+
+    await t.tap(find.text('Send a test crash report'));
+    await t.pumpAndSettle();
+
+    final sent = reporter.errors.single;
+    expect(sent.error, isA<StateError>());
+    expect(
+      (sent.error as StateError).message,
+      'Test crash report from a dev build',
+    );
+    expect(sent.fatal, isFalse);
+    expect(
+      find.text(
+        'Test crash report sent. It shows in Crashlytics within a few minutes.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('prod_build_has_no_test_crash_row', (t) async {
+    final reporter = RecordingCrashReporter();
+    await pumpAbout(t, flavor: Flavor.prod, reporter: reporter);
+
+    expect(find.text('Send a test crash report'), findsNothing);
+    expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
+    expect(reporter.errors, isEmpty);
+  });
+
+  testWidgets('a_failing_reporter_still_shows_the_snackbar', (t) async {
+    await pumpAbout(t, reporter: RecordingCrashReporter(throwOnRecord: true));
+
+    await t.tap(find.text('Send a test crash report'));
+    await t.pumpAndSettle();
+
+    expect(find.textContaining('Test crash report sent'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 
   for (final b in Brightness.values) {

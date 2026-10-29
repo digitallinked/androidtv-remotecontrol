@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
@@ -15,7 +16,6 @@ import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
-import 'package:tv_remote/features/remote/application/remote_actions.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../../helpers/fake_remote_session.dart';

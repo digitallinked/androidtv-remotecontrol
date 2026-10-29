@@ -19,6 +19,11 @@ import 'support/unloadable_identity.dart';
 
 const Duration _wait = Duration(seconds: 5);
 
+/// The budget for setup that is not under test (pairing, connecting and the
+/// handshake with the in-process fake TV). A loaded machine can stall these
+/// for seconds; tests of timing use their own explicit durations.
+const Duration _setup = Duration(seconds: 20);
+
 const DeviceInfo _deviceInfo = DeviceInfo(
   model: 'Test Phone',
   vendor: 'Test Vendor',
@@ -52,7 +57,7 @@ Future<void> _pair(FakeTvServer tv, ClientIdentity identity) async {
     host: InternetAddress.loopbackIPv4.address,
     port: tv.pairingPort,
     identity: identity,
-    timeout: _wait,
+    timeout: _setup,
   );
   addTearDown(pairing.close);
   await pairing.start(clientName: 'test phone');
@@ -64,7 +69,7 @@ RemoteClient _client(
   ClientIdentity? identity,
   int? port,
   Duration idleTimeout = const Duration(seconds: 15),
-  Duration connectTimeout = const Duration(seconds: 5),
+  Duration connectTimeout = _setup,
   SocketConnector? connector,
 }) {
   final client = RemoteClient(
@@ -89,8 +94,8 @@ Future<(FakeTvServer, RemoteClient)> _ready({
   final tv = await _startTv(sendPings: sendPings, pingInterval: pingInterval);
   await _pair(tv, _paired);
   final client = _client(tv);
-  await client.connect().timeout(_wait);
-  await tv.waitForActiveClient();
+  await client.connect().timeout(_setup);
+  await tv.waitForActiveClient(timeout: _setup);
   return (tv, client);
 }
 
@@ -129,12 +134,12 @@ void main() {
       client.events.listen(seen.add);
       expect(client.isReady, isFalse);
 
-      await client.connect().timeout(_wait);
+      await client.connect().timeout(_setup);
 
       expect(client.isReady, isTrue);
       await _eventually(() => seen.isNotEmpty);
       expect(seen, [const RemoteReady()]);
-      await tv.waitForActiveClient();
+      await tv.waitForActiveClient(timeout: _setup);
       final configure = tv.receivedConfigure!;
       expect(configure.code1, 622);
       expect(configure.deviceInfo.model, 'Test Phone');
@@ -153,10 +158,10 @@ void main() {
       final seen = <RemoteEvent>[];
       client.events.listen(seen.add);
 
-      await client.connect().timeout(_wait);
+      await client.connect().timeout(_setup);
 
       expect(client.isReady, isTrue);
-      await tv.waitForActiveClient();
+      await tv.waitForActiveClient(timeout: _setup);
       // The Configure that followed SetActive is answered too.
       await _eventually(() => tv.configureReplyCount == 1);
       expect(tv.setActiveReplyCount, 1);
@@ -209,7 +214,7 @@ void main() {
       final client = _client(tv);
       final first4 = client.events.take(4).toList();
 
-      await client.connect().timeout(_wait);
+      await client.connect().timeout(_setup);
 
       expect(await first4.timeout(_wait), [
         const RemoteReady(),
@@ -231,7 +236,7 @@ void main() {
       final client = _client(tv);
       expect(client.serverPublicKeySha256, isNull);
 
-      await client.connect().timeout(_wait);
+      await client.connect().timeout(_setup);
 
       final parts = fakeTvIdentity.publicParts;
       final expected = SHA256Digest().process(
@@ -246,7 +251,7 @@ void main() {
       final client = _client(tv, identity: _trustedButUnpaired);
 
       await expectLater(
-        client.connect().timeout(_wait),
+        client.connect().timeout(_setup),
         throwsA(_connectFailure(RemoteCloseReason.certificateRejected)),
       );
       expect(client.isReady, isFalse);
@@ -257,7 +262,7 @@ void main() {
       final client = _client(tv, identity: _untrusted);
 
       await expectLater(
-        client.connect().timeout(_wait),
+        client.connect().timeout(_setup),
         throwsA(_connectFailure(RemoteCloseReason.certificateRejected)),
       );
     });
@@ -270,7 +275,7 @@ void main() {
         final all = client.events.toList();
 
         await expectLater(
-          client.connect().timeout(_wait),
+          client.connect().timeout(_setup),
           throwsA(isA<RemoteConnectException>()),
         );
 
@@ -288,7 +293,7 @@ void main() {
       final client = _client(tv, port: freePort);
 
       await expectLater(
-        client.connect().timeout(_wait),
+        client.connect().timeout(_setup),
         throwsA(_connectFailure(RemoteCloseReason.networkError)),
       );
     });
@@ -342,7 +347,7 @@ void main() {
       final all = client.events.toList();
 
       await expectLater(
-        client.connect().timeout(_wait),
+        client.connect().timeout(_setup),
         throwsA(_connectFailure(RemoteCloseReason.networkError)),
       );
 
@@ -394,7 +399,7 @@ void main() {
         tv,
         idleTimeout: const Duration(milliseconds: 300),
       );
-      await client.connect().timeout(_wait);
+      await client.connect().timeout(_setup);
       final closed = _first<RemoteClosed>(client);
 
       expect((await closed).reason, RemoteCloseReason.pingTimeout);
@@ -407,7 +412,7 @@ void main() {
       final tv = await _startTv(sendPings: true);
       await _pair(tv, _paired);
       final client = _client(tv, idleTimeout: const Duration(seconds: 1));
-      await client.connect().timeout(_wait);
+      await client.connect().timeout(_setup);
       final seen = <RemoteEvent>[];
       client.events.listen(seen.add);
 

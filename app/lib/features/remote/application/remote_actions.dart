@@ -4,7 +4,12 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/analytics/analytics_guard.dart'
+    show AnalyticsPolicyError;
+import 'package:tv_remote/core/analytics/analytics_hooks.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
+import 'package:tv_remote/core/review/review_prompter.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
@@ -89,20 +94,26 @@ final class TextSent extends RemoteActionEvent {
 /// Receives each command `RemoteActions` sent.
 typedef RemoteActionListener = void Function(RemoteActionEvent event);
 
-/// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-/// and the review prompter's press counter.
+/// Where sent commands are reported: a fan-out to everything that follows
+/// what the user does on the remote. That is analytics (key presses
+/// sampled, app launches by catalogue package; typed text is never logged,
+/// not even its length) and the review prompter, which counts every key
+/// press (the demo's are ignored there).
 @Riverpod(keepAlive: true)
-RemoteActionListener remoteActionListener(Ref ref) => (_) {};
-
-/// Counts the presses that were refused because the TV isn't connected; the
-/// remote screen shows the "Not connected" snackbar for each bump.
-@Riverpod(keepAlive: true)
-class NotConnectedNotices extends _$NotConnectedNotices {
-  @override
-  int build() => 0;
-
-  /// Records one more refused command.
-  void notify() => state++;
+RemoteActionListener remoteActionListener(Ref ref) {
+  final analytics = ref.watch(analyticsHooksProvider);
+  final review = ref.watch(reviewPrompterProvider.notifier);
+  return (event) {
+    switch (event) {
+      case KeySent(:final keyCode):
+        review.countPress();
+        analytics.keySent(keyCode);
+      case AppLaunched(:final package):
+        analytics.appLaunched(package);
+      case TextSent():
+        break;
+    }
+  };
 }
 
 /// Every press of a remote control goes through here: it sends the key,
@@ -269,8 +280,21 @@ class RemoteActions implements RemoteInput {
   void _report(RemoteActionEvent event) {
     try {
       _onSent?.call(event);
-    } on Object {
-      // Analytics and counters are best effort.
+      // A policy error is an Error on purpose (a programming mistake).
+      // ignore: avoid_catching_errors
+    } on AnalyticsPolicyError {
+      // A bad analytics event is a programming error: debug builds (and so
+      // the tests) must see it. A release build already dropped the event.
+      if (kDebugMode) rethrow;
+    } on Object catch (error) {
+      // Analytics and counters are best effort. The event's fields and the
+      // error's message are left out: they could hold what the user typed.
+      if (kDebugMode) {
+        debugPrint(
+          'RemoteActions listener failed on ${event.runtimeType}: '
+          '${error.runtimeType}',
+        );
+      }
     }
   }
 

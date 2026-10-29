@@ -19,6 +19,11 @@ import 'support/unloadable_identity.dart';
 
 const Duration _wait = Duration(seconds: 5);
 
+/// The budget for setup that is not under test (the TLS connect and the
+/// handshake with the in-process fake TV). A loaded machine can stall these
+/// for seconds; tests of timing use their own explicit durations.
+const Duration _setup = Duration(seconds: 20);
+
 late ClientIdentity _identity;
 
 Matcher _pairingFailure(PairingFailure reason) =>
@@ -112,7 +117,7 @@ class _ScriptedTv {
   int get port => _server.port;
 
   /// The first message a client sent.
-  Future<OuterMessage> get firstMessage => _first.future.timeout(_wait);
+  Future<OuterMessage> get firstMessage => _first.future.timeout(_setup);
 
   void _accept(SecureSocket socket) {
     _sockets.add(socket);
@@ -187,13 +192,13 @@ void main() {
 
     test('pairs_successfully', () async {
       final tv = await _startTv();
-      final client = _client(tv.pairingPort);
+      final client = _client(tv.pairingPort, timeout: _setup);
 
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       final code = tv.displayedCode;
       expect(code, isNotNull);
 
-      await client.submitCode(code!).timeout(_wait);
+      await client.submitCode(code!).timeout(_setup);
 
       // The TV now accepts this identity on the control port.
       final socket = await SecureSocket.connect(
@@ -201,10 +206,10 @@ void main() {
         tv.remotePort,
         context: securityContextFor(_identity),
         onBadCertificate: (_) => true,
-      ).timeout(_wait);
+      ).timeout(_setup);
       addTearDown(socket.destroy);
       final decoder = FrameDecoder();
-      final first = await socket.expand(decoder.add).first.timeout(_wait);
+      final first = await socket.expand(decoder.add).first.timeout(_setup);
       expect(RemoteMessage.fromBuffer(first).hasRemoteConfigure(), isTrue);
     });
 
@@ -476,10 +481,9 @@ void main() {
 
     test('sends_pairing_request_first', () async {
       final tv = await _ScriptedTv.start((message, socket) {});
-      final client = _client(
-        tv.port,
-        timeout: const Duration(milliseconds: 500),
-      );
+      // A roomy budget: the TLS handshake with the fake must not time out
+      // before the request is sent. The test ends the pairing by closing it.
+      final client = _client(tv.port, timeout: _setup);
       final started = client.start(clientName: 'Living room phone');
       // The TV never answers; only the request matters here.
       unawaited(started.then<void>((_) {}, onError: (Object _) {}));

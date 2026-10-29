@@ -8,14 +8,20 @@ part of 'remote_actions.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-/// and the review prompter's press counter.
+/// Where sent commands are reported: a fan-out to everything that follows
+/// what the user does on the remote. That is analytics (key presses
+/// sampled, app launches by catalogue package; typed text is never logged,
+/// not even its length) and the review prompter, which counts every key
+/// press (the demo's are ignored there).
 
 @ProviderFor(remoteActionListener)
 final remoteActionListenerProvider = RemoteActionListenerProvider._();
 
-/// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-/// and the review prompter's press counter.
+/// Where sent commands are reported: a fan-out to everything that follows
+/// what the user does on the remote. That is analytics (key presses
+/// sampled, app launches by catalogue package; typed text is never logged,
+/// not even its length) and the review prompter, which counts every key
+/// press (the demo's are ignored there).
 
 final class RemoteActionListenerProvider
     extends
@@ -25,8 +31,11 @@ final class RemoteActionListenerProvider
           RemoteActionListener
         >
     with $Provider<RemoteActionListener> {
-  /// Where sent commands are reported. A no-op until Phase 6 attaches analytics
-  /// and the review prompter's press counter.
+  /// Where sent commands are reported: a fan-out to everything that follows
+  /// what the user does on the remote. That is analytics (key presses
+  /// sampled, app launches by catalogue package; typed text is never logged,
+  /// not even its length) and the review prompter, which counts every key
+  /// press (the demo's are ignored there).
   RemoteActionListenerProvider._()
     : super(
         from: null,
@@ -62,70 +71,7 @@ final class RemoteActionListenerProvider
 }
 
 String _$remoteActionListenerHash() =>
-    r'f019182a81525fb3dd37557362ca2c928db6e161';
-
-/// Counts the presses that were refused because the TV isn't connected; the
-/// remote screen shows the "Not connected" snackbar for each bump.
-
-@ProviderFor(NotConnectedNotices)
-final notConnectedNoticesProvider = NotConnectedNoticesProvider._();
-
-/// Counts the presses that were refused because the TV isn't connected; the
-/// remote screen shows the "Not connected" snackbar for each bump.
-final class NotConnectedNoticesProvider
-    extends $NotifierProvider<NotConnectedNotices, int> {
-  /// Counts the presses that were refused because the TV isn't connected; the
-  /// remote screen shows the "Not connected" snackbar for each bump.
-  NotConnectedNoticesProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'notConnectedNoticesProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$notConnectedNoticesHash();
-
-  @$internal
-  @override
-  NotConnectedNotices create() => NotConnectedNotices();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$notConnectedNoticesHash() =>
-    r'1b134254f600c54dc20b75a140ab41930396c085';
-
-/// Counts the presses that were refused because the TV isn't connected; the
-/// remote screen shows the "Not connected" snackbar for each bump.
-
-abstract class _$NotConnectedNotices extends $Notifier<int> {
-  int build();
-  @$mustCallSuper
-  @override
-  WhenComplete runBuild() {
-    final ref = this.ref as $Ref<int, int>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
-              Object?,
-              Object?
-            >;
-    return element.handleCreate(ref, build);
-  }
-}
+    r'80d252a7795f86a07e7829e470e397ce24c4d34b';
 
 /// The [RemoteActions] for the active TV and the current settings.
 ///

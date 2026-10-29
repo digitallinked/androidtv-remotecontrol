@@ -1166,7 +1166,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqPrivacyA =>
-      'Your TV\'s name, network address and MAC address stay on this phone. The app doesn\'t send them to us.';
+      'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.';
 
   @override
   String aboutVersion(String version, String build) {
@@ -1209,4 +1209,284 @@ class AppLocalizationsEn extends AppLocalizations {
   String feedbackNoEmailApp(String email) {
     return 'No email app found. Write to us at $email.';
   }
+
+  @override
+  String get settingsPremiumSubtitle => 'No ads and extra colour styles';
+
+  @override
+  String get settingsPremiumActiveSubtitle => 'You have Premium. Thank you!';
+
+  @override
+  String get pageTitlePrivacyChoices => 'Privacy choices';
+
+  @override
+  String get settingsPrivacyChoicesSubtitle =>
+      'Usage statistics, crash reports and ads';
+
+  @override
+  String get aboutTestCrash => 'Send a test crash report';
+
+  @override
+  String get aboutTestCrashSent =>
+      'Test crash report sent. It shows in Crashlytics within a few minutes.';
+
+  @override
+  String get privacyIntro =>
+      'Choose what the app may share. Your TV\'s name, network address and MAC address never leave this phone.';
+
+  @override
+  String get privacySectionImprove => 'Help improve the app';
+
+  @override
+  String get privacyUsageTitle => 'Share usage statistics';
+
+  @override
+  String get privacyUsageSubtitle =>
+      'Anonymous counts of the screens and features you use. Never what you type or anything about your TV.';
+
+  @override
+  String get privacyCrashTitle => 'Share crash reports';
+
+  @override
+  String get privacyCrashSubtitle =>
+      'Sent when something goes wrong, so it can be fixed. Names, addresses and codes are removed first.';
+
+  @override
+  String get privacyServicesOff =>
+      'This build of the app doesn\'t send usage statistics or crash reports.';
+
+  @override
+  String get privacySectionAds => 'Ads';
+
+  @override
+  String get privacyAdsInfo =>
+      'The free app shows a banner ad at the bottom of the Apps and Settings screens only.';
+
+  @override
+  String get privacyAdsPremium => 'You have Premium, so the app shows no ads.';
+
+  @override
+  String get privacyAdChoices => 'Ad privacy choices';
+
+  @override
+  String get privacyAdChoicesSubtitle => 'Choose how ads are picked for you.';
+
+  @override
+  String get privacyAdChoicesFailed =>
+      'Couldn\'t open ad privacy choices. Check your internet connection and try again.';
+
+  @override
+  String get privacyRemoveAds => 'Remove ads with Premium';
+
+  @override
+  String get privacyTrackingTitle => 'Ad tracking';
+
+  @override
+  String get privacyTrackingAllowed =>
+      'Allowed. You can change this in your iPhone\'s Settings.';
+
+  @override
+  String get privacyTrackingDenied =>
+      'Not allowed. You can change this in your iPhone\'s Settings.';
+
+  @override
+  String get privacyTrackingNotDetermined =>
+      'Not chosen yet. The app asks before it first shows an ad.';
+
+  @override
+  String get privacyTrackingRestricted => 'Turned off on this iPhone.';
+
+  @override
+  String get privacyOpensSettings => 'Opens your phone\'s Settings';
+
+  @override
+  String get trackingPrepromptTitle => 'About ads in this app';
+
+  @override
+  String get trackingPrepromptBody =>
+      'The free app shows a small ad at the bottom of this screen. Next, your iPhone asks whether the app may use your activity in other apps to choose ads. You see the same number of ads whatever you choose, and the remote works the same.';
+
+  @override
+  String get trackingPrepromptContinue => 'Continue';
+
+  @override
+  String get adLabel => 'Advertisement';
+
+  @override
+  String get paywallHeadline => 'Make the remote yours';
+
+  @override
+  String get paywallSubhead =>
+      'Premium removes ads, adds colour styles and supports the app\'s development.';
+
+  @override
+  String get paywallBenefitNoAds => 'No ads';
+
+  @override
+  String get paywallBenefitNoAdsBody =>
+      'No banner on the Apps and Settings screens.';
+
+  @override
+  String get paywallBenefitStyles => 'Colour styles';
+
+  @override
+  String get paywallBenefitStylesBody =>
+      'Ocean, Ember and Midnight, in light and dark.';
+
+  @override
+  String get paywallFreeForever =>
+      'Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.';
+
+  @override
+  String get paywallChoosePlan => 'Choose a plan';
+
+  @override
+  String get paywallPlanMonthly => 'Monthly';
+
+  @override
+  String get paywallPlanYearly => 'Yearly';
+
+  @override
+  String get paywallPlanLifetime => 'Lifetime';
+
+  @override
+  String paywallPricePerMonth(String price) {
+    return '$price per month';
+  }
+
+  @override
+  String paywallPricePerYear(String price) {
+    return '$price per year';
+  }
+
+  @override
+  String paywallPriceOnce(String price) {
+    return '$price, one payment';
+  }
+
+  @override
+  String get paywallRenewsMonthly => 'Renews every month until you cancel.';
+
+  @override
+  String get paywallRenewsYearly => 'Renews every year until you cancel.';
+
+  @override
+  String get paywallLifetimeTerms => 'Pay once. No subscription.';
+
+  @override
+  String get paywallBestValue => 'Best value';
+
+  @override
+  String paywallSavePercent(int percent) {
+    return 'Save $percent%';
+  }
+
+  @override
+  String get paywallContinue => 'Continue';
+
+  @override
+  String get paywallRestore => 'Restore purchases';
+
+  @override
+  String get paywallTermsAndroid =>
+      'Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, and you keep Premium until the end of the period you paid for.';
+
+  @override
+  String get paywallTermsIos =>
+      'Payment is charged to your Apple ID. Subscriptions renew automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel them in your Apple ID settings.';
+
+  @override
+  String get paywallLoading => 'Loading plans…';
+
+  @override
+  String get paywallUnavailableTitle => 'Premium isn\'t available right now';
+
+  @override
+  String get paywallUnavailableBody =>
+      'Check your internet connection and try again.';
+
+  @override
+  String get paywallPurchasing => 'Confirming your purchase…';
+
+  @override
+  String get paywallRestoring => 'Restoring your purchases…';
+
+  @override
+  String get paywallWelcome => 'Welcome to Premium. Thank you!';
+
+  @override
+  String get paywallPending =>
+      'Your purchase is waiting for approval. Premium starts as soon as it\'s complete.';
+
+  @override
+  String get paywallFailed => 'The purchase didn\'t go through. Try again.';
+
+  @override
+  String get paywallNetworkError =>
+      'Couldn\'t reach the store. Check your internet connection and try again.';
+
+  @override
+  String get paywallNotAllowed => 'Purchases aren\'t allowed on this phone.';
+
+  @override
+  String get paywallAlreadyOwned =>
+      'You already own Premium. Tap Restore purchases to get it back.';
+
+  @override
+  String get paywallRestored => 'Purchases restored. You have Premium.';
+
+  @override
+  String get paywallNothingToRestore => 'No purchases found for this account.';
+
+  @override
+  String get paywallRestoreFailed => 'Couldn\'t restore purchases. Try again.';
+
+  @override
+  String get paywallActiveTitle => 'You have Premium';
+
+  @override
+  String get paywallActiveBody =>
+      'Thank you for supporting the app. There are no ads, and every colour style is yours.';
+
+  @override
+  String get paywallActiveLifetime => 'Lifetime Premium: it never expires.';
+
+  @override
+  String get paywallManageSubscription => 'Manage subscription';
+
+  @override
+  String get appearanceStyle => 'Colour style';
+
+  @override
+  String get appearanceStyleStandard => 'Standard';
+
+  @override
+  String get appearanceStyleOcean => 'Ocean';
+
+  @override
+  String get appearanceStyleEmber => 'Ember';
+
+  @override
+  String get appearanceStyleMidnight => 'Midnight';
+
+  @override
+  String get appearanceStyleLocked => 'Included with Premium';
+
+  @override
+  String get appearanceStyleWallpaperOn =>
+      'Colours from wallpaper are on, so colour styles don\'t show.';
+
+  @override
+  String get updateRequiredTitle => 'Update required';
+
+  @override
+  String get updateRequiredBody =>
+      'This version of the app is too old to keep working reliably. Update to the latest version to continue.';
+
+  @override
+  String get updateRequiredAction => 'Update';
+
+  @override
+  String get updateRequiredFailed =>
+      'Couldn\'t open the store. Update the app from your phone\'s app store.';
 }

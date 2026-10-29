@@ -12,7 +12,9 @@ final RegExp _dashMac = RegExp(r'^[0-9a-fA-F]{2}(-[0-9a-fA-F]{2}){5}$');
 /// the TV's Ethernet/Wi-Fi MAC, not the Bluetooth MAC of its mDNS record.
 Uint8List buildMagicPacket(String mac) {
   if (!_colonMac.hasMatch(mac) && !_dashMac.hasMatch(mac)) {
-    throw FormatException('Not a MAC address (AA:BB:CC:DD:EE:FF)', mac);
+    // The MAC is not passed as the exception's source: it would be echoed in
+    // the message, and error text can reach crash reports.
+    throw const FormatException('Not a MAC address (AA:BB:CC:DD:EE:FF)');
   }
   final bytes = [
     for (var i = 0; i < 6; i++)

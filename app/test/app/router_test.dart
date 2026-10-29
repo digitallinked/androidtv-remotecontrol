@@ -1,15 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
-import 'package:tv_remote/app/widgets/placeholder_screen.dart';
 import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/manage_apps_screen.dart';
 import 'package:tv_remote/features/devices/presentation/devices_screen.dart';
 import 'package:tv_remote/features/devices/presentation/edit_device_screen.dart';
 import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
+import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 import 'package:tv_remote/features/settings/presentation/about_page.dart';
 import 'package:tv_remote/features/settings/presentation/appearance_page.dart';
 import 'package:tv_remote/features/settings/presentation/help_page.dart';
@@ -43,6 +45,7 @@ void main() {
       AppRoutes.settingsRemoteBehaviour: 'Remote behaviour',
       AppRoutes.settingsHelp: 'Help',
       AppRoutes.settingsAbout: 'About this app',
+      AppRoutes.settingsPrivacy: 'Privacy choices',
       '/paywall': 'Premium',
     };
     for (final e in titles.entries) {
@@ -88,6 +91,7 @@ void main() {
       AppRoutes.settingsRemoteBehaviour,
       AppRoutes.settingsHelp,
       AppRoutes.settingsAbout,
+      AppRoutes.settingsPrivacy,
     ]) {
       unawaited(router.push(path));
       await t.pumpAndSettle();
@@ -141,20 +145,47 @@ void main() {
     }
   });
 
-  testWidgets('paywall_route_passes_source', (t) async {
-    await pumpRouterApp(t, initialLocation: AppRoutes.paywall(source: 'apps'));
-    expect(
-      t.widget<PlaceholderScreen>(find.byType(PlaceholderScreen)).params,
-      {'source': 'apps'},
+  testWidgets('paywall_route_parses_its_source', (t) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.paywall(source: PaywallSource.themes),
     );
+    expect(
+      t.widget<PaywallScreen>(find.byType(PaywallScreen)).source,
+      PaywallSource.themes,
+    );
+    for (final location in const ['/paywall?source=bogus', '/paywall']) {
+      await pumpRouterApp(t, initialLocation: location);
+      expect(
+        t.widget<PaywallScreen>(find.byType(PaywallScreen)).source,
+        PaywallSource.unknown,
+        reason: location,
+      );
+    }
   });
 
-  testWidgets('paywall_route_without_source_has_no_params', (t) async {
-    await pumpRouterApp(t, initialLocation: AppRoutes.paywallPath);
-    expect(
-      t.widget<PlaceholderScreen>(find.byType(PlaceholderScreen)).params,
-      isEmpty,
+  testWidgets('every_route_has_a_parameter_free_name', (t) async {
+    await pumpRouterApp(t, initialLocation: AppRoutes.settings);
+    final container = ProviderScope.containerOf(
+      t.element(find.byType(SettingsScreen)),
     );
+    final names = <String>[];
+    void walk(List<RouteBase> routes) {
+      for (final route in routes) {
+        if (route is GoRoute) {
+          expect(route.name, isNotNull, reason: route.path);
+          names.add(route.name!);
+        }
+        walk(route.routes);
+      }
+    }
+
+    walk(container.read(appRouterProvider).configuration.routes);
+    expect(AppRouteNames.all, hasLength(16));
+    expect(names.toSet(), hasLength(names.length), reason: 'duplicate names');
+    expect(names, everyElement(isIn(AppRouteNames.all)));
+    expect(names.toSet(), AppRouteNames.all);
+    expect(AppRouteNames.all, everyElement(matches(RegExp(r'^[a-z_]+$'))));
   });
 
   testWidgets('unknown_route_offers_way_back_to_discover', (t) async {
@@ -170,6 +201,9 @@ void main() {
   test('route_helpers_encode_their_arguments', () {
     expect(AppRoutes.pair('Bravia/4K'), '/pair/Bravia%2F4K');
     expect(AppRoutes.editDevice('Bravia/4K'), '/devices/Bravia%2F4K');
-    expect(AppRoutes.paywall(source: 'a b'), '/paywall?source=a+b');
+    expect(
+      AppRoutes.paywall(source: PaywallSource.settings),
+      '/paywall?source=settings',
+    );
   });
 }

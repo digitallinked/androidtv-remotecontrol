@@ -155,6 +155,26 @@ void main() {
     expect(repo.saved['A']!.wolMac, isNull);
   });
 
+  test('actions_taken_before_an_await_still_write_afterwards', () async {
+    // The edit page saves a new name and a new MAC with one Save: it takes
+    // the actions once and awaits the first write. Nothing watches the
+    // provider, so it is disposed in between.
+    final c = makeContainer();
+    final actions = c.read(deviceActionsProvider);
+
+    await actions.rename('A', 'Den');
+    await pumpEventQueue();
+    expect(c.exists(deviceActionsProvider), isFalse);
+    await actions.setWolMac('A', 'AA:BB:CC:DD:EE:F0');
+
+    expect(repo.saved['A']!.nickname, 'Den');
+    expect(repo.saved['A']!.wolMac, 'AA:BB:CC:DD:EE:F0');
+
+    // Removing works through the same held actions.
+    await actions.delete('B');
+    expect(repo.saved.keys, ['A']);
+  });
+
   test('write_errors_propagate', () async {
     final c = makeContainer();
     final actions = c.read(deviceActionsProvider);

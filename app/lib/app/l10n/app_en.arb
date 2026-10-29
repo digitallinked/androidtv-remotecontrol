@@ -1588,7 +1588,7 @@
   "@faqPrivacyQ": {
     "description": "FAQ question."
   },
-  "faqPrivacyA": "Your TV's name, network address and MAC address stay on this phone. The app doesn't send them to us.",
+  "faqPrivacyA": "Your TV's name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.",
   "@faqPrivacyA": {
     "description": "FAQ answer."
   },
@@ -1661,5 +1661,357 @@
         "example": "support@example.com"
       }
     }
+  },
+  "settingsPremiumSubtitle": "No ads and extra colour styles",
+  "@settingsPremiumSubtitle": {
+    "description": "Hub Premium row, free user."
+  },
+  "settingsPremiumActiveSubtitle": "You have Premium. Thank you!",
+  "@settingsPremiumActiveSubtitle": {
+    "description": "Hub Premium row, Premium user."
+  },
+  "pageTitlePrivacyChoices": "Privacy choices",
+  "@pageTitlePrivacyChoices": {
+    "description": "Page title and hub row."
+  },
+  "settingsPrivacyChoicesSubtitle": "Usage statistics, crash reports and ads",
+  "@settingsPrivacyChoicesSubtitle": {
+    "description": "Hub row subtitle."
+  },
+  "aboutTestCrash": "Send a test crash report",
+  "@aboutTestCrash": {
+    "description": "About row, dev flavor only."
+  },
+  "aboutTestCrashSent": "Test crash report sent. It shows in Crashlytics within a few minutes.",
+  "@aboutTestCrashSent": {
+    "description": "Snackbar after the dev test crash."
+  },
+  "privacyIntro": "Choose what the app may share. Your TV's name, network address and MAC address never leave this phone.",
+  "@privacyIntro": {
+    "description": "Page intro."
+  },
+  "privacySectionImprove": "Help improve the app",
+  "@privacySectionImprove": {
+    "description": "Section header."
+  },
+  "privacyUsageTitle": "Share usage statistics",
+  "@privacyUsageTitle": {
+    "description": "Switch."
+  },
+  "privacyUsageSubtitle": "Anonymous counts of the screens and features you use. Never what you type or anything about your TV.",
+  "@privacyUsageSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "privacyCrashTitle": "Share crash reports",
+  "@privacyCrashTitle": {
+    "description": "Switch."
+  },
+  "privacyCrashSubtitle": "Sent when something goes wrong, so it can be fixed. Names, addresses and codes are removed first.",
+  "@privacyCrashSubtitle": {
+    "description": "Switch subtitle."
+  },
+  "privacyServicesOff": "This build of the app doesn't send usage statistics or crash reports.",
+  "@privacyServicesOff": {
+    "description": "Note when Firebase is off."
+  },
+  "privacySectionAds": "Ads",
+  "@privacySectionAds": {
+    "description": "Section header."
+  },
+  "privacyAdsInfo": "The free app shows a banner ad at the bottom of the Apps and Settings screens only.",
+  "@privacyAdsInfo": {
+    "description": "Ads section text, free user."
+  },
+  "privacyAdsPremium": "You have Premium, so the app shows no ads.",
+  "@privacyAdsPremium": {
+    "description": "Ads section text, Premium user."
+  },
+  "privacyAdChoices": "Ad privacy choices",
+  "@privacyAdChoices": {
+    "description": "Row → consent options form."
+  },
+  "privacyAdChoicesSubtitle": "Choose how ads are picked for you.",
+  "@privacyAdChoicesSubtitle": {
+    "description": "Row subtitle."
+  },
+  "privacyAdChoicesFailed": "Couldn't open ad privacy choices. Check your internet connection and try again.",
+  "@privacyAdChoicesFailed": {
+    "description": "Snackbar."
+  },
+  "privacyRemoveAds": "Remove ads with Premium",
+  "@privacyRemoveAds": {
+    "description": "Row → paywall (source privacy)."
+  },
+  "privacyTrackingTitle": "Ad tracking",
+  "@privacyTrackingTitle": {
+    "description": "IOS status row."
+  },
+  "privacyTrackingAllowed": "Allowed. You can change this in your iPhone's Settings.",
+  "@privacyTrackingAllowed": {
+    "description": "Row subtitle."
+  },
+  "privacyTrackingDenied": "Not allowed. You can change this in your iPhone's Settings.",
+  "@privacyTrackingDenied": {
+    "description": "Row subtitle."
+  },
+  "privacyTrackingNotDetermined": "Not chosen yet. The app asks before it first shows an ad.",
+  "@privacyTrackingNotDetermined": {
+    "description": "Row subtitle."
+  },
+  "privacyTrackingRestricted": "Turned off on this iPhone.",
+  "@privacyTrackingRestricted": {
+    "description": "Row subtitle."
+  },
+  "privacyOpensSettings": "Opens your phone's Settings",
+  "@privacyOpensSettings": {
+    "description": "Semantics hint of the tracking row."
+  },
+  "trackingPrepromptTitle": "About ads in this app",
+  "@trackingPrepromptTitle": {
+    "description": "Dialog title."
+  },
+  "trackingPrepromptBody": "The free app shows a small ad at the bottom of this screen. Next, your iPhone asks whether the app may use your activity in other apps to choose ads. You see the same number of ads whatever you choose, and the remote works the same.",
+  "@trackingPrepromptBody": {
+    "description": "Dialog body."
+  },
+  "trackingPrepromptContinue": "Continue",
+  "@trackingPrepromptContinue": {
+    "description": "The only action."
+  },
+  "adLabel": "Advertisement",
+  "@adLabel": {
+    "description": "Label band above the banner; its semantics label."
+  },
+  "paywallHeadline": "Make the remote yours",
+  "@paywallHeadline": {
+    "description": "Headline."
+  },
+  "paywallSubhead": "Premium removes ads, adds colour styles and supports the app's development.",
+  "@paywallSubhead": {
+    "description": "Text under the headline."
+  },
+  "paywallBenefitNoAds": "No ads",
+  "@paywallBenefitNoAds": {
+    "description": "Benefit title."
+  },
+  "paywallBenefitNoAdsBody": "No banner on the Apps and Settings screens.",
+  "@paywallBenefitNoAdsBody": {
+    "description": "Benefit text."
+  },
+  "paywallBenefitStyles": "Colour styles",
+  "@paywallBenefitStyles": {
+    "description": "Benefit title."
+  },
+  "paywallBenefitStylesBody": "Ocean, Ember and Midnight, in light and dark.",
+  "@paywallBenefitStylesBody": {
+    "description": "Benefit text."
+  },
+  "paywallFreeForever": "Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.",
+  "@paywallFreeForever": {
+    "description": "Honest note."
+  },
+  "paywallChoosePlan": "Choose a plan",
+  "@paywallChoosePlan": {
+    "description": "Radio group label."
+  },
+  "paywallPlanMonthly": "Monthly",
+  "@paywallPlanMonthly": {
+    "description": "Plan title."
+  },
+  "paywallPlanYearly": "Yearly",
+  "@paywallPlanYearly": {
+    "description": "Plan title."
+  },
+  "paywallPlanLifetime": "Lifetime",
+  "@paywallPlanLifetime": {
+    "description": "Plan title."
+  },
+  "paywallPricePerMonth": "{price} per month",
+  "@paywallPricePerMonth": {
+    "description": "Plan price.",
+    "placeholders": {
+      "price": {
+        "type": "String",
+        "example": "RM 9.90"
+      }
+    }
+  },
+  "paywallPricePerYear": "{price} per year",
+  "@paywallPricePerYear": {
+    "description": "Plan price.",
+    "placeholders": {
+      "price": {
+        "type": "String",
+        "example": "RM 9.90"
+      }
+    }
+  },
+  "paywallPriceOnce": "{price}, one payment",
+  "@paywallPriceOnce": {
+    "description": "Lifetime price.",
+    "placeholders": {
+      "price": {
+        "type": "String",
+        "example": "RM 9.90"
+      }
+    }
+  },
+  "paywallRenewsMonthly": "Renews every month until you cancel.",
+  "@paywallRenewsMonthly": {
+    "description": "Monthly terms."
+  },
+  "paywallRenewsYearly": "Renews every year until you cancel.",
+  "@paywallRenewsYearly": {
+    "description": "Yearly terms."
+  },
+  "paywallLifetimeTerms": "Pay once. No subscription.",
+  "@paywallLifetimeTerms": {
+    "description": "Lifetime terms."
+  },
+  "paywallBestValue": "Best value",
+  "@paywallBestValue": {
+    "description": "Badge on yearly."
+  },
+  "paywallSavePercent": "Save {percent}%",
+  "@paywallSavePercent": {
+    "description": "Badge text (`percent`: `int`).",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "40"
+      }
+    }
+  },
+  "paywallContinue": "Continue",
+  "@paywallContinue": {
+    "description": "Purchase button."
+  },
+  "paywallRestore": "Restore purchases",
+  "@paywallRestore": {
+    "description": "Restore button."
+  },
+  "paywallTermsAndroid": "Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, and you keep Premium until the end of the period you paid for.",
+  "@paywallTermsAndroid": {
+    "description": "Billing terms, Android."
+  },
+  "paywallTermsIos": "Payment is charged to your Apple ID. Subscriptions renew automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel them in your Apple ID settings.",
+  "@paywallTermsIos": {
+    "description": "Billing terms, iOS."
+  },
+  "paywallLoading": "Loading plans…",
+  "@paywallLoading": {
+    "description": "Loading state."
+  },
+  "paywallUnavailableTitle": "Premium isn't available right now",
+  "@paywallUnavailableTitle": {
+    "description": "No offering."
+  },
+  "paywallUnavailableBody": "Check your internet connection and try again.",
+  "@paywallUnavailableBody": {
+    "description": "No offering (button reuses `commonRetry`)."
+  },
+  "paywallPurchasing": "Confirming your purchase…",
+  "@paywallPurchasing": {
+    "description": "In progress."
+  },
+  "paywallRestoring": "Restoring your purchases…",
+  "@paywallRestoring": {
+    "description": "Shown while restoring earlier purchases."
+  },
+  "paywallWelcome": "Welcome to Premium. Thank you!",
+  "@paywallWelcome": {
+    "description": "Snackbar after a purchase."
+  },
+  "paywallPending": "Your purchase is waiting for approval. Premium starts as soon as it's complete.",
+  "@paywallPending": {
+    "description": "Pending purchase."
+  },
+  "paywallFailed": "The purchase didn't go through. Try again.",
+  "@paywallFailed": {
+    "description": "Unknown or store failure."
+  },
+  "paywallNetworkError": "Couldn't reach the store. Check your internet connection and try again.",
+  "@paywallNetworkError": {
+    "description": "Network failure."
+  },
+  "paywallNotAllowed": "Purchases aren't allowed on this phone.",
+  "@paywallNotAllowed": {
+    "description": "Purchases disabled."
+  },
+  "paywallAlreadyOwned": "You already own Premium. Tap Restore purchases to get it back.",
+  "@paywallAlreadyOwned": {
+    "description": "Already owned."
+  },
+  "paywallRestored": "Purchases restored. You have Premium.",
+  "@paywallRestored": {
+    "description": "Restore success."
+  },
+  "paywallNothingToRestore": "No purchases found for this account.",
+  "@paywallNothingToRestore": {
+    "description": "Restore found nothing."
+  },
+  "paywallRestoreFailed": "Couldn't restore purchases. Try again.",
+  "@paywallRestoreFailed": {
+    "description": "Restore failed."
+  },
+  "paywallActiveTitle": "You have Premium",
+  "@paywallActiveTitle": {
+    "description": "Already-Premium state."
+  },
+  "paywallActiveBody": "Thank you for supporting the app. There are no ads, and every colour style is yours.",
+  "@paywallActiveBody": {
+    "description": "Already-Premium state."
+  },
+  "paywallActiveLifetime": "Lifetime Premium: it never expires.",
+  "@paywallActiveLifetime": {
+    "description": "Already Premium, lifetime."
+  },
+  "paywallManageSubscription": "Manage subscription",
+  "@paywallManageSubscription": {
+    "description": "Opens the store's subscription page."
+  },
+  "appearanceStyle": "Colour style",
+  "@appearanceStyle": {
+    "description": "Group label."
+  },
+  "appearanceStyleStandard": "Standard",
+  "@appearanceStyleStandard": {
+    "description": "Style name."
+  },
+  "appearanceStyleOcean": "Ocean",
+  "@appearanceStyleOcean": {
+    "description": "Style name."
+  },
+  "appearanceStyleEmber": "Ember",
+  "@appearanceStyleEmber": {
+    "description": "Style name."
+  },
+  "appearanceStyleMidnight": "Midnight",
+  "@appearanceStyleMidnight": {
+    "description": "Style name."
+  },
+  "appearanceStyleLocked": "Included with Premium",
+  "@appearanceStyleLocked": {
+    "description": "Subtitle of a locked style."
+  },
+  "appearanceStyleWallpaperOn": "Colours from wallpaper are on, so colour styles don't show.",
+  "@appearanceStyleWallpaperOn": {
+    "description": "Note while dynamic colour is on."
+  },
+  "updateRequiredTitle": "Update required",
+  "@updateRequiredTitle": {
+    "description": "Blocking screen title."
+  },
+  "updateRequiredBody": "This version of the app is too old to keep working reliably. Update to the latest version to continue.",
+  "@updateRequiredBody": {
+    "description": "Blocking screen text."
+  },
+  "updateRequiredAction": "Update",
+  "@updateRequiredAction": {
+    "description": "Opens the store listing."
+  },
+  "updateRequiredFailed": "Couldn't open the store. Update the app from your phone's app store.",
+  "@updateRequiredFailed": {
+    "description": "Snackbar when the link fails."
   }
 }

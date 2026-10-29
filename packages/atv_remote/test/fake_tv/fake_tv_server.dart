@@ -272,6 +272,15 @@ class FakeTvServer {
     RemoteMessage(remoteStart: RemoteStart(started: on)),
   );
 
+  /// Sends one ping to every active remote client now, exactly as the ping
+  /// timer does. With `sendPings: false` these are the only pings, so a test
+  /// decides which ping is the last one.
+  void ping() {
+    for (final client in _remoteClients.toList()) {
+      if (client.active) client._ping();
+    }
+  }
+
   /// Destroys every client connection on both ports but keeps listening.
   Future<void> dropConnections() async {
     for (final socket in _pairingSockets.toList()) {
@@ -572,7 +581,7 @@ class _RemoteClient {
       active = true;
       _tv._clientBecameActive();
       if (_tv.sendPings) {
-        _pingTimer = Timer.periodic(_tv.pingInterval, (_) => _ping());
+        _pingTimer = Timer.periodic(_tv.pingInterval, (_) => _pingOnTimer());
       }
     } else if (message.hasRemotePingResponse()) {
       final n = message.remotePingResponse.val1;
@@ -583,6 +592,18 @@ class _RemoteClient {
     } else {
       _tv._handleClientMessage(message);
     }
+  }
+
+  /// One tick of the ping timer. A loaded machine can stall the event loop
+  /// and then run several overdue ticks back to back; those would count as
+  /// unanswered pings the client never had a chance to answer, so a tick that
+  /// comes less than half an interval after the last ping is skipped.
+  void _pingOnTimer() {
+    if (_lastPing != 0 &&
+        DateTime.now().difference(_lastPingAt) < _tv.pingInterval ~/ 2) {
+      return;
+    }
+    _ping();
   }
 
   void _ping() {

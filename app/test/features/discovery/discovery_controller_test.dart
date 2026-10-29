@@ -3,10 +3,16 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nsd/nsd.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/storage/settings_store.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 import '../../helpers/fake_tv_discovery.dart';
+import '../../helpers/recording_analytics_sink.dart';
 
 DiscoveredTv _named(String serviceName, String displayName) => DiscoveredTv(
   serviceName: serviceName,
@@ -18,11 +24,17 @@ DiscoveredTv _named(String serviceName, String displayName) => DiscoveredTv(
 
 void main() {
   late FakeTvDiscoveries discoveries;
+  late RecordingAnalyticsSink analyticsSink;
+  late SettingsStore settings;
 
   ProviderContainer makeContainer() {
     final container = ProviderContainer.test(
       overrides: [
         tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+        settingsStoreProvider.overrideWithValue(settings),
+        analyticsSinkProvider.overrideWithValue(analyticsSink),
+        // The guard throws as in a debug build, so a bad event fails the test.
+        analyticsDebugBuildProvider.overrideWithValue(true),
       ],
     )..listen(discoveryControllerProvider, (_, _) {}); // autoDispose
     return container;
@@ -31,7 +43,14 @@ void main() {
   DiscoveryState read(ProviderContainer c) =>
       c.read(discoveryControllerProvider);
 
-  setUp(() => discoveries = FakeTvDiscoveries());
+  setUp(() async {
+    discoveries = FakeTvDiscoveries();
+    analyticsSink = RecordingAnalyticsSink();
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    settings = await SettingsStore.open();
+    await settings.setConsentRegion(ConsentRegion.notRequired);
+  });
 
   test('state_compares_by_value', () {
     expect(
@@ -171,6 +190,30 @@ void main() {
       expect(first.stopped, isTrue);
       // The timer was cancelled: nothing is left to fire.
       expect(async.pendingTimers, isEmpty);
+    });
+  });
+
+  test('tv_discovered_logged_once_with_a_count', () {
+    fakeAsync((async) {
+      final c = makeContainer();
+      async.flushMicrotasks();
+      expect(analyticsSink.calls, isEmpty);
+
+      discoveries.created.single.emit([tv('a'), tv('b')]);
+      async.flushMicrotasks();
+      expect(analyticsSink.eventNames, ['tv_discovered']);
+      expect(analyticsSink.events.single.params, {'count': 2});
+
+      // More TVs, fewer TVs, none and a rescan do not log it again.
+      discoveries.created.single.emit([tv('a'), tv('b'), tv('c')]);
+      async.flushMicrotasks();
+      discoveries.created.single.emit(const []);
+      async.flushMicrotasks();
+      c.read(discoveryControllerProvider.notifier).rescan();
+      async.elapse(Duration.zero);
+      discoveries.created.last.emit([tv('a')]);
+      async.flushMicrotasks();
+      expect(analyticsSink.eventNames, ['tv_discovered']);
     });
   });
 }

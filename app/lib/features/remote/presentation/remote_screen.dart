@@ -9,8 +9,10 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
 import 'package:tv_remote/core/device/theater_mode.dart';
+import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -68,6 +70,10 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// Changes when the body must start afresh on the stored style.
   int _bodyEpoch = 0;
 
+  /// The consent step was asked for by this screen (see
+  /// [didChangeDependencies]).
+  bool _consentAsked = false;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +84,23 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       _onConnectionState,
       fireImmediately: true,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The ad consent form waits for the remote: it opens the first time this
+    // screen is the top route, never over onboarding, discovery or pairing
+    // (Ruling P6-R8). Reading `isCurrentOf` here also calls this again when
+    // a page or dialog on top leaves. The controller shows the form once per
+    // launch, whatever number of times this screen is built.
+    if (_consentAsked || !(ModalRoute.isCurrentOf(context) ?? false)) return;
+    _consentAsked = true;
+    // After the frame, so the controller never changes state during a build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(ref.read(consentControllerProvider.notifier).ensureGathered());
+    });
   }
 
   /// The status the controls and the pill show: the socket's state, never the

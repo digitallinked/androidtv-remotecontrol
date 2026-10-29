@@ -104,6 +104,19 @@ void main() {
       expect(data, buildMagicPacket('AA:BB:CC:DD:EE:FF'));
     });
 
+    test('a bad MAC is never echoed in the error', () {
+      try {
+        buildMagicPacket('11:22:33:44:55:GG');
+        fail('expected a FormatException');
+      } on FormatException catch (e) {
+        expect(e.source, isNull);
+        expect(e.toString(), isNot(contains('GG')));
+        // Not even the valid part of it.
+        expect(e.toString(), isNot(contains('11:22:33')));
+        expect(e.message, isNot(contains('11:22:33')));
+      }
+    });
+
     test('throws FormatException for a bad MAC without sending', () {
       expect(
         () => sendWakeOnLan('nope'),

@@ -1,6 +1,9 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
@@ -17,7 +20,7 @@ const _info = AppInfo(
   appName: 'Remotely Dev',
   version: '1.0.0',
   buildNumber: '1',
-  os: 'android',
+  os: 'Android',
   osVersion: '12',
 );
 
@@ -27,6 +30,7 @@ void main() {
     RecordingLinkOpener opener, {
     List<SavedDevice> devices = const [],
     Override? appInfo,
+    List<Override> more = const [],
   }) async {
     t.view
       ..physicalSize = const Size(390, 844)
@@ -39,6 +43,7 @@ void main() {
         linkOpenerProvider.overrideWithValue(opener),
         appInfo ?? appInfoProvider.overrideWith((ref) async => _info),
         savedDevicesProvider.overrideWith((ref) => Stream.value(devices)),
+        ...more,
       ],
     );
   }
@@ -90,7 +95,7 @@ void main() {
     );
     expect(mail, startsWith('mailto:${AppLinks.supportEmail}?'));
     expect(mail, contains('App: 1.0.0 (1)'));
-    expect(mail, contains('System: android 12'));
+    expect(mail, contains('System: Android 12'));
     expect(mail, contains('Feedback on Remotely Dev 1.0.0'));
     expect(mail, contains('Write your message here.'));
   });
@@ -110,8 +115,39 @@ void main() {
     expect(uri.path, AppLinks.supportEmail);
     expect(
       Uri.decodeComponent(text.split('body=').last),
-      'Write your message here.\n\n\n---\nApp: 1.0.0 (1)\nSystem: android 12',
+      'Write your message here.\n\n\n---\nApp: 1.0.0 (1)\nSystem: Android 12',
     );
+  });
+
+  testWidgets('feedback_footer_names_the_os_release', (t) async {
+    // The real app info, with the phone answering "Android 12": the footer
+    // holds the release, not the kernel string.
+    PackageInfo.setMockInitialValues(
+      appName: 'Remotely Dev',
+      packageName: 'app.remotely.dev',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+    final opener = RecordingLinkOpener();
+    await pumpHub(
+      t,
+      opener,
+      appInfo: appInfoProvider.overrideWith(appInfo),
+      more: [
+        osVersionReaderProvider.overrideWithValue(
+          () async => (os: 'Android', version: '12'),
+        ),
+      ],
+    );
+
+    await openFeedback(t);
+    await t.tap(find.text('Write email'));
+    await t.pumpAndSettle();
+
+    final mail = Uri.decodeFull(opener.opened.single.toString());
+    expect(mail, contains('System: Android 12'));
+    expect(mail, isNot(contains(Platform.operatingSystemVersion)));
   });
 
   testWidgets('feedback_cancel_opens_nothing', (t) async {
@@ -207,7 +243,7 @@ void main() {
     expect(parts['subject'], subject);
     expect(
       parts['body'],
-      '$prompt\n\n\n---\nApp: 1.0.0 (1)\nSystem: android 12',
+      '$prompt\n\n\n---\nApp: 1.0.0 (1)\nSystem: Android 12',
     );
 
     // The raw text has no literal `+` (a `+` the user typed is `%2B`), no

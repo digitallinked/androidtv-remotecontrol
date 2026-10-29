@@ -7,6 +7,9 @@ google-services.json
 GoogleService-Info.plist
 app/env/*.json
 !app/env/example.json
+app/android/secrets.properties
+app/ios/Flutter/Secrets.xcconfig
+app/ios/config/
 .env
 
 # OS / editor

@@ -124,7 +124,8 @@ class SettingsSwitchTile extends StatelessWidget {
 /// A labelled group of radio rows, one of which is chosen.
 ///
 /// Built on [RadioGroup], so a row is selected by its [value] and every row
-/// is at least 56 dp high. A choice may have a subtitle.
+/// is at least 56 dp high. A choice may have a subtitle, and the group may
+/// draw a [secondary] widget at the end of every row.
 class SettingsChoiceGroup<T> extends StatelessWidget {
   /// Creates a group called [label] with [choices], showing [value] and
   /// calling [onChanged] with the one the user picks.
@@ -133,6 +134,7 @@ class SettingsChoiceGroup<T> extends StatelessWidget {
     required this.value,
     required this.choices,
     required this.onChanged,
+    this.secondary,
     super.key,
   });
 
@@ -148,8 +150,14 @@ class SettingsChoiceGroup<T> extends StatelessWidget {
   /// Called with the value of the row the user picked.
   final ValueChanged<T> onChanged;
 
+  /// Builds a decoration for the row of a value, shown at the end of the row.
+  /// Screen readers may skip it, so it must carry nothing the title doesn't
+  /// say.
+  final Widget Function(T value)? secondary;
+
   @override
   Widget build(BuildContext context) {
+    final secondary = this.secondary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -172,6 +180,7 @@ class SettingsChoiceGroup<T> extends StatelessWidget {
                     value: choice,
                     title: Text(title),
                     subtitle: subtitle == null ? null : Text(subtitle),
+                    secondary: secondary == null ? null : secondary(choice),
                   ),
               ],
             ),
