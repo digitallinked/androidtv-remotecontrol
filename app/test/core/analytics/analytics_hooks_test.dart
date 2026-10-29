@@ -109,6 +109,8 @@ void main() {
     container.read(remoteActionListenerProvider)(
       const AppLaunched('com.netflix.ninja'),
     );
+    // The event waits for the collection switch the build started.
+    await pumpEventQueue();
     expect(sink.events.single.params, {'package': 'custom'});
   });
 

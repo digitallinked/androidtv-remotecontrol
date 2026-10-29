@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -214,4 +216,63 @@ void main() {
     // Reaching here without an uncaught error is the assertion.
     expect(broken.calls, isEmpty);
   });
+
+  test('events_wait_for_the_collection_switch', () async {
+    final held = _HeldSwitchSink();
+    final c = await containerFor(withSink: held);
+    await flush(c);
+    expect(held.collectionHistory, [true]);
+    analytics(c)
+      ..log(const AnalyticsEvent.pairStart())
+      ..log(const AnalyticsEvent.pairSuccess());
+    await flush(c);
+    expect(held.calls, isEmpty);
+
+    held.switches.last.complete();
+    await flush(c);
+    expect(held.calls, ['event:pair_start', 'event:pair_success']);
+  });
+
+  test('buffered_events_follow_the_switch_on', () async {
+    final held = _HeldSwitchSink();
+    final c = await containerFor(region: ConsentRegion.unknown, withSink: held);
+    await flush(c);
+    expect(held.collectionHistory, [false]);
+    held.switches.last.complete();
+    analytics(c)
+      ..log(const AnalyticsEvent.pairStart())
+      ..screen('pair');
+    await flush(c);
+
+    await c
+        .read(consentRegionStateProvider.notifier)
+        .set(ConsentRegion.notRequired);
+    await flush(c);
+    expect(held.collectionHistory, [false, true]);
+    expect(held.calls, isEmpty);
+    analytics(c).log(const AnalyticsEvent.pairSuccess());
+    await flush(c);
+    expect(held.calls, isEmpty);
+
+    held.switches.last.complete();
+    await flush(c);
+    expect(held.calls, [
+      'event:pair_start',
+      'screen:pair',
+      'event:pair_success',
+    ]);
+  });
+}
+
+/// A sink whose collection switch finishes only when the test completes it.
+class _HeldSwitchSink extends RecordingAnalyticsSink {
+  final List<Completer<void>> switches = [];
+
+  @override
+  Future<void> setCollectionEnabled(bool enabled) {
+    collectionHistory.add(enabled);
+    final held = Completer<void>();
+    switches.add(held);
+    return held.future;
+  }
 }

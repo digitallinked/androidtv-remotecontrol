@@ -435,6 +435,46 @@ void main() {
     },
   );
 
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'a_tracking_question_that_never_showed_is_asked_on_the_next_visit',
+    (t) async {
+      // Visit 1: iOS showed nothing (the app wasn't active), so the status
+      // stays "not determined" after Continue.
+      final tracking = FakeTrackingService(
+        current: TrackingStatus.notDetermined,
+        answer: TrackingStatus.notDetermined,
+      );
+      final sdk = FakeAdsSdk(loads: true);
+      await pumpAt(
+        t,
+        AppRoutes.settings,
+        sdk: sdk,
+        overrides: [trackingServiceProvider.overrideWithValue(tracking)],
+      );
+      await t.tap(find.text('Continue'));
+      await t.pumpAndSettle();
+      expect(tracking.requests, 1);
+      expect(_banner, findsNothing);
+      expect(sdk.initializeCalls, 0);
+
+      // Leave and reopen the screen; this time iOS shows its question.
+      tracking.answer = TrackingStatus.authorized;
+      final router = GoRouter.of(t.element(find.byType(Scaffold).first))
+        ..go(AppRoutes.devices);
+      await t.pumpAndSettle();
+      router.go(AppRoutes.settings);
+      await t.pump();
+      expect(find.byType(AppDialog<void>), findsNothing);
+      await t.pumpAndSettle();
+
+      expect(find.text('About ads in this app'), findsNothing);
+      expect(tracking.requests, 2);
+      expect(sdk.initializeCalls, 1);
+      expect(_banner, findsOneWidget);
+    },
+  );
+
   testWidgets('prod_without_unit_ids_shows_no_banner', (t) async {
     final sdk = FakeAdsSdk(loads: true);
     await pumpAt(

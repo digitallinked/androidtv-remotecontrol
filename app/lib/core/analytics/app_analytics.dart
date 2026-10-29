@@ -65,12 +65,18 @@ class AppAnalytics extends _$AppAnalytics {
   bool _debugBuild = false;
   bool? _collecting;
 
+  /// The collection switch on its way to the sink, or `null` when none is.
+  /// Sends wait for it, so no event reaches the platform before collection
+  /// is on.
+  Future<void>? _switching;
+
   @override
   void build() {
     _sink = ref.watch(analyticsSinkProvider);
     _debugBuild = ref.watch(analyticsDebugBuildProvider);
     _buffer.clear();
     _collecting = null;
+    _switching = null;
     ref.listen<PrivacyChoices>(
       privacyChoicesProvider,
       (previous, next) => _apply(next),
@@ -134,7 +140,14 @@ class AppAnalytics extends _$AppAnalytics {
     if (choices.shareUsage != _collecting) {
       _collecting = choices.shareUsage;
       final sink = _sink;
-      _fire(() => sink.setCollectionEnabled(choices.shareUsage));
+      final enabled = choices.shareUsage;
+      final switching = _guarded(() => sink.setCollectionEnabled(enabled));
+      _switching = switching;
+      unawaited(
+        switching.whenComplete(() {
+          if (identical(_switching, switching)) _switching = null;
+        }),
+      );
     }
     if (!choices.usageDecided) return;
     if (choices.shareUsage) {
@@ -146,13 +159,34 @@ class AppAnalytics extends _$AppAnalytics {
     }
   }
 
+  /// Sends [pending] now, or after the collection switch in progress.
+  /// Callbacks on one future run in the order they were registered, so the
+  /// order of events is kept.
   void _send(_Pending pending) {
+    final switching = _switching;
+    if (switching != null) {
+      unawaited(switching.then((_) => _deliver(pending)));
+    } else {
+      _deliver(pending);
+    }
+  }
+
+  void _deliver(_Pending pending) {
     final sink = _sink;
     final event = pending.event;
     if (event != null) {
       _fire(() => sink.logEvent(event.name, event.params));
     } else {
       _fire(() => sink.logScreenView(pending.screen!));
+    }
+  }
+
+  /// Runs [call]; the returned future never completes with an error.
+  Future<void> _guarded(Future<void> Function() call) async {
+    try {
+      await call();
+    } on Object {
+      // The real sink already catches everything; this is a second net.
     }
   }
 

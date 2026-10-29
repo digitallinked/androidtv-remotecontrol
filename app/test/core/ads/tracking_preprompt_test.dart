@@ -95,8 +95,9 @@ void main() {
   });
 
   testWidgetsOn(TargetPlatform.iOS, 'preprompt_shown_at_most_once', (t) async {
-    // The user left the system prompt undecided, so the status is still
-    // "not determined": only the stored flag keeps the dialog away.
+    // The system question never appeared (iOS shows nothing while the app
+    // isn't active), so the status is still "not determined". The stored
+    // flag keeps the dialog away, and the system is asked again directly.
     tracking.answer = TrackingStatus.notDetermined;
     await pump(t);
     await ask(t);
@@ -107,8 +108,27 @@ void main() {
     await ask(t);
 
     expect(find.text('About ads in this app'), findsNothing);
-    expect(tracking.requests, 1);
+    expect(find.byType(AppDialog<void>), findsNothing);
+    expect(tracking.requests, 2);
   });
+
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'an_answered_question_is_never_asked_again',
+    (t) async {
+      tracking.answer = TrackingStatus.denied;
+      await pump(t);
+      await ask(t);
+      await t.tap(find.text('Continue'));
+      await t.pumpAndSettle();
+      expect(tracking.requests, 1);
+
+      await ask(t);
+
+      expect(find.byType(AppDialog<void>), findsNothing);
+      expect(tracking.requests, 1);
+    },
+  );
 
   testWidgetsOn(TargetPlatform.iOS, 'concurrent_calls_share_one_dialog', (
     t,

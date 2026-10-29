@@ -171,8 +171,19 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Remove ads with Premium'), findsNothing);
-    expect(find.text('Ad privacy choices'), findsNothing);
     expect(find.textContaining('shows a banner ad'), findsNothing);
+  });
+
+  testWidgets('premium_users_can_still_open_ad_privacy_choices', (t) async {
+    // UMP's rules: when it says the entry point is required, it stays
+    // reachable, Premium or not.
+    consent.optionsRequired = true;
+    await pumpPage(t, premium: true);
+    expect(find.text('Ad privacy choices'), findsOneWidget);
+
+    await t.tap(find.text('Ad privacy choices'));
+    await t.pumpAndSettle();
+    expect(consent.privacyOptionsCalls, 1);
   });
 
   testWidgets('free_users_see_the_ad_note_and_the_premium_row', (t) async {

@@ -94,9 +94,34 @@ void main() {
       expect(
         gradle,
         contains(
-          'if (admobAppIdProd == null && '
-          'gradle.startParameter.taskNames.any { '
-          'it.contains("prod", ignoreCase = true) })',
+          'val prodRequested = gradle.startParameter.taskNames.any { '
+          'it.contains("prod", ignoreCase = true) }',
+        ),
+      );
+      expect(gradle, contains('if (admobAppIdProd == null && prodRequested)'));
+      // A malformed prod app id (an ad unit id, say) fails a prod build
+      // instead of stopping the app at launch.
+      final pattern = RegExp(
+        r'val admobAppIdPattern = Regex\("""(.*?)"""\)',
+      ).firstMatch(gradle)?.group(1);
+      expect(pattern, r'^ca-app-pub-\d{16}~\d{10}$');
+      final appId = RegExp(pattern!);
+      expect(appId.hasMatch('ca-app-pub-3940256099942544~3347511713'), isTrue);
+      expect(appId.hasMatch('ca-app-pub-3940256099942544/9214589741'), isFalse);
+      expect(appId.hasMatch('ca-app-pub-3940256099942544~334751171'), isFalse);
+      expect(
+        gradle,
+        contains(
+          'if (prodRequested && admobAppIdProd != null && '
+          '!admobAppIdPattern.matches(admobAppIdProd))',
+        ),
+      );
+      expect(
+        gradle,
+        contains(
+          'throw GradleException("admobAppIdProd in android/secrets.properties '
+          'must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not '
+          'an ad unit id; a malformed id stops the app at launch.")',
         ),
       );
       // Each placeholder sits in its own flavor.

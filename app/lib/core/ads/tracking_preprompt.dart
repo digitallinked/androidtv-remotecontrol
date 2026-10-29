@@ -28,11 +28,13 @@ TrackingPreprompt trackingPreprompt(Ref ref) => TrackingPreprompt();
 /// Makes sure the user has been asked about ad tracking, right before the
 /// first banner loads (Ruling P6-R8).
 ///
-/// It returns at once unless the platform is iOS, the system has not asked
-/// yet (`notDetermined`) and the pre-prompt was never shown. Otherwise it
-/// shows a themed dialog with one action, "Continue", that can't be left by
-/// the barrier or Back, then asks the system. The dialog is the only way to
-/// the system prompt, and the question is never asked twice. Calls made while
+/// It returns at once unless the platform is iOS and the system question is
+/// still unanswered (`notDetermined`). The first time, it shows a themed
+/// dialog with one action, "Continue", that can't be left by the barrier or
+/// Back, then asks the system. The pre-prompt is shown at most once. If iOS
+/// didn't show its question (it shows nothing while the app isn't active),
+/// the next banner visit asks the system again directly, with no second
+/// pre-prompt; iOS itself never shows its question twice. Calls made while
 /// one is running share it. It never throws.
 Future<void> ensureTrackingDecided(BuildContext context, WidgetRef ref) {
   final holder = ref.read(trackingPrepromptProvider);
@@ -46,9 +48,14 @@ Future<void> _decide(BuildContext context, WidgetRef ref) async {
   try {
     if (defaultTargetPlatform != TargetPlatform.iOS) return;
     final store = ref.read(settingsStoreProvider);
-    if (store.trackingPrepromptShown) return;
     final tracking = ref.read(trackingServiceProvider);
     if (await tracking.status() != TrackingStatus.notDetermined) return;
+    // The pre-prompt was shown, but iOS never showed its question: ask the
+    // system again, without a second pre-prompt.
+    if (store.trackingPrepromptShown) {
+      await tracking.request();
+      return;
+    }
     if (!context.mounted) return;
 
     final l10n = AppLocalizations.of(context);

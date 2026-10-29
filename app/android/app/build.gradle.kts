@@ -50,9 +50,15 @@ val secrets = Properties().apply {
 val admobAppIdProd = secrets.getProperty("admobAppIdProd")?.trim()
     ?.takeIf { it.isNotBlank() && !it.contains("XXXXXXXX") }
 // Only a prod build needs the warning; dev always uses the test id on purpose.
-if (admobAppIdProd == null && gradle.startParameter.taskNames.any { it.contains("prod", ignoreCase = true) }) {
+val prodRequested = gradle.startParameter.taskNames.any { it.contains("prod", ignoreCase = true) }
+if (admobAppIdProd == null && prodRequested) {
     logger.warn("prod uses Google's test AdMob app id; set admobAppIdProd in android/secrets.properties")
 }
+// A value that isn't an app id (an ad unit id, say) makes the Mobile Ads provider throw at
+// launch, so a prod build stops here instead.
+val admobAppIdPattern = Regex("""^ca-app-pub-\d{16}~\d{10}$""")
+if (prodRequested && admobAppIdProd != null && !admobAppIdPattern.matches(admobAppIdProd))
+    throw GradleException("admobAppIdProd in android/secrets.properties must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not an ad unit id; a malformed id stops the app at launch.")
 
 android {
     namespace = "com.digitallinked.atvremote"

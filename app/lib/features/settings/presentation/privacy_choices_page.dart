@@ -157,13 +157,15 @@ class _PrivacyChoicesPageState extends ConsumerState<PrivacyChoicesPage> {
                 context.push(AppRoutes.paywall(source: PaywallSource.privacy)),
               ),
             ),
-            if (adChoices)
-              SettingsNavTile(
-                title: l10n.privacyAdChoices,
-                subtitle: l10n.privacyAdChoicesSubtitle,
-                onTap: () => unawaited(_openAdChoices()),
-              ),
           ],
+          // UMP's rules: when it says the entry point is required, it stays
+          // reachable, Premium or not.
+          if (adChoices)
+            SettingsNavTile(
+              title: l10n.privacyAdChoices,
+              subtitle: l10n.privacyAdChoicesSubtitle,
+              onTap: () => unawaited(_openAdChoices()),
+            ),
           if (trackingText != null)
             Semantics(
               hint: l10n.privacyOpensSettings,
