@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/core/config/app_version.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 
 void main() {

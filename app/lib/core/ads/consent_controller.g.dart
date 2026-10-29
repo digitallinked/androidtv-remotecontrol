@@ -13,7 +13,8 @@ part of 'consent_controller.dart';
 /// 1. [refresh], right after the first frame: a silent update that writes
 ///    the consent region. It shows nothing.
 /// 2. [ensureGathered], the first time the remote is the top route: the
-///    consent form, if the platform requires one.
+///    consent form, if the platform requires one and the user doesn't have
+///    Premium (Ruling P7-R9).
 ///
 /// No method throws; a failing platform leaves ads off.
 
@@ -25,7 +26,8 @@ final consentControllerProvider = ConsentControllerProvider._();
 /// 1. [refresh], right after the first frame: a silent update that writes
 ///    the consent region. It shows nothing.
 /// 2. [ensureGathered], the first time the remote is the top route: the
-///    consent form, if the platform requires one.
+///    consent form, if the platform requires one and the user doesn't have
+///    Premium (Ruling P7-R9).
 ///
 /// No method throws; a failing platform leaves ads off.
 final class ConsentControllerProvider
@@ -35,7 +37,8 @@ final class ConsentControllerProvider
   /// 1. [refresh], right after the first frame: a silent update that writes
   ///    the consent region. It shows nothing.
   /// 2. [ensureGathered], the first time the remote is the top route: the
-  ///    consent form, if the platform requires one.
+  ///    consent form, if the platform requires one and the user doesn't have
+  ///    Premium (Ruling P7-R9).
   ///
   /// No method throws; a failing platform leaves ads off.
   ConsentControllerProvider._()
@@ -65,14 +68,15 @@ final class ConsentControllerProvider
   }
 }
 
-String _$consentControllerHash() => r'3645316d6cf2fd4e088cddb06c9fa8716134e47a';
+String _$consentControllerHash() => r'7bf614b103e93b534650dc4ebf85a61f928046d9';
 
 /// Runs the ad consent steps once per launch (Ruling P6-R3 and P6-R8).
 ///
 /// 1. [refresh], right after the first frame: a silent update that writes
 ///    the consent region. It shows nothing.
 /// 2. [ensureGathered], the first time the remote is the top route: the
-///    consent form, if the platform requires one.
+///    consent form, if the platform requires one and the user doesn't have
+///    Premium (Ruling P7-R9).
 ///
 /// No method throws; a failing platform leaves ads off.
 

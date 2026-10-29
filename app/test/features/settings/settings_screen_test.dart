@@ -1,8 +1,26 @@
+import 'dart:async';
+
+import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/ads/ads_service.dart';
+import 'package:tv_remote/core/ads/interstitials.dart';
+import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
+import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
+import '../../helpers/fake_ads_sdk.dart';
+import '../../helpers/fake_remote_session.dart';
+import '../../helpers/fake_tv_discovery.dart';
+import '../../helpers/gather_consent.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/test_app_config.dart';
+import '../../helpers/test_premium.dart';
 
 void main() {
   /// Pumps the hub on a phone-sized view.
@@ -109,6 +127,113 @@ void main() {
       isNot(contains('Opens in your browser')),
     );
     handle.dispose();
+  });
+
+  testWidgets(
+    'leaving_a_hub_opened_before_pairing_never_shows_an_interstitial',
+    (t) async {
+      // Every interstitial rule holds: Remote Config on, the second launch, a
+      // known free user, consent that allows ads and one ad loaded.
+      final sdk = FakeAdsSdk(loads: true);
+      await pumpRouterApp(
+        t,
+        initialLocation: AppRoutes.remote,
+        prepareSettings: (store) => store.setLaunchCount(2),
+        overrides: [
+          adsSdkProvider.overrideWithValue(sdk),
+          appConfigProvider.overrideWith(
+            () => TestAppConfig(const {'ads_interstitial_enabled': true}),
+          ),
+          premiumProvider.overrideWith(() => TestPremium(PremiumState.free)),
+          remoteSessionProvider.overrideWith(
+            (ref) async => FakeRemoteSession(
+              initial: const TvConnectionState(
+                status: ConnectionStatus.connected,
+              ),
+            ),
+          ),
+        ],
+      );
+      // `App` keeps the pacing listened to from launch.
+      final container = ProviderScope.containerOf(
+        t.element(find.byType(MaterialApp)),
+      )..listen(interstitialsProvider, (_, _) {});
+      await gatherConsent(t);
+      expect(sdk.interstitialLoads, 1, reason: 'one ad is kept loaded');
+      final router = container.read(appRouterProvider);
+
+      // The hub as discovery and the no-TV remote open it.
+      unawaited(router.push<void>(AppRoutes.settingsFromSetup));
+      await t.pumpAndSettle();
+      expect(
+        t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
+        isTrue,
+      );
+      await t.pageBack();
+      await t.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(sdk.shows, 0);
+
+      // The control: the same app, the hub opened from the remote.
+      unawaited(router.push<void>(AppRoutes.settings));
+      await t.pumpAndSettle();
+      expect(
+        t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
+        isFalse,
+      );
+      await t.pageBack();
+      await t.pumpAndSettle();
+      expect(sdk.shows, 1);
+    },
+  );
+
+  testWidgets('help_privacy_and_feedback_are_reachable_before_pairing', (
+    t,
+  ) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.discover,
+      settle: false,
+      overrides: [
+        tvDiscoveryFactoryProvider.overrideWithValue(
+          FakeTvDiscoveries().create,
+        ),
+      ],
+    );
+    await t.pump();
+    await t.tap(find.byTooltip('Settings'));
+    await t.pumpAndSettle();
+    expect(appBarTitle('Settings'), findsOneWidget);
+
+    await reveal(t, find.text('Help'));
+    await t.tap(find.text('Help'));
+    await t.pumpAndSettle();
+    expect(appBarTitle('Help'), findsOneWidget);
+    expect(find.text('Common questions'), findsOneWidget);
+    await t.scrollUntilVisible(
+      find.text('Send feedback'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Send feedback'), findsOneWidget);
+    await t.pageBack();
+    await t.pumpAndSettle();
+
+    await reveal(t, find.text('Privacy choices'));
+    await t.tap(find.text('Privacy choices'));
+    await t.pumpAndSettle();
+    expect(appBarTitle('Privacy choices'), findsOneWidget);
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(appBarTitle('Settings'), findsOneWidget);
+
+    // Back again: discovery, where the search is still running.
+    await t.pageBack();
+    await t.pump();
+    await t.pump(const Duration(seconds: 1));
+    expect(find.byType(DiscoveryScreen), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsNothing);
+    expect(t.takeException(), isNull);
   });
 
   for (final b in Brightness.values) {

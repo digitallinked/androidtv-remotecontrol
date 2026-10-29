@@ -23,11 +23,11 @@ class AboutPage extends ConsumerWidget {
     );
     final flavor = ref.watch(flavorProvider);
     final name = flavor.displayName;
-    final info = ref.watch(appInfoProvider).value;
-    final failed = ref.watch(appInfoProvider).hasError;
+    final appInfo = ref.watch(appInfoProvider);
+    final info = appInfo.value;
     final versionText = info != null
         ? l10n.aboutVersion(info.version, info.buildNumber)
-        : failed
+        : appInfo.hasError
         ? l10n.aboutVersionUnknown
         : null;
 
@@ -49,8 +49,16 @@ class AboutPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: AppSpacing.xs,
               children: [
-                Text(name, style: theme.textTheme.titleLarge),
-                if (versionText != null) Text(versionText, style: secondary),
+                Semantics(
+                  header: true,
+                  child: Text(name, style: theme.textTheme.titleLarge),
+                ),
+                // While the version loads, a blank line of the same style
+                // holds its place, so nothing below moves when it arrives.
+                if (versionText != null)
+                  Text(versionText, style: secondary)
+                else
+                  ExcludeSemantics(child: Text(' ', style: secondary)),
               ],
             ),
           ),

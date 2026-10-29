@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -13,6 +14,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/config/app_version.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -24,6 +26,7 @@ import '../../helpers/fake_config_source.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_link_opener.dart';
+import '../../helpers/test_app_config.dart';
 import '../../helpers/test_devices.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
@@ -267,35 +270,55 @@ void main() {
     }
   });
 
-  testWidgets('app_info_failure_never_blocks', (t) async {
-    await pumpGate(
+  testWidgets('the_gate_decides_before_app_info_loads', (t) async {
+    // Startup activates the config before the first frame; the app info
+    // (a platform call) never answers here.
+    var remoteBodies = 0;
+    await pumpRouterApp(
       t,
-      {'min_supported_version': '9.0.0'},
+      initialLocation: AppRoutes.remote,
+      settle: false,
       overrides: [
-        appInfoProvider.overrideWith((ref) => throw StateError('no package')),
+        appConfigProvider.overrideWith(
+          () => TestAppConfig(const {'min_supported_version': '9.0.0'}),
+        ),
+        appInfoProvider.overrideWith((ref) => Completer<AppInfo>().future),
+        remoteSessionProvider.overrideWith(
+          (ref) async => FakeRemoteSession(initial: _connected),
+        ),
+        savedDevicesProvider.overrideWith((ref) => Stream.value([savedTv()])),
       ],
     );
+    // The very first frame.
+    expect(find.text('Update required'), findsOneWidget);
+    remoteBodies += find.byType(RemoteBody).evaluate().length;
+    for (var i = 0; i < 5; i++) {
+      await t.pump(const Duration(milliseconds: 100));
+      remoteBodies += find.byType(RemoteBody).evaluate().length;
+    }
+    expect(remoteBodies, 0);
+    expect(find.text('Update required'), findsOneWidget);
+  });
 
+  testWidgets('the_gate_does_not_depend_on_app_info', (t) async {
+    final noInfo = appInfoProvider.overrideWith(
+      (ref) => throw StateError('no package'),
+    );
+    await pumpGate(t, {'min_supported_version': '9.0.0'}, overrides: [noInfo]);
+    expect(find.text('Update required'), findsOneWidget);
+    expect(find.byType(RemoteBody), findsNothing);
+
+    await pumpGate(t, {'min_supported_version': '1.0.0'}, overrides: [noInfo]);
     expect(find.text('Update required'), findsNothing);
     expect(find.byType(RemoteBody), findsOneWidget);
   });
 
-  testWidgets('app_info_still_loading_never_blocks', (t) async {
-    await pumpGate(
-      t,
-      {'min_supported_version': '9.0.0'},
-      overrides: [
-        appInfoProvider.overrideWith(
-          (ref) => Future<AppInfo>.delayed(const Duration(minutes: 1), () {
-            throw StateError('late');
-          }),
-        ),
-      ],
-    );
-
-    expect(find.text('Update required'), findsNothing);
-    // The delayed future outlives the pump; end it before the test does.
-    await t.pump(const Duration(minutes: 2));
+  test('app_version_constant_lives_in_config', () {
+    final v = RegExp(
+      r'^version: (\S+)\+',
+      multiLine: true,
+    ).firstMatch(File('pubspec.yaml').readAsStringSync())!.group(1);
+    expect(kAppVersion, v);
   });
 
   testWidgets('a_failed_store_link_says_so', (t) async {

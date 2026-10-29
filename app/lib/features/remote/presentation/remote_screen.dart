@@ -346,7 +346,18 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     }
     if (session == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.pageTitleRemote)),
+        appBar: AppBar(
+          title: Text(l10n.pageTitleRemote),
+          actions: [
+            // Settings before pairing (Ruling P7-R7).
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: l10n.pageTitleSettings,
+              onPressed: () =>
+                  unawaited(context.push(AppRoutes.settingsFromSetup)),
+            ),
+          ],
+        ),
         body: _Message(
           title: l10n.remoteNoTvTitle,
           actionLabel: l10n.remoteNoTvAction,

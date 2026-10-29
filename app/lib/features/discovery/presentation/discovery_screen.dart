@@ -90,7 +90,19 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.discoverTitle)),
+      appBar: AppBar(
+        title: Text(l10n.discoverTitle),
+        actions: [
+          // Settings before pairing (Ruling P7-R7): help, privacy and
+          // feedback without a TV, and no interstitial on the way back.
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.pageTitleSettings,
+            onPressed: () =>
+                unawaited(context.push(AppRoutes.settingsFromSetup)),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [

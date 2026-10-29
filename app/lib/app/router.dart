@@ -52,6 +52,10 @@ abstract final class AppRoutes {
   /// App settings.
   static const settings = '/settings';
 
+  /// App settings opened before pairing (from discovery or the no-TV remote):
+  /// leaving it never shows an interstitial (Ruling P7-R7).
+  static const settingsFromSetup = '/settings?from=setup';
+
   /// Settings: theme and language.
   static const settingsAppearance = '/settings/appearance';
 
@@ -283,7 +287,12 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         name: AppRouteNames.settings,
         path: AppRoutes.settings,
-        pageBuilder: (_, state) => appPage(state, const SettingsScreen()),
+        pageBuilder: (_, state) => appPage(
+          state,
+          SettingsScreen(
+            fromSetup: state.uri.queryParameters['from'] == 'setup',
+          ),
+        ),
         routes: [
           GoRoute(
             name: AppRouteNames.settingsAppearance,

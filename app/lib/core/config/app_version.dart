@@ -1,3 +1,10 @@
+/// This app's version, known at compile time. It must equal the `version` in
+/// `pubspec.yaml` (without the build number); a test holds it there.
+///
+/// It is reported to the TV and decides the update gate on the first frame,
+/// with no wait for the platform's package info (Ruling P7-R8).
+const String kAppVersion = '1.0.0';
+
 /// Reads a version such as `1.2.3`, `1.2` (the same as `1.2.0`) or
 /// `1.2.3+4` (the build suffix is ignored).
 ///

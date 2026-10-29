@@ -15,10 +15,12 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
+import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_device_repository.dart';
+import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
 
@@ -76,12 +78,16 @@ void main() {
     WidgetTester t, {
     List<Override> overrides = const [],
     double textScale = 1,
+    TextScaler? textScaler,
+    Brightness brightness = Brightness.light,
   }) async {
     await pumpRouterApp(
       t,
       initialLocation: AppRoutes.discover,
       settle: false,
       textScale: textScale,
+      textScaler: textScaler,
+      brightness: brightness,
       overrides: [
         tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
         ...overrides,
@@ -530,6 +536,66 @@ void main() {
     expect(t.takeException(), isNull);
     expect(find.text('Update needed'), findsOneWidget);
     expect(find.text('Try demo'), findsOneWidget);
+  });
+
+  testWidgets('discovery_has_a_settings_button', (t) async {
+    await pumpDiscover(t);
+    final button = find.widgetWithIcon(IconButton, Icons.settings_outlined);
+    expect(button, findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
+    final size = t.getSize(button);
+    expect(size.width, greaterThanOrEqualTo(48));
+    expect(size.height, greaterThanOrEqualTo(48));
+
+    await t.tap(button);
+    await t.pumpAndSettle();
+    expect(
+      t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
+      isTrue,
+    );
+    expect(top(t).uri.toString(), AppRoutes.settingsFromSetup);
+
+    await t.pageBack();
+    await t.pump();
+    await t.pump(const Duration(seconds: 1));
+    expect(find.byType(SettingsScreen), findsNothing);
+    expect(find.byType(DiscoveryScreen), findsOneWidget);
+    expect(find.text('Choose your TV'), findsOneWidget);
+  });
+
+  testWidgets('discovery_app_bar_keeps_its_title_at_200_percent_text', (
+    t,
+  ) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+
+    for (final brightness in Brightness.values) {
+      for (final scaler in const <TextScaler>[
+        TextScaler.linear(2),
+        NonlinearTwoXScaler(),
+      ]) {
+        final reason = '${brightness.name} $scaler';
+        discoveries = FakeTvDiscoveries();
+        await pumpDiscover(t, textScaler: scaler, brightness: brightness);
+        expect(t.takeException(), isNull, reason: reason);
+        expect(find.text('Choose your TV'), findsOneWidget, reason: reason);
+        final button = find.widgetWithIcon(
+          IconButton,
+          Icons.settings_outlined,
+        );
+        expect(button, findsOneWidget, reason: reason);
+        expect(
+          t.getSize(button).height,
+          greaterThanOrEqualTo(48),
+          reason: reason,
+        );
+        // The title keeps the room left beside the action.
+        final title = t.getRect(find.text('Choose your TV'));
+        expect(title.right, lessThanOrEqualTo(t.getRect(button).left));
+      }
+    }
   });
 
   group('empty_state_icon_is_excluded_from_semantics', () {
