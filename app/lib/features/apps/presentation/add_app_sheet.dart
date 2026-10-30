@@ -236,6 +236,7 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
+          cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
           key: const ValueKey('add_app_search'),
           controller: _search,
           autocorrect: false,

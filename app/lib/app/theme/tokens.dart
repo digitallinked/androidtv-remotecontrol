@@ -325,6 +325,12 @@ abstract final class AppMotion {
   /// so with reduce motion on the new state shows in the same frame.
   static Duration durationOf(BuildContext context, Duration d) =>
       MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
+
+  /// A text field's `cursorOpacityAnimates`: `false` under reduce motion, so
+  /// the caret blinks on and off instead of fading in a loop (iOS fades it by
+  /// default); `null`, the platform's default, otherwise.
+  static bool? cursorFadesOf(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context) ? false : null;
 }
 
 /// WCAG contrast ratio between [a] and [b], from 1 to 21.

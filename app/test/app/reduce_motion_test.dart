@@ -544,4 +544,58 @@ void main() {
       expect(inside.colorScheme, base.colorScheme);
     });
   });
+
+  group('the text caret', () {
+    Future<void> pumpField(WidgetTester t, {required bool reduceMotion}) =>
+        t.pumpWidget(
+          MaterialApp(
+            theme: buildAppTheme(brightness: Brightness.light),
+            builder: (context, app) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(disableAnimations: reduceMotion),
+              child: app!,
+            ),
+            home: Scaffold(
+              body: Builder(
+                // No decoration: its focus transition is a separate
+                // animation; this checks the caret alone.
+                builder: (context) => TextField(
+                  decoration: null,
+                  autofocus: true,
+                  cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    // The iOS caret fades in and out in a loop; under reduce motion it
+    // blinks without fading, as on Android.
+    testWidgetsOn(
+      TargetPlatform.iOS,
+      'reduce_motion_stops_the_ios_caret_fading',
+      (t) async {
+        await pumpField(t, reduceMotion: true);
+        await t.pump();
+        expect(t.hasRunningAnimations, isFalse);
+        await t.pump(const Duration(milliseconds: 600));
+        expect(t.hasRunningAnimations, isFalse);
+      },
+    );
+
+    testWidgetsOn(
+      TargetPlatform.iOS,
+      'with_motion_the_ios_caret_fades',
+      (t) async {
+        await pumpField(t, reduceMotion: false);
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 600));
+        expect(t.hasRunningAnimations, isTrue);
+        // Unfocus, so the looping fade ends with the test.
+        FocusManager.instance.primaryFocus?.unfocus();
+        await t.pump();
+      },
+    );
+  });
 }

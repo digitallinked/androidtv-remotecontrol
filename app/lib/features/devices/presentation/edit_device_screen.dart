@@ -296,6 +296,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
             children: [
               if (unpaired) pairAgain,
               TextField(
+                cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
                 controller: _name,
                 textInputAction: TextInputAction.next,
                 textCapitalization: TextCapitalization.words,

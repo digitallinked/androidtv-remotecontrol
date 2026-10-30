@@ -213,6 +213,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
           ),
         ),
         TextField(
+          cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
           key: const ValueKey('shortcut_name'),
           controller: _name,
           textInputAction: TextInputAction.next,
@@ -225,6 +226,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
           ),
         ),
         TextField(
+          cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
           key: const ValueKey('shortcut_package'),
           controller: _package,
           readOnly: _editing,

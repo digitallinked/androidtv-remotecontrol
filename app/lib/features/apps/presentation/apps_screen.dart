@@ -252,6 +252,7 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
         AppSpacing.s,
       ),
       child: TextField(
+        cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
         controller: _search,
         autocorrect: false,
         textInputAction: TextInputAction.search,

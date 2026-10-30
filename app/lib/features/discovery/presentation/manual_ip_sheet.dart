@@ -51,6 +51,7 @@ class _ManualIpFormState extends State<_ManualIpForm> {
       spacing: AppSpacing.l,
       children: [
         TextField(
+          cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
           controller: _controller,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
