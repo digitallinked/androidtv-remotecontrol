@@ -125,8 +125,10 @@ class _RemoteBodyState extends State<RemoteBody> {
     );
   }
 
-  Widget _faded(Widget child) =>
-      Opacity(opacity: widget.enabled ? 1 : 0.4, child: child);
+  Widget _faded(Widget child) => Opacity(
+    opacity: widget.enabled ? 1 : AppOpacity.unavailable,
+    child: child,
+  );
 
   Widget _quick() => _faded(
     QuickAccessBar(

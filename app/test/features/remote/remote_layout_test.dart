@@ -345,7 +345,7 @@ void main() {
             matching: find.byType(Opacity),
           ),
         )
-        .where((o) => o.opacity == 0.4)
+        .where((o) => o.opacity == AppOpacity.unavailable)
         .length;
     // The quick row, the pad pages and the bottom cluster.
     expect(faded, 3);

@@ -307,6 +307,15 @@ abstract final class AppSizes {
   static const double largeTextGrowth = 1.3;
 }
 
+/// Opacities.
+abstract final class AppOpacity {
+  /// The remote's TV controls while no TV is connected: faded so they read
+  /// as unavailable, yet every label keeps at least 4.5:1 against its
+  /// background in both themes (Phase 8 accessibility audit). They still
+  /// take taps, so they are not exempt as inactive controls.
+  static const double unavailable = 0.85;
+}
+
 /// Motion durations and curves.
 abstract final class AppMotion {
   /// Quick feedback, such as a key press.

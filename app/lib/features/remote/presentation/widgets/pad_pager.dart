@@ -160,7 +160,7 @@ class _PadPagerState extends State<PadPager> {
     final l10n = AppLocalizations.of(context);
     final selected = _target ?? _shown;
     final pages = Opacity(
-      opacity: widget.enabled ? 1 : 0.4,
+      opacity: widget.enabled ? 1 : AppOpacity.unavailable,
       child: NotificationListener<ScrollNotification>(
         onNotification: _onScroll,
         child: PageView(
