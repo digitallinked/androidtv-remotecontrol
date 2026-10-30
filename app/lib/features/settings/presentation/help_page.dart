@@ -95,7 +95,7 @@ class _Faq extends StatefulWidget {
 }
 
 class _FaqState extends State<_Faq> {
-  static const _count = 7;
+  static const _count = 8;
 
   final List<ExpansibleController> _controllers = List.generate(
     _count,
@@ -128,6 +128,7 @@ class _FaqState extends State<_Faq> {
       (l10n.faqTypingQ, l10n.faqTypingA),
       (l10n.faqAppQ, l10n.faqAppA),
       (l10n.faqPrivacyQ, l10n.faqPrivacyA),
+      (l10n.faqNewPhoneQ, l10n.faqNewPhoneA),
     ];
     assert(items.length == _count, 'one controller per question');
     final reduceMotion = MediaQuery.disableAnimationsOf(context);

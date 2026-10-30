@@ -147,11 +147,12 @@ void main() {
     expect((await s.loadOrCreate()).certificatePem, fixture.certificatePem);
   });
 
-  test(
-    'secure_storage_keeps_keys_on_this_device',
-    () => expect(
-      FlutterSecureKeyValueStore.defaultStorage.iOptions.accessibility,
+  test('ios_keychain_item_never_leaves_this_device', () {
+    final options = FlutterSecureKeyValueStore.defaultStorage.iOptions;
+    expect(
+      options.accessibility,
       KeychainAccessibility.first_unlock_this_device,
-    ),
-  );
+    );
+    expect(options.synchronizable, isFalse);
+  });
 }

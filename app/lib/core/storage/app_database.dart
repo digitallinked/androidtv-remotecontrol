@@ -88,8 +88,16 @@ class AppDatabase extends _$AppDatabase {
   /// Creates a database over [e], for example `NativeDatabase.memory()`.
   AppDatabase(super.e);
 
-  /// Opens the on-device database file named `remotely`.
-  factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'remotely'));
+  /// Opens the on-device database file named `remotely`, in
+  /// [databaseDirectory] when given (see `databaseDirectoryFor`), otherwise
+  /// in drift's default directory.
+  factory AppDatabase.open({Future<Object> Function()? databaseDirectory}) =>
+      AppDatabase(
+        driftDatabase(
+          name: 'remotely',
+          native: DriftNativeOptions(databaseDirectory: databaseDirectory),
+        ),
+      );
 
   @override
   int get schemaVersion => 1;

@@ -2230,6 +2230,18 @@ abstract class AppLocalizations {
   /// **'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.'**
   String get faqPrivacyA;
 
+  /// FAQ question after the privacy question: what happens to saved TVs on a new or restored phone.
+  ///
+  /// In en, this message translates to:
+  /// **'I moved to a new phone. Where are my TVs?'**
+  String get faqNewPhoneQ;
+
+  /// FAQ answer. Backups and phone transfer never carry saved TVs, so keep the promise exact.
+  ///
+  /// In en, this message translates to:
+  /// **'Your TVs and their pairing stay on the phone you paired them with. They aren\'t copied by backups or when you move to a new phone, so pair each TV again on the new phone.'**
+  String get faqNewPhoneA;
+
   /// About page.
   ///
   /// In en, this message translates to:
@@ -2787,6 +2799,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open the store. Update the app from your phone\'s app store.'**
   String get updateRequiredFailed;
+
+  /// Spoken label of a progress spinner that has no other label.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get loadingLabel;
+
+  /// Tooltip and spoken label of the Edit apps overflow menu button.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get manageAppsMoreOptions;
+
+  /// Announced to screen readers after an app is reordered in Edit apps (`app`: app name; `position`, `count`: `int`).
+  ///
+  /// In en, this message translates to:
+  /// **'{app} moved to position {position} of {count}'**
+  String manageAppsMoved(String app, int position, int count);
 }
 
 class _AppLocalizationsDelegate

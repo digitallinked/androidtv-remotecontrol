@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show StreamProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/database_location.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/secure_key_value_store.dart';
@@ -9,9 +11,12 @@ import 'package:tv_remote/core/storage/settings_store.dart';
 part 'storage_providers.g.dart';
 
 /// The local database, opened on first use and closed with its container.
+/// On iOS it lives in the backup-excluded directory (Ruling P8-R1).
 @Riverpod(keepAlive: true)
 AppDatabase appDatabase(Ref ref) {
-  final db = AppDatabase.open();
+  final db = AppDatabase.open(
+    databaseDirectory: databaseDirectoryFor(defaultTargetPlatform),
+  );
   ref.onDispose(db.close);
   return db;
 }

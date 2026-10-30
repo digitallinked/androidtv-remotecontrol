@@ -1646,6 +1646,14 @@
   "@faqPrivacyA": {
     "description": "FAQ answer."
   },
+  "faqNewPhoneQ": "I moved to a new phone. Where are my TVs?",
+  "@faqNewPhoneQ": {
+    "description": "FAQ question after the privacy question: what happens to saved TVs on a new or restored phone."
+  },
+  "faqNewPhoneA": "Your TVs and their pairing stay on the phone you paired them with. They aren't copied by backups or when you move to a new phone, so pair each TV again on the new phone.",
+  "@faqNewPhoneA": {
+    "description": "FAQ answer. Backups and phone transfer never carry saved TVs, so keep the promise exact."
+  },
   "aboutVersion": "Version {version} ({build})",
   "@aboutVersion": {
     "description": "About page.",
@@ -2067,5 +2075,31 @@
   "updateRequiredFailed": "Couldn't open the store. Update the app from your phone's app store.",
   "@updateRequiredFailed": {
     "description": "Snackbar when the link fails."
+  },
+  "loadingLabel": "Loading…",
+  "@loadingLabel": {
+    "description": "Spoken label of a progress spinner that has no other label."
+  },
+  "manageAppsMoreOptions": "More options",
+  "@manageAppsMoreOptions": {
+    "description": "Tooltip and spoken label of the Edit apps overflow menu button."
+  },
+  "manageAppsMoved": "{app} moved to position {position} of {count}",
+  "@manageAppsMoved": {
+    "description": "Announced to screen readers after an app is reordered in Edit apps (`app`: app name; `position`, `count`: `int`).",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Netflix"
+      },
+      "position": {
+        "type": "int",
+        "example": "2"
+      },
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
   }
 }
