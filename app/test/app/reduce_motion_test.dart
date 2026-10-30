@@ -14,6 +14,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/device_switcher.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
@@ -436,12 +437,17 @@ void main() {
       }
     });
 
-    /// Every kind of tappable the app uses, under the app theme.
+    /// Every kind of tappable the app uses, under the app theme: plain
+    /// buttons, and the widget-styled ones whose style derives its own
+    /// pressed overlay (a coloured TextButton or IconButton, the dialog's
+    /// danger action, the remote's device switcher), a SegmentedButton and a
+    /// PopupMenuButton. A fresh app each time: some of them open a route.
     Future<void> pumpTappables(
       WidgetTester t, {
       required bool reduceMotion,
     }) => t.pumpWidget(
       MaterialApp(
+        key: UniqueKey(),
         theme: buildAppTheme(brightness: Brightness.light),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -452,52 +458,126 @@ void main() {
           child: ReduceMotionTheme(child: app!),
         ),
         home: Scaffold(
-          body: Column(
-            children: [
-              FilledButton(onPressed: () {}, child: const Text('Filled')),
-              TextButton(onPressed: () {}, child: const Text('Text')),
-              OutlinedButton(onPressed: () {}, child: const Text('Outlined')),
-              IconButton(
-                onPressed: () {},
-                tooltip: 'Icon',
-                icon: const Icon(Icons.settings_outlined),
-              ),
-              ListTile(onTap: () {}, title: const Text('Tile')),
-              SizedBox(
-                width: 96,
-                height: 120,
-                child: AppTile(
-                  app: const AppEntry(package: 'a.b', name: 'Films'),
-                  isCurrent: false,
-                  onTap: () {},
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                FilledButton(onPressed: () {}, child: const Text('Filled')),
+                TextButton(onPressed: () {}, child: const Text('Text')),
+                OutlinedButton(
+                  onPressed: () {},
+                  child: const Text('Outlined'),
                 ),
-              ),
-            ],
+                IconButton(
+                  onPressed: () {},
+                  tooltip: 'Icon',
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+                Builder(
+                  builder: (context) => IconButton(
+                    onPressed: () {},
+                    tooltip: 'Coloured icon',
+                    // As Edit apps colours its Remove button.
+                    style: foregroundOnly(context.appColors.dangerText),
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                ),
+                ListTile(onTap: () {}, title: const Text('Tile')),
+                SizedBox(
+                  width: 96,
+                  height: 120,
+                  child: AppTile(
+                    app: const AppEntry(package: 'a.b', name: 'Films'),
+                    isCurrent: false,
+                    onTap: () {},
+                  ),
+                ),
+                const AppDialog<bool>(
+                  title: 'Remove?',
+                  message: 'Gone for good.',
+                  actions: [
+                    AppDialogAction(
+                      label: 'Danger',
+                      value: true,
+                      isDestructive: true,
+                    ),
+                  ],
+                ),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 0, label: Text('One')),
+                    ButtonSegment(value: 1, label: Text('Two')),
+                  ],
+                  selected: const {0},
+                  onSelectionChanged: (_) {},
+                ),
+                Builder(
+                  builder: (context) => PopupMenuButton<void>(
+                    tooltip: 'Menu',
+                    // As Edit apps styles its menu button.
+                    style: Theme.of(context).iconButtonTheme.style,
+                    popUpAnimationStyle: MediaQuery.disableAnimationsOf(context)
+                        ? AnimationStyle.noAnimation
+                        : null,
+                    itemBuilder: (_) => [
+                      const PopupMenuItem<void>(child: Text('Reset')),
+                    ],
+                  ),
+                ),
+                DeviceSwitcher(
+                  currentName: 'Living Room TV',
+                  currentServiceName: null,
+                  devices: const [],
+                  onSelect: (_) {},
+                  onAddTv: () {},
+                  onManageTvs: () {},
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
 
-    final tappables = {
-      'filled': find.text('Filled'),
-      'text': find.text('Text'),
-      'outlined': find.text('Outlined'),
-      'icon': find.byTooltip('Icon'),
-      'list tile': find.text('Tile'),
-      'app tile': find.byType(AppTile),
+    /// What to press, and whether to lift the finger afterwards. The danger
+    /// action would pop the only route, so it is cancelled instead.
+    final tappables = <String, (Finder, bool)>{
+      'filled': (find.text('Filled'), true),
+      'text': (find.text('Text'), true),
+      'outlined': (find.text('Outlined'), true),
+      'icon': (find.byTooltip('Icon'), true),
+      'coloured icon': (find.byTooltip('Coloured icon'), true),
+      'list tile': (find.text('Tile'), true),
+      'app tile': (find.byType(AppTile), true),
+      'dialog danger action': (find.text('Danger'), false),
+      'segmented button': (find.text('Two'), true),
+      'popup menu button': (find.byTooltip('Menu'), true),
+      'device switcher': (find.text('Living Room TV'), true),
     };
 
-    // Ruling P7-C5: Flutter fades a pressed highlight over 200 ms whatever
-    // the flag says, so under reduce motion it must be transparent.
+    Future<TestGesture> holdOn(WidgetTester t, Finder target) async {
+      await t.ensureVisible(target);
+      await t.pumpAndSettle();
+      final press = await t.startGesture(t.getCenter(target));
+      // Past the press timeout: a scrollable or a tooltip delays tap-down.
+      await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+      return press;
+    }
+
+    // Rulings P7-C5, P7-C7: Flutter fades a pressed highlight over 200 ms
+    // whatever the flag says, so under reduce motion it must be transparent,
+    // whoever styled the control.
     testWidgets('reduce_motion_shows_no_pressed_highlight', (t) async {
-      await pumpTappables(t, reduceMotion: true);
-      for (final MapEntry(key: name, value: target) in tappables.entries) {
-        final press = await t.startGesture(t.getCenter(target));
-        // Past the press timeout: a tooltip's gestures delay the tap-down.
-        await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+      for (final MapEntry(key: name, value: (target, lift))
+          in tappables.entries) {
+        await pumpTappables(t, reduceMotion: true);
+        final press = await holdOn(t, target);
         expectNoVisibleInk(t, '$name pressed');
         expect(t.hasRunningAnimations, isFalse, reason: '$name pressed');
-        await press.up();
+        if (lift) {
+          await press.up();
+        } else {
+          await press.cancel();
+        }
         await t.pump();
         expectNoVisibleInk(t, '$name released');
         expect(t.hasRunningAnimations, isFalse, reason: '$name released');
@@ -505,18 +585,60 @@ void main() {
     });
 
     testWidgets('with_motion_a_press_shows_a_highlight', (t) async {
-      await pumpTappables(t, reduceMotion: false);
-      for (final MapEntry(key: name, value: target) in tappables.entries) {
-        final press = await t.startGesture(t.getCenter(target));
-        await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+      for (final MapEntry(key: name, value: (target, _)) in tappables.entries) {
+        await pumpTappables(t, reduceMotion: false);
+        final press = await holdOn(t, target);
         expect(
           inkFeatures(t).whereType<InkHighlight>().where((h) => h.color.a > 0),
           isNotEmpty,
           reason: name,
         );
-        await press.up();
+        await press.cancel();
         await t.pumpAndSettle();
       }
+    });
+
+    // The real Edit apps screen's menu button, under reduce motion.
+    testWidgets('reduce_motion_edit_apps_menu_shows_no_pressed_highlight', (
+      t,
+    ) async {
+      await pumpRouterApp(
+        t,
+        initialLocation: AppRoutes.manageApps,
+        disableAnimations: true,
+      );
+      final press = await holdOn(t, find.byType(PopupMenuButton<void>));
+      expectNoVisibleInk(t, 'menu pressed');
+      expect(t.hasRunningAnimations, isFalse, reason: 'menu pressed');
+      await press.up();
+      await t.pump();
+      expect(find.text('Reset to suggested apps'), findsOneWidget);
+      expectNoVisibleInk(t, 'menu open');
+      expect(t.hasRunningAnimations, isFalse, reason: 'menu open');
+    });
+
+    // Reduce motion removes only the pressed highlight: keyboard focus stays
+    // visible.
+    testWidgets('reduce_motion_keeps_the_focus_highlight', (t) async {
+      await pumpTappables(t, reduceMotion: true);
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      addTearDown(
+        () => FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic,
+      );
+      final ink = find.descendant(
+        of: find.byType(FilledButton),
+        matching: find.byType(InkWell),
+      );
+      Focus.of(t.element(find.text('Filled'))).requestFocus();
+      await t.pumpAndSettle();
+      expect(ink, findsOneWidget);
+      expect(
+        inkFeatures(t).whereType<InkHighlight>().where((h) => h.color.a > 0),
+        isNotEmpty,
+        reason: 'a focused button still shows its overlay',
+      );
     });
 
     testWidgets('reduce_motion_theme_keeps_the_app_theme_otherwise', (

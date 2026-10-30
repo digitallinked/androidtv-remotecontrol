@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
@@ -367,9 +368,12 @@ class _EditFormState extends ConsumerState<_EditForm> {
               if (!unpaired) pairAgain,
               TextButton(
                 onPressed: _busy ? null : () => unawaited(_remove()),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size.fromHeight(AppSizes.touchMin),
-                  foregroundColor: colors.dangerText,
+                // No styleFrom(foregroundColor:): its derived overlay
+                // would beat reduce motion's.
+                style: foregroundOnly(colors.dangerText).copyWith(
+                  minimumSize: const WidgetStatePropertyAll(
+                    Size.fromHeight(AppSizes.touchMin),
+                  ),
                 ),
                 child: Text(l10n.editDeviceRemove),
               ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
@@ -285,6 +286,14 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
             onPressed: () => unawaited(showAddAppSheet(context)),
           ),
           PopupMenuButton<void>(
+            // It colours its IconButton, which derives a pressed overlay;
+            // the icon-button theme's style (no pressed overlay under reduce
+            // motion) wins over that.
+            style: Theme.of(context).iconButtonTheme.style,
+            // The menu opens without its grow-and-fade under reduce motion.
+            popUpAnimationStyle: MediaQuery.disableAnimationsOf(context)
+                ? AnimationStyle.noAnimation
+                : null,
             itemBuilder: (_) => [
               PopupMenuItem<void>(
                 onTap: () => unawaited(_reset()),
@@ -359,9 +368,9 @@ class _AppRowItem extends StatelessWidget {
       ),
       IconButton(
         icon: const Icon(Icons.remove_circle_outline),
-        color: colors.dangerText,
         tooltip: l10n.manageAppsRemove(app.name),
-        style: buttonStyle,
+        // Not `color:`: it derives an overlay that beats reduce motion's.
+        style: buttonStyle.merge(foregroundOnly(colors.dangerText)),
         onPressed: onRemove,
       ),
       Semantics(

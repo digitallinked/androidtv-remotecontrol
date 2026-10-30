@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 
 /// One button of an [AppDialog]; tapping it closes the dialog with [value].
@@ -92,9 +93,8 @@ class AppDialog<T> extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: action.isDestructive
-          ? TextButton.styleFrom(
-              foregroundColor: context.appColors.dangerText,
-            )
+          // No styleFrom: its derived overlay would beat reduce motion's.
+          ? foregroundOnly(context.appColors.dangerText)
           : null,
       child: label,
     );

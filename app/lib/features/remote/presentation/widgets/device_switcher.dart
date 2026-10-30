@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -95,10 +96,15 @@ class DeviceSwitcher extends StatelessWidget {
       child: Tooltip(
         message: l10n.remoteSwitchTv,
         child: TextButton(
-          style: TextButton.styleFrom(
-            minimumSize: const Size(AppSizes.touchMin, AppSizes.touchMin),
-            foregroundColor: context.appColors.textPrimary,
-            textStyle: Theme.of(context).textTheme.titleMedium,
+          // No styleFrom(foregroundColor:): its derived overlay would beat
+          // reduce motion's.
+          style: foregroundOnly(context.appColors.textPrimary).copyWith(
+            minimumSize: const WidgetStatePropertyAll(
+              Size(AppSizes.touchMin, AppSizes.touchMin),
+            ),
+            textStyle: WidgetStatePropertyAll(
+              Theme.of(context).textTheme.titleMedium,
+            ),
           ),
           onPressed: () => _open(context),
           child: Row(

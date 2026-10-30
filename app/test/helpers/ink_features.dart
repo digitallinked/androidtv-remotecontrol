@@ -3,6 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Every ink feature (splash or highlight) that a `Material` paints right
 /// now, through the framework's `debugInkFeatures` test hook.
+///
+/// The list can hold a feature more than once: the render tree walk reaches
+/// some ink controllers by two paths. Deduplicate (`toSet()`) before
+/// counting or disposing, as [expectNoVisibleInk] does.
 List<InkFeature> inkFeatures(WidgetTester t) => [
   for (final controller
       in t.allRenderObjects.whereType<MaterialInkController>())

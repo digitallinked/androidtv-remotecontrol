@@ -38,7 +38,10 @@ ThemeData buildTheaterTheme() => _buildTheme(
 /// Flutter fades a pressed highlight in and out over 200 ms whatever the
 /// reduce-motion flag says, and offers no way to shorten it. So the pressed
 /// highlight is made transparent: `highlightColor` for list tiles and plain
-/// ink wells, and the pressed overlay of every button theme. Hover and focus
+/// ink wells, and the pressed overlay of every button theme. A widget that
+/// colours a button itself must not use `styleFrom(foregroundColor:)` or
+/// `IconButton(color:)`: those derive a pressed overlay that beats the
+/// theme's. Use [foregroundOnly] instead (Ruling P7-C7). Hover and focus
 /// highlights are kept: they aren't motion a press starts, and focus is how a
 /// keyboard user finds their place. A press still shows its result (a page,
 /// a sheet, a toggled switch), and the remote's keys still scale at once.
@@ -61,7 +64,17 @@ ThemeData withReducedMotion(ThemeData theme) => theme.copyWith(
   iconButtonTheme: IconButtonThemeData(
     style: _noPressedOverlay(theme.iconButtonTheme.style),
   ),
+  segmentedButtonTheme: SegmentedButtonThemeData(
+    style: _noPressedOverlay(theme.segmentedButtonTheme.style),
+    selectedIcon: theme.segmentedButtonTheme.selectedIcon,
+  ),
 );
+
+/// A button style that only sets the foreground (text and icon) to [color]:
+/// unlike `styleFrom(foregroundColor:)` it derives no overlay, so the
+/// theme's pressed overlay (none under reduce motion) stays in charge.
+ButtonStyle foregroundOnly(Color color) =>
+    ButtonStyle(foregroundColor: WidgetStatePropertyAll(color));
 
 /// [style] whose overlay is transparent while pressed, and whose shape,
 /// colour and elevation changes don't animate. Other states keep the
