@@ -1,14 +1,23 @@
 # Project status
 
-_Last updated: 2026-10-29 by Claude (controller, subagent-driven run, Phase 6 merged)._
+_Last updated: 2026-10-30 by Claude (controller, subagent-driven run, Phase 7 merged)._
 
 ## Current phase
 
-**Phase 7: Polish** (next; plan to be written from the master plan). Phases 0–6 are merged into `main`.
+**Phase 8: Test and accessibility hardening** (next; plan to be written from the master plan). Phases 0–7 are merged into `main`.
 
-The **real-device run on the owner's phone and TV is still open**. It is the exit criterion for Phases 3–6. Phase 6 adds Firebase DebugView, ads with consent, and the RevenueCat sandbox (needs the owner and real test config).
+The **real-device run on the owner's phone and TV is still open**. It is the exit criterion for Phases 3–7. Phase 6 adds Firebase DebugView, ads with consent, and the RevenueCat sandbox (needs the owner and real test config). Phase 7 adds the icon, splash and reduce-motion checks below.
 
 ## Done
+
+- **Phase 7 (polish):**
+  - **Onboarding:** 3 cards (Skip, Get started, Try demo), shown once, never trapped by a failing store. An iOS-only Local Network explainer before discovery.
+  - **Motion:** real page transitions on all 16 routes through `appPage` (iOS swipe-back, Android predictive back). A full reduce-motion mode: no visible animation anywhere, including ink, menus and the iOS caret (decision #47).
+  - **Branding:** an original icon (adaptive, themed/monochrome, iOS set, Play 512) and splash, all rendered from our own painter by `tool/brand.ps1` (decision #48).
+  - **Reachability:** Settings (Help, privacy, feedback) from discovery and the no-TV remote before pairing. The update gate shows on the first frame. Premium users skip the UMP form.
+  - **Apps:** name-prefix-first search, a ringed now-on-TV dot, a non-scrolling empty/loading/failed state, the keyboard closes on drag.
+  - **Large text:** two-line quick tiles, stacked Edit apps rows, About polish; every Phase 7 screen fits 320 dp at 200% text and a non-linear scaler, with contrast, tap-target and screen-reader-order tests.
+  - Haptic and touchpad-reach fixes. Decisions #46–#48. All Phase 7 carry-overs are closed.
 
 - **Phase 6 (services & monetisation):**
   - **Firebase:**
@@ -98,29 +107,25 @@ _Nothing._
      - A RevenueCat sandbox purchase and restore. Check that the paywall doesn't flash "You have Premium" while closing.
      - The review prompt (Play internal track only).
      - The feedback footer shows "System: Android 12".
+   - **Phase 7 checks (not run yet):**
+     - Onboarding on a fresh install; Try demo; Settings from discovery.
+     - The launcher icon and splash on the Note10+; the themed (monochrome) icon on an Android 13+ device.
+     - System "Remove animations" on: pages, sheets, presses and menus don't animate; iOS swipe-back still works.
+     - TalkBack through onboarding; maximum font size on Apps, Edit apps and the quick row.
+     - On a Mac/iPhone: the iOS icon set, splash, Local Network explainer, reduce motion.
    - **Ask before any Power or Wake-on-LAN test**, because it turns the TV off or on.
-2. Write and execute the Phase 7 (polish) plan from the master plan, including the Phase 7 carry-overs below.
+2. Write and execute the Phase 8 (test and accessibility hardening) plan from the master plan, including the Phase 8 carry-overs below (the `allowBackup` release blocker first).
 
-## Carry-over to Phase 7+
-- **Phase 7 (polish):**
-  - **From Phase 6:**
-    - UpdateGate may flash the remote while `appInfo` loads.
-    - A ruling, against P6-R8, on skipping the UMP form for a user who is already Premium (cached). "Ad privacy choices" stays reachable either way.
-  - **Navigation and reachability:**
-    - A Settings entry on the no-TV screen and in discovery. Today Help, privacy and feedback can't be reached before pairing (P6-R15).
-  - **Apps and catalogue:**
-    - Name-prefix-first catalogue search.
-    - The now-on-TV dot ring on custom colours.
-    - The Apps empty state needs extra scroll and `keyboardDismissBehavior`.
-  - **Large text (200%):**
-    - The Edit apps name column needs a stacked layout.
-    - Quick-tile names ellipsize.
-  - **About page:** a single watch, header semantics, no pop-in.
-  - **Remote behaviour:**
-    - The heavy haptic fires before `needsMac`/`cannotWake`.
-    - Touchpad reach isn't updated from the up position.
-  - **Onboarding:** a storage write error leaves "Get started" dead.
+## Carry-over to Phase 8+
 - Phase 8 (test/accessibility hardening):
+  - **From Phase 7:**
+    - **Reduce motion:** Radio and Switch animations; the InputDecorator focus transition (167 ms under the MediaQuery flag, about 8 ms under the platform flag). Decision #47.
+    - **Tests:**
+      - Drift multiple-database warnings in other test files.
+      - The predictive-back test finds a private Flutter class name; recheck on the next Flutter bump.
+      - A screen test that 'hotstar' in IN lists Disney+ Hotstar before JioHotstar; a drag test on a stacked Edit apps row; hold the real Edit apps Remove button; the popup menu closes without animation.
+      - Unreadable Premium is tested in isolation only (the App reads `premiumProvider` for the theme).
+    - **Refactor:** extract the Settings `IconButton` if a third caller appears.
   - **RELEASE BLOCKER: decide the Android `allowBackup` / data-extraction rules.**
     - Auto Backup copies the DB (TV names, IPs, MACs, pins, usage) off the phone, and restoring the secure-storage identity is a risk.
     - The Privacy page's "never leave this phone" (`privacyIntro`) and `faqPrivacyA` are true only once the DB and prefs are excluded.

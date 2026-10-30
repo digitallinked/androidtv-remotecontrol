@@ -24,7 +24,7 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
   2. Remote Config activate (5 s, then `seal()`; fetched values apply next launch).
   3. The first frame.
   4. UMP silent update and RevenueCat, in parallel, so Premium is known before any ad.
-  5. The consent form, started only on `/remote`.
+  5. The consent form, started only on `/remote`, and skipped for a cached Premium user (decision #46; an unreadable Premium counts as free).
   6. (iOS) the ATT pre-prompt, then the system prompt.
   7. The ads SDK.
   8. The banner.
