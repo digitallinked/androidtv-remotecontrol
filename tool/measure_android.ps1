@@ -112,9 +112,12 @@ switch ($Mode) {
         $times = @()
         for ($run = 1; $run -le $Runs; $run++) {
             & $adb -s $serial shell am force-stop $Package
+            if ($LASTEXITCODE -ne 0) { Fail "Run ${run}: am force-stop $Package failed." }
             Start-Sleep -Seconds 2
             $result = & $adb -s $serial shell am start -W -n "$Package/$Activity" | Out-String
+            $code = $LASTEXITCODE
             Set-Content -Encoding utf8 -Path (Join-Path $out "run-$run.txt") -Value $result
+            if ($code -ne 0) { Fail "Run ${run}: am start failed (see $out\run-$run.txt)." }
             if ($result -notmatch 'TotalTime:\s*(\d+)') {
                 Fail "Run $run printed no TotalTime (see $out\run-$run.txt)."
             }
@@ -122,6 +125,7 @@ switch ($Mode) {
             Write-Host ("Run {0,2}: TotalTime {1} ms" -f $run, $Matches[1])
         }
         & $adb -s $serial shell am force-stop $Package
+        if ($LASTEXITCODE -ne 0) { Fail "am force-stop $Package failed after the last run." }
         $median = Get-Median $times
         $summary = "Cold start of $Package on $serial ($model, Android $release): median TotalTime $median ms over $Runs runs ($($times -join ', ') ms)"
         Set-Content -Encoding utf8 -Path (Join-Path $out 'summary.txt') -Value $summary
@@ -135,9 +139,20 @@ switch ($Mode) {
         if (Test-Path $info) { Remove-Item -Force $info }
         Push-Location $appDir
         try {
-            # Tee-Object -FilePath writes UTF-16 in Windows PowerShell; keep the log UTF-8.
-            & flutter run --profile --trace-startup --flavor dev -t lib/main_dev.dart -d $serial | Tee-Object -Variable runLog
-            $code = $LASTEXITCODE
+            # stderr goes into the log too (build errors, a lost device). In
+            # Windows PowerShell 2>&1 turns native stderr lines into error
+            # records, which 'Stop' would throw on, and Tee-Object -FilePath
+            # writes UTF-16: so relax the preference, turn every line back into
+            # text and save the log as UTF-8 ourselves.
+            $preference = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            try {
+                & flutter run --profile --trace-startup --flavor dev -t lib/main_dev.dart -d $serial 2>&1 |
+                    ForEach-Object { "$_" } | Tee-Object -Variable runLog
+                $code = $LASTEXITCODE
+            } finally {
+                $ErrorActionPreference = $preference
+            }
             Set-Content -Encoding utf8 -Path (Join-Path $out 'flutter_run.txt') -Value $runLog
             if ($code -ne 0) { Fail "flutter run failed (see $out\flutter_run.txt)." }
         } finally {
@@ -156,11 +171,12 @@ switch ($Mode) {
         & $adb -s $serial shell dumpsys batterystats --reset | Out-Null
         if ($LASTEXITCODE -ne 0) { Fail 'dumpsys batterystats --reset failed.' }
         Write-Host "Unplug, open the remote connected to the TV, leave it for $Minutes minutes."
-        Write-Host '(For the baseline run: force-stop the app instead, screen on.) Plug back in before the time is up; the stats are read once the device is back.'
+        Write-Host '(For the baseline run: force-stop the app instead, screen on.) Plug back in when the countdown ends, not before; the stats are read once the device is back.'
         for ($left = $Minutes; $left -gt 0; $left--) {
             Write-Host "  $left min left"
             Start-Sleep -Seconds 60
         }
+        Write-Host 'Time is up: plug the phone back in now.'
         Write-Host 'Waiting for the device...'
         & $adb -s $serial wait-for-device
         $stats = & $adb -s $serial shell dumpsys batterystats --charged $Package | Out-String

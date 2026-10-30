@@ -48,8 +48,11 @@ case "$mode" in
   startup | trace | battery) ;;
   *) fail "--mode must be startup, trace or battery" ;;
 esac
-[[ "$runs" =~ ^[1-9][0-9]*$ ]] || fail "--runs must be a positive whole number"
-[[ "$minutes" =~ ^[1-9][0-9]*$ ]] || fail "--minutes must be a positive whole number"
+# The same ranges as measure_android.ps1.
+{ [[ "$runs" =~ ^[1-9][0-9]*$ ]] && [ "$runs" -le 1000 ]; } ||
+  fail "--runs must be a whole number from 1 to 1000"
+{ [[ "$minutes" =~ ^[1-9][0-9]*$ ]] && [ "$minutes" -le 1440 ]; } ||
+  fail "--minutes must be a whole number from 1 to 1440"
 
 find_adb() {
   if command -v adb > /dev/null 2>&1; then
@@ -105,15 +108,16 @@ case "$mode" in
     mkdir -p "$out"
     times=()
     for run in $(seq 1 "$runs"); do
-      adb_s shell am force-stop "$package"
+      adb_s shell am force-stop "$package" || fail "Run $run: am force-stop $package failed."
       sleep 2
-      adb_s shell am start -W -n "$package/$activity" | tr -d '\r' > "$out/run-$run.txt"
+      adb_s shell am start -W -n "$package/$activity" | tr -d '\r' > "$out/run-$run.txt" ||
+        fail "Run $run: am start failed (see $out/run-$run.txt)."
       total="$(sed -n 's/^TotalTime:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$out/run-$run.txt")"
       [ -n "$total" ] || fail "Run $run printed no TotalTime (see $out/run-$run.txt)."
       times+=("$total")
       printf 'Run %2d: TotalTime %s ms\n' "$run" "$total"
     done
-    adb_s shell am force-stop "$package"
+    adb_s shell am force-stop "$package" || fail "am force-stop $package failed after the last run."
     median="$(printf '%s\n' "${times[@]}" | sort -n | awk '{ v[NR] = $1 } END { if (NR % 2) print v[(NR + 1) / 2]; else print (v[NR / 2] + v[NR / 2 + 1]) / 2 }')"
     summary="Cold start of $package on $serial ($model, Android $release): median TotalTime $median ms over $runs runs ($(IFS=,; echo "${times[*]}" | sed 's/,/, /g') ms)"
     echo "$summary" > "$out/summary.txt"
@@ -128,8 +132,16 @@ case "$mode" in
       tee "$out/flutter_run.txt" || fail "flutter run failed (see $out/flutter_run.txt)."
     [ -f "$info" ] || fail "flutter run wrote no $info."
     cp "$info" "$out/start_up_info.json"
-    field() { grep -o "\"$1\"[[:space:]]*:[[:space:]]*[0-9]*" "$info" | grep -o '[0-9]*$'; }
-    summary="Startup trace of $package on $serial ($model, Android $release): timeToFirstFrameMicros $(field timeToFirstFrameMicros), timeToFirstFrameRasterizedMicros $(field timeToFirstFrameRasterizedMicros)"
+    field() {
+      local value
+      value="$(grep -o "\"$1\"[[:space:]]*:[[:space:]]*[0-9]*" "$info" | grep -o '[0-9]*$' || true)"
+      [ -n "$value" ] || fail "$info has no $1."
+      echo "$value"
+    }
+    # Read outside the summary's $(...), so a missing field stops with its message.
+    first_frame="$(field timeToFirstFrameMicros)" || exit 1
+    first_raster="$(field timeToFirstFrameRasterizedMicros)" || exit 1
+    summary="Startup trace of $package on $serial ($model, Android $release): timeToFirstFrameMicros $first_frame, timeToFirstFrameRasterizedMicros $first_raster"
     echo "$summary" > "$out/summary.txt"
     echo "$summary"
     echo "Raw output: $out"
@@ -138,11 +150,12 @@ case "$mode" in
     mkdir -p "$out"
     adb_s shell dumpsys batterystats --reset > /dev/null || fail 'dumpsys batterystats --reset failed.'
     echo "Unplug, open the remote connected to the TV, leave it for $minutes minutes."
-    echo '(For the baseline run: force-stop the app instead, screen on.) Plug back in before the time is up; the stats are read once the device is back.'
+    echo '(For the baseline run: force-stop the app instead, screen on.) Plug back in when the countdown ends, not before; the stats are read once the device is back.'
     for left in $(seq "$minutes" -1 1); do
       echo "  $left min left"
       sleep 60
     done
+    echo 'Time is up: plug the phone back in now.'
     echo 'Waiting for the device...'
     adb_s wait-for-device
     adb_s shell dumpsys batterystats --charged "$package" | tr -d '\r' > "$out/batterystats.txt"
