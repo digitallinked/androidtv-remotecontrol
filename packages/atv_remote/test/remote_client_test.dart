@@ -10,11 +10,11 @@ import 'package:atv_remote/src/proto/remotemessage.pb.dart';
 import 'package:atv_remote/src/remote_client.dart';
 import 'package:atv_remote/src/remote_events.dart';
 import 'package:atv_remote/src/socket_connector.dart';
+import 'package:atv_remote/src/testing/fake_tv_identity.dart';
+import 'package:atv_remote/testing.dart';
 import 'package:pointycastle/export.dart' show SHA256Digest;
 import 'package:test/test.dart';
 
-import 'fake_tv/fake_tv_identity.dart';
-import 'fake_tv/fake_tv_server.dart';
 import 'support/unloadable_identity.dart';
 
 const Duration _wait = Duration(seconds: 5);

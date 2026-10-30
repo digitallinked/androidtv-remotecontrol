@@ -8,8 +8,7 @@ import 'package:atv_remote/src/identity.dart';
 import 'package:atv_remote/src/pairing_secret.dart';
 import 'package:atv_remote/src/proto/polo.pb.dart';
 import 'package:atv_remote/src/proto/remotemessage.pb.dart';
-
-import 'fake_tv_identity.dart';
+import 'package:atv_remote/src/testing/fake_tv_identity.dart';
 
 /// An in-process stand-in for an Android TV running the Remote Service v2.
 ///
@@ -112,6 +111,10 @@ class FakeTvServer {
 
   String? _displayedCode;
   final List<int> _receivedKeyCodes = [];
+  final StreamController<int> _keyCodes = StreamController<int>.broadcast(
+    sync: true,
+  );
+  int _acceptedRemoteConnections = 0;
   final List<RemoteDirection> _receivedKeyDirections = [];
   final List<String> _receivedAppLinks = [];
   String _receivedText = '';
@@ -135,6 +138,22 @@ class FakeTvServer {
   /// Android key codes injected by clients, in order, including the
   /// start and end of long presses.
   List<int> get receivedKeyCodes => List.unmodifiable(_receivedKeyCodes);
+
+  /// Each Android key code a client injects, as soon as the TV reads it,
+  /// including the start and end of long presses (the same values as
+  /// [receivedKeyCodes], in the same order).
+  ///
+  /// A broadcast stream: listeners see only the keys read after they
+  /// subscribed. It closes when the TV is [close]d.
+  Stream<int> get keyCodes => _keyCodes.stream;
+
+  /// How many remote-port connections are open now: accepted (and, with
+  /// `rejectUnknownClients`, paired) and not yet closed by either side.
+  int get openRemoteConnections => _remoteClients.length;
+
+  /// How many remote-port connections were accepted since the TV started,
+  /// whether or not they are still open.
+  int get acceptedRemoteConnections => _acceptedRemoteConnections;
 
   /// Directions matching [receivedKeyCodes] one to one.
   List<RemoteDirection> get receivedKeyDirections =>
@@ -304,6 +323,7 @@ class FakeTvServer {
     await dropConnections();
     await _pairingServer.close();
     await _remoteServer.close();
+    await _keyCodes.close();
   }
 
   // ---------------------------------------------------------------- pairing
@@ -449,6 +469,7 @@ class FakeTvServer {
       return;
     }
     final client = _RemoteClient(this, socket);
+    _acceptedRemoteConnections++;
     _remoteClients.add(client);
     client.start();
   }
@@ -470,6 +491,7 @@ class FakeTvServer {
       final inject = message.remoteKeyInject;
       _receivedKeyCodes.add(inject.keyCode.value);
       _receivedKeyDirections.add(inject.direction);
+      if (!_keyCodes.isClosed) _keyCodes.add(inject.keyCode.value);
     } else if (message.hasRemoteAppLinkLaunchRequest()) {
       _receivedAppLinks.add(message.remoteAppLinkLaunchRequest.appLink);
     } else if (message.hasRemoteImeBatchEdit()) {

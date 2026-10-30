@@ -15,7 +15,7 @@ function Invoke-Step {
 Invoke-Step . flutter @('pub', 'get')
 
 Write-Host '== format =='
-Invoke-Step . dart @('format', '--output=none', '--set-exit-if-changed', 'app/lib', 'app/test', 'packages/atv_remote/lib', 'packages/atv_remote/test', 'packages/atv_remote/bin')
+Invoke-Step . dart @('format', '--output=none', '--set-exit-if-changed', 'app/lib', 'app/test', 'app/integration_test', 'packages/atv_remote/lib', 'packages/atv_remote/test', 'packages/atv_remote/bin')
 
 Write-Host '== analyze =='
 Invoke-Step app flutter @('analyze')
