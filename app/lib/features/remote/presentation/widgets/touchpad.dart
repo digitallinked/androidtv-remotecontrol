@@ -17,7 +17,11 @@ import 'package:tv_remote/features/remote/presentation/key_labels.dart';
 ///   steps.
 /// - Tap: OK. Hold for `kLongPressTimeout`: a hold on OK.
 /// - Tap with two fingers: Back.
-/// - Movement of at least `kTouchSlop` that sends no step sends nothing.
+/// - Movement of at least `kTouchSlop` that sends no step sends nothing; the
+///   point where the finger lifts counts too (Ruling P7-R12).
+///
+/// A tap and a two-finger Back paint a ring that grows and fades where the
+/// finger lifted (Ruling P7-R5); with reduce motion nothing is painted.
 ///
 /// The pad claims every gesture that starts on it, so an ancestor scrollable
 /// or pager never scrolls from here. Screen readers get one node with the
@@ -37,8 +41,8 @@ class Touchpad extends StatefulWidget {
   /// Distance of every later step of the same touch, in dp.
   static const double repeatStep = 40;
 
-  /// Key of the layer that paints the trail and the edge glow. With reduce
-  /// motion the layer paints nothing.
+  /// Key of the layer that paints the trail, the edge glow and the tap pulse.
+  /// With reduce motion the layer paints nothing.
   static const Key trailKey = ValueKey('touchpad-trail');
 
   @override
@@ -54,7 +58,11 @@ class _TouchpadState extends State<Touchpad>
   @override
   void initState() {
     super.initState();
-    _gestures = _PadGestures(input: () => widget.input, onStep: _onStep);
+    _gestures = _PadGestures(
+      input: () => widget.input,
+      onStep: _onStep,
+      onTap: _onTap,
+    );
     _feedback = _Feedback(createTicker);
   }
 
@@ -76,23 +84,29 @@ class _TouchpadState extends State<Touchpad>
     if (!_reduceMotion) _feedback.glow(keyCode);
   }
 
+  void _onTap(Offset localPosition) {
+    if (!_reduceMotion) _feedback.pulse(localPosition);
+  }
+
   void _trace(PointerEvent e) {
     if (!_reduceMotion && e.pointer == _gestures.primary) {
       _feedback.touch(e.localPosition);
     }
   }
 
+  // Positions are local to the pad: it claims every gesture that starts on
+  // it, so it doesn't move under the finger and distances are the same.
   void _down(PointerDownEvent e) {
-    _gestures.down(e.pointer, e.position);
+    _gestures.down(e.pointer, e.localPosition);
     _trace(e);
   }
 
   void _move(PointerMoveEvent e) {
-    _gestures.move(e.pointer, e.position);
+    _gestures.move(e.pointer, e.localPosition);
     _trace(e);
   }
 
-  void _up(PointerUpEvent e) => _gestures.up(e.pointer);
+  void _up(PointerUpEvent e) => _gestures.up(e.pointer, e.localPosition);
 
   void _cancel(PointerCancelEvent e) => _gestures.cancel(e.pointer);
 
@@ -193,16 +207,24 @@ class _TouchpadState extends State<Touchpad>
 /// or painting, so every rule of the touchpad reads in this one class.
 ///
 /// A session starts with the first pointer down and ends when every pointer is
-/// up. Pointers arrive as `down`, `move`, `up` and `cancel` with global
-/// positions.
+/// up. Pointers arrive as `down`, `move`, `up` and `cancel` with positions
+/// local to the pad.
 class _PadGestures {
-  _PadGestures({required this.input, required this.onStep});
+  _PadGestures({
+    required this.input,
+    required this.onStep,
+    required this.onTap,
+  });
 
   /// The current input; a hold keeps the one it started with.
   final KeyInput Function() input;
 
   /// Called after each step with its D-pad key code.
   final void Function(int keyCode) onStep;
+
+  /// Called after a centre tap or a two-finger Back, with where the last
+  /// finger lifted.
+  final void Function(Offset localPosition) onTap;
 
   /// Window for a two-finger tap, from the first pointer down.
   static const Duration _twoFingerWindow = Duration(milliseconds: 400);
@@ -254,9 +276,13 @@ class _PadGestures {
     _step(position);
   }
 
-  void up(int pointer) {
+  void up(int pointer, Offset position) {
     final touch = _touches.remove(pointer);
     if (touch == null) return;
+    // The finger may have travelled since its last move event: a flick that
+    // lifts past the slop is not a tap.
+    touch.moveTo(position);
+    if (touch.reach >= Touchpad.firstStep) _twoFingersStillTight = false;
     if (pointer == _primary) _endHold();
     if (_touches.isEmpty) _finish(touch);
   }
@@ -339,10 +365,16 @@ class _PadGestures {
     _endSession();
     if (wasDead || steps > 0 || held) return;
     if (twoFingers) {
-      if (twoFingerTap) input().tap(KeyCodes.back);
+      if (twoFingerTap) {
+        input().tap(KeyCodes.back);
+        onTap(last.position);
+      }
       return;
     }
-    if (primaryReach < kTouchSlop) input().tap(KeyCodes.dpadCenter);
+    if (primaryReach < kTouchSlop) {
+      input().tap(KeyCodes.dpadCenter);
+      onTap(last.position);
+    }
   }
 
   void _endSession() {
@@ -354,16 +386,21 @@ class _PadGestures {
   }
 }
 
-/// One pointer of a session: where it went down and how far it ever got.
+/// One pointer of a session: where it went down, where it is and how far it
+/// ever got.
 class _Touch {
-  _Touch(this.start);
+  _Touch(this.start) : position = start;
 
   final Offset start;
+
+  /// Where the pointer was last seen.
+  Offset position;
 
   /// The largest distance from [start] so far.
   double reach = 0;
 
   void moveTo(Offset position) {
+    this.position = position;
     final d = (position - start).distance;
     if (d > reach) reach = d;
   }
@@ -385,7 +422,16 @@ class _Glow {
   final Duration at;
 }
 
-/// Trail and glow state. A ticker runs only while something is still fading.
+/// A recent tap: a ring that grows and fades around where it landed.
+class _Pulse {
+  _Pulse(this.position, this.at);
+
+  final Offset position;
+  final Duration at;
+}
+
+/// Trail, glow and pulse state. A ticker runs only while something is still
+/// fading.
 class _Feedback extends ChangeNotifier {
   _Feedback(Ticker Function(TickerCallback onTick) createTicker) {
     _ticker = createTicker(_tick);
@@ -397,9 +443,13 @@ class _Feedback extends ChangeNotifier {
   /// How long an edge glow takes to fade.
   static const Duration glowLife = AppMotion.standard;
 
+  /// How long a tap pulse takes to grow and fade.
+  static const Duration pulseLife = AppMotion.standard;
+
   late final Ticker _ticker;
   final List<_Point> points = [];
   final List<_Glow> glows = [];
+  final List<_Pulse> pulses = [];
   Duration now = Duration.zero;
 
   void touch(Offset position) {
@@ -414,16 +464,25 @@ class _Feedback extends ChangeNotifier {
     _wake();
   }
 
+  void pulse(Offset position) {
+    _restartClock();
+    pulses.add(_Pulse(position, now));
+    _wake();
+  }
+
   /// The ticker's clock restarts at zero, so an entry added while it is idle
   /// must be stamped on the new clock, not on the stale time it stopped at.
   void _restartClock() {
     if (!_ticker.isActive) now = Duration.zero;
   }
 
+  bool get _isEmpty => points.isEmpty && glows.isEmpty && pulses.isEmpty;
+
   void clear() {
-    if (points.isEmpty && glows.isEmpty) return;
+    if (_isEmpty) return;
     points.clear();
     glows.clear();
+    pulses.clear();
     notifyListeners();
   }
 
@@ -436,7 +495,8 @@ class _Feedback extends ChangeNotifier {
     now = elapsed;
     points.removeWhere((p) => now - p.at > trailLife);
     glows.removeWhere((g) => now - g.at > glowLife);
-    if (points.isEmpty && glows.isEmpty) _ticker.stop();
+    pulses.removeWhere((p) => now - p.at > pulseLife);
+    if (_isEmpty) _ticker.stop();
     notifyListeners();
   }
 
@@ -447,7 +507,7 @@ class _Feedback extends ChangeNotifier {
   }
 }
 
-/// Paints the fading trail and the edge glows.
+/// Paints the fading trail, the edge glows and the tap pulses.
 class _FeedbackPainter extends CustomPainter {
   _FeedbackPainter(this.feedback, this.accent) : super(repaint: feedback);
 
@@ -456,6 +516,12 @@ class _FeedbackPainter extends CustomPainter {
 
   /// Depth of the edge glow.
   static const double _glowDepth = 24;
+
+  /// Radius a tap pulse grows to.
+  static const double _pulseRadius = 24;
+
+  /// Accent alpha a tap pulse starts at.
+  static const double _pulseAlpha = 0.35;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -511,6 +577,21 @@ class _FeedbackPainter extends CustomPainter {
           ],
         ).createShader(rect);
       canvas.drawRect(rect, paint);
+    }
+
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    for (final p in feedback.pulses) {
+      final t =
+          (now - p.at).inMicroseconds / _Feedback.pulseLife.inMicroseconds;
+      if (t >= 1) continue;
+      ring.color = accent.withValues(alpha: _pulseAlpha * (1 - t));
+      canvas.drawCircle(
+        p.position,
+        _pulseRadius * AppMotion.curve.transform(t),
+        ring,
+      );
     }
   }
 

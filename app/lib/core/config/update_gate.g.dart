@@ -11,8 +11,10 @@ part of 'update_gate.dart';
 /// Whether this app version is older than the configured
 /// `min_supported_version` and must be updated (Ruling P6-R7).
 ///
-/// `false` while the app info is loading, when it can't be read, and for a
-/// malformed version on either side: the gate never blocks by mistake.
+/// It compares the compile-time [kAppVersion], so it decides on the first
+/// frame: there is no loading window in which the remote shows (Ruling
+/// P7-R8). A malformed version gives `false`: the gate never blocks by
+/// mistake.
 
 @ProviderFor(updateRequired)
 final updateRequiredProvider = UpdateRequiredProvider._();
@@ -20,16 +22,20 @@ final updateRequiredProvider = UpdateRequiredProvider._();
 /// Whether this app version is older than the configured
 /// `min_supported_version` and must be updated (Ruling P6-R7).
 ///
-/// `false` while the app info is loading, when it can't be read, and for a
-/// malformed version on either side: the gate never blocks by mistake.
+/// It compares the compile-time [kAppVersion], so it decides on the first
+/// frame: there is no loading window in which the remote shows (Ruling
+/// P7-R8). A malformed version gives `false`: the gate never blocks by
+/// mistake.
 
 final class UpdateRequiredProvider extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
   /// Whether this app version is older than the configured
   /// `min_supported_version` and must be updated (Ruling P6-R7).
   ///
-  /// `false` while the app info is loading, when it can't be read, and for a
-  /// malformed version on either side: the gate never blocks by mistake.
+  /// It compares the compile-time [kAppVersion], so it decides on the first
+  /// frame: there is no loading window in which the remote shows (Ruling
+  /// P7-R8). A malformed version gives `false`: the gate never blocks by
+  /// mistake.
   UpdateRequiredProvider._()
     : super(
         from: null,
@@ -63,4 +69,4 @@ final class UpdateRequiredProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$updateRequiredHash() => r'af59dc0588665fe7998bae984bb591de1ffe97c5';
+String _$updateRequiredHash() => r'cfcf4d8e061f9dfbea95cc224fe152aaae9deeb3';

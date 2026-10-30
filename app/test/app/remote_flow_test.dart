@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
@@ -128,6 +129,9 @@ void main() {
     await gesture.up();
     await t.pump();
     expect(t.takeException(), isNull);
+    // The pill cross-fades to the new state; the old label leaves the tree
+    // one tick after the fade.
+    await t.pump(AppMotion.standard + const Duration(milliseconds: 1));
     expect(find.text('Connected'), findsNothing);
 
     await t.tap(find.bySemanticsLabel('Home'));

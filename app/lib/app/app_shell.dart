@@ -4,15 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/config/update_gate.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/features/demo/presentation/demo_badge.dart';
 
 /// The `MaterialApp.router` builder: everything that sits around every
-/// screen. That is the forced-update gate and the demo-mode strip.
-Widget buildAppShell(BuildContext context, Widget? child) => UpdateGate(
-  child: DemoBadgeOverlay(child: child ?? const SizedBox.shrink()),
+/// screen. That is the reduce-motion theme, the forced-update gate and the
+/// demo-mode strip.
+Widget buildAppShell(BuildContext context, Widget? child) => ReduceMotionTheme(
+  child: UpdateGate(
+    child: DemoBadgeOverlay(child: child ?? const SizedBox.shrink()),
+  ),
 );
 
 /// Shows [child], or, while this app version is older than the configured
@@ -63,7 +68,7 @@ class _UpdateRequiredScreenState extends ConsumerState<_UpdateRequiredScreen> {
     if (opened || !mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
+      ..showAppSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context).updateRequiredFailed),
         ),

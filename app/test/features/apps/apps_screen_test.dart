@@ -27,6 +27,13 @@ const _connected = TvConnectionState(status: ConnectionStatus.connected);
 const _offline = TvConnectionState(status: ConnectionStatus.offline);
 const _needsPairing = TvConnectionState(status: ConnectionStatus.needsPairing);
 
+/// A shortcut store whose saved list never arrives.
+class _NeverLoadingShortcuts extends InMemoryShortcutRepository {
+  @override
+  Stream<List<AppEntry>> watchAll() =>
+      StreamController<List<AppEntry>>().stream;
+}
+
 /// A shortcut store whose stream fails until [broken] is cleared.
 class _FlakyShortcuts extends InMemoryShortcutRepository {
   _FlakyShortcuts(super.initial);
@@ -354,6 +361,8 @@ void main() {
   });
 
   // Catalogue order puts Disney+ Hotstar first; in India JioHotstar leads.
+  // "startv" is in both packages and in neither name, so both have the same
+  // name rank and only the region orders them (Ruling P7-R10).
   for (final (region, expected) in [
     (null, ['Disney+ Hotstar', 'JioHotstar']),
     ('IN', ['JioHotstar', 'Disney+ Hotstar']),
@@ -373,13 +382,134 @@ void main() {
           deviceRegionProvider.overrideWithValue(region),
         ],
       );
-      await search(t, 'hotstar');
+      await search(t, 'startv');
       expect([
         for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
           tile.app.name,
       ], expected);
     });
   }
+
+  testWidgets('your_apps_filter_ranks_prefix_first', (t) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(const [
+            AppEntry(package: 'com.example.amazon', name: 'Amazon Prime Video'),
+            AppEntry(package: 'com.example.prime', name: 'Prime Video'),
+          ]),
+        ),
+      ],
+    );
+    await search(t, 'pr');
+    expect(find.text('Your apps'), findsOneWidget);
+    final names = [
+      for (final tile in t.widgetList<AppTile>(
+        find.descendant(
+          of: find.byType(SliverGrid).first,
+          matching: find.byType(AppTile),
+        ),
+      ))
+        tile.app.name,
+    ];
+    expect(names, ['Prime Video', 'Amazon Prime Video']);
+  });
+
+  testWidgets('empty_list_fits_without_scrolling', (t) async {
+    t.view
+      ..physicalSize = const Size(390, 800)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+      ],
+    );
+    expect(find.text('No apps yet'), findsOneWidget);
+    final scrollable = t.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(scrollable.position.maxScrollExtent, 0);
+  });
+
+  /// Opens the Apps screen on [shortcuts] in a 390 × 800 view, and checks
+  /// its list doesn't scroll: the banner clearance sits inside the state
+  /// that fills the rest (Ruling P7-R11).
+  Future<void> expectNoScroll(
+    WidgetTester t,
+    InMemoryShortcutRepository shortcuts, {
+    required Finder shows,
+    bool settle = true,
+  }) async {
+    t.view
+      ..physicalSize = const Size(390, 800)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      settle: settle,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(shortcuts),
+      ],
+    );
+    if (!settle) await t.pump();
+    expect(shows, findsOneWidget);
+    final scrollable = t.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(scrollable.position.maxScrollExtent, 0);
+  }
+
+  testWidgets('loading_list_fits_without_scrolling', (t) async {
+    // The saved list never arrives: the screen keeps its spinner.
+    await expectNoScroll(
+      t,
+      _NeverLoadingShortcuts(),
+      shows: find.byType(CircularProgressIndicator),
+      settle: false,
+    );
+  });
+
+  testWidgets('failed_list_fits_without_scrolling', (t) async {
+    await expectNoScroll(
+      t,
+      _FlakyShortcuts(const []),
+      shows: find.text("Couldn't load your apps."),
+    );
+  });
+
+  testWidgets('dragging_the_list_closes_the_keyboard', (t) async {
+    await pumpApps(t);
+    expect(
+      t
+          .widget<CustomScrollView>(find.byType(CustomScrollView))
+          .keyboardDismissBehavior,
+      ScrollViewKeyboardDismissBehavior.onDrag,
+    );
+  });
 
   testWidgets('edit_action_opens_edit_apps', (t) async {
     await pumpApps(t);

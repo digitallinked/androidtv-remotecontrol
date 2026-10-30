@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/features/apps/domain/app_catalogue.dart';
+import 'package:tv_remote/features/apps/domain/name_search.dart';
 
 const _file = 'assets/catalogue/apps_v1.json';
 
@@ -244,21 +245,57 @@ void main() {
     expect(c.search('zzzzqqqq'), isEmpty);
   });
 
+  test('search_ranks_name_prefix_first', () {
+    for (final q in ['pr', 'tv', 'you', 'net', 'a']) {
+      final ranks = [for (final a in c.search(q)) nameMatchRank(a.name, q)];
+      expect(ranks, isNotEmpty, reason: q);
+      for (var i = 1; i < ranks.length; i++) {
+        expect(ranks[i], greaterThanOrEqualTo(ranks[i - 1]), reason: q);
+      }
+    }
+    // A name that starts with the query beats one that only has a word that
+    // does, whatever the catalogue order.
+    final pr = c.search('pr').map((a) => a.name).toList();
+    expect(pr.first, 'Prime Video');
+  });
+
   test('search_lists_region_available_apps_first', () {
     // "tv" matches the packages of both global and regional apps.
-    final hits = c.search('tv', region: 'MY').map((a) => a.package).toList();
+    final hits = c.search('tv', region: 'MY');
     final unavailable = c.search('tv').where((a) => !a.isAvailableIn('MY'));
     expect(unavailable, isNotEmpty);
-    final firstUnavailable = hits.indexWhere(
-      (p) => !c.byPackage(p)!.isAvailableIn('MY'),
-    );
-    final lastAvailable = hits.lastIndexWhere(
-      (p) => c.byPackage(p)!.isAvailableIn('MY'),
-    );
-    expect(lastAvailable, greaterThanOrEqualTo(0));
-    expect(firstUnavailable, greaterThan(lastAvailable));
+    // Within each rank, the apps offered in Malaysia come first.
+    var checked = 0;
+    for (var rank = 0; rank <= 3; rank++) {
+      final group = [
+        for (final a in hits)
+          if (nameMatchRank(a.name, 'tv') == rank) a,
+      ];
+      final firstUnavailable = group.indexWhere((a) => !a.isAvailableIn('MY'));
+      final lastAvailable = group.lastIndexWhere((a) => a.isAvailableIn('MY'));
+      if (firstUnavailable >= 0 && lastAvailable >= 0) {
+        expect(firstUnavailable, greaterThan(lastAvailable), reason: '$rank');
+        checked++;
+      }
+    }
+    expect(checked, greaterThan(0));
     // Same set either way.
-    expect(hits.toSet(), c.search('tv').map((a) => a.package).toSet());
+    expect(
+      hits.map((a) => a.package).toSet(),
+      c.search('tv').map((a) => a.package).toSet(),
+    );
+  });
+
+  test('search_keeps_catalogue_order_within_a_rank_and_region', () {
+    final hits = c.search('tv');
+    for (var i = 1; i < hits.length; i++) {
+      final a = hits[i - 1];
+      final b = hits[i];
+      if (nameMatchRank(a.name, 'tv') == nameMatchRank(b.name, 'tv') &&
+          a.isAvailableIn(null) == b.isAvailableIn(null)) {
+        expect(c.apps.indexOf(a), lessThan(c.apps.indexOf(b)));
+      }
+    }
   });
 
   test('suggested_for_region_lists_regional_then_global_apps', () {

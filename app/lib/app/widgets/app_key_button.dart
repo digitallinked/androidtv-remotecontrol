@@ -95,9 +95,7 @@ class _AppKeyButtonState extends State<AppKeyButton> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : AppMotion.fast;
+    final duration = AppMotion.durationOf(context, AppMotion.fast);
     final onSemanticLongPress =
         widget.onSemanticLongPress ?? (_hasLongPress ? widget.onTap : null);
 
@@ -169,7 +167,7 @@ class _AppKeyButtonState extends State<AppKeyButton> {
 }
 
 /// Listens to the raw pointer and paints the ink ripple on the [Material]
-/// above it.
+/// above it; under reduce motion there is no ripple (Ruling P7-C1).
 ///
 /// It owns the splash and sits below the [Material], so it is disposed first.
 class _InkLayer extends StatefulWidget {
@@ -202,6 +200,7 @@ class _InkLayerState extends State<_InkLayer> {
     widget.onPointerDown();
     // A second pointer must not leave the first ripple stuck.
     _splash?.cancel();
+    if (MediaQuery.disableAnimationsOf(context)) return;
     late final InteractiveInkFeature splash;
     splash = InkRipple.splashFactory.create(
       controller: Material.of(context),

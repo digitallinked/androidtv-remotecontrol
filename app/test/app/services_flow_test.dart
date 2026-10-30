@@ -3,6 +3,7 @@ import 'dart:io' show InternetAddress, SocketException;
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -159,10 +160,20 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  /// Onboarding → Get started → the discovery screen.
+  /// Onboarding → the last card → Get started (on iOS, then the Local
+  /// Network explainer's Continue) → the discovery screen.
   Future<void> getStarted(WidgetTester t) async {
+    for (var i = 0; i < 2; i++) {
+      await t.tap(find.text('Next'));
+      await t.pumpAndSettle();
+    }
     await t.tap(find.text('Get started'));
     await t.pump();
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await t.pumpAndSettle();
+      await t.tap(find.text('Continue'));
+      await t.pump();
+    }
     await t.pump(const Duration(milliseconds: 400));
     expect(discoveries.created, isNotEmpty);
   }

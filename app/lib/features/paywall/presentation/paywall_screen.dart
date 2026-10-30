@@ -9,6 +9,7 @@ import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/purchases/purchase_service.dart';
 import 'package:tv_remote/features/paywall/application/paywall_controller.dart';
 import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
@@ -89,7 +90,7 @@ void _close(BuildContext context) {
 
 void _say(ScaffoldMessengerState messenger, String message) => messenger
   ..clearSnackBars()
-  ..showSnackBar(SnackBar(content: Text(message)));
+  ..showAppSnackBar(SnackBar(content: Text(message)));
 
 /// Restores earlier purchases and says how it went.
 Future<void> _restore(

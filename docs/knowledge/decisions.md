@@ -4,6 +4,29 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #48 — 2026-10-30 — Phase 7 pins and branding pipeline
+- flutter_launcher_icons 0.14.4 and flutter_native_splash 2.4.8 (dev dependencies, exact). The icon is our own painter mark (ring, centre dot, four triangles on #3D5AFE); `test/branding/` renders every master and `brand_icon.svg`.
+- `tool/brand.ps1` / `brand.sh`: step 1 is `flutter test --update-goldens test/branding` with **no tag filter** (amends P7-R6), so the svg regenerates; then the two generators. `adaptive_icon_foreground_inset: 0`; the mark radius 26.07 of 33 units keeps clear of every launcher mask.
+- `*.svg text eol=lf` in `.gitattributes`: the svg test compares bytes.
+- **Revisit:** when the app name or brand colour is final (owner).
+
+### #47 — 2026-10-30 — Reduce motion means no visible motion (P7-R4, P7-C1, P7-C5–C7)
+- Under `disableAnimations` (MediaQuery or platform flag) nothing visible animates: pages, sheets, dialogs, snackbars, onboarding paging, the status pill, the touchpad, menus (`AnimationStyle.noAnimation`), the iOS caret (`AppMotion.cursorFadesOf`).
+- `ReduceMotionTheme` sets `NoSplash`, a transparent `highlightColor`, and transparent pressed overlays with `animationDuration: Duration.zero` on filled, text, outlined, elevated, icon and segmented button themes. Hover and focus overlays stay.
+- Widget-level colours must not derive their own overlay: use `foregroundOnly(c)` instead of `styleFrom(foregroundColor:)`, and no `IconButton(color:)`.
+- An invisible (transparent) ink ticker is accepted. iOS swipe-back under reduce motion is a static Cupertino paint that doesn't track the finger (P7-C2), accepted.
+- **Deferred to Phase 8:** Radio and Switch animations; the InputDecorator focus transition (167 ms; about 8 ms under the platform flag).
+- **Revisit:** if a Flutter release honours `disableAnimations` in ink or the decorator.
+
+### #46 — 2026-10-30 — Phase 7 product rulings (P7-R1–R12, P7-C2–C4)
+- **Onboarding:** 3 cards with Skip, Get started and Try demo, shown once. The storage write is never awaited, so a failing store can't trap the user. iOS-only Local Network explainer before discovery.
+- **Navigation:** every route builds through `appPage(state, child)` → `MaterialPage` (go_router 18.1.1 doesn't detect Flutter 3.44.1's MaterialApp, so builders became `NoTransitionPage`). Settings is reachable from discovery and the no-TV remote as `/settings?from=setup`: no interstitial when leaving it; the hub banner rules are unchanged (amends P7-R7 wording; allowed by #6/#41).
+- **Update gate** reads `kAppVersion` on the first frame (no flash). **Premium skips the UMP form** on launch (P7-R9, amends #41); an unreadable Premium is treated as free; ads never load without consent; Ad privacy choices stays reachable.
+- **Apps:** search ranks name prefix, then word prefix, then contains, then region, then catalogue order (`nameMatchRank`, `rankedByName`). The now-on-TV dot has a contrasting ring (≥ 4.5:1 on every fill).
+- **Large text:** quick tiles grow to at most 112 dp with 2-line names above 1.3× (`AppSizes.largeTextGrowth`). Edit apps rows stack only above 1.3× **and** with a name column under 160 dp (P7-C3, amends P7-R11). The pad's 200 dp minimum still wins over the quick row on short phones (P7-C4).
+- **Haptics:** one heavy haptic, only when something is actually sent (amends #22); touchpad reach updates from the up position.
+- **Revisit:** after the real-device run and first store feedback.
+
 ### #45 — 2026-10-29 — Interface↔adapter import pairs are the accepted cycle shape
 - Each SDK has an interface file that holds the provider and builds its adapter. The adapter imports the interface. The pairs are `consent_service`↔`ump_consent_service`, `tracking_service`↔`att_tracking_service`, `ads_service`↔`google_mobile_ads_sdk`, `app_config`↔`firebase_remote_config_source`, `purchase_service`↔`revenuecat_purchase_service`/`unavailable_purchase_service` and `review_prompter`↔`in_app_review_requester`.
 - `test/platform/vendor_imports_test.dart` keeps each SDK import in exactly one adapter file, so vendor types never leak.

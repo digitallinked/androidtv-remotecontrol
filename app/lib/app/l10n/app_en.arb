@@ -42,14 +42,6 @@
   "@closeAction": {
     "description": "Tooltip and screen-reader label of the button that closes a bottom sheet."
   },
-  "onboardingTitle": "Control your TV from your phone",
-  "@onboardingTitle": {
-    "description": "Headline of the first-run onboarding screen."
-  },
-  "onboardingBody": "Find your Android TV on this Wi-Fi network and pair it in a few seconds.",
-  "@onboardingBody": {
-    "description": "Body text of the first-run onboarding screen."
-  },
   "onboardingGetStarted": "Get started",
   "@onboardingGetStarted": {
     "description": "Button that finishes onboarding and opens the TV list."
@@ -57,6 +49,68 @@
   "onboardingTryDemo": "Try demo",
   "@onboardingTryDemo": {
     "description": "Button on the first-run screen that opens the remote with a simulated TV, for people without a TV at hand."
+  },
+  "onboardingSkip": "Skip",
+  "@onboardingSkip": {
+    "description": "Top-end button on onboarding cards 1–2; finishes onboarding and opens the TV list."
+  },
+  "onboardingNext": "Next",
+  "@onboardingNext": {
+    "description": "Primary button on onboarding cards 1–2; shows the next card."
+  },
+  "onboardingProgress": "Card {current} of {total}",
+  "@onboardingProgress": {
+    "description": "Spoken page indicator of the onboarding cards (`current` and `total`: `int`).",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "onboardingConnectTitle": "Find your TV",
+  "@onboardingConnectTitle": {
+    "description": "Title of onboarding card 1 (connect)."
+  },
+  "onboardingConnectBody": "Your phone finds your Android TV on the same Wi-Fi network. Pair once with the code your TV shows.",
+  "@onboardingConnectBody": {
+    "description": "Body of onboarding card 1 (connect)."
+  },
+  "onboardingConnectNote": "The app only looks on your Wi-Fi network. It never asks for your location.",
+  "@onboardingConnectNote": {
+    "description": "Note on onboarding card 1 (connect): the app needs no location permission to find TVs."
+  },
+  "onboardingControlTitle": "Control it from your phone",
+  "@onboardingControlTitle": {
+    "description": "Title of onboarding card 2 (control)."
+  },
+  "onboardingControlBody": "Swipe the touchpad or use the D-pad, change the volume and type with your phone's keyboard.",
+  "@onboardingControlBody": {
+    "description": "Body of onboarding card 2 (control)."
+  },
+  "onboardingAppsTitle": "Open apps in one tap",
+  "@onboardingAppsTitle": {
+    "description": "Title of onboarding card 3 (apps)."
+  },
+  "onboardingAppsBody": "Keep your favourite TV apps in a row on the remote and open them without searching.",
+  "@onboardingAppsBody": {
+    "description": "Body of onboarding card 3 (apps)."
+  },
+  "onboardingLocalNetworkTitle": "Allow local network access",
+  "@onboardingLocalNetworkTitle": {
+    "description": "Title of the iOS explainer shown before the system Local Network prompt."
+  },
+  "onboardingLocalNetworkBody": "Next, your iPhone asks to let this app find devices on your local network. Choose Allow so the app can find your TV. You can change this later in Settings → Privacy & Security → Local Network.",
+  "@onboardingLocalNetworkBody": {
+    "description": "Body of the iOS explainer shown before the system Local Network prompt."
+  },
+  "onboardingContinue": "Continue",
+  "@onboardingContinue": {
+    "description": "The iOS local network explainer's only action; closes it and opens the TV list."
   },
   "demoBadgeLabel": "Demo mode",
   "@demoBadgeLabel": {

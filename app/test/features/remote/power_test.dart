@@ -16,6 +16,8 @@ import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
+import 'package:tv_remote/features/remote/application/power_controller.dart';
+import 'package:tv_remote/features/remote/application/remote_actions.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 
 import '../../helpers/fake_remote_session.dart';
@@ -214,7 +216,8 @@ void main() {
     await t.tap(find.byTooltip('Close'));
     await t.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
-    expect(haptics.events, ['heavy']);
+    // Nothing was sent: asking for the MAC is no power action (P7-R12).
+    expect(haptics.events, isEmpty);
   });
 
   testWidgets('power_works_again_after_the_first_action_finished', (t) async {
@@ -283,7 +286,7 @@ void main() {
     expect(fake.reconnectCalls, 1);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Waking Living Room TV 3…'), findsOneWidget);
-    expect(haptics.events, ['heavy'], reason: 'one haptic for the action');
+    expect(haptics.events, ['heavy'], reason: 'one haptic, at the send');
   });
 
   testWidgets('closing_the_setup_sheet_sends_nothing', (t) async {
@@ -351,5 +354,101 @@ void main() {
         expect(t.getRect(switcher).right, lessThanOrEqualTo(key.left));
       }
     }
+  });
+
+  group('one heavy haptic, only when something is sent (Ruling P7-R12)', () {
+    late int refused;
+
+    setUp(() {
+      refused = 0;
+      fake.emit(_offline);
+    });
+
+    PowerController controller({bool available = true}) => PowerController(
+      session: fake,
+      actions: RemoteActions(
+        session: fake,
+        smoothPress: true,
+        hapticsEnabled: true,
+        haptics: haptics,
+        onRefused: () => refused++,
+      ),
+      devices: repo,
+      wakeOnLan: wol,
+      wakeOnLanAvailable: available,
+      haptics: haptics,
+      hapticsEnabled: true,
+      onRefused: () => refused++,
+    );
+
+    int heavies() => haptics.events.where((e) => e == 'heavy').length;
+
+    test('heavy_haptic_only_when_a_wake_is_sent', () async {
+      await repo.upsert(savedTv(wolMac: _mac));
+      expect(await controller().press(), PowerOutcome.waking);
+      expect(heavies(), 1);
+      expect(wol.wakes, hasLength(1));
+    });
+
+    test('heavy_haptic_when_a_wake_is_sent_but_fails', () async {
+      await repo.upsert(savedTv(wolMac: _mac));
+      wol.result = false;
+      expect(await controller().press(), PowerOutcome.wakeFailed);
+      expect(heavies(), 1, reason: 'the send was attempted');
+      expect(wol.wakes, hasLength(1));
+    });
+
+    test('no_heavy_haptic_for_a_malformed_stored_mac', () async {
+      // parseMac normalises on save, so this only comes from a damaged row.
+      await repo.upsert(savedTv(wolMac: 'not a mac'));
+      expect(await controller().press(), PowerOutcome.wakeFailed);
+      expect(heavies(), 0, reason: 'nothing was sent');
+      expect(wol.wakes, isEmpty);
+    });
+
+    test('no_heavy_haptic_for_needs_mac', () async {
+      await repo.upsert(savedTv());
+      expect(await controller().press(), PowerOutcome.needsMac);
+      expect(heavies(), 0);
+      expect(wol.wakes, isEmpty);
+    });
+
+    test('no_heavy_haptic_when_it_cannot_wake', () async {
+      await repo.upsert(savedTv(wolMac: _mac));
+      expect(
+        await controller(available: false).press(),
+        PowerOutcome.cannotWake,
+      );
+      expect(heavies(), 0);
+      expect(wol.wakes, isEmpty);
+    });
+
+    test('no_heavy_haptic_when_not_connected', () async {
+      fake.emit(
+        const TvConnectionState(status: ConnectionStatus.needsPairing),
+      );
+      expect(await controller().press(), PowerOutcome.notConnected);
+      expect(heavies(), 0);
+      expect(refused, 1);
+    });
+
+    test('save_mac_and_wake_fires_one_heavy_haptic', () async {
+      await repo.upsert(savedTv());
+      final c = controller();
+      expect(await c.press(), PowerOutcome.needsMac);
+      expect(heavies(), 0);
+      expect(await c.saveMacAndWake(_mac), PowerOutcome.waking);
+      expect(heavies(), 1);
+      expect(wol.wakes, [(_mac, '192.168.0.20')]);
+    });
+
+    test('power_key_still_gets_one_heavy_haptic', () async {
+      await repo.upsert(savedTv(wolMac: _mac));
+      fake.emit(_connected);
+      expect(await controller().press(), PowerOutcome.sentPowerKey);
+      expect(haptics.events, ['heavy']);
+      expect(fake.sentPresses, [(KeyCodes.power, KeyDirection.short)]);
+      expect(wol.wakes, isEmpty);
+    });
   });
 }

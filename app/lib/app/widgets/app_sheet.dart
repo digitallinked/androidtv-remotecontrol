@@ -8,7 +8,8 @@ import 'package:tv_remote/app/theme/tokens.dart';
 /// The sheet closes with a swipe down, a tap outside or the close button; all
 /// three return `null`. Content that does not fit (for example at 200% text
 /// size) scrolls. To return a value, call `Navigator.pop(context, value)` from
-/// inside [builder].
+/// inside [builder]. Under reduce motion it opens and closes without animating
+/// (Ruling P7-R4).
 Future<T?> showAppSheet<T>({
   required BuildContext context,
   required String title,
@@ -19,6 +20,9 @@ Future<T?> showAppSheet<T>({
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
+    sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+        ? AnimationStyle.noAnimation
+        : null,
     builder: (sheetContext) {
       final l10n = AppLocalizations.of(sheetContext);
       // Lift the content above the keyboard so a text field stays visible.

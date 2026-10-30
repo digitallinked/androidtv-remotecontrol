@@ -125,4 +125,4 @@ final class AnalyticsHooksProvider
   }
 }
 
-String _$analyticsHooksHash() => r'e43da10dc961e4e6f2ecf6a8e41b020466619226';
+String _$analyticsHooksHash() => r'b1bbf9922d21e28f421ebf2c37ee0d4240db2d4f';

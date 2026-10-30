@@ -1,5 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 import 'package:tv_remote/app/widgets/rocker.dart';
 
@@ -179,5 +181,73 @@ void main() {
     final keys = t.widgetList<AppKeyButton>(find.byType(AppKeyButton));
     expect(keys, hasLength(2));
     expect(keys.map((k) => k.color), everyElement(Colors.transparent));
+  });
+
+  /// The scale [icon] is drawn at: the product of every [AnimatedScale] target
+  /// above it, so a scale applied twice would show.
+  double iconScale(WidgetTester t, IconData icon) {
+    var scale = 1.0;
+    t.element(find.byIcon(icon)).visitAncestorElements((e) {
+      final w = e.widget;
+      if (w is AnimatedScale) scale *= w.scale;
+      return true;
+    });
+    return scale;
+  }
+
+  testWidgets('pressed_half_scales_its_icon', (t) async {
+    final log = <String>[];
+    await pumpApp(
+      t,
+      Rocker(
+        label: 'VOL',
+        upSemanticLabel: 'Volume up',
+        downSemanticLabel: 'Volume down',
+        onUp: () => log.add('up'),
+        onDown: () => log.add('down'),
+        onUpLongPressStart: () => log.add('upStart'),
+        onUpLongPressEnd: () => log.add('upEnd'),
+      ),
+    );
+    expect(iconScale(t, Icons.add), 1);
+    expect(iconScale(t, Icons.remove), 1);
+
+    final press = await t.startGesture(t.getCenter(find.byIcon(Icons.add)));
+    await t.pump();
+    expect(iconScale(t, Icons.add), AppMotion.pressScale);
+    expect(iconScale(t, Icons.remove), 1);
+    await t.pump(AppMotion.fast);
+    expect(
+      t
+          .widget<ScaleTransition>(
+            find.ancestor(
+              of: find.byIcon(Icons.add),
+              matching: find.byType(ScaleTransition),
+            ),
+          )
+          .scale
+          .value,
+      AppMotion.pressScale,
+    );
+
+    // A hold is untouched by the press scale.
+    await t.pump(kLongPressTimeout);
+    expect(log, ['upStart']);
+    await press.up();
+    await t.pump();
+    expect(log, ['upStart', 'upEnd']);
+    expect(iconScale(t, Icons.add), 1);
+    await t.pumpAndSettle();
+
+    // A cancelled touch lets go of the scale too.
+    final cancelled = await t.startGesture(
+      t.getCenter(find.byIcon(Icons.remove)),
+    );
+    await t.pump();
+    expect(iconScale(t, Icons.remove), AppMotion.pressScale);
+    expect(iconScale(t, Icons.add), 1);
+    await cancelled.cancel();
+    await t.pump();
+    expect(iconScale(t, Icons.remove), 1);
   });
 }

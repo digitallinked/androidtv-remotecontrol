@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/pairing/domain/pairing_code.dart';
 
 /// Largest text scale the code itself is shown at.
@@ -104,6 +105,7 @@ class PairingCodeFieldState extends State<PairingCodeField> {
       }
     }
     return TextField(
+      cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
       controller: _controller,
       focusNode: _focus,
       enabled: widget.enabled,

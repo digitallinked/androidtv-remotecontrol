@@ -184,7 +184,7 @@ final class AppAnalyticsProvider extends $NotifierProvider<AppAnalytics, void> {
   }
 }
 
-String _$appAnalyticsHash() => r'abc0b582d651272745afa37430c7676f2ca6f460';
+String _$appAnalyticsHash() => r'e548b83f8e96f5c244411ccb629be7b86760ca4d';
 
 /// The one door analytics goes through.
 ///

@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/add_app_sheet.dart';
@@ -64,7 +66,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       _anyFailed = true;
       messenger
         ..removeCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failed)));
+        ..showAppSnackBar(SnackBar(content: Text(failed)));
     }
     _writes--;
     if (mounted && _writes == 0) _settle();
@@ -130,7 +132,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     if (!ok) return;
     messenger
       ..removeCurrentSnackBar()
-      ..showSnackBar(
+      ..showAppSnackBar(
         SnackBar(
           content: Text(l10n.manageAppsRemoved(app.name)),
           action: SnackBarAction(
@@ -170,7 +172,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       if (restored == null) return;
       await container.read(shortcutActionsProvider).replaceAll(restored);
     } on Object {
-      messenger.showSnackBar(
+      messenger.showAppSnackBar(
         SnackBar(content: Text(l10n.manageAppsSaveFailed)),
       );
     } finally {
@@ -284,6 +286,14 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
             onPressed: () => unawaited(showAddAppSheet(context)),
           ),
           PopupMenuButton<void>(
+            // It colours its IconButton, which derives a pressed overlay;
+            // the icon-button theme's style (no pressed overlay under reduce
+            // motion) wins over that.
+            style: Theme.of(context).iconButtonTheme.style,
+            // The menu opens without its grow-and-fade under reduce motion.
+            popUpAnimationStyle: MediaQuery.disableAnimationsOf(context)
+                ? AnimationStyle.noAnimation
+                : null,
             itemBuilder: (_) => [
               PopupMenuItem<void>(
                 onTap: () => unawaited(_reset()),
@@ -300,6 +310,10 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
 
 /// One row of the list: the app, edit and remove buttons, and the drag
 /// handle.
+///
+/// With large text, a name column narrower than [_minNameWidth] would wrap
+/// the name a word to a line, so the row stacks: the app on the first line,
+/// the three controls on a second line aligned to the end (Ruling P7-R11).
 class _AppRowItem extends StatelessWidget {
   const _AppRowItem({
     required this.app,
@@ -314,6 +328,9 @@ class _AppRowItem extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onRemove;
 
+  static const double _iconSize = 40;
+  static const double _minNameWidth = 160;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -322,6 +339,53 @@ class _AppRowItem extends StatelessWidget {
     final buttonStyle = IconButton.styleFrom(
       minimumSize: const Size.square(AppSizes.touchMin),
     );
+    final baseSize = text.bodyLarge?.fontSize ?? 16;
+    final largeText =
+        MediaQuery.textScalerOf(context).scale(baseSize) / baseSize >
+        AppSizes.largeTextGrowth;
+
+    final icon = AppIconSquare(app: app, size: _iconSize);
+    final name = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(app.name, style: text.bodyLarge),
+          Text(
+            app.package,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
+        ],
+      ),
+    );
+    final controls = [
+      IconButton(
+        icon: const Icon(Icons.edit_outlined),
+        tooltip: l10n.manageAppsEdit(app.name),
+        style: buttonStyle,
+        onPressed: onEdit,
+      ),
+      IconButton(
+        icon: const Icon(Icons.remove_circle_outline),
+        tooltip: l10n.manageAppsRemove(app.name),
+        // Not `color:`: it derives an overlay that beats reduce motion's.
+        style: buttonStyle.merge(foregroundOnly(colors.dangerText)),
+        onPressed: onRemove,
+      ),
+      Semantics(
+        container: true,
+        label: l10n.manageAppsDragHandle(app.name),
+        child: ReorderableDragStartListener(
+          index: index,
+          child: const SizedBox.square(
+            dimension: AppSizes.touchMin,
+            child: ExcludeSemantics(child: Icon(Icons.drag_handle)),
+          ),
+        ),
+      ),
+    ];
+
     // No semantics of its own: the list wraps every item in a node with the
     // Move up / Move down actions, and the name and app ID merge into it.
     return ConstrainedBox(
@@ -331,51 +395,33 @@ class _AppRowItem extends StatelessWidget {
           horizontal: AppSpacing.s,
           vertical: AppSpacing.xs,
         ),
-        child: Row(
-          spacing: AppSpacing.s,
-          children: [
-            AppIconSquare(app: app, size: 40),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(app.name, style: text.bodyLarge),
-                  Text(
-                    app.package,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: l10n.manageAppsEdit(app.name),
-              style: buttonStyle,
-              onPressed: onEdit,
-            ),
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
-              color: colors.dangerText,
-              tooltip: l10n.manageAppsRemove(app.name),
-              style: buttonStyle,
-              onPressed: onRemove,
-            ),
-            Semantics(
-              container: true,
-              label: l10n.manageAppsDragHandle(app.name),
-              child: ReorderableDragStartListener(
-                index: index,
-                child: const SizedBox.square(
-                  dimension: AppSizes.touchMin,
-                  child: ExcludeSemantics(child: Icon(Icons.drag_handle)),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // The name column's width on one line: the row less the icon,
+            // the three 48 dp controls and the four gaps between them.
+            final oneLineName =
+                constraints.maxWidth -
+                _iconSize -
+                controls.length * AppSizes.touchMin -
+                (controls.length + 1) * AppSpacing.s;
+            if (!largeText || oneLineName >= _minNameWidth) {
+              return Row(
+                spacing: AppSpacing.s,
+                children: [icon, name, ...controls],
+              );
+            }
+            return Column(
+              spacing: AppSpacing.xs,
+              children: [
+                Row(spacing: AppSpacing.s, children: [icon, name]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  spacing: AppSpacing.s,
+                  children: controls,
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

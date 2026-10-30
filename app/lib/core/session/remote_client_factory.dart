@@ -1,6 +1,7 @@
 import 'package:atv_remote/atv_remote.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/core/config/app_version.dart';
 
 part 'remote_client_factory.g.dart';
 
@@ -12,10 +13,6 @@ typedef RemoteClientFactory =
       required int port,
       required ClientIdentity identity,
     });
-
-/// The app version reported to the TV. A test holds it equal to the
-/// `pubspec.yaml` version.
-const kAppVersion = '1.0.0';
 
 /// The name this app gives itself towards the TV: the pairing client name
 /// and the device model.

@@ -21,17 +21,22 @@ import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.
 /// bottom-anchored control.
 class SettingsScreen extends ConsumerWidget {
   /// Creates the screen.
-  const SettingsScreen({super.key});
+  const SettingsScreen({this.fromSetup = false, super.key});
+
+  /// Whether the hub was opened before pairing (from discovery or the no-TV
+  /// remote). Leaving it then never shows an interstitial (Ruling P7-R7).
+  final bool fromSetup;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final premium = ref.watch(premiumProvider.select((p) => p.isPremium));
     // Leaving the hub is the one place an interstitial may show (Ruling
-    // P6-R9); the sub-pages are routes of their own and don't count.
+    // P6-R9); the sub-pages are routes of their own and don't count. Not
+    // before pairing: no ad lands on discovery (decision #6).
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
+        if (didPop && !fromSetup) {
           unawaited(
             ref
                 .read(interstitialsProvider.notifier)

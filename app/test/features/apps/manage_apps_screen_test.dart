@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -11,8 +12,16 @@ import 'package:tv_remote/features/apps/presentation/manage_apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
 import '../../helpers/in_memory_shortcut_repository.dart';
+import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_catalogue.dart';
+
+/// The package of a row in the "*" default row, by its name.
+String _packageOf(String name) => switch (name) {
+  'Netflix' => 'com.netflix.ninja',
+  'YouTube' => 'com.google.android.youtube.tv',
+  _ => throw ArgumentError(name),
+};
 
 const _star = [
   'Netflix',
@@ -24,6 +33,10 @@ const _star = [
 ];
 
 void main() {
+  // Some tests pump the screen twice, each time on a fresh in-memory
+  // database: two databases at once are intended here.
+  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+
   late InMemoryShortcutRepository repo;
 
   setUp(() => repo = InMemoryShortcutRepository());
@@ -419,6 +432,122 @@ void main() {
     await t.tap(find.byTooltip('Edit Netflix'));
     await t.pumpAndSettle();
     expect(find.text('Edit shortcut'), findsOneWidget);
+  });
+
+  /// The name, the controls and the row of [name], as on screen.
+  ({Rect name, Rect row, List<Rect> controls}) rowOf(
+    WidgetTester t,
+    String name,
+  ) => (
+    name: t.getRect(find.text(name)),
+    row: t.getRect(
+      find
+          .ancestor(of: find.text(name), matching: find.byType(ConstrainedBox))
+          .first,
+    ),
+    controls: [
+      t.getRect(find.byTooltip('Edit $name')),
+      t.getRect(find.byTooltip('Remove $name')),
+      t.getRect(
+        find.descendant(
+          of: find.byKey(ValueKey('manage_app_${_packageOf(name)}')),
+          matching: find.byType(ReorderableDragStartListener),
+        ),
+      ),
+    ],
+  );
+
+  testWidgets('edit_apps_rows_stack_at_200_percent_text_on_320dp', (t) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    for (final b in Brightness.values) {
+      await pumpManage(t, textScale: 2, brightness: b);
+      expect(t.takeException(), isNull);
+      final r = rowOf(t, 'Netflix');
+      final nameColumn = t.getSize(
+        find
+            .ancestor(of: find.text('Netflix'), matching: find.byType(Column))
+            .first,
+      );
+      expect(nameColumn.width, greaterThanOrEqualTo(160));
+      for (final c in r.controls) {
+        expect(c.top, greaterThan(r.name.bottom));
+        expect(c.shortestSide, greaterThanOrEqualTo(48));
+        expect(c.bottom, lessThanOrEqualTo(r.row.bottom));
+      }
+      // Aligned to the end, in the order edit, remove, drag handle.
+      expect(r.controls[0].right, lessThanOrEqualTo(r.controls[1].left));
+      expect(r.controls[1].right, lessThanOrEqualTo(r.controls[2].left));
+      expect(r.controls[2].right, greaterThan(r.row.right - 16));
+      expect(r.row.height, greaterThanOrEqualTo(56));
+    }
+  });
+
+  testWidgets('edit_apps_rows_stack_under_a_non_linear_text_scaler', (
+    t,
+  ) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.manageApps,
+      textScaler: const NonlinearTwoXScaler(),
+      overrides: [shortcutRepositoryProvider.overrideWithValue(repo)],
+    );
+    expect(t.takeException(), isNull);
+    final r = rowOf(t, 'Netflix');
+    for (final c in r.controls) {
+      expect(c.top, greaterThan(r.name.bottom));
+    }
+  });
+
+  testWidgets('edit_apps_rows_stay_on_one_line_at_100_percent', (t) async {
+    for (final width in [390.0, 320.0]) {
+      t.view
+        ..physicalSize = Size(width, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      await pumpManage(t);
+      final r = rowOf(t, 'Netflix');
+      for (final c in r.controls) {
+        // On the name's line: the controls overlap it vertically.
+        expect(c.top, lessThan(r.name.bottom), reason: '$width');
+        expect(c.left, greaterThanOrEqualTo(r.name.right), reason: '$width');
+      }
+      expect(r.row.height, greaterThanOrEqualTo(56));
+    }
+  });
+
+  testWidgets('stacked_rows_keep_the_move_actions', (t) async {
+    // Tall enough to show the first rows under the 200% hint.
+    t.view
+      ..physicalSize = const Size(320, 1200)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final handle = t.ensureSemantics();
+    await pumpManage(t, textScale: 2);
+    // Stacked: the controls are under the name.
+    expect(
+      t.getRect(find.byTooltip('Edit Netflix')).top,
+      greaterThan(t.getRect(find.text('Netflix')).bottom),
+    );
+    expect(actionsOf(t, 'Netflix'), contains('Move down'));
+    expect(actionsOf(t, 'Netflix'), isNot(contains('Move up')));
+    expect(actionsOf(t, 'YouTube'), containsAll(['Move up', 'Move down']));
+    final node = t.getSemantics(find.text('Netflix'));
+    expect(node.label, contains('Netflix'));
+    expect(node.label, contains('com.netflix.ninja'));
+    expect(find.bySemanticsLabel('Reorder Netflix'), findsOneWidget);
+    expect(find.byTooltip('Edit Netflix'), findsOneWidget);
+    expect(find.byTooltip('Remove Netflix'), findsOneWidget);
+    perform(t, 'YouTube', 'Move up');
+    await t.pumpAndSettle();
+    expect(stored().take(2), ['YouTube', 'Netflix']);
+    handle.dispose();
   });
 
   for (final b in Brightness.values) {

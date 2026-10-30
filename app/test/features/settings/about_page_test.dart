@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -115,6 +118,45 @@ void main() {
 
     expect(find.textContaining('Test crash report sent'), findsOneWidget);
     expect(t.takeException(), isNull);
+  });
+
+  test('about_watches_app_info_once', () {
+    final source = File(
+      'lib/features/settings/presentation/about_page.dart',
+    ).readAsStringSync();
+    expect('ref.watch(appInfoProvider'.allMatches(source), hasLength(1));
+  });
+
+  testWidgets('about_app_name_is_a_header', (t) async {
+    final semantics = t.ensureSemantics();
+    try {
+      await pumpAbout(t);
+      expect(
+        t
+            .getSemantics(find.text('Remotely Dev'))
+            .getSemanticsData()
+            .flagsCollection
+            .isHeader,
+        isTrue,
+      );
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('about_version_line_keeps_its_height_while_loading', (t) async {
+    final info = Completer<AppInfo>();
+    await pumpAbout(
+      t,
+      appInfo: appInfoProvider.overrideWith((ref) => info.future),
+    );
+    expect(find.text('Version 1.0.0 (1)'), findsNothing);
+    final before = t.getTopLeft(find.text('Open-source licences')).dy;
+
+    info.complete(_info);
+    await t.pumpAndSettle();
+    expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
+    expect(t.getTopLeft(find.text('Open-source licences')).dy, before);
   });
 
   for (final b in Brightness.values) {

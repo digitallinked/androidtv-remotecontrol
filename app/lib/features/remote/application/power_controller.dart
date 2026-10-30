@@ -11,6 +11,7 @@ import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/mac_address.dart';
 import 'package:tv_remote/core/wake/wake_on_lan_service.dart';
 import 'package:tv_remote/features/remote/application/remote_actions.dart';
 
@@ -44,10 +45,12 @@ enum PowerOutcome {
 /// The power key (Rulings P4-R5, P4-R6, P4-R10): sends `KEYCODE_POWER` while
 /// the TV is connected, otherwise wakes it with Wake-on-LAN and reconnects.
 ///
-/// Exactly one heavy haptic per power action, whichever path it takes: the
-/// connected path gets it from [RemoteActions.tap]; the Wake-on-LAN path sends
-/// no key, so this class fires it itself, gated by `hapticsEnabled` (the
-/// setting [RemoteActions] reads on its own).
+/// One heavy haptic per power action, and only when something is sent
+/// (Ruling P7-R12, amending decision #22): the connected path gets it from
+/// [RemoteActions.tap]; the Wake-on-LAN path sends no key, so this class fires
+/// it itself right before the wake-up signal goes out, gated by
+/// `hapticsEnabled` (the setting [RemoteActions] reads on its own). Asking for
+/// the MAC, a platform that can't wake and a refusal give none.
 ///
 /// An instance belongs to one session and one set of settings, like
 /// [RemoteActions].
@@ -113,13 +116,13 @@ class PowerController {
       onRefused();
       return PowerOutcome.notConnected;
     }
-    if (hapticsEnabled) unawaited(haptics.heavy());
     return _wake(session, target);
   }
 
   /// Stores [mac] (already normalised by `parseMac`) for the TV and wakes it,
-  /// without a second haptic. Rethrows a storage error, so the setup sheet
-  /// can say the MAC wasn't saved and stay open.
+  /// with the action's one heavy haptic at the send (the press that opened the
+  /// setup sheet gave none). Rethrows a storage error, so the setup sheet can
+  /// say the MAC wasn't saved and stay open.
   Future<PowerOutcome> saveMacAndWake(String mac) async {
     final session = this.session;
     final target = session?.pairingTarget;
@@ -138,6 +141,11 @@ class PowerController {
       final device = await devices.find(target.serviceName);
       final mac = device?.wolMac;
       if (device == null || mac == null) return PowerOutcome.needsMac;
+      // A damaged stored MAC would make `wake` throw before sending:
+      // nothing goes out, so no haptic.
+      if (parseMac(mac) == null) return PowerOutcome.wakeFailed;
+      // The power action's one heavy haptic: something is being sent.
+      if (hapticsEnabled) unawaited(haptics.heavy());
       if (!await wakeOnLan.wake(mac: mac, tvHost: device.lastHost)) {
         return PowerOutcome.wakeFailed;
       }

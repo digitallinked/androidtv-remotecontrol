@@ -8,10 +8,12 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/privacy/privacy_choices.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
 import '../../helpers/fake_consent_service.dart';
+import '../../helpers/test_premium.dart';
 
 /// A service whose every call throws, as when the plugin is missing.
 class _ThrowingConsentService implements ConsentService {
@@ -42,16 +44,102 @@ void main() {
     store = await SettingsStore.open();
   });
 
-  ProviderContainer containerFor(ConsentService service) {
+  ProviderContainer containerFor(
+    ConsentService service, {
+    PremiumState premium = PremiumState.free,
+  }) {
     return ProviderContainer.test(
         overrides: [
           settingsStoreProvider.overrideWithValue(store),
           consentServiceProvider.overrideWithValue(service),
+          premiumProvider.overrideWith(() => TestPremium(premium)),
         ],
       )
       // Riverpod pauses what nothing listens to.
       ..listen(consentControllerProvider, (_, _) {});
   }
+
+  // Ruling P7-R9: a Premium user is shown no ads, so the UMP form is skipped.
+  // The cached entitlement counts (`known` false).
+  const cachedPremium = PremiumState(isPremium: true, known: false);
+
+  test('a_premium_user_never_sees_the_consent_form', () async {
+    final service = FakeConsentService(
+      region: ConsentRegion.required,
+      formOutcome: ConsentFormOutcome.shown,
+      canRequest: false,
+    );
+    final container = containerFor(service, premium: cachedPremium);
+
+    final result = await container
+        .read(consentControllerProvider.notifier)
+        .ensureGathered();
+
+    expect(service.showFormCalls, 0);
+    expect(service.requestUpdateCalls, 1, reason: 'the silent update runs');
+    expect(result.gathered, isTrue);
+    expect(result.formShown, isFalse);
+    expect(container.read(consentControllerProvider), result);
+  });
+
+  test('a_premium_user_keeps_ad_privacy_choices', () async {
+    final service = FakeConsentService(
+      region: ConsentRegion.required,
+      formOutcome: ConsentFormOutcome.shown,
+      optionsRequired: true,
+    );
+    final container = containerFor(service, premium: cachedPremium);
+    final controller = container.read(consentControllerProvider.notifier);
+
+    await controller.refresh();
+    expect(
+      container.read(consentControllerProvider).privacyOptionsRequired,
+      isTrue,
+    );
+    final result = await controller.ensureGathered();
+
+    expect(service.showFormCalls, 0);
+    expect(result.privacyOptionsRequired, isTrue);
+    expect(
+      container.read(consentControllerProvider).privacyOptionsRequired,
+      isTrue,
+    );
+  });
+
+  test('a_free_user_still_gets_the_form', () async {
+    final service = FakeConsentService(
+      region: ConsentRegion.required,
+      formOutcome: ConsentFormOutcome.shown,
+    );
+    final container = containerFor(service);
+
+    final result = await container
+        .read(consentControllerProvider.notifier)
+        .ensureGathered();
+
+    expect(service.showFormCalls, 1);
+    expect(result.formShown, isTrue);
+    expect(result.gathered, isTrue);
+  });
+
+  test('the_skip_reads_ads_permission_from_the_service', () async {
+    for (final canRequest in [true, false]) {
+      final service = FakeConsentService(
+        region: ConsentRegion.required,
+        formOutcome: ConsentFormOutcome.shown,
+        canRequest: canRequest,
+      );
+      final container = containerFor(service, premium: cachedPremium);
+
+      final result = await container
+          .read(consentControllerProvider.notifier)
+          .ensureGathered();
+
+      expect(service.showFormCalls, 0, reason: '$canRequest');
+      expect(result.canRequestAds, canRequest, reason: '$canRequest');
+      expect(result.formShown, isFalse, reason: '$canRequest');
+    }
+  });
 
   test('refresh_writes_the_region_and_keeps_it_on_unknown', () async {
     final service = FakeConsentService();

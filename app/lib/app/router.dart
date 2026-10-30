@@ -1,4 +1,5 @@
 import 'package:atv_remote/atv_remote.dart' show DiscoveredTv;
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -50,6 +51,10 @@ abstract final class AppRoutes {
 
   /// App settings.
   static const settings = '/settings';
+
+  /// App settings opened before pairing (from discovery or the no-TV remote):
+  /// leaving it never shows an interstitial (Ruling P7-R7).
+  static const settingsFromSetup = '/settings?from=setup';
 
   /// Settings: theme and language.
   static const settingsAppearance = '/settings/appearance';
@@ -193,6 +198,25 @@ AnalyticsRouteObserver analyticsRouteObserver(Ref ref) =>
       onScreen: ref.read(appAnalyticsProvider.notifier).screen,
     );
 
+/// The page every route uses (Ruling P7-C2): a [MaterialPage], so the theme's
+/// `AppPageTransitionsBuilder` applies (the platform transition, iOS edge
+/// swipe-back, Android predictive back, none under reduce motion).
+///
+/// go_router 18.1.1 picks its own page type by looking for material_ui's
+/// `MaterialApp`, not Flutter's, so a route with a plain `builder:` would get
+/// a `NoTransitionPage`. It is a [MaterialPage] on iOS too: a `CupertinoPage`
+/// would ignore the theme's page transitions and reduce motion.
+Page<void> appPage(GoRouterState state, Widget child) => MaterialPage<void>(
+  key: state.pageKey,
+  name: state.name ?? state.path,
+  arguments: <String, String>{
+    ...state.pathParameters,
+    ...state.uri.queryParameters,
+  },
+  restorationId: state.pageKey.value,
+  child: child,
+);
+
 /// The app's router.
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
@@ -206,48 +230,56 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         name: AppRouteNames.onboarding,
         path: AppRoutes.onboarding,
-        builder: (_, _) => const OnboardingScreen(),
+        pageBuilder: (_, state) => appPage(state, const OnboardingScreen()),
       ),
       GoRoute(
         name: AppRouteNames.discover,
         path: AppRoutes.discover,
-        builder: (_, _) => const DiscoveryScreen(),
+        pageBuilder: (_, state) => appPage(state, const DiscoveryScreen()),
       ),
       GoRoute(
         name: AppRouteNames.pair,
         path: '/pair/:serviceName',
-        builder: (_, state) => PairingScreen(
-          serviceName: state.pathParameters['serviceName']!,
-          tv: state.extra is DiscoveredTv ? state.extra! as DiscoveredTv : null,
+        pageBuilder: (_, state) => appPage(
+          state,
+          PairingScreen(
+            serviceName: state.pathParameters['serviceName']!,
+            tv: state.extra is DiscoveredTv
+                ? state.extra! as DiscoveredTv
+                : null,
+          ),
         ),
       ),
       GoRoute(
         name: AppRouteNames.remote,
         path: AppRoutes.remote,
-        builder: (_, _) => const RemoteScreen(),
+        pageBuilder: (_, state) => appPage(state, const RemoteScreen()),
       ),
       GoRoute(
         name: AppRouteNames.apps,
         path: AppRoutes.apps,
-        builder: (_, _) => const AppsScreen(),
+        pageBuilder: (_, state) => appPage(state, const AppsScreen()),
         routes: [
           GoRoute(
             name: AppRouteNames.manageApps,
             path: 'manage',
-            builder: (_, _) => const ManageAppsScreen(),
+            pageBuilder: (_, state) => appPage(state, const ManageAppsScreen()),
           ),
         ],
       ),
       GoRoute(
         name: AppRouteNames.devices,
         path: AppRoutes.devices,
-        builder: (_, _) => const DevicesScreen(),
+        pageBuilder: (_, state) => appPage(state, const DevicesScreen()),
         routes: [
           GoRoute(
             name: AppRouteNames.editDevice,
             path: ':serviceName',
-            builder: (_, state) => EditDeviceScreen(
-              serviceName: state.pathParameters['serviceName']!,
+            pageBuilder: (_, state) => appPage(
+              state,
+              EditDeviceScreen(
+                serviceName: state.pathParameters['serviceName']!,
+              ),
             ),
           ),
         ],
@@ -255,57 +287,72 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         name: AppRouteNames.settings,
         path: AppRoutes.settings,
-        builder: (_, _) => const SettingsScreen(),
+        pageBuilder: (_, state) => appPage(
+          state,
+          SettingsScreen(
+            fromSetup: state.uri.queryParameters['from'] == 'setup',
+          ),
+        ),
         routes: [
           GoRoute(
             name: AppRouteNames.settingsAppearance,
             path: 'appearance',
-            builder: (_, _) => const AppearancePage(),
+            pageBuilder: (_, state) => appPage(state, const AppearancePage()),
           ),
           GoRoute(
             name: AppRouteNames.settingsRemoteLayout,
             path: 'remote-layout',
-            builder: (_, _) => const RemoteLayoutPage(),
+            pageBuilder: (_, state) => appPage(state, const RemoteLayoutPage()),
           ),
           GoRoute(
             name: AppRouteNames.settingsRemoteBehaviour,
             path: 'remote-behaviour',
-            builder: (_, _) => const RemoteBehaviourPage(),
+            pageBuilder: (_, state) =>
+                appPage(state, const RemoteBehaviourPage()),
           ),
           GoRoute(
             name: AppRouteNames.settingsHelp,
             path: 'help',
-            builder: (_, _) => const HelpPage(),
+            pageBuilder: (_, state) => appPage(state, const HelpPage()),
           ),
           GoRoute(
             name: AppRouteNames.settingsAbout,
             path: 'about',
-            builder: (_, _) => const AboutPage(),
+            pageBuilder: (_, state) => appPage(state, const AboutPage()),
           ),
           GoRoute(
             name: AppRouteNames.settingsPrivacy,
             path: 'privacy',
-            builder: (_, _) => const PrivacyChoicesPage(),
+            pageBuilder: (_, state) =>
+                appPage(state, const PrivacyChoicesPage()),
           ),
         ],
       ),
       GoRoute(
         name: AppRouteNames.paywall,
         path: AppRoutes.paywallPath,
-        builder: (_, state) => PaywallScreen(
-          source: PaywallSource.parse(state.uri.queryParameters['source']),
+        pageBuilder: (_, state) => appPage(
+          state,
+          PaywallScreen(
+            source: PaywallSource.parse(state.uri.queryParameters['source']),
+          ),
         ),
       ),
     ],
-    errorBuilder: (context, _) {
-      final l10n = AppLocalizations.of(context);
-      return PlaceholderScreen(
-        title: l10n.routeNotFoundTitle,
-        body: l10n.routeNotFoundBody,
-        actionLabel: l10n.routeNotFoundAction,
-        onAction: () => context.go(AppRoutes.discover),
-      );
-    },
+    errorPageBuilder: (_, state) => appPage(
+      state,
+      Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return PlaceholderScreen(
+            title: l10n.routeNotFoundTitle,
+            body: l10n.routeNotFoundBody,
+            actionLabel: l10n.routeNotFoundAction,
+            onAction: () => context.go(AppRoutes.discover),
+          );
+        },
+      ),
+    ),
   );
   ref.onDispose(router.dispose);
   return router;

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/privacy/privacy_choices.dart';
+import 'package:tv_remote/core/purchases/premium.dart';
 
 part 'consent_controller.g.dart';
 
@@ -75,7 +76,8 @@ class ConsentResult {
 /// 1. [refresh], right after the first frame: a silent update that writes
 ///    the consent region. It shows nothing.
 /// 2. [ensureGathered], the first time the remote is the top route: the
-///    consent form, if the platform requires one.
+///    consent form, if the platform requires one and the user doesn't have
+///    Premium (Ruling P7-R9).
 ///
 /// No method throws; a failing platform leaves ads off.
 @Riverpod(keepAlive: true)
@@ -124,8 +126,9 @@ class ConsentController extends _$ConsentController {
   }
 
   /// Shows the consent form if the platform requires one, once per launch,
-  /// and publishes the result. Concurrent and later calls share the first
-  /// one's outcome.
+  /// and publishes the result. A Premium user is never shown the form; the
+  /// result then says `formShown: false`. Concurrent and later calls share
+  /// the first one's outcome.
   Future<ConsentResult> ensureGathered() => _gathered ??= _gatherOnce();
 
   Future<ConsentResult> _gatherOnce() async {
@@ -134,13 +137,23 @@ class ConsentController extends _$ConsentController {
     final service = _service;
     await refresh();
     if (!ref.mounted) return _disposed;
-    // A failed form is not an error here: the platform may still allow ads
-    // from an earlier choice, and `canRequestAds` says.
-    final outcome = await _guard(
-      service.showFormIfRequired,
-      ConsentFormOutcome.failed,
-    );
-    if (!ref.mounted) return _disposed;
+    // A Premium user is shown no ads, so asking for ad consent is noise: the
+    // form is skipped, the cached entitlement included (Ruling P7-R9). The
+    // silent update above still ran, so "Ad privacy choices" shows whenever
+    // the platform requires it. A wrong cache costs at most this launch's
+    // ads: the next launch caches "free" and shows the form.
+    final ConsentFormOutcome outcome;
+    if (_isPremium()) {
+      outcome = ConsentFormOutcome.notNeeded;
+    } else {
+      // A failed form is not an error here: the platform may still allow ads
+      // from an earlier choice, and `canRequestAds` says.
+      outcome = await _guard(
+        service.showFormIfRequired,
+        ConsentFormOutcome.failed,
+      );
+      if (!ref.mounted) return _disposed;
+    }
     final canRequest = await _guard(service.canRequestAds, false);
     if (!ref.mounted) return _disposed;
     final options = await _guard(service.privacyOptionsRequired, false);
@@ -154,6 +167,17 @@ class ConsentController extends _$ConsentController {
     );
     state = result;
     return result;
+  }
+
+  /// Whether the user has Premium, cached or confirmed. A Premium state that
+  /// can't be read counts as free, so the form still shows.
+  bool _isPremium() {
+    try {
+      return ref.read(premiumProvider).isPremium;
+    } on Object catch (error) {
+      developer.log('premium unreadable', name: 'consent', error: error);
+      return false;
+    }
   }
 
   /// What a gather that outlived its container answers: nothing is known and

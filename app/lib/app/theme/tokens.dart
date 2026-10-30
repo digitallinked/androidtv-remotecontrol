@@ -301,6 +301,10 @@ abstract final class AppSizes {
 
   /// Minimum gap between keys.
   static const double keyGap = 8;
+
+  /// Text scaled past this factor of its base size is large text: layouts
+  /// switch to their large-text form (Rulings P7-R11, P7-C3).
+  static const double largeTextGrowth = 1.3;
 }
 
 /// Motion durations and curves.
@@ -319,6 +323,18 @@ abstract final class AppMotion {
 
   /// Scale applied to a pressed key.
   static const double pressScale = 0.94;
+
+  /// [d], or [Duration.zero] when the user asked for reduced motion
+  /// (Ruling P7-R4): every implicit animation takes its duration from here,
+  /// so with reduce motion on the new state shows in the same frame.
+  static Duration durationOf(BuildContext context, Duration d) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
+
+  /// A text field's `cursorOpacityAnimates`: `false` under reduce motion, so
+  /// the caret blinks on and off instead of fading in a loop (iOS fades it by
+  /// default); `null`, the platform's default, otherwise.
+  static bool? cursorFadesOf(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context) ? false : null;
 }
 
 /// WCAG contrast ratio between [a] and [b], from 1 to 21.

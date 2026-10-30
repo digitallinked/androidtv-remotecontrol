@@ -26,7 +26,11 @@ void main() {
     t,
   ) async {
     final store = await pumpRouterApp(t, initialLocation: AppRoutes.onboarding);
-    expect(find.text('Control your TV from your phone'), findsOneWidget);
+    expect(find.text('Find your TV'), findsOneWidget);
+    for (var i = 0; i < 2; i++) {
+      await t.tap(find.text('Next'));
+      await t.pumpAndSettle();
+    }
     await t.tap(find.text('Get started'));
     await t.pumpAndSettle();
     expect(find.text('Choose your TV'), findsOneWidget);
@@ -186,6 +190,53 @@ void main() {
     expect(names, everyElement(isIn(AppRouteNames.all)));
     expect(names.toSet(), AppRouteNames.all);
     expect(AppRouteNames.all, everyElement(matches(RegExp(r'^[a-z_]+$'))));
+  });
+
+  testWidgets('every_route_builds_a_material_page', (t) async {
+    await pumpRouterApp(t, initialLocation: AppRoutes.settings);
+    final context = t.element(find.byType(SettingsScreen));
+    final router = ProviderScope.containerOf(context).read(appRouterProvider);
+    var count = 0;
+    void walk(List<RouteBase> routes) {
+      for (final route in routes) {
+        if (route is GoRoute) {
+          count++;
+          // go_router 18.1.1 looks for material_ui's MaterialApp, not
+          // Flutter's, so a `builder:` route would get a NoTransitionPage.
+          expect(route.builder, isNull, reason: route.path);
+          expect(route.pageBuilder, isNotNull, reason: route.path);
+          final state = GoRouterState(
+            router.configuration,
+            uri: Uri.parse('/x?source=settings'),
+            matchedLocation: '/x',
+            name: route.name,
+            path: route.path,
+            fullPath: '/x',
+            pathParameters: const {'serviceName': 'Living Room TV'},
+            pageKey: ValueKey<String>('page-${route.name}'),
+          );
+          final page = route.pageBuilder!(context, state);
+          expect(page, isA<MaterialPage<void>>(), reason: route.path);
+          expect(page.key, state.pageKey, reason: route.path);
+          expect(page.name, route.name, reason: route.path);
+          expect(page.restorationId, 'page-${route.name}');
+          expect(page.arguments, {
+            'serviceName': 'Living Room TV',
+            'source': 'settings',
+          });
+        }
+        walk(route.routes);
+      }
+    }
+
+    walk(router.configuration.routes);
+    expect(count, 16);
+  });
+
+  testWidgets('the_error_page_is_a_material_page', (t) async {
+    await pumpRouterApp(t, initialLocation: '/nope');
+    final page = ModalRoute.of(t.element(find.text('Page not found')))!;
+    expect(page.settings, isA<MaterialPage<void>>());
   });
 
   testWidgets('unknown_route_offers_way_back_to_discover', (t) async {

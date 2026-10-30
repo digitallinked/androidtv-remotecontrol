@@ -260,6 +260,7 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
         ),
         const SizedBox(height: AppSpacing.m),
         TextField(
+          cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
           controller: _controller,
           autofocus: true,
           autocorrect: false,

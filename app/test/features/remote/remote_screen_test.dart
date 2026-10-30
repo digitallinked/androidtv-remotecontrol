@@ -29,6 +29,7 @@ import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_access_row.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
+import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_remote_client.dart';
@@ -416,6 +417,28 @@ void main() {
     await t.tap(find.text('Choose a TV'));
     await t.pumpAndSettle();
     expect(find.text('Choose your TV'), findsOneWidget);
+  });
+
+  testWidgets('no_tv_screen_has_a_settings_button', (t) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.remote,
+      overrides: [remoteSessionProvider.overrideWith((ref) async => null)],
+    );
+    expect(find.text('No TV selected'), findsOneWidget);
+    final button = find.widgetWithIcon(IconButton, Icons.settings_outlined);
+    expect(button, findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
+    expect(t.getSize(button).height, greaterThanOrEqualTo(48));
+    expect(t.getSize(button).width, greaterThanOrEqualTo(48));
+
+    await t.tap(button);
+    await t.pumpAndSettle();
+    expect(
+      t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
+      isTrue,
+    );
+    expect(top(t).uri.toString(), AppRoutes.settingsFromSetup);
   });
 
   testWidgets('identity_store_failure_offers_retry', (t) async {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
@@ -22,11 +23,11 @@ class AboutPage extends ConsumerWidget {
     );
     final flavor = ref.watch(flavorProvider);
     final name = flavor.displayName;
-    final info = ref.watch(appInfoProvider).value;
-    final failed = ref.watch(appInfoProvider).hasError;
+    final appInfo = ref.watch(appInfoProvider);
+    final info = appInfo.value;
     final versionText = info != null
         ? l10n.aboutVersion(info.version, info.buildNumber)
-        : failed
+        : appInfo.hasError
         ? l10n.aboutVersionUnknown
         : null;
 
@@ -48,8 +49,16 @@ class AboutPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: AppSpacing.xs,
               children: [
-                Text(name, style: theme.textTheme.titleLarge),
-                if (versionText != null) Text(versionText, style: secondary),
+                Semantics(
+                  header: true,
+                  child: Text(name, style: theme.textTheme.titleLarge),
+                ),
+                // While the version loads, a blank line of the same style
+                // holds its place, so nothing below moves when it arrives.
+                if (versionText != null)
+                  Text(versionText, style: secondary)
+                else
+                  ExcludeSemantics(child: Text(' ', style: secondary)),
               ],
             ),
           ),
@@ -103,5 +112,5 @@ Future<void> _sendTestCrash(BuildContext context, WidgetRef ref) async {
   );
   messenger
     ..clearSnackBars()
-    ..showSnackBar(SnackBar(content: Text(l10n.aboutTestCrashSent)));
+    ..showAppSnackBar(SnackBar(content: Text(l10n.aboutTestCrashSent)));
 }

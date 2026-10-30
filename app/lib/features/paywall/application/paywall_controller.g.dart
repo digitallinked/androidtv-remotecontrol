@@ -70,7 +70,7 @@ final class PaywallControllerProvider
   }
 }
 
-String _$paywallControllerHash() => r'6f9a4a1b6fae23347ba46b382b7c0de4a5eaad1b';
+String _$paywallControllerHash() => r'0a61865621a386ecdaa737759189d0b9b48303e6';
 
 /// The logic of the paywall opened from [source] (Ruling P6-R11).
 ///

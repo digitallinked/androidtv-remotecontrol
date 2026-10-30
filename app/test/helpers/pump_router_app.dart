@@ -71,7 +71,8 @@ import 'test_identity.dart';
 /// applied in.
 ///
 /// [textScaler] replaces the linear [textScale] with a scaler of your own, for
-/// the non-linear curves of Android 14+.
+/// the non-linear curves of Android 14+. [disableAnimations] turns on reduce
+/// motion in that same `MediaQuery`.
 ///
 /// The theme follows the stored colour style and Premium exactly as `App`
 /// does; [brightness] stands in for the system theme. [dynamicScheme] stands
@@ -93,6 +94,7 @@ Future<SettingsStore> pumpRouterApp(
   bool settle = true,
   Future<void> Function(SettingsStore store)? prepareSettings,
   bool accessibleNavigation = false,
+  bool disableAnimations = false,
   ColorScheme? dynamicScheme,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
@@ -125,6 +127,9 @@ Future<SettingsStore> pumpRouterApp(
             data: MediaQuery.of(context).copyWith(
               textScaler: textScaler ?? TextScaler.linear(textScale),
               accessibleNavigation: accessibleNavigation,
+              // Keeps a platform-level flag a test may have set.
+              disableAnimations:
+                  disableAnimations || MediaQuery.disableAnimationsOf(context),
             ),
             child: buildAppShell(context, app),
           ),

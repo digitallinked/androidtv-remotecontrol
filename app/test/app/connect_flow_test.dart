@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
@@ -144,6 +145,9 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await t.pump();
+    // The pill cross-fades to the new state; the old label leaves the tree
+    // one tick after the fade.
+    await t.pump(AppMotion.standard + const Duration(milliseconds: 1));
     expect(find.text('Connected'), findsNothing);
 
     signals.foreground();

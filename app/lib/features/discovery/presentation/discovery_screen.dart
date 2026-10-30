@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -89,7 +90,19 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.discoverTitle)),
+      appBar: AppBar(
+        title: Text(l10n.discoverTitle),
+        actions: [
+          // Settings before pairing (Ruling P7-R7): help, privacy and
+          // feedback without a TV, and no interstitial on the way back.
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.pageTitleSettings,
+            onPressed: () =>
+                unawaited(context.push(AppRoutes.settingsFromSetup)),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -176,11 +189,11 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
             tv: tv,
           );
         } on Object {
-          messenger.showSnackBar(SnackBar(content: Text(failed)));
+          messenger.showAppSnackBar(SnackBar(content: Text(failed)));
           return;
         }
         if (!adopted) {
-          messenger.showSnackBar(SnackBar(content: Text(failed)));
+          messenger.showAppSnackBar(SnackBar(content: Text(failed)));
           return;
         }
       }

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -362,5 +363,100 @@ void main() {
         epsilon: 2,
       ),
     );
+  });
+
+  testWidgets('now_on_tv_dot_has_a_contrasting_ring', (t) async {
+    for (final b in Brightness.values) {
+      final colors = b == Brightness.light ? AppColors.light : AppColors.dark;
+      for (final custom in <Color?>[null, ...kShortcutColors]) {
+        final reason = '${b.name} $custom';
+        await pumpApp(
+          t,
+          SizedBox(
+            width: 96,
+            height: 130,
+            child: AppTile(
+              app: AppEntry(
+                package: 'a.b',
+                name: 'Plex',
+                isCustom: custom != null,
+                customColor: custom,
+              ),
+              isCurrent: true,
+              onTap: () {},
+            ),
+          ),
+          brightness: b,
+        );
+        // The theme animates from the previous brightness.
+        await t.pumpAndSettle();
+        final fill = _fillOf(t);
+        expect(fill, custom ?? colors.surfaceRaised, reason: reason);
+        final dot = find.byType(NowOnTvDot);
+        expect(dot, findsOneWidget, reason: reason);
+        expect(
+          contrastRatio(t.widget<NowOnTvDot>(dot).ringColor, fill),
+          greaterThanOrEqualTo(4.5),
+          reason: reason,
+        );
+        expect(t.getSize(dot), const Size.square(NowOnTvDot.size));
+        expect(NowOnTvDot.size, 12);
+        final inner = find.byKey(const ValueKey('app_tile_current_dot'));
+        expect(
+          find.descendant(of: dot, matching: inner),
+          findsOneWidget,
+          reason: reason,
+        );
+        expect(t.getSize(inner), const Size(8, 8), reason: reason);
+        final decoration =
+            t.widget<Container>(inner).decoration! as BoxDecoration;
+        expect(decoration.color, colors.accent, reason: reason);
+        // The ring and the dot share a centre.
+        expect(t.getCenter(inner), t.getCenter(dot), reason: reason);
+      }
+    }
+  });
+
+  testWidgets('pressing_a_tile_scales_its_square', (t) async {
+    for (final reduceMotion in [false, true]) {
+      var taps = 0;
+      await pumpApp(
+        t,
+        SizedBox(
+          width: 96,
+          height: 120,
+          child: AppTile(
+            app: const AppEntry(package: 'a.b', name: 'Films'),
+            isCurrent: false,
+            onTap: () => taps++,
+          ),
+        ),
+        disableAnimations: reduceMotion,
+      );
+      final square = find.ancestor(
+        of: find.byType(AppIconSquare),
+        matching: find.byType(AnimatedScale),
+      );
+      expect(square, findsOneWidget);
+      expect(t.widget<AnimatedScale>(square).scale, 1);
+
+      final press = await t.startGesture(t.getCenter(find.byType(AppTile)));
+      await t.pump(kPressTimeout);
+      expect(t.widget<AnimatedScale>(square).scale, AppMotion.pressScale);
+      expect(
+        t.widget<AnimatedScale>(square).duration,
+        reduceMotion ? Duration.zero : AppMotion.fast,
+      );
+      // The name is not part of the square and keeps its size.
+      expect(
+        find.ancestor(of: find.text('Films'), matching: square),
+        findsNothing,
+      );
+      await press.up();
+      await t.pump();
+      expect(t.widget<AnimatedScale>(square).scale, 1);
+      expect(taps, 1);
+      await t.pumpAndSettle();
+    }
   });
 }

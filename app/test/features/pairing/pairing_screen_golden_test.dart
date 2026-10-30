@@ -26,6 +26,10 @@ void main() {
         initialLocation: AppRoutes.discover,
         brightness: b,
         settle: false,
+        // The page appears without its transition, so the spinner (which
+        // never settles and ignores reduce motion) is captured at the same
+        // 400 ms as before pages animated.
+        disableAnimations: true,
         overrides: [
           pairingClientFactoryProvider.overrideWithValue(fakes.create),
         ],

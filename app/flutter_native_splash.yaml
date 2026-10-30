@@ -1,0 +1,15 @@
+# Native splash from our own branding masters (Ruling P7-R6). The colours are
+# the bg tokens, so the first Flutter frame doesn't flash.
+# Regenerate with tool/brand.ps1 or tool/brand.sh.
+flutter_native_splash:
+  color: "#F6F7F9"
+  color_dark: "#0F1115"
+  image: assets/branding/splash_light.png
+  image_dark: assets/branding/splash_dark.png
+  android_12:
+    image: assets/branding/splash_android12_light.png
+    image_dark: assets/branding/splash_android12_dark.png
+    color: "#F6F7F9"
+    color_dark: "#0F1115"
+  fullscreen: false
+  web: false

@@ -148,18 +148,6 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get closeAction;
 
-  /// Headline of the first-run onboarding screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Control your TV from your phone'**
-  String get onboardingTitle;
-
-  /// Body text of the first-run onboarding screen.
-  ///
-  /// In en, this message translates to:
-  /// **'Find your Android TV on this Wi-Fi network and pair it in a few seconds.'**
-  String get onboardingBody;
-
   /// Button that finishes onboarding and opens the TV list.
   ///
   /// In en, this message translates to:
@@ -171,6 +159,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try demo'**
   String get onboardingTryDemo;
+
+  /// Top-end button on onboarding cards 1–2; finishes onboarding and opens the TV list.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardingSkip;
+
+  /// Primary button on onboarding cards 1–2; shows the next card.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// Spoken page indicator of the onboarding cards (`current` and `total`: `int`).
+  ///
+  /// In en, this message translates to:
+  /// **'Card {current} of {total}'**
+  String onboardingProgress(int current, int total);
+
+  /// Title of onboarding card 1 (connect).
+  ///
+  /// In en, this message translates to:
+  /// **'Find your TV'**
+  String get onboardingConnectTitle;
+
+  /// Body of onboarding card 1 (connect).
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone finds your Android TV on the same Wi-Fi network. Pair once with the code your TV shows.'**
+  String get onboardingConnectBody;
+
+  /// Note on onboarding card 1 (connect): the app needs no location permission to find TVs.
+  ///
+  /// In en, this message translates to:
+  /// **'The app only looks on your Wi-Fi network. It never asks for your location.'**
+  String get onboardingConnectNote;
+
+  /// Title of onboarding card 2 (control).
+  ///
+  /// In en, this message translates to:
+  /// **'Control it from your phone'**
+  String get onboardingControlTitle;
+
+  /// Body of onboarding card 2 (control).
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe the touchpad or use the D-pad, change the volume and type with your phone\'s keyboard.'**
+  String get onboardingControlBody;
+
+  /// Title of onboarding card 3 (apps).
+  ///
+  /// In en, this message translates to:
+  /// **'Open apps in one tap'**
+  String get onboardingAppsTitle;
+
+  /// Body of onboarding card 3 (apps).
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your favourite TV apps in a row on the remote and open them without searching.'**
+  String get onboardingAppsBody;
+
+  /// Title of the iOS explainer shown before the system Local Network prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow local network access'**
+  String get onboardingLocalNetworkTitle;
+
+  /// Body of the iOS explainer shown before the system Local Network prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Next, your iPhone asks to let this app find devices on your local network. Choose Allow so the app can find your TV. You can change this later in Settings → Privacy & Security → Local Network.'**
+  String get onboardingLocalNetworkBody;
+
+  /// The iOS local network explainer's only action; closes it and opens the TV list.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get onboardingContinue;
 
   /// Label of the strip shown above every screen while the simulated demo TV is in use.
   ///

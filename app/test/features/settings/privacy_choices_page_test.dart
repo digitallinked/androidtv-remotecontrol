@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
@@ -19,6 +20,7 @@ import 'package:tv_remote/features/settings/presentation/privacy_choices_page.da
 
 import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_tracking_service.dart';
+import '../../helpers/gather_consent.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_router_app.dart';
@@ -43,6 +45,7 @@ void main() {
     ConsentRegion region = ConsentRegion.notRequired,
     bool? usageChoice,
     bool premium = false,
+    PremiumState? premiumState,
     FirebaseStatus firebase = FirebaseStatus.ready,
     TrackingService? tracking,
     Size size = const Size(390, 844),
@@ -72,9 +75,10 @@ void main() {
         firebaseStatusProvider.overrideWithValue(firebase),
         premiumProvider.overrideWith(
           () => TestPremium(
-            premium
-                ? const PremiumState(isPremium: true, known: true)
-                : PremiumState.free,
+            premiumState ??
+                (premium
+                    ? const PremiumState(isPremium: true, known: true)
+                    : PremiumState.free),
           ),
         ),
         if (tracking != null)
@@ -179,6 +183,32 @@ void main() {
     // reachable, Premium or not.
     consent.optionsRequired = true;
     await pumpPage(t, premium: true);
+    expect(find.text('Ad privacy choices'), findsOneWidget);
+
+    await t.tap(find.text('Ad privacy choices'));
+    await t.pumpAndSettle();
+    expect(consent.privacyOptionsCalls, 1);
+  });
+
+  testWidgets('premium_user_sees_ad_privacy_choices_when_required', (t) async {
+    // Ruling P7-R9: a cached Premium user gets no consent form, and the ad
+    // privacy entry still follows what the silent update says.
+    consent
+      ..formOutcome = ConsentFormOutcome.shown
+      ..optionsRequired = true;
+    await pumpPage(
+      t,
+      region: ConsentRegion.required,
+      premiumState: const PremiumState(isPremium: true, known: false),
+    );
+    await gatherConsent(t);
+
+    expect(consent.showFormCalls, 0);
+    final result = containerOf(t).read(consentControllerProvider);
+    expect(result.gathered, isTrue);
+    expect(result.formShown, isFalse);
+    expect(result.privacyOptionsRequired, isTrue);
+    await scrollTo(t, find.text('Ad privacy choices'));
     expect(find.text('Ad privacy choices'), findsOneWidget);
 
     await t.tap(find.text('Ad privacy choices'));

@@ -59,6 +59,24 @@ class StatusPill extends StatelessWidget {
         status == ConnectionStatus.offline && onReconnect != null;
     final showPairAgain =
         status == ConnectionStatus.needsPairing && onPairAgain != null;
+    final duration = AppMotion.durationOf(context, AppMotion.standard);
+
+    final Widget action;
+    if (showReconnect) {
+      action = TextButton(
+        key: const ValueKey('reconnect'),
+        onPressed: onReconnect,
+        child: Text(l10n.statusReconnectAction),
+      );
+    } else if (showPairAgain) {
+      action = TextButton(
+        key: const ValueKey('pair_again'),
+        onPressed: onPairAgain,
+        child: Text(l10n.statusPairAgainAction),
+      );
+    } else {
+      action = const SizedBox.shrink(key: ValueKey('none'));
+    }
 
     return Semantics(
       container: true,
@@ -70,68 +88,149 @@ class StatusPill extends StatelessWidget {
           shape: StadiumBorder(side: BorderSide(color: colors.outline)),
         ),
         child: Padding(
-          padding: EdgeInsets.only(
-            left: AppSpacing.m,
-            right: showReconnect || showPairAgain
-                ? AppSpacing.xs
-                : AppSpacing.m,
+          padding: EdgeInsetsDirectional.only(
+            start: AppSpacing.m,
+            end: showReconnect || showPairAgain ? AppSpacing.xs : AppSpacing.m,
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // The label is spoken through the Semantics wrapper above.
-                Flexible(
-                  child: ExcludeSemantics(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox.square(
-                          dimension: 8,
-                          child: DecoratedBox(
-                            key: dotKey,
-                            decoration: BoxDecoration(
-                              color: dot,
-                              shape: BoxShape.circle,
+            // The pill grows or shrinks with its content instead of jumping.
+            child: _Resize(
+              duration: duration,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // The label is spoken through the Semantics wrapper above,
+                  // so the outgoing label of a cross-fade is never read and
+                  // the pill stays one live region.
+                  Flexible(
+                    child: ExcludeSemantics(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // A new palette (a theme switch, Theater Mode) shows
+                          // at once; only a status change tweens the colour.
+                          TweenAnimationBuilder<Color?>(
+                            key: ValueKey(colors),
+                            tween: ColorTween(end: dot),
+                            duration: duration,
+                            curve: AppMotion.curve,
+                            builder: (context, colour, _) => SizedBox.square(
+                              dimension: 8,
+                              child: DecoratedBox(
+                                key: dotKey,
+                                decoration: BoxDecoration(
+                                  color: colour,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.s),
-                        Flexible(
-                          child: Text(
-                            label,
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: colors.textPrimary),
+                          const SizedBox(width: AppSpacing.s),
+                          Flexible(
+                            child: _CrossFade(
+                              duration: duration,
+                              child: Text(
+                                label,
+                                key: ValueKey(status),
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(color: colors.textPrimary),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (showReconnect) ...[
-                  const SizedBox(width: AppSpacing.xs),
+                  if (showReconnect || showPairAgain)
+                    const SizedBox(width: AppSpacing.xs),
+                  // Without an action the slot takes no share of the width,
+                  // so the label keeps all of it (and a fading-out button
+                  // its own width).
                   Flexible(
-                    child: TextButton(
-                      onPressed: onReconnect,
-                      child: Text(l10n.statusReconnectAction),
-                    ),
+                    flex: showReconnect || showPairAgain ? 1 : 0,
+                    child: _CrossFade(duration: duration, child: action),
                   ),
                 ],
-                if (showPairAgain) ...[
-                  const SizedBox(width: AppSpacing.xs),
-                  Flexible(
-                    child: TextButton(
-                      onPressed: onPairAgain,
-                      child: Text(l10n.statusPairAgainAction),
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Animates [child]'s size changes over [duration]; with a zero duration
+/// (reduce motion) it is just [child]: an `AnimatedSize` that animates for no
+/// time asserts in its own layout.
+class _Resize extends StatelessWidget {
+  const _Resize({required this.duration, required this.child});
+
+  final Duration duration;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (duration == Duration.zero) return child;
+    return AnimatedSize(
+      duration: duration,
+      curve: AppMotion.curve,
+      alignment: AlignmentDirectional.centerStart,
+      child: child,
+    );
+  }
+}
+
+/// Cross-fades from one child to the next (told apart by their keys), with
+/// the outgoing child out of semantics and out of reach of the finger.
+///
+/// "Outgoing" is read from each child's own animation, which runs in reverse
+/// while it leaves. Comparing keys would wrongly revive a child still fading
+/// out after a quick A → B → A, leaving two live buttons.
+class _CrossFade extends StatelessWidget {
+  const _CrossFade({required this.duration, required this.child});
+
+  final Duration duration;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: duration,
+      switchInCurve: AppMotion.curve,
+      switchOutCurve: AppMotion.curve,
+      // Only the incoming child sizes the slot, so the pill resizes once,
+      // in step with the fade; the outgoing one fades where it was and the
+      // pill's edge clips it.
+      layoutBuilder: (current, previous) => Stack(
+        clipBehavior: Clip.none,
+        alignment: AlignmentDirectional.centerStart,
+        children: [
+          for (final child in previous)
+            PositionedDirectional(start: 0, child: child),
+          ?current,
+        ],
+      ),
+      transitionBuilder: _transition,
+      child: child,
+    );
+  }
+
+  static Widget _transition(Widget child, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, faded) {
+        final leaving = switch (animation.status) {
+          AnimationStatus.reverse || AnimationStatus.dismissed => true,
+          AnimationStatus.forward || AnimationStatus.completed => false,
+        };
+        return ExcludeSemantics(
+          excluding: leaving,
+          child: IgnorePointer(ignoring: leaving, child: faded),
+        );
+      },
+      child: FadeTransition(opacity: animation, child: child),
     );
   }
 }

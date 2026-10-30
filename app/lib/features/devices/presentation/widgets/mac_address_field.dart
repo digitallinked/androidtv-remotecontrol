@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/tv/mac_address.dart';
 
 /// What is wrong with the MAC address [text], or `null` when it is fine.
@@ -49,6 +50,7 @@ class MacAddressField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return TextField(
+      cursorOpacityAnimates: AppMotion.cursorFadesOf(context),
       controller: controller,
       // A plain ASCII keyboard without suggestions or auto-correct.
       keyboardType: TextInputType.visiblePassword,

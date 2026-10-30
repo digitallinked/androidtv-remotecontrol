@@ -170,6 +170,14 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
     super.dispose();
   }
 
+  /// The dimmed theme, under reduce motion too (Ruling P7-C1).
+  ThemeData _theater(BuildContext context) {
+    final theme = _theaterTheme ??= buildTheaterTheme();
+    return MediaQuery.disableAnimationsOf(context)
+        ? withReducedMotion(theme)
+        : theme;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -184,9 +192,7 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
           onPointerUp: _onTouchEnd,
           onPointerCancel: _onTouchEnd,
           child: Theme(
-            data: _dimmed
-                ? (_theaterTheme ??= buildTheaterTheme())
-                : Theme.of(context),
+            data: _dimmed ? _theater(context) : Theme.of(context),
             child: widget.child,
           ),
         ),

@@ -4,6 +4,30 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 7 gotchas (polish)
+- **Navigation:**
+  - go_router 18.1.1 checks for material_ui's `MaterialApp`, not Flutter 3.44.1's, so plain `builder:` routes become `NoTransitionPage`. Recheck on every go_router bump; we use `pageBuilder` via `appPage`.
+  - Only the pushed page carries its query parameters; a later `go('/settings')` drops `from=setup`.
+- **Ink and reduce motion (Flutter 3.44.1):**
+  - `InkHighlight` fades for about 200 ms whatever `disableAnimations` says (MediaQuery or platform); `NoSplash` removes only the splash.
+  - `TextButton.styleFrom(foregroundColor:)` and `IconButton(color:)` derive a 0.1× pressed overlay that beats a theme `overlayColor`. `SegmentedButton` has its own theme. Test every tappable kind, including widget-styled ones.
+  - In a scrollable, `startGesture` plus one `pump()` starts no ink: the press waits `kPressTimeout` (100 ms).
+  - The iOS caret fades in a loop unless `cursorOpacityAnimates` is false.
+- **Tests:**
+  - `shared_preferences` 2.5.6 captures the platform at open: a failing-prefs test must install the failing platform before the store opens.
+  - Re-pumping `MaterialApp` with a new brightness leaves `AnimatedTheme` mid-transition; `pumpAndSettle()` before reading colours.
+  - `Brightness.values` is `[dark, light]`.
+  - After `go()` under reduce motion the replaced page stays offstage for one frame.
+  - Lazy lists un-build items scrolled away: scroll back or `Scrollable.ensureVisible(alignment: 0/1)` for large-text checks; 200% text on 320×640 Edit apps builds only the first row.
+  - App-bar titles use `softWrap: false`, so compare `getMaxIntrinsicWidth(∞)` with `size.width` to detect truncation.
+  - A flick that crosses `firstStep` between the last move and lift-off sends no step, by design (P7-R12).
+- **Branding tooling:**
+  - flutter_launcher_icons rewrites `project.pbxproj` (an asset-symbol setting and LF endings) on every run: `git checkout` it after `tool/brand.ps1`.
+  - The adaptive foreground inset must be 0; the 16% default shrinks the mark.
+  - With `core.autocrlf=true`, any text file a test compares byte for byte needs an `eol=lf` rule.
+- **check.ps1** can stall in the test runner with no failure; stop and rerun. A clean run took 7–70 minutes this phase.
+- Source: Phase 7 SDD (`.superpowers/sdd/2026-10-30-phase-7-polish/`).
+
 ### Phase 6 gotchas (services & monetisation)
 - **Firebase and Analytics:**
   - Native Crashlytics initialises from its config file whatever `FIREBASE_ENABLED` says, and its collection override persists across launches.

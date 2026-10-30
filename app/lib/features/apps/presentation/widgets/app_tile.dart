@@ -32,12 +32,8 @@ class AppIconSquare extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final custom = app.customColor;
-    final fill = custom ?? colors.surfaceRaised;
-    final ink = custom == null
-        ? colors.textPrimary
-        : colourKeyLabelColor(custom);
+    final fill = app.customColor ?? context.appColors.surfaceRaised;
+    final ink = appSquareInk(context, app);
     final iconId = app.customIcon;
     final Widget content;
     if (iconId != null) {
@@ -85,13 +81,69 @@ class AppIconSquare extends StatelessWidget {
   }
 }
 
+/// The ink that reads on the square of [app]: the readable label colour on a
+/// custom colour, the primary text colour on the default fill.
+Color appSquareInk(BuildContext context, AppEntry app) {
+  final custom = app.customColor;
+  return custom == null
+      ? context.appColors.textPrimary
+      : colourKeyLabelColor(custom);
+}
+
+/// The "now on TV" mark of an app tile: an accent dot inside a
+/// [ringWidth] dp ring of the square's ink, [size] dp across, so the mark
+/// shows on every fill (Ruling P7-R11). It is only drawn; the tile's spoken
+/// label says the app is on the TV.
+class NowOnTvDot extends StatelessWidget {
+  /// Creates the mark with a ring of [ringColor]. [dotKey] goes on the inner
+  /// dot.
+  const NowOnTvDot({required this.ringColor, this.dotKey, super.key});
+
+  /// The whole diameter: the dot and its ring.
+  static const double size = 12;
+
+  /// The width of the ring.
+  static const double ringWidth = 2;
+
+  /// The diameter of the accent dot inside the ring.
+  static const double dotSize = size - 2 * ringWidth;
+
+  /// The colour of the ring: the ink of the square it sits on.
+  final Color ringColor;
+
+  /// The key of the inner dot.
+  final Key? dotKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: ringColor, shape: BoxShape.circle),
+        child: Center(
+          child: Container(
+            key: dotKey,
+            width: dotSize,
+            height: dotSize,
+            decoration: BoxDecoration(
+              color: context.appColors.accent,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// One app in the Apps screen's grid: its square over its name.
 ///
 /// It fills the grid cell and the whole tile is one button. The name takes up
 /// to two lines. [AppTile.heightOf] is the cell height that holds both lines
-/// at the ambient text size. When [isCurrent], an accent dot marks the square
-/// and the spoken label says the app is on the TV now.
-class AppTile extends StatelessWidget {
+/// at the ambient text size. When [isCurrent], a [NowOnTvDot] marks the square
+/// and the spoken label says the app is on the TV now. While pressed, the
+/// square scales to [AppMotion.pressScale] (Ruling P7-R5).
+class AppTile extends StatefulWidget {
   /// Creates a tile for [app].
   const AppTile({
     required this.app,
@@ -99,9 +151,6 @@ class AppTile extends StatelessWidget {
     required this.onTap,
     super.key,
   });
-
-  /// Diameter of the "now on TV" dot.
-  static const double dotSize = 8;
 
   /// Lines the name may take.
   static const int nameLines = 2;
@@ -131,10 +180,20 @@ class AppTile extends StatelessWidget {
   }
 
   @override
+  State<AppTile> createState() => _AppTileState();
+}
+
+class _AppTileState extends State<AppTile> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = context.appColors;
     final text = Theme.of(context).textTheme;
+    final app = widget.app;
+    final isCurrent = widget.isCurrent;
+    final onTap = widget.onTap;
 
     return Semantics(
       button: true,
@@ -147,34 +206,37 @@ class AppTile extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
+          onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
           borderRadius: BorderRadius.circular(AppRadii.key),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xs),
             child: Column(
               spacing: AppSpacing.xs,
               children: [
-                Stack(
-                  children: [
-                    AppIconSquare(app: app),
-                    if (isCurrent)
-                      PositionedDirectional(
-                        top: AppSpacing.s,
-                        end: AppSpacing.s,
-                        child: Container(
-                          key: const ValueKey('app_tile_current_dot'),
-                          width: dotSize,
-                          height: dotSize,
-                          decoration: BoxDecoration(
-                            color: colors.accent,
-                            shape: BoxShape.circle,
+                AnimatedScale(
+                  scale: _pressed ? AppMotion.pressScale : 1,
+                  duration: AppMotion.durationOf(context, AppMotion.fast),
+                  curve: AppMotion.curve,
+                  child: Stack(
+                    children: [
+                      AppIconSquare(app: app),
+                      if (isCurrent)
+                        // The ring grows around the dot, which stays where
+                        // it was.
+                        PositionedDirectional(
+                          top: AppSpacing.s - NowOnTvDot.ringWidth,
+                          end: AppSpacing.s - NowOnTvDot.ringWidth,
+                          child: NowOnTvDot(
+                            ringColor: appSquareInk(context, app),
+                            dotKey: const ValueKey('app_tile_current_dot'),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
                 Text(
                   app.name,
-                  maxLines: nameLines,
+                  maxLines: AppTile.nameLines,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: text.labelMedium?.copyWith(color: colors.textPrimary),
