@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -32,6 +33,10 @@ const _star = [
 ];
 
 void main() {
+  // Some tests pump the screen twice, each time on a fresh in-memory
+  // database: two databases at once are intended here.
+  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+
   late InMemoryShortcutRepository repo;
 
   setUp(() => repo = InMemoryShortcutRepository());

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show kPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +15,7 @@ import 'package:tv_remote/app/widgets/app_key_button.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
+import 'package:tv_remote/core/ads/interstitials.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -32,8 +36,10 @@ import '../helpers/failing_preferences.dart';
 import '../helpers/fake_ads_sdk.dart';
 import '../helpers/fake_consent_service.dart';
 import '../helpers/fake_tv_discovery.dart';
+import '../helpers/gather_consent.dart';
 import '../helpers/in_memory_device_repository.dart';
 import '../helpers/ink_features.dart';
+import '../helpers/platform_override.dart';
 import '../helpers/pump_router_app.dart';
 import '../helpers/recording_analytics_sink.dart';
 import '../helpers/recording_crash_reporter.dart';
@@ -109,6 +115,8 @@ void main() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     final store = await SettingsStore.open();
+    // The second launch, so the launch-count rule allows an interstitial.
+    await store.setLaunchCount(interstitialFirstLaunch);
     final location = await resolveInitialLocation(
       settings: store,
       devices: InMemoryDeviceRepository(),
@@ -121,6 +129,10 @@ void main() {
       overrides: [
         ...recorders(),
         settingsStoreProvider.overrideWithValue(store),
+        // Remote Config allows interstitials.
+        appConfigProvider.overrideWith(
+          () => TestAppConfig(const {'ads_interstitial_enabled': true}),
+        ),
       ],
     );
     expect(find.byType(OnboardingScreen), findsOneWidget);
@@ -145,10 +157,43 @@ void main() {
     expect(find.byType(DiscoveryScreen), findsOneWidget);
     expect(find.byType(SettingsScreen, skipOffstage: false), findsNothing);
 
-    // Before pairing: no interstitial on the way back, and no banner.
-    expect(ads.shows, 0);
+    // Before pairing consent hasn't been gathered, so the hub shows no
+    // banner (Ruling P7-R7).
     expect(banner, findsNothing);
     expect(find.text('Advertisement'), findsNothing);
+    expect(ads.shows, 0);
+    expect(t.takeException(), isNull);
+
+    // Now let every other interstitial rule hold: consent gathered (as the
+    // remote does) and an ad loaded. Leaving a hub opened from discovery
+    // still shows none.
+    await gatherConsent(t);
+    expect(ads.interstitialLoads, 1, reason: 'one ad is kept loaded');
+    await t.tap(find.byTooltip('Settings'));
+    await t.pumpAndSettle();
+    expect(
+      t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
+      isTrue,
+    );
+    await back(t);
+    expect(find.byType(DiscoveryScreen), findsOneWidget);
+    expect(ads.shows, 0, reason: 'a hub opened before pairing');
+
+    // The control, in the same app: the hub opened as the remote opens it.
+    unawaited(
+      containerOf(t)
+          .read(appRouterProvider)
+          .push<void>(
+            AppRoutes.settings,
+          ),
+    );
+    await t.pumpAndSettle();
+    expect(
+      t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
+      isFalse,
+    );
+    await back(t);
+    expect(ads.shows, 1, reason: 'the control: a hub opened from the remote');
     expect(t.takeException(), isNull);
 
     expect(
@@ -231,9 +276,13 @@ void main() {
     expect(crashes.errors.map((e) => e.reason), contains('onboarding write'));
   });
 
-  testWidgets('premium_in_the_eea_gets_no_consent_form_and_no_ads', (
-    t,
-  ) async {
+  /// A user in the EEA (a form is required) on the remote of a saved TV,
+  /// with Premium as the phone last saw it ([premium]); the store hasn't
+  /// answered.
+  Future<FakeConsentService> pumpEeaRemote(
+    WidgetTester t, {
+    required bool premium,
+  }) async {
     phone(t);
     final consent = FakeConsentService(
       region: ConsentRegion.required,
@@ -244,10 +293,9 @@ void main() {
     await pumpRealApp(
       t,
       initialLocation: AppRoutes.remote,
-      // Premium as the phone last saw it; the store hasn't answered.
       prepareSettings: (store) async {
         await store.setOnboardingComplete(true);
-        await store.setCachedPremium((active: true, expiresAt: null));
+        await store.setCachedPremium((active: premium, expiresAt: null));
       },
       overrides: [
         ...recorders(),
@@ -258,6 +306,13 @@ void main() {
         ),
       ],
     );
+    return consent;
+  }
+
+  testWidgets('premium_in_the_eea_gets_no_consent_form_and_no_ads', (
+    t,
+  ) async {
+    final consent = await pumpEeaRemote(t, premium: true);
     expect(find.byType(RemoteScreen), findsOneWidget);
     expect(find.text('Connected'), findsOneWidget);
     final container = containerOf(t);
@@ -292,6 +347,25 @@ void main() {
     expect(ads.shows, 0);
     expect(ads.bannerLoads, 0);
     expect(consent.showFormCalls, 0);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('a_free_user_in_the_eea_gets_the_form_and_a_banner', (t) async {
+    // The control for the Premium test: the same setup, but free.
+    final consent = await pumpEeaRemote(t, premium: false);
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    final container = containerOf(t);
+    expect(container.read(premiumProvider).isPremium, isFalse);
+    final result = container.read(consentControllerProvider);
+    expect(result.gathered, isTrue);
+    expect(result.formShown, isTrue);
+    expect(consent.showFormCalls, 1);
+
+    await t.tap(find.byTooltip('Settings'));
+    await t.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(ads.bannerLoads, greaterThan(0));
+    expect(banner, findsOneWidget);
     expect(t.takeException(), isNull);
   });
 
@@ -400,9 +474,15 @@ void main() {
     expect(find.text('Control it from your phone'), findsOneWidget);
     still('onboarding next');
 
-    // Skip to discovery.
+    // Skip to discovery. On iOS the Local Network explainer comes first.
     await t.tap(find.text('Skip'));
     await t.pump();
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      expect(find.byType(AppDialog<void>), findsOneWidget);
+      still('local network explainer');
+      await t.tap(find.text('Continue'));
+      await t.pump();
+    }
     expect(find.byType(DiscoveryScreen), findsOneWidget);
     expect(
       find.byType(OnboardingScreen),
@@ -516,6 +596,14 @@ void main() {
   testWidgets('no_animation_runs_anywhere_with_reduce_motion', (t) async {
     await sweep(t, platformFlag: false);
   });
+
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'no_animation_runs_anywhere_with_reduce_motion_on_ios',
+    (t) async {
+      await sweep(t, platformFlag: false);
+    },
+  );
 
   testWidgets(
     'no_animation_runs_anywhere_with_reduce_motion_from_the_platform',

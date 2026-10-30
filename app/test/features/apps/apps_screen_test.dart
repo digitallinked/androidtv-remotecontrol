@@ -27,6 +27,13 @@ const _connected = TvConnectionState(status: ConnectionStatus.connected);
 const _offline = TvConnectionState(status: ConnectionStatus.offline);
 const _needsPairing = TvConnectionState(status: ConnectionStatus.needsPairing);
 
+/// A shortcut store whose saved list never arrives.
+class _NeverLoadingShortcuts extends InMemoryShortcutRepository {
+  @override
+  Stream<List<AppEntry>> watchAll() =>
+      StreamController<List<AppEntry>>().stream;
+}
+
 /// A shortcut store whose stream fails until [broken] is cleared.
 class _FlakyShortcuts extends InMemoryShortcutRepository {
   _FlakyShortcuts(super.initial);
@@ -438,6 +445,60 @@ void main() {
           .first,
     );
     expect(scrollable.position.maxScrollExtent, 0);
+  });
+
+  /// Opens the Apps screen on [shortcuts] in a 390 × 800 view, and checks
+  /// its list doesn't scroll: the banner clearance sits inside the state
+  /// that fills the rest (Ruling P7-R11).
+  Future<void> expectNoScroll(
+    WidgetTester t,
+    InMemoryShortcutRepository shortcuts, {
+    required Finder shows,
+    bool settle = true,
+  }) async {
+    t.view
+      ..physicalSize = const Size(390, 800)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      settle: settle,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(shortcuts),
+      ],
+    );
+    if (!settle) await t.pump();
+    expect(shows, findsOneWidget);
+    final scrollable = t.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(scrollable.position.maxScrollExtent, 0);
+  }
+
+  testWidgets('loading_list_fits_without_scrolling', (t) async {
+    // The saved list never arrives: the screen keeps its spinner.
+    await expectNoScroll(
+      t,
+      _NeverLoadingShortcuts(),
+      shows: find.byType(CircularProgressIndicator),
+      settle: false,
+    );
+  });
+
+  testWidgets('failed_list_fits_without_scrolling', (t) async {
+    await expectNoScroll(
+      t,
+      _FlakyShortcuts(const []),
+      shows: find.text("Couldn't load your apps."),
+    );
   });
 
   testWidgets('dragging_the_list_closes_the_keyboard', (t) async {

@@ -593,7 +593,11 @@ void main() {
         );
         // The title keeps the room left beside the action.
         final title = t.getRect(find.text('Choose your TV'));
-        expect(title.right, lessThanOrEqualTo(t.getRect(button).left));
+        expect(
+          title.right,
+          lessThanOrEqualTo(t.getRect(button).left),
+          reason: '$reason: the title runs under the Settings button',
+        );
       }
     }
   });

@@ -289,7 +289,10 @@ void main() {
         savedDevicesProvider.overrideWith((ref) => Stream.value([savedTv()])),
       ],
     );
-    // The very first frame.
+    // The very first frame. (Its RemoteBody count can't fail on its own:
+    // the session is still loading in this frame, so the remote would show
+    // its spinner anyway. The frames after it, once the session is there,
+    // are what the count proves.)
     expect(find.text('Update required'), findsOneWidget);
     remoteBodies += find.byType(RemoteBody).evaluate().length;
     for (var i = 0; i < 5; i++) {

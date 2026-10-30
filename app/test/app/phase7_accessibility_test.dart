@@ -121,7 +121,7 @@ final Map<String, _Screen> _screens = {
       await t.pumpAndSettle();
     },
     texts: ['Living Room TV 3'],
-    buttons: ['Settings', 'Enter IP address', 'Try demo'],
+    buttons: ['Living Room TV 3', 'Settings', 'Enter IP address', 'Try demo'],
   ),
   'no_tv_remote': (
     route: AppRoutes.remote,
@@ -162,7 +162,7 @@ final Map<String, _Screen> _screens = {
     ios: false,
     open: null,
     texts: [_reorderHint, 'Netflix'],
-    buttons: ['Add app', 'Edit Netflix', 'Remove Netflix'],
+    buttons: ['Add app', 'Edit Netflix', 'Remove Netflix', 'Reorder Netflix'],
   ),
   'quick_row': (
     route: AppRoutes.remote,
@@ -176,8 +176,8 @@ final Map<String, _Screen> _screens = {
     ],
     ios: false,
     open: null,
-    texts: ['All apps'],
-    buttons: ['All apps'],
+    texts: ['All apps', 'Netflix'],
+    buttons: ['All apps', 'Netflix'],
   ),
 };
 
@@ -248,14 +248,19 @@ void main() {
   Finder buttonFor(String label) {
     final byText = find.text(label);
     if (byText.evaluate().isEmpty) {
-      final icon = find.ancestor(
+      final byTooltip = find.ancestor(
         of: find.byTooltip(label),
         matching: find.byWidgetPredicate(
           (w) => w is IconButton || w is ButtonStyleButton,
         ),
       );
-      expect(icon, findsWidgets, reason: 'the button "$label"');
-      return icon.first;
+      if (byTooltip.evaluate().isNotEmpty) return byTooltip.first;
+      // A control that is named only for screen readers (a drag handle).
+      final bySemantics = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == label,
+      );
+      expect(bySemantics, findsWidgets, reason: 'the button "$label"');
+      return bySemantics.first;
     }
     // The widget that takes the tap: a Material button, a tile announced as
     // a button, or a list tile's ink.
@@ -271,6 +276,31 @@ void main() {
       if (button.evaluate().isNotEmpty) return button.first;
     }
     fail('no button holds the text "$label"');
+  }
+
+  /// Checks that [button] is the control named [label], not a large
+  /// container around it: no wider than the screen nor taller than half of
+  /// it, and its semantics node carries the label (and, unless it is only
+  /// dragged, a tap action).
+  void expectIsTheControl(
+    WidgetTester t,
+    Finder button,
+    String label,
+    Size size,
+    String why,
+  ) {
+    final box = t.getSize(button);
+    expect(box.width, lessThanOrEqualTo(size.width), reason: why);
+    expect(box.height, lessThanOrEqualTo(size.height / 2), reason: why);
+    final data = t.getSemantics(button).getSemanticsData();
+    if (!label.startsWith('Reorder ')) {
+      expect(data.hasAction(SemanticsAction.tap), isTrue, reason: why);
+    }
+    expect(
+      '${data.label} ${data.tooltip}',
+      contains(label),
+      reason: '$why: semantics "${data.label}" / "${data.tooltip}"',
+    );
   }
 
   /// Builds [finder]'s widget when a lazy list has dropped it: scrolls the
@@ -340,32 +370,43 @@ void main() {
     );
   }
 
-  /// Every text in the app bar is either shown in full, or ends in an
-  /// ellipsis and still gives its full text to a screen reader: never
+  /// The text of [element] (a `RichText`) is either shown in full, or ends
+  /// in an ellipsis and still gives its full text to a screen reader: never
   /// silently clipped.
+  void expectParagraphReadable(WidgetTester t, Element element, String why) {
+    final paragraph = element.renderObject! as RenderParagraph;
+    final text = paragraph.text.toPlainText();
+    final width = paragraph.size.width;
+    final neededWidth = paragraph.getMaxIntrinsicWidth(double.infinity);
+    final neededHeight = paragraph.getMaxIntrinsicHeight(width);
+    final truncated =
+        paragraph.didExceedMaxLines ||
+        (!paragraph.softWrap && neededWidth > width + 0.5) ||
+        neededHeight > paragraph.size.height + 0.5;
+    if (!truncated) return;
+    final reason = '$why: "$text" ($width of $neededWidth)';
+    expect(paragraph.overflow, TextOverflow.ellipsis, reason: reason);
+    final node = t.getSemantics(find.byElementPredicate((e) => e == element));
+    final data = node.getSemanticsData();
+    expect(
+      '${data.label} ${data.tooltip}',
+      contains(text),
+      reason: '$reason: semantics "${data.label}" / "${data.tooltip}"',
+    );
+  }
+
+  /// Every text in the app bar is readable (see [expectParagraphReadable]).
   void expectAppBarTitlesReadable(WidgetTester t, String why) {
     final paragraphs = find.descendant(
       of: find.byType(AppBar),
       matching: find.byType(RichText),
     );
     for (final element in paragraphs.evaluate()) {
-      final paragraph = element.renderObject! as RenderParagraph;
-      final text = paragraph.text.toPlainText();
+      final text = (element.renderObject! as RenderParagraph).text
+          .toPlainText();
       // Icons are text too, in their font; they have no words to lose.
       if (text.trim().isEmpty || text.runes.length == 1) continue;
-      final needed = paragraph.getMaxIntrinsicWidth(double.infinity);
-      final truncated =
-          needed > paragraph.size.width + 0.5 || paragraph.didExceedMaxLines;
-      if (!truncated) continue;
-      final reason = '$why: "$text" (${paragraph.size.width} of $needed)';
-      expect(paragraph.overflow, TextOverflow.ellipsis, reason: reason);
-      final node = t.getSemantics(find.byElementPredicate((e) => e == element));
-      final data = node.getSemanticsData();
-      expect(
-        '${data.label} ${data.tooltip}',
-        contains(text),
-        reason: '$reason: semantics "${data.label}" / "${data.tooltip}"',
-      );
+      expectParagraphReadable(t, element, why);
     }
   }
 
@@ -402,6 +443,15 @@ void main() {
                 size,
                 '$reason "$text"',
               );
+              for (final element
+                  in find
+                      .descendant(
+                        of: find.text(text),
+                        matching: find.byType(RichText),
+                      )
+                      .evaluate()) {
+                expectParagraphReadable(t, element, '$reason body');
+              }
               expect(t.takeException(), isNull, reason: '$reason $text');
             }
             for (final label in e.value.buttons) {
@@ -411,7 +461,8 @@ void main() {
                 find.byWidgetPredicate(
                   (w) =>
                       (w is Text && w.data == label) ||
-                      (w is Tooltip && w.message == label),
+                      (w is Tooltip && w.message == label) ||
+                      (w is Semantics && w.properties.label == label),
                 ),
               );
               final button = buttonFor(label);
@@ -420,6 +471,7 @@ void main() {
               final box = t.getSize(button);
               expect(box.width, greaterThanOrEqualTo(48), reason: why);
               expect(box.height, greaterThanOrEqualTo(48), reason: why);
+              expectIsTheControl(t, button, label, size, why);
             }
           });
         }

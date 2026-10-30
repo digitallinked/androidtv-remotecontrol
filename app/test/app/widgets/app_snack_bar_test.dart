@@ -25,27 +25,34 @@ void main() {
     return bar.animation!.value;
   }
 
-  testWidgets('reduce_motion_shows_and_hides_a_snack_bar_in_one_frame', (
-    t,
-  ) async {
-    // The phone's own flag: the messenger sits above the app's builder, so
-    // it reads the MediaQuery that comes from the platform.
-    t.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
-    await pumpShower(t);
-    await t.tap(find.text('show'));
-    await t.pump();
-    expect(find.text('Saved'), findsOneWidget);
-    expect(shown(t), 1);
-    expect(t.hasRunningAnimations, isFalse);
+  testWidgets(
+    'reduce_motion_shows_a_snack_bar_at_once_and_hides_it_unanimated',
+    (
+      t,
+    ) async {
+      // The phone's own flag: the messenger sits above the app's builder, so
+      // it reads the MediaQuery that comes from the platform.
+      t.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      await pumpShower(t);
+      await t.tap(find.text('show'));
+      await t.pump();
+      expect(find.text('Saved'), findsOneWidget);
+      expect(shown(t), 1);
+      expect(t.hasRunningAnimations, isFalse);
 
-    ScaffoldMessenger.of(t.element(find.text('show'))).hideCurrentSnackBar();
-    await t.pump();
-    await t.pump();
-    expect(find.text('Saved'), findsNothing);
-    expect(t.hasRunningAnimations, isFalse);
-  });
+      ScaffoldMessenger.of(t.element(find.text('show'))).hideCurrentSnackBar();
+      // The messenger removes a hidden snack bar in the frame after it
+      // completes its (zero-length) exit, so this takes two pumps; nothing
+      // animates in between.
+      await t.pump();
+      expect(t.hasRunningAnimations, isFalse);
+      await t.pump();
+      expect(find.text('Saved'), findsNothing);
+      expect(t.hasRunningAnimations, isFalse);
+    },
+  );
 
   testWidgets('with_motion_a_snack_bar_slides_in', (t) async {
     await pumpShower(t);
