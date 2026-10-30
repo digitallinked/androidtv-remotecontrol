@@ -103,19 +103,17 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
 
   /// The apps in [mine] whose name or package contains [needle], ranked by
   /// [nameMatchRank] and in list order within a rank (Ruling P7-R10).
-  static List<AppEntry> _filter(List<AppEntry> mine, String needle) {
-    final ranked = [
-      for (final app in mine)
-        if (app.name.toLowerCase().contains(needle) ||
-            app.package.toLowerCase().contains(needle))
-          (app: app, rank: nameMatchRank(app.name, needle)),
-    ];
-    return [
-      for (var rank = 0; rank <= kNoNameMatch; rank++)
-        for (final hit in ranked)
-          if (hit.rank == rank) hit.app,
-    ];
-  }
+  static List<AppEntry> _filter(List<AppEntry> mine, String needle) =>
+      rankedByName(
+        [
+          for (final app in mine)
+            if (app.name.toLowerCase().contains(needle) ||
+                app.package.toLowerCase().contains(needle))
+              app,
+        ],
+        (app) => app.name,
+        needle,
+      );
 
   @override
   Widget build(BuildContext context) {

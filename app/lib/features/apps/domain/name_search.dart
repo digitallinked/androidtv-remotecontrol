@@ -22,7 +22,9 @@ bool _isSeparator(String char) =>
 /// - `2` when the name contains it anywhere else;
 /// - [kNoNameMatch] (`3`) when the name does not contain it.
 ///
-/// A blank needle ranks `0`: every name starts with it.
+/// A blank needle ranks `0`: every name starts with it. A needle that starts
+/// with a separator (for example `+hot`) never ranks `1`: a word never starts
+/// with a separator.
 int nameMatchRank(String name, String needle) {
   final n = needle.trim().toLowerCase();
   final s = name.toLowerCase();
@@ -33,4 +35,28 @@ int nameMatchRank(String name, String needle) {
     contains = true;
   }
   return contains ? 2 : kNoNameMatch;
+}
+
+/// [items] ordered by [nameMatchRank] of their [name] against [needle]: best
+/// rank first; within a rank the [preferred] items first (when given), then
+/// the order of [items]. Nothing is dropped: filter before calling.
+List<T> rankedByName<T>(
+  Iterable<T> items,
+  String Function(T item) name,
+  String needle, {
+  bool Function(T item)? preferred,
+}) {
+  final ranked = [
+    for (final item in items)
+      (item: item, rank: nameMatchRank(name(item), needle)),
+  ];
+  final order = preferred == null ? const [true] : const [true, false];
+  return [
+    for (var rank = 0; rank <= kNoNameMatch; rank++)
+      for (final first in order)
+        for (final hit in ranked)
+          if (hit.rank == rank &&
+              (preferred == null || preferred(hit.item) == first))
+            hit.item,
+  ];
 }

@@ -47,12 +47,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   bool get _isLast => _index == _cards.length - 1;
 
+  /// How far, in pages, the cards may sit from a whole page and still count
+  /// as settled: a `PageView` can stop a hair off a page after a fling.
+  static const double _pageSettleTolerance = 0.001;
+
   /// Whether the cards are between two pages (a swipe or Next's
   /// animation). The indicator and the primary button switch halfway, so a
   /// tap then could finish onboarding by accident.
   bool get _paging {
     final page = _pages.hasClients ? _pages.page : null;
-    return page != null && (page - page.round()).abs() > 0.001;
+    return page != null && (page - page.round()).abs() > _pageSettleTolerance;
   }
 
   /// Next, or Get started on the last card; ignored while paging.

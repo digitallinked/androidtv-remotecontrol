@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// The snack bar's own slide, used while animations are on: Flutter's
-/// default transition time.
+/// default transition time. It mirrors the framework's private
+/// `_snackBarTransitionDuration` (250 ms) on purpose, so the snack bar feels
+/// as it always has; `AppMotion.standard` (200 ms) would change that.
 const AnimationStyle _withMotion = AnimationStyle(
   duration: Duration(milliseconds: 250),
 );

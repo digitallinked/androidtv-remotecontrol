@@ -301,6 +301,10 @@ abstract final class AppSizes {
 
   /// Minimum gap between keys.
   static const double keyGap = 8;
+
+  /// Text scaled past this factor of its base size is large text: layouts
+  /// switch to their large-text form (Rulings P7-R11, P7-C3).
+  static const double largeTextGrowth = 1.3;
 }
 
 /// Motion durations and curves.

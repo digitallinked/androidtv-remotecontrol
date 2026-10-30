@@ -30,10 +30,6 @@ class QuickAppTile extends StatefulWidget {
   /// Side of the monogram square.
   static const double squareSize = kAppSquareSize;
 
-  /// Text grown past this factor of its base size is large text: the name
-  /// takes two lines and the tile grows.
-  static const double _largeText = 1.3;
-
   /// The app this tile opens.
   final AppEntry app;
 
@@ -55,12 +51,15 @@ class QuickAppTile extends StatefulWidget {
   /// The lines a name may take at the ambient text scale: 1, or 2 for large
   /// text.
   static int nameLinesOf(BuildContext context) =>
-      _growth(context) > _largeText ? 2 : 1;
+      _growth(context) > AppSizes.largeTextGrowth ? 2 : 1;
 
   /// The width of a tile at the ambient text scale: [width], growing with
   /// large text up to [maxWidth].
   static double widthOf(BuildContext context) =>
-      (width * _growth(context) / _largeText).clamp(width, maxWidth);
+      (width * _growth(context) / AppSizes.largeTextGrowth).clamp(
+        width,
+        maxWidth,
+      );
 
   /// The height of a tile at the ambient text scale, so a horizontal list of
   /// tiles can give itself a bounded height: the square, a gap and

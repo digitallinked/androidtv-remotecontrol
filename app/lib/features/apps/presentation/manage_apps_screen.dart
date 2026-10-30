@@ -322,9 +322,6 @@ class _AppRowItem extends StatelessWidget {
   static const double _iconSize = 40;
   static const double _minNameWidth = 160;
 
-  /// Text grown past this factor of its base size is large text.
-  static const double _largeText = 1.3;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -336,7 +333,7 @@ class _AppRowItem extends StatelessWidget {
     final baseSize = text.bodyLarge?.fontSize ?? 16;
     final largeText =
         MediaQuery.textScalerOf(context).scale(baseSize) / baseSize >
-        _largeText;
+        AppSizes.largeTextGrowth;
 
     final icon = AppIconSquare(app: app, size: _iconSize);
     final name = Expanded(

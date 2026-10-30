@@ -185,19 +185,17 @@ class AppCatalogue {
     if (needle.isEmpty) {
       return const [];
     }
-    final ranked = [
-      for (final a in apps)
-        if (a.name.toLowerCase().contains(needle) ||
-            a.package.toLowerCase().contains(needle))
-          (app: a, rank: nameMatchRank(a.name, needle)),
-    ];
-    return [
-      for (var rank = 0; rank <= kNoNameMatch; rank++)
-        for (final available in const [true, false])
-          for (final hit in ranked)
-            if (hit.rank == rank && hit.app.isAvailableIn(region) == available)
-              hit.app,
-    ];
+    return rankedByName(
+      [
+        for (final a in apps)
+          if (a.name.toLowerCase().contains(needle) ||
+              a.package.toLowerCase().contains(needle))
+            a,
+      ],
+      (a) => a.name,
+      needle,
+      preferred: (a) => a.isAvailableIn(region),
+    );
   }
 
   static CatalogueApp _parseApp(Object? raw) {
