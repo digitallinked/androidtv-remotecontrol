@@ -19,6 +19,16 @@ Finder _inPreview(Finder finder) =>
 /// socket. The demo's simulated TV answers every control in the preview card.
 Future<void> demoModeFlow(WidgetTester t) async {
   final semantics = t.ensureSemantics();
+  try {
+    await _steps(t);
+  } finally {
+    // In the test body, not a tear-down: flutter_test checks for live
+    // semantics handles before tear-downs run.
+    semantics.dispose();
+  }
+}
+
+Future<void> _steps(WidgetTester t) async {
   var remoteClients = 0;
   var pairingClients = 0;
   final fakeRemotes = FakeRemoteClients();
@@ -87,5 +97,4 @@ Future<void> demoModeFlow(WidgetTester t) async {
   expect(find.text('Demo mode'), findsNothing);
   expect(remoteClients, 0, reason: 'the demo never creates a remote client');
   expect(pairingClients, 0, reason: 'the demo never creates a pairing client');
-  semantics.dispose();
 }

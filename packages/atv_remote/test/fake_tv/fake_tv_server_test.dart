@@ -568,4 +568,29 @@ void main() {
     await _eventually(() => tv.openRemoteConnections == 0);
     expect(tv.acceptedRemoteConnections, 1);
   });
+
+  test('accepted_remote_connections_counts_paired_clients_only', () async {
+    final tv = await _start();
+    await _pair(tv, _clientA);
+
+    // _clientB gets through TLS but never paired: the TV hangs up at once.
+    final unpaired = await _Peer.connect(tv.remotePort, _clientB);
+    await unpaired.waitUntilClosed();
+    expect(tv.acceptedRemoteConnections, 0);
+    expect(tv.openRemoteConnections, 0);
+
+    await _connectRemote(tv, _clientA);
+    await tv.waitForActiveClient();
+    expect(tv.acceptedRemoteConnections, 1);
+  });
+
+  test('key_codes_stream_closes_when_the_tv_closes', () async {
+    final tv = await FakeTvServer.start(sendPings: false);
+    final done = Completer<void>();
+    tv.keyCodes.listen((_) {}, onDone: done.complete);
+
+    await tv.close();
+
+    await done.future.timeout(_wait);
+  });
 }

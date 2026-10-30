@@ -106,8 +106,12 @@ Future<SettingsStore> pumpRouterApp(
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
-      overrides: _withDefaults(
-        _defaults(store: store, db: db, initialLocation: initialLocation),
+      overrides: mergeOverrides(
+        testAppOverrides(
+          store: store,
+          db: db,
+          initialLocation: initialLocation,
+        ),
         overrides,
       ),
       child: Consumer(
@@ -171,8 +175,12 @@ Future<SettingsStore> pumpRealApp(
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
-      overrides: _withDefaults(
-        _defaults(store: store, db: db, initialLocation: initialLocation),
+      overrides: mergeOverrides(
+        testAppOverrides(
+          store: store,
+          db: db,
+          initialLocation: initialLocation,
+        ),
         overrides,
       ),
       child: const App(),
@@ -186,8 +194,13 @@ Future<SettingsStore> pumpRealApp(
   return store;
 }
 
-/// The overrides every pumped app starts with; see [pumpRouterApp].
-List<Override> _defaults({
+/// The overrides every pumped app starts with, on [store] and [db] at
+/// [initialLocation]: everything platform-backed is replaced (see
+/// [pumpRouterApp]).
+///
+/// For a `ProviderContainer` built without a widget tree; combine it with a
+/// test's own overrides through [mergeOverrides].
+List<Override> testAppOverrides({
   required SettingsStore store,
   required AppDatabase db,
   required String initialLocation,
@@ -261,7 +274,7 @@ List<Override> _defaults({
 
 /// [defaults] followed by [overrides]; an override replaces the default of the
 /// same provider, because a container rejects two overrides of one provider.
-List<Override> _withDefaults(
+List<Override> mergeOverrides(
   List<Override> defaults,
   List<Override> overrides,
 ) {

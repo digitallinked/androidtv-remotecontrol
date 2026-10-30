@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:atv_remote/atv_remote.dart';
 import 'package:atv_remote/testing.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/flavor.dart';
@@ -10,6 +9,7 @@ import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import 'fake_tv_discovery.dart';
+import 'pump_until.dart';
 import 'test_identity.dart';
 
 /// The protocol library's fake TV, wired into the app the way a real TV is:
@@ -21,10 +21,10 @@ import 'test_identity.dart';
 /// `pumpUntil`, which lets the real sockets make progress.
 class FakeTvHarness {
   FakeTvHarness._(this._tester, this.tv) {
-    // The controller listens right after creating a discovery; the microtask
-    // runs once it has.
+    // Emitted once the app listens, whenever that is: an event sent before
+    // would be lost on the broadcast stream.
     discoveries.onCreate = (discovery) =>
-        scheduleMicrotask(() => discovery.emit([discovered]));
+        discovery.onListen = (d) => d.emit([discovered]);
   }
 
   /// Starts a fake TV and lets [testIdentity] through its TLS handshake.
@@ -76,6 +76,38 @@ class FakeTvHarness {
       ),
     ),
   ];
+
+  /// Unmounts the app and waits until the TV sees its connection end.
+  ///
+  /// Closing the app's real client takes real I/O, so without this its idle
+  /// timer would outlive the test. Call it before the test ends, also when
+  /// the test failed: see [cleanUpAfter].
+  Future<void> unmountApp() async {
+    await _tester.pumpWidget(const SizedBox.shrink());
+    await pumpUntil(
+      _tester,
+      () => tv.openRemoteConnections == 0,
+      reason: 'the app to close its connection to the TV',
+    );
+  }
+
+  /// Runs [body], then [unmountApp], whether or not [body] failed.
+  ///
+  /// When [body] failed, a failure of the clean-up is dropped, so the test
+  /// reports only the real failure; when [body] passed, it fails the test.
+  Future<void> cleanUpAfter(Future<void> Function() body) async {
+    var passed = false;
+    try {
+      await body();
+      passed = true;
+    } finally {
+      try {
+        await unmountApp();
+      } on Object {
+        if (passed) rethrow;
+      }
+    }
+  }
 
   /// Stops the fake TV and drops its connections.
   Future<void> close() => _tester.runAsync(tv.close);

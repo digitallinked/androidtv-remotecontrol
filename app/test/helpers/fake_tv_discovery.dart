@@ -18,8 +18,14 @@ DiscoveredTv tv(
 
 /// A [TvDiscovery] that tests drive by hand.
 class FakeTvDiscovery implements TvDiscovery {
-  final StreamController<List<DiscoveredTv>> _controller =
-      StreamController<List<DiscoveredTv>>.broadcast();
+  late final StreamController<List<DiscoveredTv>> _controller =
+      StreamController<List<DiscoveredTv>>.broadcast(
+        onListen: () => onListen?.call(this),
+      );
+
+  /// Called when [watch]'s stream gets its first listener, so a test can
+  /// emit what is "found" once someone is listening.
+  void Function(FakeTvDiscovery discovery)? onListen;
 
   /// How many times [watch] was called.
   int watchCalls = 0;

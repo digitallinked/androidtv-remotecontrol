@@ -16,10 +16,24 @@ bool _shows(Finder finder) => finder.evaluate().isNotEmpty;
 /// Discover → pair → press keys, against the protocol library's fake TV over
 /// real TLS: the app's real pairing client, remote client, session and
 /// screens; only discovery is faked.
+///
+/// The app is unmounted at the end, and the flow waits for the TV to see the
+/// connection close, also when a step failed (then only that step's failure
+/// is reported).
 Future<void> discoverPairPressKeyFlow(WidgetTester t) async {
-  final semantics = t.ensureSemantics();
   final harness = await FakeTvHarness.start(t);
   addTearDown(harness.close);
+  final semantics = t.ensureSemantics();
+  try {
+    await harness.cleanUpAfter(() => _steps(t, harness));
+  } finally {
+    // In the test body, not a tear-down: flutter_test checks for live
+    // semantics handles before tear-downs run.
+    semantics.dispose();
+  }
+}
+
+Future<void> _steps(WidgetTester t, FakeTvHarness harness) async {
   final tv = harness.tv;
 
   await pumpRouterApp(
@@ -75,14 +89,4 @@ Future<void> discoverPairPressKeyFlow(WidgetTester t) async {
   expect(saved, isNotNull, reason: 'pairing saves the TV');
   expect(saved!.serverKeyPin, isNotNull, reason: "the TV's key is pinned");
   expect(tv.openRemoteConnections, 1);
-
-  // Closing the app's real client takes real I/O: unmount the app and wait
-  // until the TV sees the connection end, so no client timer outlives it.
-  await t.pumpWidget(const SizedBox.shrink());
-  await pumpUntil(
-    t,
-    () => tv.openRemoteConnections == 0,
-    reason: 'the app to close its connection to the TV',
-  );
-  semantics.dispose();
 }

@@ -145,6 +145,11 @@ class FakeTvServer {
   ///
   /// A broadcast stream: listeners see only the keys read after they
   /// subscribed. It closes when the TV is [close]d.
+  ///
+  /// Delivery is synchronous (so a latency test can stop its clock the moment
+  /// the key is read): listeners run inside the TV's socket handler, before
+  /// it reads the next frame. Keep them short, and don't throw from them; an
+  /// error there would end that client's connection.
   Stream<int> get keyCodes => _keyCodes.stream;
 
   /// How many remote-port connections are open now: accepted (and, with
@@ -153,6 +158,11 @@ class FakeTvServer {
 
   /// How many remote-port connections were accepted since the TV started,
   /// whether or not they are still open.
+  ///
+  /// Counts only connections let past the identity checks: with
+  /// `rejectUnknownClients` (the default) that means paired clients. A socket
+  /// the TV hangs up on at once (no certificate, or a client that never
+  /// paired) isn't counted.
   int get acceptedRemoteConnections => _acceptedRemoteConnections;
 
   /// Directions matching [receivedKeyCodes] one to one.

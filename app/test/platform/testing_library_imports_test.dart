@@ -6,12 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 /// it, so release builds never contain it.
 void main() {
   test('app_lib_never_imports_the_testing_library', () {
+    // The barrel, or its implementation files directly.
+    const forbidden = [
+      'package:atv_remote/testing.dart',
+      'package:atv_remote/src/testing/',
+    ];
     final offenders = [
       for (final file in Directory('lib').listSync(recursive: true))
-        if (file is File &&
-            file.path.endsWith('.dart') &&
-            file.readAsStringSync().contains('package:atv_remote/testing.dart'))
-          file.path.replaceAll(r'\', '/'),
+        if (file is File && file.path.endsWith('.dart'))
+          for (final uri in forbidden)
+            if (file.readAsStringSync().contains(uri))
+              '${file.path.replaceAll(r'\', '/')}: $uri',
     ];
     expect(offenders, isEmpty);
   });
