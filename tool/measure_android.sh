@@ -100,9 +100,8 @@ case "$mode" in
   startup)
     adb_s shell pm path "$package" | grep -q '^package:' ||
       fail "$package is not installed on $serial. From app/: flutter build apk --profile --flavor dev -t lib/main_dev.dart, then adb install -r build/app/outputs/flutter-apk/app-dev-profile.apk"
-    if adb_s shell dumpsys package "$package" | grep -m1 'pkgFlags=' | grep -q DEBUGGABLE; then
-      echo "WARNING: $package is a debuggable (debug) build; cold-start numbers need the profile build." >&2
-    fi
+    # Profile builds are debuggable too, so the flags can't tell them from a
+    # debug build: installing the profile APK is up to the operator.
     mkdir -p "$out"
     times=()
     for run in $(seq 1 "$runs"); do

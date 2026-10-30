@@ -106,10 +106,8 @@ switch ($Mode) {
         if (-not $installed.StartsWith('package:')) {
             Fail "$Package is not installed on $serial. From app/: flutter build apk --profile --flavor dev -t lib/main_dev.dart, then adb install -r build/app/outputs/flutter-apk/app-dev-profile.apk"
         }
-        $flags = (& $adb -s $serial shell dumpsys package $Package | Select-String 'pkgFlags=' | Select-Object -First 1 | Out-String)
-        if ($flags -match 'DEBUGGABLE') {
-            Write-Warning "$Package is a debuggable (debug) build; cold-start numbers need the profile build."
-        }
+        # Profile builds are debuggable too, so the flags can't tell them from a
+        # debug build: installing the profile APK is up to the operator.
         $out = New-OutputDir 'startup'
         $times = @()
         for ($run = 1; $run -le $Runs; $run++) {
@@ -137,8 +135,11 @@ switch ($Mode) {
         if (Test-Path $info) { Remove-Item -Force $info }
         Push-Location $appDir
         try {
-            & flutter run --profile --trace-startup --flavor dev -t lib/main_dev.dart -d $serial | Tee-Object -FilePath (Join-Path $out 'flutter_run.txt')
-            if ($LASTEXITCODE -ne 0) { Fail "flutter run failed (see $out\flutter_run.txt)." }
+            # Tee-Object -FilePath writes UTF-16 in Windows PowerShell; keep the log UTF-8.
+            & flutter run --profile --trace-startup --flavor dev -t lib/main_dev.dart -d $serial | Tee-Object -Variable runLog
+            $code = $LASTEXITCODE
+            Set-Content -Encoding utf8 -Path (Join-Path $out 'flutter_run.txt') -Value $runLog
+            if ($code -ne 0) { Fail "flutter run failed (see $out\flutter_run.txt)." }
         } finally {
             Pop-Location
         }
