@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/gestures.dart' show kPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -20,6 +21,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 import 'package:tv_remote/features/settings/presentation/help_page.dart';
@@ -31,6 +33,7 @@ import '../helpers/fake_ads_sdk.dart';
 import '../helpers/fake_consent_service.dart';
 import '../helpers/fake_tv_discovery.dart';
 import '../helpers/in_memory_device_repository.dart';
+import '../helpers/ink_features.dart';
 import '../helpers/pump_router_app.dart';
 import '../helpers/recording_analytics_sink.dart';
 import '../helpers/recording_crash_reporter.dart';
@@ -385,6 +388,8 @@ void main() {
     );
 
     void still(String step) {
+      // A pressed highlight may exist but must be transparent (P7-C5).
+      expectNoVisibleInk(t, step);
       expect(t.hasRunningAnimations, isFalse, reason: step);
       expect(t.takeException(), isNull, reason: step);
     }
@@ -417,16 +422,36 @@ void main() {
     expect(find.text('Living Room TV 3'), findsOneWidget);
     still('a tv found');
 
-    // A held press on a list row: its ink highlight appears at once, and
-    // goes at once when the press is cancelled.
-    final hold = await t.startGesture(
-      t.getCenter(find.text('Living Room TV 3')),
-    );
-    await t.pump();
+    // A held press on a list row, past the press timeout a scrollable waits
+    // for: its ink highlight appears at once, and goes at once when the press
+    // is cancelled or released.
+    final row = t.getCenter(find.text('Living Room TV 3'));
+    final hold = await t.startGesture(row);
+    await t.pump(kPressTimeout + const Duration(milliseconds: 1));
     still('row pressed');
     await hold.cancel();
     await t.pump();
     still('row press cancelled');
+    final rowPress = await t.startGesture(row);
+    await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+    still('row pressed again');
+    // Lifting opens pairing in one frame. Pairing shows a progress spinner
+    // while it connects, which is exempt (Ruling P7-R4), so the release is
+    // checked for ink only; back on the list nothing may move.
+    await rowPress.up();
+    await t.pump();
+    expect(find.byType(PairingScreen), findsOneWidget);
+    expect(
+      ModalRoute.of(t.element(find.byType(PairingScreen)))!.animation!.value,
+      1,
+      reason: 'row released: pairing opens in one frame',
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expectNoVisibleInk(t, 'row released');
+    await t.pageBack();
+    await t.pump();
+    expect(find.byType(PairingScreen, skipOffstage: false), findsNothing);
+    still('back from pairing');
 
     // Discovery → Settings, and back.
     await t.tap(find.byTooltip('Settings'));

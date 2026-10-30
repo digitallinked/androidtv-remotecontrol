@@ -1,5 +1,6 @@
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart' show kPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -17,6 +18,7 @@ import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../helpers/fake_remote_session.dart';
+import '../helpers/ink_features.dart';
 import '../helpers/platform_override.dart';
 import '../helpers/pump_router_app.dart';
 import '../helpers/test_devices.dart';
@@ -430,6 +432,89 @@ void main() {
         await t.tap(target);
         await t.pump();
         expect(t.hasRunningAnimations, isTrue, reason: '$target');
+        await t.pumpAndSettle();
+      }
+    });
+
+    /// Every kind of tappable the app uses, under the app theme.
+    Future<void> pumpTappables(
+      WidgetTester t, {
+      required bool reduceMotion,
+    }) => t.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(brightness: Brightness.light),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, app) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: reduceMotion),
+          child: ReduceMotionTheme(child: app!),
+        ),
+        home: Scaffold(
+          body: Column(
+            children: [
+              FilledButton(onPressed: () {}, child: const Text('Filled')),
+              TextButton(onPressed: () {}, child: const Text('Text')),
+              OutlinedButton(onPressed: () {}, child: const Text('Outlined')),
+              IconButton(
+                onPressed: () {},
+                tooltip: 'Icon',
+                icon: const Icon(Icons.settings_outlined),
+              ),
+              ListTile(onTap: () {}, title: const Text('Tile')),
+              SizedBox(
+                width: 96,
+                height: 120,
+                child: AppTile(
+                  app: const AppEntry(package: 'a.b', name: 'Films'),
+                  isCurrent: false,
+                  onTap: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final tappables = {
+      'filled': find.text('Filled'),
+      'text': find.text('Text'),
+      'outlined': find.text('Outlined'),
+      'icon': find.byTooltip('Icon'),
+      'list tile': find.text('Tile'),
+      'app tile': find.byType(AppTile),
+    };
+
+    // Ruling P7-C5: Flutter fades a pressed highlight over 200 ms whatever
+    // the flag says, so under reduce motion it must be transparent.
+    testWidgets('reduce_motion_shows_no_pressed_highlight', (t) async {
+      await pumpTappables(t, reduceMotion: true);
+      for (final MapEntry(key: name, value: target) in tappables.entries) {
+        final press = await t.startGesture(t.getCenter(target));
+        // Past the press timeout: a tooltip's gestures delay the tap-down.
+        await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+        expectNoVisibleInk(t, '$name pressed');
+        expect(t.hasRunningAnimations, isFalse, reason: '$name pressed');
+        await press.up();
+        await t.pump();
+        expectNoVisibleInk(t, '$name released');
+        expect(t.hasRunningAnimations, isFalse, reason: '$name released');
+      }
+    });
+
+    testWidgets('with_motion_a_press_shows_a_highlight', (t) async {
+      await pumpTappables(t, reduceMotion: false);
+      for (final MapEntry(key: name, value: target) in tappables.entries) {
+        final press = await t.startGesture(t.getCenter(target));
+        await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+        expect(
+          inkFeatures(t).whereType<InkHighlight>().where((h) => h.color.a > 0),
+          isNotEmpty,
+          reason: name,
+        );
+        await press.up();
         await t.pumpAndSettle();
       }
     });

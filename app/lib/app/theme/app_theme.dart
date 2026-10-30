@@ -30,13 +30,53 @@ ThemeData buildTheaterTheme() => _buildTheme(
   dynamicScheme: null,
 );
 
-/// [theme] for a user who asked for reduced motion (Rulings P7-R4, P7-C1):
-/// no ink ripple anywhere, and pages that change in one frame. Everything
-/// else, colours included, is [theme]'s.
+/// [theme] for a user who asked for reduced motion (Rulings P7-R4, P7-C1,
+/// P7-C5): no ink ripple and no pressed ink highlight anywhere, and pages
+/// that change in one frame. Everything else, colours included, is
+/// [theme]'s.
+///
+/// Flutter fades a pressed highlight in and out over 200 ms whatever the
+/// reduce-motion flag says, and offers no way to shorten it. So the pressed
+/// highlight is made transparent: `highlightColor` for list tiles and plain
+/// ink wells, and the pressed overlay of every button theme. Hover and focus
+/// highlights are kept: they aren't motion a press starts, and focus is how a
+/// keyboard user finds their place. A press still shows its result (a page,
+/// a sheet, a toggled switch), and the remote's keys still scale at once.
 ThemeData withReducedMotion(ThemeData theme) => theme.copyWith(
   splashFactory: NoSplash.splashFactory,
+  highlightColor: Colors.transparent,
   pageTransitionsTheme: instantPageTransitionsTheme,
+  filledButtonTheme: FilledButtonThemeData(
+    style: _noPressedOverlay(theme.filledButtonTheme.style),
+  ),
+  textButtonTheme: TextButtonThemeData(
+    style: _noPressedOverlay(theme.textButtonTheme.style),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: _noPressedOverlay(theme.outlinedButtonTheme.style),
+  ),
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: _noPressedOverlay(theme.elevatedButtonTheme.style),
+  ),
+  iconButtonTheme: IconButtonThemeData(
+    style: _noPressedOverlay(theme.iconButtonTheme.style),
+  ),
 );
+
+/// [style] whose overlay is transparent while pressed, and whose shape,
+/// colour and elevation changes don't animate. Other states keep the
+/// overlay [style] gives, or the button's default when it gives none.
+ButtonStyle _noPressedOverlay(ButtonStyle? style) {
+  final overlay = style?.overlayColor;
+  return (style ?? const ButtonStyle()).copyWith(
+    overlayColor: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.pressed)
+          ? Colors.transparent
+          : overlay?.resolve(states),
+    ),
+    animationDuration: Duration.zero,
+  );
+}
 
 /// Applies [withReducedMotion] to the ambient theme below it while
 /// `MediaQuery.disableAnimationsOf` is set, and passes the theme on unchanged
