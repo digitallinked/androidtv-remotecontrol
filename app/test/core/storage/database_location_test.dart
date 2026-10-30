@@ -40,15 +40,40 @@ void main() {
       mockStorage((_) => throw PlatformException(code: 'storage'));
       await expectLater(
         databaseDirectoryFor(TargetPlatform.iOS)!(),
-        throwsStateError,
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'no backup-excluded database directory (storage)',
+          ),
+        ),
       );
 
       final calls = mockStorage((_) => null);
       await expectLater(
         databaseDirectoryFor(TargetPlatform.iOS)!(),
-        throwsStateError,
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'no backup-excluded database directory (no path)',
+          ),
+        ),
       );
       expect(calls, hasLength(1));
+
+      // No handler at all: the Swift channel was never registered.
+      messenger.setMockMethodCallHandler(storageChannel, null);
+      await expectLater(
+        databaseDirectoryFor(TargetPlatform.iOS)!(),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'no backup-excluded database directory (not implemented)',
+          ),
+        ),
+      );
     },
   );
 }

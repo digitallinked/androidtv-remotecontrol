@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -78,8 +79,10 @@ void main() {
   });
 
   test('the_privacy_promise_is_backed_by_the_rules', () {
+    final arb =
+        jsonDecode(File(_arbPath).readAsStringSync()) as Map<String, dynamic>;
     expect(
-      File(_arbPath).readAsStringSync(),
+      arb['privacyIntro'],
       contains('never leave this phone'),
       reason:
           'privacyIntro in $_arbPath promises that TV data never leaves '

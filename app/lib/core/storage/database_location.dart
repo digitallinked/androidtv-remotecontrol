@@ -14,24 +14,28 @@ const MethodChannel storageChannel = MethodChannel(
 /// from iCloud and computer backups and from device transfer (Ruling P8-R1).
 /// If that directory can't be had, the callback throws a [StateError] and
 /// opening the database fails: it never falls back to `Documents`, which is
-/// backed up.
+/// backed up. The message ends with the reason in brackets: the native error
+/// code, `not implemented` when the channel isn't registered
+/// ([MissingPluginException]), or `no path`. None of them holds TV data.
 Future<Object> Function()? databaseDirectoryFor(
   TargetPlatform platform, {
   MethodChannel channel = storageChannel,
 }) {
   if (platform != TargetPlatform.iOS) return null;
   return () async {
-    String? path;
+    StateError unavailable(String reason) =>
+        StateError('no backup-excluded database directory ($reason)');
+    final String? path;
     try {
       path = await channel.invokeMethod<String>(
         'backupExcludedDatabaseDirectory',
       );
-    } on PlatformException {
-      path = null;
+    } on PlatformException catch (e) {
+      throw unavailable(e.code);
+    } on MissingPluginException {
+      throw unavailable('not implemented');
     }
-    if (path == null) {
-      throw StateError('no backup-excluded database directory');
-    }
+    if (path == null) throw unavailable('no path');
     return path;
   };
 }
