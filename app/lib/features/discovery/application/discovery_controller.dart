@@ -6,6 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -122,8 +124,9 @@ class DiscoveryController extends _$DiscoveryController {
   /// Moves the saved TV [manualServiceName] (added by IP address) to [tv],
   /// its mDNS entry, in one transaction (decision #33), and moves the remote
   /// with it. Returns whether it merged; storage errors from the merge
-  /// propagate. An app torn down after the merge doesn't turn it into a
-  /// failure: the merge has happened.
+  /// propagate. Nothing after the merge turns it into a failure, because it
+  /// has happened: an app torn down meanwhile skips the follow-up, and a
+  /// follow-up that throws is reported as a non-fatal error.
   ///
   /// [opening] is asked once the merge is done: whether the user is still
   /// opening this TV. Then the merged TV becomes the active one. Otherwise
@@ -142,6 +145,7 @@ class DiscoveryController extends _$DiscoveryController {
     // discovery meanwhile, which disposes this controller.
     final container = ref.container;
     final devices = ref.read(deviceRepositoryProvider);
+    final crashes = ref.read(crashReporterProvider);
     // Closed when the container is disposed (the app was torn down during
     // the merge): then there is no remote left to move, and the merge that
     // succeeded must not be reported as failed.
@@ -152,7 +156,15 @@ class DiscoveryController extends _$DiscoveryController {
         tv: tv,
       );
       if (adopted && !alive.closed) {
-        _followMerge(container, manualServiceName, tv, opening);
+        try {
+          _followMerge(container, manualServiceName, tv, opening);
+        } on Object catch (error, stack) {
+          // The merge is committed, so the caller must not say it failed:
+          // a bug here is reported instead.
+          unawaited(
+            safeRecordError(crashes, error, stack, reason: 'merge follow-up'),
+          );
+        }
       }
       return adopted;
     } finally {

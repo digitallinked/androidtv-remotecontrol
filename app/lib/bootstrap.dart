@@ -146,10 +146,10 @@ Future<Widget> buildRootWidget({
     // Read once, before the first frame, so an early error is scrubbed of
     // saved names before the saved-list stream's first event (Ruling
     // P8-R11). The database was just read, so this is quick; the bound
-    // keeps a stuck read from holding the first frame (decision #38). A
-    // failed read seeds nothing; the stream still follows. A late read
-    // holds every report back until the saved names are known.
-    var saved = const <SavedDevice>[];
+    // keeps a stuck read from holding the first frame (decision #38). Until
+    // the saved names are known (a read that failed or is late, Ruling
+    // P8-C11), reports are logged only, never sent.
+    List<SavedDevice>? saved;
     Future<List<SavedDevice>>? lateRead;
     final read = container.read(deviceRepositoryProvider).all();
     try {
@@ -157,7 +157,7 @@ Future<Widget> buildRootWidget({
     } on TimeoutException {
       lateRead = read;
     } on Object {
-      // Nothing to seed.
+      // Unknown: the saved-list stream decides.
     }
     _installCrashlytics(
       container,
@@ -182,14 +182,15 @@ Future<Widget> buildRootWidget({
 /// the log and the scrubbing Crashlytics reporter. A failure leaves it
 /// logging only; the app still starts.
 ///
-/// With [lateSeed], the seed read that timed out, nothing is seeded yet and
-/// [reporter] keeps only logging until the scrubber knows the saved names:
-/// when [lateSeed] answers or the saved list's first event arrives, whichever
-/// comes first. So no report sent before then can carry a saved TV's name.
+/// With no [seed] (the read failed or timed out) [reporter] keeps logging
+/// only until the scrubber knows the saved names: when [lateSeed], the read
+/// that timed out, answers or the saved list's first event arrives,
+/// whichever comes first. Reports before then are logged, never sent, so
+/// none can carry a saved TV's name.
 void _installCrashlytics(
   ProviderContainer container,
   DelegatingCrashReporter reporter, {
-  required List<SavedDevice> seed,
+  required List<SavedDevice>? seed,
   Future<List<SavedDevice>>? lateSeed,
 }) {
   try {
@@ -202,12 +203,14 @@ void _installCrashlytics(
       const LoggingCrashReporter(),
       collection.reporter,
     ]);
-    if (lateSeed == null) {
+    if (seed != null) {
       collection.seedTerms(seed);
       install();
       return;
     }
-    unawaited(lateSeed.then(collection.seedTerms, onError: (Object _) {}));
+    if (lateSeed != null) {
+      unawaited(lateSeed.then(collection.seedTerms, onError: (Object _) {}));
+    }
     unawaited(
       collection.savedNamesKnown.then((_) {
         // A start that was given up on (Try again) disposed its container,

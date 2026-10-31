@@ -53,12 +53,6 @@ final Map<String, String> _routes = {
   AppRoutes.settingsAbout: 'settings_about',
 };
 
-/// App bars whose buttons touch (0 dp between 48 dp hit boxes; the visible
-/// 40 dp shapes are 8 dp apart). Edit apps puts Add and More options side
-/// by side; spacing them re-baselines its goldens, which Task 8.11 may not
-/// do, so it awaits a controller ruling. They must still never overlap.
-const Set<String> _appBarGapAwaitingRuling = {'apps_manage'};
-
 void main() {
   Future<void> pump(
     WidgetTester t,
@@ -257,12 +251,11 @@ void main() {
               (element.renderObject! as RenderBox).localToGlobal(Offset.zero),
             ),
         }.toList()..sort((a, b) => a.left.compareTo(b.left));
-        final minGap = _appBarGapAwaitingRuling.contains(e.value) ? 0 : 8;
         for (var i = 1; i < boxes.length; i++) {
           final gap = boxes[i].left - boxes[i - 1].right;
           expect(
             gap,
-            greaterThanOrEqualTo(minGap),
+            greaterThanOrEqualTo(8),
             reason: '${e.value} at ${scale}x: ${boxes[i - 1]} and ${boxes[i]}',
           );
           checked++;

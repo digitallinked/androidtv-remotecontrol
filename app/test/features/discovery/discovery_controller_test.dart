@@ -9,6 +9,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
@@ -26,6 +27,7 @@ import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/manual_session_signals.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/recording_crashlytics_sink.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
@@ -403,11 +405,47 @@ void main() {
 
       identityReady.complete();
       final session = await c.read(remoteSessionProvider.future);
+      await pumpEventQueue();
       expect(c.read(activeTargetProvider), isNull);
       expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
+      // The build parked on the identity discarded itself: the one client
+      // is the merged session's, none was made for the deleted manual row.
+      expect(clients.created, hasLength(1));
+      expect(clients.created.single.closed, isFalse);
     });
 
-    test('a_failing_follow_up_still_reports_the_merge', () async {
+    test('a_follow_up_that_throws_is_reported_and_the_merge_stands', () async {
+      final repo = InMemoryDeviceRepository([savedTv(name: manual)]);
+      final crashes = RecordingCrashReporter();
+      final c = ProviderContainer.test(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          deviceRepositoryProvider.overrideWithValue(repo),
+          crashReporterProvider.overrideWithValue(crashes),
+        ],
+      )..listen(discoveryControllerProvider, (_, _) {});
+
+      // A bug after the merge committed: the follow-up throws.
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => throw StateError('follow-up bug'),
+          );
+      await pumpEventQueue();
+
+      // The TVs are merged, so the caller must not say "couldn't open"; the
+      // bug is reported instead.
+      expect(merged, isTrue);
+      expect(repo.saved.keys, ['Living Room TV 3']);
+      expect(crashes.errors.single.reason, 'merge follow-up');
+      expect(crashes.errors.single.fatal, isFalse);
+    });
+
+    test('a_follow_up_after_teardown_still_reports_the_merge', () async {
       final repo = _SlowAdoptRepository([savedTv(name: manual)]);
       // Not ProviderContainer.test: this test disposes it itself.
       final c = ProviderContainer(

@@ -1,8 +1,9 @@
-import 'dart:developer' as developer;
+import 'dart:async';
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderException;
 import 'package:tv_remote/app/app_shell.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
@@ -13,6 +14,8 @@ import 'package:tv_remote/app/theme/dynamic_scheme.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/interstitials.dart';
 import 'package:tv_remote/core/analytics/analytics_hooks.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/review/review_prompter.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
@@ -33,6 +36,26 @@ ThemeMode _themeMode(ThemePreference preference) => switch (preference) {
   ThemePreference.light => ThemeMode.light,
   ThemePreference.dark => ThemeMode.dark,
 };
+
+/// The cause of the last unreadable Premium reported, so a rebuild doesn't
+/// report the same failure again.
+Object? _reportedPremiumCause;
+
+/// Reports an unreadable Premium once per cause, as a non-fatal error. Only
+/// the error and its stack go out (through the scrubbing reporter): no TV
+/// data.
+void _reportUnreadablePremium(
+  CrashReporter reporter,
+  Object error,
+  StackTrace stack,
+) {
+  final cause = error is ProviderException ? error.exception : error;
+  if (identical(cause, _reportedPremiumCause)) return;
+  _reportedPremiumCause = cause;
+  unawaited(
+    safeRecordError(reporter, error, stack, reason: 'premium unreadable'),
+  );
+}
 
 /// The app: theme, language and routing, driven by the user's settings.
 class App extends ConsumerWidget {
@@ -68,9 +91,9 @@ class App extends ConsumerWidget {
     PremiumState premium;
     try {
       premium = ref.watch(premiumProvider);
-    } on Object catch (error) {
-      developer.log('premium unreadable', name: 'app', error: error);
+    } on Object catch (error, stack) {
       premium = PremiumState.free;
+      _reportUnreadablePremium(ref.read(crashReporterProvider), error, stack);
     }
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(

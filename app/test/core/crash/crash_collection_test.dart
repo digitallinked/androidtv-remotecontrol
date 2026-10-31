@@ -283,6 +283,27 @@ void main() {
     expect(known, isTrue, reason: 'the first saved list arrived');
   });
 
+  // Riverpod 3.3.2 keeps a Notifier's instance across rebuilds (its
+  // CHANGELOG once said otherwise; the code reuses the instance). The
+  // scrubber's saved names and the hold's `savedNamesKnown` rely on it.
+  test('the_notifier_and_its_saved_names_survive_a_rebuild', () async {
+    devices = _SilentDeviceRepository();
+    final container = await containerFor();
+    final before = start(container)..seedTerms([savedTv(name: 'Den')]);
+    var known = false;
+    unawaited(before.savedNamesKnown.then((_) => known = true));
+    final firstScrubber = before.scrubber;
+
+    container.invalidate(crashCollectionProvider);
+    await flush(container);
+    final after = container.read(crashCollectionProvider.notifier);
+
+    expect(after.scrubber, isNot(same(firstScrubber)), reason: 'rebuilt');
+    expect(after, same(before));
+    expect(after.scrubber.scrub('Den'), '<tv>');
+    expect(known, isTrue);
+  });
+
   test('the_first_watch_event_replaces_the_seeded_names', () async {
     final container = await containerFor();
     final collection = start(container)..seedTerms([savedTv(name: 'Den')]);

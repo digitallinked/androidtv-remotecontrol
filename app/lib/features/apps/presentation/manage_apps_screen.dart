@@ -342,6 +342,8 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
             ),
             onPressed: () => unawaited(showAddAppSheet(context)),
           ),
+          // Touch targets at least 8 dp apart (design system).
+          const SizedBox(width: AppSpacing.s),
           PopupMenuButton<void>(
             tooltip: l10n.manageAppsMoreOptions,
             // It colours its IconButton, which derives a pressed overlay;

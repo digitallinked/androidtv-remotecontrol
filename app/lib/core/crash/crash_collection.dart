@@ -75,8 +75,11 @@ class CrashCollection extends _$CrashCollection {
     final debugBuild = ref.watch(crashDebugBuildProvider);
     final devices = ref.watch(deviceRepositoryProvider);
 
-    // The saved names are not cleared on a rebuild: the list stream replaces
-    // them, and until then over-scrubbing is the safe side.
+    // Riverpod 3.3.2 keeps this notifier instance across rebuilds (its old
+    // CHANGELOG said otherwise; crash_collection_test pins the behaviour),
+    // so the fields above survive one. The saved names are not cleared on a
+    // rebuild: the list stream replaces them, and until then over-scrubbing
+    // is the safe side.
     _collecting = null;
     scrubber = CrashScrubber(
       knownTerms: () => [

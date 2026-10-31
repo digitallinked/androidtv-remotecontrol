@@ -220,7 +220,6 @@ class _DpadState extends State<Dpad> {
   }
 }
 
-/// Paints the pad and describes its five buttons to screen readers.
 /// The region [painter], a D-pad's painter, tints as pressed; `null` for no
 /// region or another painter. Lets tests read the tint without depending on
 /// the private painter's fields.
@@ -228,6 +227,7 @@ class _DpadState extends State<Dpad> {
 DpadRegion? dpadTintedRegion(CustomPainter? painter) =>
     painter is _DpadPainter ? painter.pressed : null;
 
+/// Paints the pad and describes its five buttons to screen readers.
 class _DpadPainter extends CustomPainter {
   _DpadPainter({
     required this.colors,

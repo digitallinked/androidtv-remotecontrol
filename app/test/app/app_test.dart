@@ -17,6 +17,7 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/bootstrap.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
@@ -43,9 +44,10 @@ Future<Widget> _root({
   void Function()? onOpenDatabase,
   FakeConsentService? consent,
   List<Override> extraOverrides = const [],
+  RecordingCrashReporter? crashes,
 }) => buildRootWidget(
   flavor: Flavor.dev,
-  crashReporter: RecordingCrashReporter(),
+  crashReporter: crashes ?? RecordingCrashReporter(),
   startupSteps: steps,
   overrides: [
     ...fakeAdsOverrides(consent: consent),
@@ -148,8 +150,10 @@ void main() {
 
   testWidgets('app_treats_unreadable_premium_as_free', (t) async {
     _prefs({'settings.colour_style': ColourStyle.ember.name});
+    final crashes = RecordingCrashReporter();
     await t.pumpWidget(
       await _root(
+        crashes: crashes,
         extraOverrides: [premiumProvider.overrideWith(_UnreadablePremium.new)],
       ),
     );
@@ -160,6 +164,23 @@ void main() {
     final app = t.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.theme!.extension<AppColors>(), AppColors.light);
     expect(app.darkTheme!.extension<AppColors>(), AppColors.dark);
+
+    // Reported once, however often the app rebuilds, as a non-fatal error
+    // with nothing but the error itself: no TV data.
+    final container = ProviderScope.containerOf(t.element(find.byType(App)));
+    for (final mode in [ThemePreference.dark, ThemePreference.light]) {
+      await container
+          .read(settingsControllerProvider.notifier)
+          .update((s) => s.setThemePreference(mode));
+      await t.pumpAndSettle();
+    }
+    final premium = [
+      for (final e in crashes.errors)
+        if (e.reason == 'premium unreadable') e,
+    ];
+    expect(premium, hasLength(1));
+    expect(premium.single.fatal, isFalse);
+    expect(premium.single.error.toString(), contains('premium unreadable'));
   });
 
   testWidgets('app_title_is_the_flavor_display_name', (t) async {
