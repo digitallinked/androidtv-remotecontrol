@@ -3,3 +3,5 @@ tags:
     description: Pixel comparisons. Baselines are generated on Windows; Linux CI excludes this tag.
   integration:
     description: End-to-end flows from integration_test/flows/ on the host; the fake TV ones talk to it over real loopback TLS.
+  gradle:
+    description: Gradle dry runs (-m) of android/app/build.gradle.kts. tool/check.* run them as a separate step after the other tests; they skip without gradlew, local.properties or Java, and when key.properties or secrets.properties exists.

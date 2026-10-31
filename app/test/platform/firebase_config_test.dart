@@ -69,12 +69,24 @@ void main() {
           r'listOf("Debug", "Release", "Profile").map { "src/$f$it/" } }',
         ),
       );
+      // Two wordings (Ruling P9-C2): with no flavor file the plugin isn't
+      // applied and the file really is ignored; once it is applied, the
+      // plugin may use the stray file for a flavor without its own.
       expect(
         gradle,
         contains(
-          'logger.quiet("WARNING: ignoring '
+          'val note = if (firebaseFlavors.isEmpty())\n'
+          '        "WARNING: ignoring '
           r'app/android/app/${it}google-services.json; move it to '
-          'src/<flavor>/ (dev or prod) to enable Firebase.")',
+          'src/<flavor>/ (dev or prod) to enable Firebase."\n'
+          '    else\n'
+          '        "WARNING: '
+          r'app/android/app/${it}google-services.json is in a location this '
+          "build script doesn't manage. The Google Services plugin may use it "
+          'for a flavor that has no src/<flavor>/google-services.json, and '
+          "that flavor's Crashlytics mapping upload stays off. Move it to "
+          'src/<flavor>/ (dev or prod)."\n'
+          '    logger.quiet(note)',
         ),
       );
     },

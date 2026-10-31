@@ -15,7 +15,10 @@ echo "== analyze =="
 
 echo "== test =="
 # Goldens are Windows baselines; the `goldens` CI job runs them.
-(cd app && flutter test --exclude-tags golden)
+(cd app && flutter test --exclude-tags golden,gradle)
+# Gradle dry runs, on their own so no Gradle process overlaps the other tests. They skip
+# without gradlew (a fresh checkout has none until a flutter build creates it).
+(cd app && flutter test --tags gradle)
 # `dart test` cannot resolve the workspace (app needs the Flutter SDK), so use flutter test.
 (cd packages/atv_remote && flutter test)
 

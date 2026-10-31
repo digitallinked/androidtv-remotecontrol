@@ -22,7 +22,9 @@ Invoke-Step app flutter @('analyze')
 Invoke-Step packages/atv_remote dart @('analyze', '--fatal-infos')
 
 Write-Host '== test =='
-Invoke-Step app flutter @('test')
+Invoke-Step app flutter @('test', '--exclude-tags', 'gradle')
+# Gradle dry runs, on their own so no Gradle process overlaps the other tests.
+Invoke-Step app flutter @('test', '--tags', 'gradle')
 # 'dart test' cannot resolve the workspace (app needs the Flutter SDK), so use flutter test.
 Invoke-Step packages/atv_remote flutter @('test')
 

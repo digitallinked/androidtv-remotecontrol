@@ -31,12 +31,18 @@ if (firebaseFlavors.isNotEmpty()) {
     }
 }
 // The Google Services plugin also finds a file in these places, but this script only
-// looks in src/<flavor>/, so say so instead of silently running without Firebase. The scan
-// runs whatever the flavors have: a stray file next to dev's own is just as misplaced.
+// looks in src/<flavor>/, so say so instead of silently misconfiguring Firebase. The scan
+// runs whatever the flavors have. With no flavor file the plugin isn't applied, so the
+// stray file is ignored; once it is applied, it may use the stray file for a flavor that
+// has none, while that flavor's Crashlytics upload stays off (Rulings P9-R3, P9-C2).
 val unsupportedLocations = listOf("", "src/debug/", "src/release/", "src/profile/") +
     firebaseFlavorNames.flatMap { f -> listOf("Debug", "Release", "Profile").map { "src/$f$it/" } }
 unsupportedLocations.filter { file(it + "google-services.json").exists() }.forEach {
-    logger.quiet("WARNING: ignoring app/android/app/${it}google-services.json; move it to src/<flavor>/ (dev or prod) to enable Firebase.")
+    val note = if (firebaseFlavors.isEmpty())
+        "WARNING: ignoring app/android/app/${it}google-services.json; move it to src/<flavor>/ (dev or prod) to enable Firebase."
+    else
+        "WARNING: app/android/app/${it}google-services.json is in a location this build script doesn't manage. The Google Services plugin may use it for a flavor that has no src/<flavor>/google-services.json, and that flavor's Crashlytics mapping upload stays off. Move it to src/<flavor>/ (dev or prod)."
+    logger.quiet(note)
 }
 
 // Upload-key signing (Ruling P9-R3). Git-ignored android/key.properties names the upload
@@ -66,15 +72,10 @@ val releaseSigningProblem: String? = when {
 }
 val releaseSigningUsable = keyPropertiesFile.exists() && releaseSigningProblem == null
 // Flutter passes Gradle one task per build, such as assembleProdRelease or bundleDevRelease.
+// These name checks stop a Flutter build early; the task-graph check below also catches
+// aggregate and abbreviated tasks (gradlew bundle, gradlew build, :app:bundleProdRel).
 val releaseRequested = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
 val uploadBundleRequested = gradle.startParameter.taskNames.any { Regex("(?i)bundle\\w*prod\\w*release").containsMatchIn(it) }
-if (releaseRequested && releaseSigningProblem != null) throw GradleException(releaseSigningProblem)
-// Only the prod bundle goes to Google Play, so only it must have the upload key. Release
-// APKs (flutter run --release, the prodRelease manifest check) and dev bundles still build.
-if (!keyPropertiesFile.exists() && uploadBundleRequested)
-    throw GradleException("A prod app bundle is the file you upload to Google Play, so it must be signed with the upload key: copy android/key.properties.example to android/key.properties and fill it in (store-release skill). Release APKs and dev bundles still build, signed with the debug key.")
-if (!keyPropertiesFile.exists() && releaseRequested)
-    logger.quiet("release build signed with the debug key (no android/key.properties); don't upload it.")
 
 // AdMob app ids (Ruling P6-R9). The dev flavor always uses Google's test id. The prod
 // flavor reads its own from git-ignored android/secrets.properties (admobAppIdProd) and
@@ -98,10 +99,32 @@ if (admobAppIdProd == null && prodRequested) {
 val admobAppIdPattern = Regex("""^ca-app-pub-\d{16}~\d{10}$""")
 if (prodRequested && admobAppIdProd != null && !admobAppIdPattern.matches(admobAppIdProd))
     throw GradleException("admobAppIdProd in android/secrets.properties must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not an ad unit id; a malformed id stops the app at launch.")
-// The upload bundle never ships the test app id (Ruling P9-R4); other prod builds keep the
-// fallback above, so a clean clone still builds and runs.
-if (uploadBundleRequested && admobAppIdProd == null)
-    throw GradleException("A prod app bundle needs the real AdMob app id: set admobAppIdProd in android/secrets.properties.")
+
+// What stops the prod upload bundle, reported together (Rulings P9-R3, P9-R4, P9-C2). Only
+// it goes to Google Play, so only it must have the upload key and the real AdMob app id:
+// release APKs (flutter run --release, the prodRelease manifest check) and dev bundles still
+// build, with the debug key and, for prod, the test app id. Google's test publisher is
+// refused whether it is the fallback or was set in secrets.properties.
+val admobTestPublisherPrefix = "ca-app-pub-3940256099942544~"
+val uploadBundleProblems: List<String> = listOfNotNull(
+    releaseSigningProblem
+        ?: if (!keyPropertiesFile.exists()) "A prod app bundle is the file you upload to Google Play, so it must be signed with the upload key: copy android/key.properties.example to android/key.properties and fill it in (store-release skill). Release APKs and dev bundles still build, signed with the debug key." else null,
+    if ((admobAppIdProd ?: admobTestAppId).startsWith(admobTestPublisherPrefix)) "A prod app bundle needs the real AdMob app id: set admobAppIdProd in android/secrets.properties." else null,
+)
+// A broken key.properties stops every release task; a missing one only the upload bundle.
+fun refuseReleaseTasks(release: Boolean, uploadBundle: Boolean) {
+    if (uploadBundle && uploadBundleProblems.isNotEmpty()) throw GradleException(uploadBundleProblems.joinToString("\n"))
+    if (release && releaseSigningProblem != null) throw GradleException(releaseSigningProblem)
+}
+refuseReleaseTasks(releaseRequested, uploadBundleRequested)
+// The backstop: the tasks Gradle will really run in this module, whatever was typed.
+gradle.taskGraph.whenReady {
+    val names = allTasks.filter { it.project == project }.map { it.name }
+    val release = names.any { it.contains("Release") }
+    refuseReleaseTasks(release, "bundleProdRelease" in names)
+    if (!keyPropertiesFile.exists() && release)
+        logger.quiet("release build signed with the debug key (no android/key.properties); don't upload it.")
+}
 
 android {
     namespace = "com.digitallinked.atvremote"

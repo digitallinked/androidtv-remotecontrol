@@ -8,14 +8,21 @@ String read(String p) => File(p).readAsStringSync().replaceAll('\r\n', '\n');
 /// The build script of the app module.
 String gradle() => read('android/app/build.gradle.kts');
 
-/// The `KEY=value` lines of a `.properties` file (comments skipped).
+/// The `KEY=value` lines of a `.properties` file (comments and lines
+/// without `=` skipped).
 Map<String, String> properties(String text) => {
   for (final line in text.split('\n').map((l) => l.trim()))
-    if (line.isNotEmpty && !line.startsWith('#') && !line.startsWith('!'))
+    if (line.contains('=') && !line.startsWith('#') && !line.startsWith('!'))
       line.substring(0, line.indexOf('=')).trim(): line
           .substring(line.indexOf('=') + 1)
           .trim(),
 };
+
+/// The body of `uploadBundleProblems` in the build script.
+String uploadBundleProblems(String script) => RegExp(
+  r'val uploadBundleProblems: List<String> = listOfNotNull\((.*?)\n\)',
+  dotAll: true,
+).firstMatch(script)!.group(1)!;
 
 /// The four keys a usable `key.properties` holds (Ruling P9-R3).
 const signingKeys = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'];
@@ -122,7 +129,7 @@ void main() {
     expect(
       script,
       contains(
-        'if (releaseRequested && releaseSigningProblem != null) '
+        'if (release && releaseSigningProblem != null) '
         'throw GradleException(releaseSigningProblem)',
       ),
     );
@@ -145,45 +152,118 @@ void main() {
     expect(upload.hasMatch('assembleProdRelease'), isFalse);
     expect(upload.hasMatch('bundleProdDebug'), isFalse);
 
+    final problems = uploadBundleProblems(script);
+    // A broken key.properties is the signing problem; a missing one is the
+    // P9-R3 bundle message.
     expect(
-      script,
+      problems,
       contains(
-        'if (!keyPropertiesFile.exists() && uploadBundleRequested)\n'
-        '    throw GradleException("A prod app bundle is the file you upload '
-        'to Google Play, so it must be signed with the upload key: copy '
-        'android/key.properties.example to android/key.properties and fill '
-        'it in (store-release skill). Release APKs and dev bundles still '
-        'build, signed with the debug key.")',
+        'releaseSigningProblem\n'
+        '        ?: if (!keyPropertiesFile.exists()) "A prod app bundle is the '
+        'file you upload to Google Play, so it must be signed with the upload '
+        'key: copy android/key.properties.example to android/key.properties '
+        'and fill it in (store-release skill). Release APKs and dev bundles '
+        'still build, signed with the debug key." else null,',
       ),
     );
     expect(
+      problems,
+      contains(
+        '"A prod app bundle needs the real AdMob app id: set admobAppIdProd '
+        'in android/secrets.properties."',
+      ),
+    );
+    // Every other release build is signed with the debug key, and says so.
+    expect(
       script,
       contains(
-        'if (!keyPropertiesFile.exists() && releaseRequested)\n'
-        '    logger.quiet("release build signed with the debug key (no '
+        'if (!keyPropertiesFile.exists() && release)\n'
+        '        logger.quiet("release build signed with the debug key (no '
         "android/key.properties); don't upload it.\")",
       ),
     );
+    // The rules read the AdMob id, and run before the android block.
+    expect(
+      script.indexOf('val uploadBundleProblems'),
+      greaterThan(script.indexOf('val admobAppIdProd')),
+    );
+    expect(
+      script.indexOf('\nandroid {'),
+      greaterThan(script.indexOf('refuseReleaseTasks(releaseRequested')),
+    );
+  });
+
+  test('the_upload_bundle_refuses_google_s_test_app_id_even_when_set', () {
+    // P9-C2 (a): the fallback and an explicit test publisher alike.
+    final script = gradle();
     expect(
       script,
       contains(
-        'if (uploadBundleRequested && admobAppIdProd == null)\n'
-        '    throw GradleException("A prod app bundle needs the real AdMob app '
-        'id: set admobAppIdProd in android/secrets.properties.")',
+        'val admobTestPublisherPrefix = "ca-app-pub-3940256099942544~"',
       ),
     );
-    // `flutter build` runs Gradle with -q, which hides logger.warn; every
-    // warning of the script must still reach the developer.
-    expect(script, isNot(contains('logger.warn(')));
-    // The signing rules run first, then the AdMob ones, and both before the
-    // android block reads them.
-    final signingRule = script.indexOf('uploadBundleRequested)\n');
-    final admobRule = script.indexOf(
-      'if (uploadBundleRequested && admobAppIdProd == null)',
+    expect(
+      uploadBundleProblems(script),
+      contains(
+        'if ((admobAppIdProd ?: '
+        'admobTestAppId).startsWith(admobTestPublisherPrefix))',
+      ),
     );
-    expect(signingRule, isNonNegative);
-    expect(admobRule, greaterThan(signingRule));
-    expect(script.indexOf('\nandroid {'), greaterThan(admobRule));
+  });
+
+  test('signing_and_admob_problems_are_reported_together', () {
+    // P9-C2 (d): one exception names every problem of the upload bundle.
+    final script = gradle();
+    expect(
+      script,
+      contains('val uploadBundleProblems: List<String> = listOfNotNull('),
+    );
+    expect(
+      script,
+      contains(
+        'if (uploadBundle && uploadBundleProblems.isNotEmpty()) '
+        r'throw GradleException(uploadBundleProblems.joinToString("\n"))',
+      ),
+    );
+  });
+
+  test('aggregate_and_abbreviated_tasks_hit_the_same_refusals', () {
+    // P9-C2 (c): `gradlew bundle`, `gradlew build` and `:app:bundleProdRel`
+    // name no release task, so the task graph is checked too.
+    final script = gradle();
+    expect(
+      script,
+      contains('refuseReleaseTasks(releaseRequested, uploadBundleRequested)'),
+    );
+    final backstop = RegExp(
+      r'\ngradle\.taskGraph\.whenReady \{(.*?)\n\}',
+      dotAll: true,
+    ).firstMatch(script);
+    expect(backstop, isNotNull);
+    final body = backstop!.group(1)!;
+    expect(
+      body,
+      contains(
+        'val names = allTasks.filter { it.project == project }.map { it.name }',
+      ),
+    );
+    expect(
+      body,
+      contains('val release = names.any { it.contains("Release") }'),
+    );
+    expect(
+      body,
+      contains('refuseReleaseTasks(release, "bundleProdRelease" in names)'),
+    );
+  });
+
+  test('every_warning_reaches_a_flutter_build', () {
+    // `flutter build` runs Gradle with -q, which hides every level below
+    // quiet; the script's warnings must still reach the developer.
+    expect(
+      RegExp(r'logger\.(warn|lifecycle|info|debug)\(').hasMatch(gradle()),
+      isFalse,
+    );
   });
 
   test('a_tilde_store_path_means_the_home_directory', () {
@@ -219,6 +299,14 @@ void main() {
     expect(
       text,
       contains('back it up offline; losing it means a Play upload-key reset'),
+    );
+    // Java's Properties treats a backslash as an escape.
+    expect(
+      text,
+      contains(
+        '# Use forward slashes in storeFile even on Windows '
+        '(C:/Users/you/keys/upload.jks)',
+      ),
     );
   });
 }
