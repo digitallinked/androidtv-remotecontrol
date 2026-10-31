@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart' show immutable, listEquals;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 part 'discovery_controller.g.dart';
@@ -108,6 +111,50 @@ class DiscoveryController extends _$DiscoveryController {
 
   /// Stops the search and starts a new one.
   void rescan() => ref.invalidateSelf();
+
+  /// Moves the saved TV [manualServiceName] (added by IP address) to [tv],
+  /// its mDNS entry, in one transaction (decision #33), and moves the remote
+  /// with it. Returns whether it merged; storage errors propagate.
+  ///
+  /// [opening] is asked once the merge is done: whether the user is still
+  /// opening this TV. Then the merged TV becomes the active one. Otherwise
+  /// (the user left meanwhile, and this controller may be gone) only a
+  /// session that still points at the deleted row moves (Ruling P8-R10):
+  /// the active target names it, so it moves to the merged name; or there
+  /// is no target and the default session was built on it, so that session
+  /// is rebuilt on the merged row. Nobody else is pulled onto this TV.
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+    required bool Function() opening,
+  }) async {
+    // Everything is taken before the first await: the user may leave
+    // discovery meanwhile, which disposes this controller.
+    final container = ref.container;
+    final devices = ref.read(deviceRepositoryProvider);
+    final adopted = await devices.adoptManualDevice(
+      manualServiceName: manualServiceName,
+      tv: tv,
+    );
+    if (!adopted) return false;
+
+    final target = container.read(activeTargetProvider);
+    if (opening() || target == DeviceTarget(manualServiceName)) {
+      container
+          .read(activeTargetProvider.notifier)
+          .activateDevice(tv.serviceName);
+    } else if (target == null &&
+        container.exists(remoteSessionProvider) &&
+        container
+                .read(remoteSessionProvider)
+                .value
+                ?.pairingTarget
+                ?.serviceName ==
+            manualServiceName) {
+      container.invalidate(remoteSessionProvider);
+    }
+    return true;
+  }
 
   static List<DiscoveredTv> _sorted(List<DiscoveredTv> tvs) {
     final sorted = [...tvs]

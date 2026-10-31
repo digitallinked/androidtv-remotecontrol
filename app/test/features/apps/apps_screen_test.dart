@@ -45,6 +45,24 @@ class _FlakyShortcuts extends InMemoryShortcutRepository {
       broken ? Stream.error(StateError('disk')) : super.watchAll();
 }
 
+/// What drift's `SqliteException` is to Riverpod: an [Exception], which its
+/// default retry would re-run for ~38 s behind a spinner.
+class _DiskException implements Exception {
+  const _DiskException();
+}
+
+/// A shortcut store whose stream always fails with an [Exception], counting
+/// how often it is asked for.
+class _BrokenShortcuts extends InMemoryShortcutRepository {
+  int subscriptions = 0;
+
+  @override
+  Stream<List<AppEntry>> watchAll() {
+    subscriptions++;
+    return Stream.error(const _DiskException());
+  }
+}
+
 void main() {
   late FakeRemoteSession fake;
 
@@ -319,6 +337,24 @@ void main() {
     expect(find.text('More apps'), findsOneWidget);
     expect(find.bySemanticsLabel('Open Plex'), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('shortcuts_error_shows_without_retrying', (t) async {
+    final repository = _BrokenShortcuts();
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      settle: false,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    // One settle: a retried provider would spin here for ~38 s instead.
+    await t.pumpAndSettle();
+    expect(find.text("Couldn't load your apps."), findsOneWidget);
+    expect(repository.subscriptions, 1);
   });
 
   testWidgets('unreadable_shortcuts_show_an_error_with_retry', (t) async {

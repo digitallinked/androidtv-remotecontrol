@@ -21,6 +21,12 @@ import '../../helpers/test_devices.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
 
+/// What drift's `SqliteException` is to Riverpod: an [Exception], which its
+/// default retry would re-run for ~38 s behind a spinner.
+class _DiskException implements Exception {
+  const _DiskException();
+}
+
 void main() {
   late InMemoryDeviceRepository repo;
   late FakeRemoteSession session;
@@ -141,6 +147,31 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Add a TV'));
     await t.pumpAndSettle();
     expect(find.byType(DiscoveryScreen), findsOneWidget);
+  });
+
+  testWidgets('saved_devices_error_shows_without_retrying', (t) async {
+    repo.watchError = const _DiskException();
+    t.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.devices,
+      settle: false,
+      overrides: [
+        deviceRepositoryProvider.overrideWithValue(repo),
+        // The production provider's body; an override keeps its retry policy.
+        savedDevicesProvider.overrideWith(
+          (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
+        ),
+        remoteSessionProvider.overrideWith((ref) async => session),
+      ],
+    );
+    // One settle: a retried provider would spin here for ~38 s instead.
+    await t.pumpAndSettle();
+    expect(find.text("Couldn't load your TVs."), findsOneWidget);
+    expect(repo.watchAllCalls, 1);
   });
 
   testWidgets('unreadable_tvs_show_an_error_with_retry_not_an_empty_list', (

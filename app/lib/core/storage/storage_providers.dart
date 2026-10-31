@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show StreamProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/session/no_retry.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/database_location.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
@@ -41,10 +42,14 @@ IdentityStore identityStore(Ref ref) =>
 
 /// The saved TVs, most recently connected first, kept up to date.
 ///
+/// A read failure is shown at once ([noRetry]): the screens offer "Try
+/// again" themselves.
+///
 /// Written by hand: `riverpod_generator` can't name [SavedDevice], because
 /// drift generates that class in the same build (`InvalidTypeException`).
 final StreamProvider<List<SavedDevice>> savedDevicesProvider =
     StreamProvider.autoDispose<List<SavedDevice>>(
       (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
       name: 'savedDevicesProvider',
+      retry: noRetry,
     );

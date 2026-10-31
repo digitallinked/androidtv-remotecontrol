@@ -14,6 +14,9 @@ class _ThrowingDevices implements DeviceRepository {
   Stream<List<SavedDevice>> watchAll() => const Stream.empty();
 
   @override
+  Future<List<SavedDevice>> all() => Future.error(StateError('db is broken'));
+
+  @override
   Future<void> upsert(SavedDevice device) async {}
 
   @override

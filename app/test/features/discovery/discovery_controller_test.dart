@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,13 +8,22 @@ import 'package:nsd/nsd.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/session/remote_client_factory.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_signals.dart';
+import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_tv_discovery.dart';
+import '../../helpers/in_memory_device_repository.dart';
+import '../../helpers/manual_session_signals.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/test_devices.dart';
+import '../../helpers/test_identity.dart';
 
 DiscoveredTv _named(String serviceName, String displayName) => DiscoveredTv(
   serviceName: serviceName,
@@ -21,6 +32,25 @@ DiscoveredTv _named(String serviceName, String displayName) => DiscoveredTv(
   port: 6466,
   isLegacyService: false,
 );
+
+/// A repository whose manual-to-mDNS merge waits until [release] completes.
+class _SlowAdoptRepository extends InMemoryDeviceRepository {
+  _SlowAdoptRepository(super.initial);
+
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) async {
+    await release.future;
+    return super.adoptManualDevice(
+      manualServiceName: manualServiceName,
+      tv: tv,
+    );
+  }
+}
 
 void main() {
   late FakeTvDiscoveries discoveries;
@@ -214,6 +244,111 @@ void main() {
       discoveries.created.last.emit([tv('a')]);
       async.flushMicrotasks();
       expect(analyticsSink.eventNames, ['tv_discovered']);
+    });
+  });
+
+  group('merge follow-up', () {
+    const manual = 'manual:192.168.0.20';
+    late FakeRemoteClients clients;
+
+    /// A container with real sessions over [repo]. The session is listened
+    /// to (as the remote keeps it alive); discovery isn't.
+    ProviderContainer sessionContainer(InMemoryDeviceRepository repo) {
+      clients = FakeRemoteClients();
+      return ProviderContainer.test(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          deviceRepositoryProvider.overrideWithValue(repo),
+          identityStoreProvider.overrideWithValue(testIdentityStore()),
+          remoteClientFactoryProvider.overrideWithValue(clients.create),
+          hostResolverProvider.overrideWithValue((_) async => null),
+          sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
+        ],
+      )..listen(remoteSessionProvider, (_, _) {});
+    }
+
+    test('merge_after_leaving_discovery_moves_the_default_session', () async {
+      final repo = _SlowAdoptRepository([
+        savedTv(name: manual, nickname: 'Den'),
+      ]);
+      final c = sessionContainer(repo);
+      // No explicit target: the default session follows the manual row.
+      final old = (await c.read(remoteSessionProvider.future))!;
+      expect(old.pairingTarget!.serviceName, manual);
+
+      final discovery = c.listen(discoveryControllerProvider, (_, _) {});
+      final merging = c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      // The user leaves discovery while the merge is still running.
+      discovery.close();
+      await pumpEventQueue();
+      expect(c.exists(discoveryControllerProvider), isFalse);
+
+      repo.release.complete();
+      expect(await merging, isTrue);
+
+      expect(repo.saved.keys, ['Living Room TV 3']);
+      // Nobody is pulled onto a target: the default session moves instead.
+      expect(c.read(activeTargetProvider), isNull);
+      final session = await c.read(remoteSessionProvider.future);
+      expect(session, isNot(same(old)));
+      expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
+      expect(clients.created.first.closed, isTrue);
+    });
+
+    test('merge_leaves_a_session_on_another_tv_alone', () async {
+      final repo = InMemoryDeviceRepository([
+        savedTv(name: manual, at: DateTime.utc(2026, 10, 25, 9)),
+        savedTv(name: 'Bedroom TV', at: DateTime.utc(2026, 10, 25, 12)),
+      ]);
+      final c = sessionContainer(repo);
+      final old = (await c.read(remoteSessionProvider.future))!;
+      expect(old.pairingTarget!.serviceName, 'Bedroom TV');
+
+      final discovery = c.listen(discoveryControllerProvider, (_, _) {});
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      discovery.close();
+
+      expect(merged, isTrue);
+      expect(c.read(activeTargetProvider), isNull);
+      expect(await c.read(remoteSessionProvider.future), same(old));
+    });
+
+    test('merge_while_opening_activates_the_merged_tv', () async {
+      final repo = InMemoryDeviceRepository([
+        savedTv(name: manual, at: DateTime.utc(2026, 10, 25, 9)),
+        savedTv(name: 'Bedroom TV', at: DateTime.utc(2026, 10, 25, 12)),
+      ]);
+      final c = sessionContainer(repo)
+        ..listen(discoveryControllerProvider, (_, _) {});
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => true,
+          );
+
+      expect(merged, isTrue);
+      expect(
+        c.read(activeTargetProvider),
+        const DeviceTarget('Living Room TV 3'),
+      );
+      final session = await c.read(remoteSessionProvider.future);
+      expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
     });
   });
 }

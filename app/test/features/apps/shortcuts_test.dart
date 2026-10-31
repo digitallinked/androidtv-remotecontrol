@@ -280,6 +280,20 @@ void main() {
       expect(_packages(apps), ['com.example.tvapp']);
       expect(apps.single.customIcon, 'app');
     });
+
+    test('recommended_apps_see_user_apps_behind_many_system_ones', () async {
+      // More system packages than the usage limit, each seen more often.
+      for (var i = 0; i < 40; i++) {
+        usageRepo.stats['com.mediatek.part$i'] = _stat(
+          'com.mediatek.part$i',
+          50,
+        );
+      }
+      usageRepo.stats['com.example.tvapp'] = _stat('com.example.tvapp', 1);
+      final c = makeContainer()..listen(recommendedAppsProvider, (_, _) {});
+      final apps = await c.read(recommendedAppsProvider.future);
+      expect(_packages(apps), ['com.example.tvapp']);
+    });
   });
 
   group('recommendation failures', () {

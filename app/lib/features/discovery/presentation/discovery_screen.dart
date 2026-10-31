@@ -9,7 +9,6 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
-import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/manual_tv.dart';
@@ -162,10 +161,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     // Read before the first await: the screen may go away meanwhile.
     final devices = ref.read(deviceRepositoryProvider);
     final target = ref.read(activeTargetProvider.notifier);
-    // Whether the remote follows the manual row that the merge removes.
-    final followedManualRow =
-        manual != null &&
-        ref.read(activeTargetProvider) == DeviceTarget(manual.serviceName);
+    final discovery = ref.read(discoveryControllerProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final failed = AppLocalizations.of(context).discoverOpenFailed;
@@ -179,14 +175,20 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
         } on Object {
           // Connecting with the old address still works if it hasn't moved.
         }
+        // Nobody who went elsewhere meanwhile is pulled back to this TV.
+        if (mounted) target.activateDevice(tv.serviceName);
       } else {
         // The saved pin moves with the row, so a different TV at this address
-        // still fails the key check on connect.
+        // still fails the key check on connect. The remote must not keep
+        // following the row the merge removes: the controller moves it to
+        // the merged TV even when the user has left (Ruling P8-R10), but
+        // pulls nobody who went elsewhere onto this TV.
         final bool adopted;
         try {
-          adopted = await devices.adoptManualDevice(
+          adopted = await discovery.adoptManualDevice(
             manualServiceName: manual!.serviceName,
             tv: tv,
+            opening: () => mounted,
           );
         } on Object {
           messenger.showAppSnackBar(SnackBar(content: Text(failed)));
@@ -197,10 +199,8 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
           return;
         }
       }
-      // The user may have left meanwhile. The remote must not keep following
-      // a row that the merge just removed, so it moves to the merged TV; but
-      // nobody who went elsewhere is pulled back to the remote.
-      if (mounted || followedManualRow) target.activateDevice(tv.serviceName);
+      // The user may have left meanwhile: nobody who went elsewhere is
+      // pulled back to the remote.
       if (mounted) router.go(AppRoutes.remote);
     } finally {
       _opening = false;

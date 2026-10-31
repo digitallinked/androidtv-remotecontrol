@@ -21,7 +21,7 @@ import 'package:tv_remote/core/tv/server_key_pin.dart';
 /// * Every successful connection records the address used and the time in
 ///   storage. Storage failures are ignored: they never break the session.
 /// * Reconnect attempts look the TV up again by its mDNS name, except for
-///   TVs added by IP address.
+///   TVs added by IP address. A look-up that fails keeps the saved host.
 class TvRemoteSession implements RemoteSession {
   /// Creates a session for [device], presenting [identity].
   ///
@@ -50,7 +50,7 @@ class TvRemoteSession implements RemoteSession {
       backoff: backoff,
       reResolveHost: isManualServiceName(device.serviceName)
           ? null
-          : () => resolveHost(device.serviceName),
+          : () => resolveHostOrNull(resolveHost, device.serviceName),
       verifyServerKey: (sha) => matchesServerKeyPin(sha, _pin),
     );
     _current = connection.current;

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/session/no_retry.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
@@ -12,14 +13,9 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/demo/demo_remote_session.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
-part 'session_providers.g.dart';
+export 'package:tv_remote/core/session/no_retry.dart';
 
-/// A retry policy that never retries.
-///
-/// Riverpod 3 retries a failed provider by default, which would hide the
-/// error behind a loading state. Providers whose failure the UI must show
-/// (and the user must be able to retry by hand) use this.
-Duration? noRetry(int retryCount, Object error) => null;
+part 'session_providers.g.dart';
 
 /// Which TV the session follows: `null` (the default) means the most
 /// recently connected saved TV.
