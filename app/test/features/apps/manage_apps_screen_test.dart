@@ -49,11 +49,13 @@ void main() {
     List<Override> overrides = const [],
     double textScale = 1,
     Brightness brightness = Brightness.light,
+    bool disableAnimations = false,
   }) => pumpRouterApp(
     t,
     initialLocation: AppRoutes.manageApps,
     textScale: textScale,
     brightness: brightness,
+    disableAnimations: disableAnimations,
     overrides: [
       shortcutRepositoryProvider.overrideWithValue(repo),
       ...overrides,
@@ -91,7 +93,14 @@ void main() {
     );
   }
 
-  Future<void> drag(WidgetTester t, String name, Offset by) async {
+  /// Drags the row of [name] by [by] and drops it; with [settle] false the
+  /// drop draws one frame and stops there.
+  Future<void> drag(
+    WidgetTester t,
+    String name,
+    Offset by, {
+    bool settle = true,
+  }) async {
     final handle = find.bySemanticsLabel('Reorder $name');
     final g = await t.startGesture(t.getCenter(handle));
     await t.pump(kLongPressTimeout);
@@ -102,7 +111,11 @@ void main() {
       await t.pump(const Duration(milliseconds: 50));
     }
     await g.up();
-    await t.pumpAndSettle();
+    if (settle) {
+      await t.pumpAndSettle();
+    } else {
+      await t.pump();
+    }
   }
 
   testWidgets('lists_the_shortcuts_with_their_controls', (t) async {
@@ -643,6 +656,37 @@ void main() {
     await pumpManage(t);
     expect(find.byTooltip('More options'), findsOneWidget);
     expect(find.byType(PopupMenuButton<void>), findsOneWidget);
+  });
+
+  testWidgets('overflow_menu_closes_without_animation', (t) async {
+    await pumpManage(t, disableAnimations: true);
+    await t.tap(find.byTooltip('More options'));
+    await t.pump();
+    expect(find.text('Reset to suggested apps'), findsOneWidget);
+    await t.tap(find.text('Reset to suggested apps'));
+    await t.pump();
+    expect(find.text('Reset to suggested apps'), findsNothing);
+    expect(find.byType(PopupMenuItem<void>), findsNothing);
+    // What the item opens is there at once, too, and nothing still moves.
+    expect(find.text('Reset your apps?'), findsOneWidget);
+    expect(t.hasRunningAnimations, isFalse);
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('reorder_drop_does_not_animate_under_reduce_motion', (t) async {
+    // Ruling P8-R7: the platform flag, which is what a phone sets.
+    t.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await pumpManage(t);
+    await drag(t, 'Prime Video', const Offset(0, -140), settle: false);
+    // Flutter's list still eases the dropped row into place (250 ms, scaled
+    // by 0.05 under the platform flag): accepted because it is over by the
+    // next frame, so no in-between position is drawn.
+    await t.pump(const Duration(milliseconds: 16));
+    expect(t.hasRunningAnimations, isFalse);
+    // The list reports the move when the row lands.
+    expect(stored().first, 'Prime Video');
   });
 
   testWidgets('a_move_keeps_focus_and_announces_the_position', (t) async {
