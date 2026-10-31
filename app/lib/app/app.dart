@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,7 +63,15 @@ class App extends ConsumerWidget {
       ..watch(reviewPrompterProvider);
     // The first read starts the purchase service, so Premium is known before
     // any banner. Watched, so a purchase or a lapse restyles the app at once.
-    final premium = ref.watch(premiumProvider);
+    // An unreadable Premium counts as free (decision #46): the standard
+    // style, never a broken app.
+    PremiumState premium;
+    try {
+      premium = ref.watch(premiumProvider);
+    } on Object catch (error) {
+      developer.log('premium unreadable', name: 'app', error: error);
+      premium = PremiumState.free;
+    }
     final title = ref.watch(flavorProvider).displayName;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
