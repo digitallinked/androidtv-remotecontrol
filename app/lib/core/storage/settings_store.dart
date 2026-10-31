@@ -266,6 +266,14 @@ class SettingsStore {
     _reviewPromptShownKey,
   };
 
+  /// The keys that describe the old phone or its database rather than the
+  /// user, which [resetForFreshDatabase] clears (Ruling P9-R6).
+  static const Set<String> freshDatabaseKeys = {
+    _onboardingCompleteKey,
+    _attPrepromptShownKey,
+    _shortcutsSeededKey,
+  };
+
   final SharedPreferencesWithCache _prefs;
 
   bool _bool(String key, {required bool fallback}) {
@@ -522,6 +530,21 @@ class SettingsStore {
   // ignore: avoid_positional_boolean_parameters
   Future<void> setReviewPromptShown(bool value) =>
       _prefs.setBool(_reviewPromptShownKey, value);
+
+  /// Forgets what described the old phone when this run created the
+  /// database (Ruling P9-R6): sets [onboardingComplete],
+  /// [trackingPrepromptShown] and [shortcutsSeeded] to false and touches no
+  /// other key. On iOS the preferences come back with an iCloud restore or
+  /// Quick Start and the database doesn't (Ruling P8-R1).
+  ///
+  /// All three writes are attempted; the first failure is rethrown.
+  Future<void> resetForFreshDatabase() async {
+    await Future.wait([
+      setOnboardingComplete(false),
+      setTrackingPrepromptShown(false),
+      setShortcutsSeeded(false),
+    ]);
+  }
 
   /// Reads every setting at once.
   AppSettings snapshot() => AppSettings(

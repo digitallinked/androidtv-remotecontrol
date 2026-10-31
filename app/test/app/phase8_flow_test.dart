@@ -40,6 +40,7 @@ import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/settings/presentation/help_page.dart';
 
 import '../helpers/a11y.dart';
+import '../helpers/existing_database.dart';
 import '../helpers/fake_ads_overrides.dart';
 import '../helpers/fake_config_source.dart';
 import '../helpers/fake_pairing_client.dart';
@@ -445,7 +446,9 @@ void main() {
           await store.setLocaleCode(code);
           return store;
         },
-        openDatabase: () => AppDatabase(NativeDatabase.memory()),
+        // A relaunch: the earlier run's database, so the onboarding and
+        // seeded flags stand (Ruling P9-R6).
+        openDatabase: await existingDatabases(),
         overrides: mergeOverrides(platformFakes, [
           ...fakeAdsOverrides(),
           remoteConfigSourceProvider.overrideWithValue(FakeConfigSource({})),

@@ -16,6 +16,7 @@ import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/fresh_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
@@ -66,6 +67,10 @@ Future<void> runStartupSteps(
 /// fetched on an earlier launch are activated, and a slow or failing Remote
 /// Config leaves the defaults in place.
 ///
+/// The database is opened before the first screen is resolved. When this run
+/// created it, the preferences that describe the old phone are reset
+/// (Ruling P9-R6, [forgetPhoneStateIfDatabaseIsNew]).
+///
 /// Each successful start adds one to the stored launch count; a count that
 /// can't be written is reported and doesn't stop the start.
 ///
@@ -113,6 +118,22 @@ Future<Widget> buildRootWidget({
     ],
   );
   try {
+    // Opens the database. One this run created resets what described the
+    // old phone before the first screen is chosen (Ruling P9-R6). A
+    // database that can't open is reported here and fails the start in the
+    // line below, as before.
+    await forgetPhoneStateIfDatabaseIsNew(
+      settings: settings,
+      databaseIsNew: () => container.read(appDatabaseProvider).createdThisRun(),
+      onError: (error, stack) => unawaited(
+        safeRecordError(
+          crashReporter,
+          error,
+          stack,
+          reason: 'fresh database',
+        ),
+      ),
+    );
     location = await resolveInitialLocation(
       settings: settings,
       devices: container.read(deviceRepositoryProvider),

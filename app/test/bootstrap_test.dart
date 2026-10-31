@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/bootstrap.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/config/app_config.dart';
@@ -21,9 +23,11 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+import 'helpers/existing_database.dart';
 import 'helpers/fake_ads_overrides.dart';
 import 'helpers/fake_config_source.dart';
 import 'helpers/in_memory_device_repository.dart';
+import 'helpers/platform_override.dart';
 import 'helpers/recording_crash_reporter.dart';
 import 'helpers/recording_crashlytics_sink.dart';
 import 'helpers/test_devices.dart';
@@ -163,14 +167,20 @@ void main() {
       RecordingCrashReporter reporter,
       void Function() fixFailure, {
       bool retryWithSemantics = false,
+      List<String> alsoReported = const [],
     }) async {
       final semantics = tester.ensureSemantics();
       await tester.pumpAndSettle();
 
       expect(find.text('The app could not start'), findsOneWidget);
       expect(find.text('Find your TV'), findsNothing);
-      expect(reporter.errors, hasLength(1));
-      expect(reporter.errors.single.fatal, isTrue);
+      expect(
+        [for (final e in reporter.errors) (e.reason, e.fatal)],
+        [
+          for (final reason in alsoReported) (reason, false),
+          ('startup', true),
+        ],
+      );
       expect(
         tester.getSize(find.byType(FilledButton)).height,
         greaterThanOrEqualTo(48),
@@ -189,7 +199,7 @@ void main() {
 
       expect(find.text('The app could not start'), findsNothing);
       expect(find.text('Find your TV'), findsOneWidget);
-      expect(reporter.errors, hasLength(1));
+      expect(reporter.errors, hasLength(1 + alsoReported.length));
       semantics.dispose();
     }
 
@@ -228,9 +238,17 @@ void main() {
         ),
       );
 
-      await expectErrorThenRetrySucceeds(tester, reporter, () {
-        broken = false;
-      }, retryWithSemantics: true);
+      // The fresh-database check opens the database first and reports it
+      // (Ruling P9-R6); the start then fails on it as before.
+      await expectErrorThenRetrySucceeds(
+        tester,
+        reporter,
+        () {
+          broken = false;
+        },
+        retryWithSemantics: true,
+        alsoReported: ['fresh database'],
+      );
     });
 
     testWidgets('two_rapid_retries_open_only_one_database', (tester) async {
@@ -1101,6 +1119,115 @@ void main() {
       expect(find.text('Find your TV'), findsOneWidget);
       expect(reporter.delegate, same(logging));
       expect(logging.errors.single.reason, 'crash reporter setup');
+    });
+  });
+
+  // On iOS the preferences come back with an iCloud restore or Quick Start
+  // and the database doesn't (Ruling P8-R1). A database created this run
+  // resets what described the old phone (Ruling P9-R6).
+  group('Fresh database', () {
+    const restored = <String, Object>{
+      'settings.onboarding_complete': true,
+      'privacy.att_preprompt_shown': true,
+      'apps.shortcuts_seeded': true,
+      'settings.theme': 'dark',
+      'review.launch_count': 7,
+      'privacy.share_usage': false,
+    };
+
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.withData(restored);
+    });
+
+    ProviderContainer containerOf(WidgetTester tester) => tester
+        .widget<UncontrolledProviderScope>(
+          find.byType(UncontrolledProviderScope),
+        )
+        .container;
+
+    Future<void> start(
+      WidgetTester tester,
+      AppDatabase Function() openDatabase,
+    ) async {
+      await tester.pumpWidget(
+        await buildRootWidget(
+          flavor: Flavor.dev,
+          crashReporter: RecordingCrashReporter(),
+          openDatabase: openDatabase,
+          overrides: [
+            ...fakeAdsOverrides(),
+            // The database's own stream leaves a timer behind when it is
+            // disposed.
+            savedDevicesProvider.overrideWith(
+              (ref) => Stream.value(const <SavedDevice>[]),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgetsOn(
+      TargetPlatform.iOS,
+      'a_restored_iphone_starts_on_onboarding_with_its_choices_kept',
+      (tester) async {
+        await start(tester, () => AppDatabase(NativeDatabase.memory()));
+
+        final container = containerOf(tester);
+        expect(container.read(initialLocationProvider), AppRoutes.onboarding);
+        final settings = container.read(settingsStoreProvider);
+        expect(settings.onboardingComplete, isFalse);
+        expect(settings.trackingPrepromptShown, isFalse);
+        expect(settings.themePreference, ThemePreference.dark);
+        expect(settings.shareUsageStats, isFalse);
+        expect(settings.launchCount, 8);
+        final stored = await SettingsStore.open();
+        expect(stored.trackingPrepromptShown, isFalse);
+        expect(stored.onboardingComplete, isFalse);
+        expect(stored.launchCount, 8);
+      },
+    );
+
+    testWidgets('a_phone_with_its_database_keeps_skipping_onboarding', (
+      tester,
+    ) async {
+      final existing = await existingDatabases();
+      await start(tester, existing);
+
+      final container = containerOf(tester);
+      expect(container.read(initialLocationProvider), AppRoutes.discover);
+      final settings = container.read(settingsStoreProvider);
+      expect(settings.onboardingComplete, isTrue);
+      expect(settings.trackingPrepromptShown, isTrue);
+      expect(settings.shortcutsSeeded, isTrue);
+      expect(settings.launchCount, 8);
+    });
+
+    testWidgets('an_upgrade_keeps_its_database_and_its_preferences', (
+      tester,
+    ) async {
+      // A database file from the earlier version, opened by the new one.
+      final dir = Directory.systemTemp.createTempSync('fresh_database_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final file = File('${dir.path}/remotely.sqlite');
+      await tester.runAsync(() async {
+        final earlier = AppDatabase(NativeDatabase(file));
+        await earlier.createdThisRun();
+        await earlier.close();
+      });
+
+      await start(tester, () => AppDatabase(NativeDatabase(file)));
+
+      final container = containerOf(tester);
+      expect(container.read(initialLocationProvider), AppRoutes.discover);
+      final settings = container.read(settingsStoreProvider);
+      expect(settings.onboardingComplete, isTrue);
+      expect(settings.trackingPrepromptShown, isTrue);
+      expect(settings.shortcutsSeeded, isTrue);
+      // The app closes its database before the directory goes.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
     });
   });
 
