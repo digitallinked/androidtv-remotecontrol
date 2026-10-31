@@ -23,18 +23,18 @@ String? _bash() {
 
 /// Whether the wrapper test can run: [shell] and git are present, and dart
 /// too, which the wrappers call.
-bool _ready(String? shell) {
+Future<bool> _ready(String? shell) async {
   if (shell == null) {
     markTestSkipped('bash is not on the PATH');
     return false;
   }
-  return requireTool(shell, const ['-c', 'exit 0']) &&
-      requireTool('git') &&
-      requireTool('dart');
+  return await requireTool(shell, const ['-c', 'exit 0']) &&
+      await requireTool('git') &&
+      await requireTool('dart');
 }
 
 /// The tree of someone who has filled in nothing.
-Directory _emptyTree() => writeReleaseFixture(
+Future<Directory> _emptyTree() => writeReleaseFixture(
   omit: everyConfigFile,
   files: {FixturePaths.appLinks: placeholderAppLinks},
 );
@@ -65,8 +65,8 @@ void main() {
   test(
     'ps1_dry_run_refuses_an_empty_tree_and_builds_nothing',
     () async {
-      if (!_ready('powershell')) return;
-      final root = _emptyTree();
+      if (!await _ready('powershell')) return;
+      final root = await _emptyTree();
       final result = await _ps1([
         '-Platform',
         'android',
@@ -85,8 +85,8 @@ void main() {
   test(
     'ps1_dry_run_on_a_complete_tree_says_no_build_was_made',
     () async {
-      if (!_ready('powershell')) return;
-      final root = writeReleaseFixture();
+      if (!await _ready('powershell')) return;
+      final root = await writeReleaseFixture();
       final result = await _ps1([
         '-Platform',
         'android',
@@ -106,8 +106,8 @@ void main() {
 
   test('sh_dry_run_refuses_an_empty_tree_and_builds_nothing', () async {
     final bash = _bash();
-    if (!_ready(bash)) return;
-    final root = _emptyTree();
+    if (!await _ready(bash)) return;
+    final root = await _emptyTree();
     final result = await _sh(bash!, [
       '--platform',
       'ios',
@@ -123,8 +123,8 @@ void main() {
 
   test('sh_dry_run_on_a_complete_tree_says_no_build_was_made', () async {
     final bash = _bash();
-    if (!_ready(bash)) return;
-    final root = writeReleaseFixture();
+    if (!await _ready(bash)) return;
+    final root = await writeReleaseFixture();
     final result = await _sh(bash!, [
       '--platform',
       'ios',
@@ -143,8 +143,8 @@ void main() {
   test(
     'ps1_refuses_an_ios_build_off_a_mac',
     () async {
-      if (!_ready('powershell')) return;
-      final root = writeReleaseFixture();
+      if (!await _ready('powershell')) return;
+      final root = await writeReleaseFixture();
       final result = await _ps1(['-Platform', 'ios', '-Root', root.path]);
       expect(
         result.stdout,
@@ -157,16 +157,33 @@ void main() {
   );
 
   test(
-    'wrappers_exit_64_on_bad_arguments',
+    'ps1_exits_64_on_bad_arguments',
     () async {
-      if (!_ready('powershell')) return;
-      final ps1 = await _ps1(['-Platform', 'windows', '-DryRun']);
-      expect(ps1.exitCode, 64, reason: '${ps1.stdout}${ps1.stderr}');
-      final bash = _bash();
-      if (bash == null) return;
-      final sh = await _sh(bash, ['--platform', 'windows', '--dry-run']);
-      expect(sh.exitCode, 64, reason: '${sh.stdout}${sh.stderr}');
+      if (!await _ready('powershell')) return;
+      for (final args in const [
+        ['-Platform', 'windows', '-DryRun'],
+        ['-DryRun'],
+      ]) {
+        final ps1 = await _ps1(args);
+        expect(ps1.exitCode, 64, reason: '$args ${ps1.stdout}${ps1.stderr}');
+        expect(ps1.stderr, contains('Usage'), reason: '$args');
+      }
     },
     skip: windowsOnly,
   );
+
+  test('sh_exits_64_on_bad_arguments', () async {
+    final bash = _bash();
+    if (!await _ready(bash)) return;
+    for (final args in const [
+      ['--platform', 'windows', '--dry-run'],
+      ['--dry-run'],
+      ['--platform'],
+      ['--bogus'],
+    ]) {
+      final sh = await _sh(bash!, args);
+      expect(sh.exitCode, 64, reason: '$args ${sh.stdout}${sh.stderr}');
+      expect(sh.stderr, contains('Usage'), reason: '$args');
+    }
+  });
 }

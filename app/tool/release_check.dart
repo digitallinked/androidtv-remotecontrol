@@ -70,6 +70,16 @@ typedef TrackedFileLister = Future<List<String>?> Function(Directory root);
 
 const _timeout = Duration(seconds: 60);
 
+/// UTF-8 that never throws: keytool prints in the console code page on
+/// Windows, so a non-ASCII certificate owner must not make a correctly
+/// signed bundle look unreadable. The markers the checks look for
+/// (`Owner:`, `CN=Android Debug`) are ASCII and survive.
+const _lenient = Utf8Decoder(allowMalformed: true);
+
+/// Decodes tool output the way the checker does: as UTF-8, replacing any
+/// byte sequence that isn't UTF-8 instead of failing.
+String decodeToolOutput(List<int> bytes) => _lenient.convert(bytes);
+
 /// Runs [executable], killing it after 60 s. `null` when it can't start or
 /// times out.
 Future<ProcessResult?> _run(
@@ -87,8 +97,8 @@ Future<ProcessResult?> _run(
   } on ProcessException {
     return null;
   }
-  final out = process.stdout.transform(utf8.decoder).join();
-  final err = process.stderr.transform(utf8.decoder).join();
+  final out = process.stdout.transform(_lenient).join();
+  final err = process.stderr.transform(_lenient).join();
   try {
     final code = await process.exitCode.timeout(_timeout);
     return ProcessResult(process.pid, code, await out, await err);

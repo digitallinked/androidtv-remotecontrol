@@ -202,12 +202,23 @@ String fixtureKeyProperties({
 
 /// A merged prodRelease manifest. Attributes named in [dropAttributes]
 /// (`android:allowBackup`, `android:fullBackupContent`,
-/// `android:dataExtractionRules`) are left out of `<application>`.
+/// `android:dataExtractionRules`) are left out of `<application>`. A `null`
+/// [targetSdk] leaves out `android:targetSdkVersion`; a `null` [admobAppId]
+/// leaves out the AdMob `APPLICATION_ID` meta-data.
 String fixtureMergedManifest({
   Set<String> dropAttributes = const {},
-  int targetSdk = 36,
-  String admobAppId = fakeAdmobAppId,
+  int? targetSdk = 36,
+  String? admobAppId = fakeAdmobAppId,
 }) {
+  final target = targetSdk == null
+      ? ''
+      : '\n        android:targetSdkVersion="$targetSdk"';
+  final adMob = admobAppId == null
+      ? ''
+      : '''
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="$admobAppId" />''';
   final attributes = {
     'android:name': 'android.app.Application',
     'android:allowBackup': 'false',
@@ -221,14 +232,13 @@ String fixtureMergedManifest({
     package="$fixtureProdId" >
 
     <uses-sdk
-        android:minSdkVersion="24"
-        android:targetSdkVersion="$targetSdk" />
+        android:minSdkVersion="24"$target />
 
     <application
 ${attributes.entries.map((e) => '        ${e.key}="${e.value}"').join('\n')} >
         <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="$admobAppId" />
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />$adMob
     </application>
 
 </manifest>
@@ -244,13 +254,14 @@ ${attributes.entries.map((e) => '        ${e.key}="${e.value}"').join('\n')} >
 /// and an `app_links.dart` with real links. Merged manifests and artifacts
 /// are written only through [files], which adds or replaces files by
 /// repo-relative path. Paths in [omit] are left out. With [gitInit], the
-/// tree becomes a git work tree with everything not ignored staged.
-Directory writeReleaseFixture({
+/// tree becomes a git work tree with everything not ignored staged (each git
+/// call has the 60 s limit of [runTool]).
+Future<Directory> writeReleaseFixture({
   Set<String> omit = const {},
   Map<String, Object?> env = const {},
   Map<String, String> files = const {},
   bool gitInit = true,
-}) {
+}) async {
   final root = Directory.systemTemp.createTempSync('release_fixture_');
   addTearDown(() {
     if (root.existsSync()) root.deleteSync(recursive: true);
@@ -282,7 +293,7 @@ Directory writeReleaseFixture({
       ['init', '-q'],
       ['add', '-A'],
     ]) {
-      final result = Process.runSync('git', args, workingDirectory: root.path);
+      final result = await runTool('git', args, workingDirectory: root.path);
       if (result.exitCode != 0) {
         throw StateError('git ${args.join(' ')} failed: ${result.stderr}');
       }
@@ -298,14 +309,14 @@ Set<String> get everyConfigFile => FixturePaths.all.difference(const {
   FixturePaths.appLinks,
 });
 
-/// Whether [tool] runs; marks the test skipped (`<tool> is not on the PATH`)
-/// when it doesn't.
-bool requireTool(
+/// Whether [tool] runs (probed with [versionArgs], 60 s limit); marks the
+/// test skipped (`<tool> is not on the PATH`) when it doesn't.
+Future<bool> requireTool(
   String tool, [
   List<String> versionArgs = const ['--version'],
-]) {
+]) async {
   try {
-    Process.runSync(tool, versionArgs);
+    await runTool(tool, versionArgs);
     return true;
   } on ProcessException {
     markTestSkipped('$tool is not on the PATH');

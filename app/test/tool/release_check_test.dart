@@ -50,7 +50,7 @@ Future<String?> debugSigned(File _) async =>
 /// Defines a test that needs git on the PATH.
 void gitTest(String name, Future<void> Function() body) {
   test(name, () async {
-    if (!requireTool('git')) return;
+    if (!await requireTool('git')) return;
     await body();
   });
 }
@@ -60,29 +60,34 @@ const _post = <String, String>{FixturePaths.aab: 'not really a bundle'};
 void main() {
   gitTest('a_complete_android_tree_passes_the_pre_checks', () async {
     expect(
-      await codes(writeReleaseFixture(), ReleasePlatform.android),
+      await codes(await writeReleaseFixture(), ReleasePlatform.android),
       <String>[],
     );
   });
 
   gitTest('a_complete_ios_tree_passes_the_pre_checks', () async {
-    expect(await codes(writeReleaseFixture(), ReleasePlatform.ios), <String>[]);
+    expect(
+      await codes(await writeReleaseFixture(), ReleasePlatform.ios),
+      <String>[],
+    );
   });
 
   gitTest('refuses_a_missing_env_file', () async {
-    final root = writeReleaseFixture(omit: {FixturePaths.env});
+    final root = await writeReleaseFixture(omit: {FixturePaths.env});
     expect(await codes(root, ReleasePlatform.android), ['env-missing']);
     expect(await codes(root, ReleasePlatform.ios), ['env-missing']);
 
-    final notAnObject = writeReleaseFixture(files: {FixturePaths.env: '[]'});
+    final notAnObject = await writeReleaseFixture(
+      files: {FixturePaths.env: '[]'},
+    );
     expect(await codes(notAnObject, ReleasePlatform.android), ['env-missing']);
-    final notJson = writeReleaseFixture(files: {FixturePaths.env: '{'});
+    final notJson = await writeReleaseFixture(files: {FixturePaths.env: '{'});
     expect(await codes(notJson, ReleasePlatform.ios), ['env-missing']);
   });
 
   gitTest('refuses_firebase_disabled_or_not_a_boolean', () async {
     for (final value in const [false, 'true']) {
-      final root = writeReleaseFixture(env: {'FIREBASE_ENABLED': value});
+      final root = await writeReleaseFixture(env: {'FIREBASE_ENABLED': value});
       for (final platform in ReleasePlatform.values) {
         expect(await codes(root, platform), [
           'firebase-disabled',
@@ -99,7 +104,7 @@ void main() {
       'ADMOB_BANNER_IOS': 'banner-ios',
     };
     for (final e in keys.entries) {
-      final root = writeReleaseFixture(env: {e.key: ''});
+      final root = await writeReleaseFixture(env: {e.key: ''});
       for (final platform in ReleasePlatform.values) {
         final found = await refusals(root, platform);
         expect(found.map((r) => r.code), [e.value], reason: e.key);
@@ -112,24 +117,26 @@ void main() {
     'refuses_revenuecat_keys_of_the_wrong_store_or_the_test_store',
     () async {
       for (final value in const ['appl_x', 'test_x']) {
-        final root = writeReleaseFixture(
+        final root = await writeReleaseFixture(
           env: {'REVENUECAT_ANDROID_KEY': value},
         );
         expect(await codes(root, ReleasePlatform.android), [
           'revenuecat-android',
         ], reason: value);
       }
-      final ios = writeReleaseFixture(env: {'REVENUECAT_IOS_KEY': 'goog_x'});
+      final ios = await writeReleaseFixture(
+        env: {'REVENUECAT_IOS_KEY': 'goog_x'},
+      );
       expect(await codes(ios, ReleasePlatform.ios), ['revenuecat-ios']);
     },
   );
 
   gitTest('refuses_google_test_ad_units', () async {
-    final banner = writeReleaseFixture(
+    final banner = await writeReleaseFixture(
       env: {'ADMOB_BANNER_ANDROID': AdMobTestIds.androidBanner},
     );
     expect(await codes(banner, ReleasePlatform.android), ['banner-android']);
-    final interstitial = writeReleaseFixture(
+    final interstitial = await writeReleaseFixture(
       env: {'ADMOB_INTERSTITIAL_IOS': AdMobTestIds.iosInterstitial},
     );
     expect(await codes(interstitial, ReleasePlatform.ios), [
@@ -138,7 +145,7 @@ void main() {
   });
 
   gitTest('allows_empty_interstitial_ids', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       env: {'ADMOB_INTERSTITIAL_ANDROID': '', 'ADMOB_INTERSTITIAL_IOS': ''},
     );
     expect(await codes(root, ReleasePlatform.android), <String>[]);
@@ -151,7 +158,7 @@ void main() {
       'UMP_TEST_DEVICE_ID': 'abc',
     };
     for (final e in settings.entries) {
-      final root = writeReleaseFixture(env: {e.key: e.value});
+      final root = await writeReleaseFixture(env: {e.key: e.value});
       final found = await refusals(root, ReleasePlatform.android);
       expect(found.map((r) => r.code), ['ump-debug'], reason: e.key);
       expect(found.single.message, contains(e.key));
@@ -160,12 +167,14 @@ void main() {
   });
 
   gitTest('refuses_missing_or_mismatched_firebase_config', () async {
-    final noAndroid = writeReleaseFixture(omit: {FixturePaths.googleServices});
+    final noAndroid = await writeReleaseFixture(
+      omit: {FixturePaths.googleServices},
+    );
     expect(await codes(noAndroid, ReleasePlatform.android), [
       'firebase-android-config',
     ]);
     expect(await codes(noAndroid, ReleasePlatform.ios), <String>[]);
-    final otherPackage = writeReleaseFixture(
+    final otherPackage = await writeReleaseFixture(
       files: {
         FixturePaths.googleServices: fixtureGoogleServices(
           packageName: 'com.other',
@@ -175,10 +184,12 @@ void main() {
     expect(await codes(otherPackage, ReleasePlatform.android), [
       'firebase-android-config',
     ]);
-    final noIos = writeReleaseFixture(omit: {FixturePaths.googleServiceInfo});
+    final noIos = await writeReleaseFixture(
+      omit: {FixturePaths.googleServiceInfo},
+    );
     expect(await codes(noIos, ReleasePlatform.ios), ['firebase-ios-config']);
     expect(await codes(noIos, ReleasePlatform.android), <String>[]);
-    final otherBundle = writeReleaseFixture(
+    final otherBundle = await writeReleaseFixture(
       files: {
         FixturePaths.googleServiceInfo: fixtureGoogleServiceInfo(
           bundleId: 'com.other',
@@ -199,7 +210,7 @@ void main() {
         AdMobTestIds.androidAppId,
         'ca-app-pub-1234567890123456/1234567890',
       ]) {
-        final root = writeReleaseFixture(
+        final root = await writeReleaseFixture(
           files: {
             FixturePaths.secretsProperties: fixtureSecretsProperties(
               admobAppIdProd: value,
@@ -226,14 +237,16 @@ void main() {
   gitTest(
     'refuses_android_signing_without_a_complete_key_properties',
     () async {
-      final missing = writeReleaseFixture(omit: {FixturePaths.keyProperties});
+      final missing = await writeReleaseFixture(
+        omit: {FixturePaths.keyProperties},
+      );
       final m = await refusals(missing, ReleasePlatform.android);
       expect(m.map((r) => r.code), ['signing']);
       expect(m.single.message, contains('app/android/key.properties'));
       expect(m.single.message, contains('missing'));
       expect(await codes(missing, ReleasePlatform.ios), <String>[]);
 
-      final incomplete = writeReleaseFixture(
+      final incomplete = await writeReleaseFixture(
         files: {
           FixturePaths.keyProperties: fixtureKeyProperties(
             drop: {'keyAlias'},
@@ -245,7 +258,7 @@ void main() {
       expect(i.single.message, contains('keyAlias'));
       expect(i.single.message, isNot(contains('fixture-store-password')));
 
-      final noStore = writeReleaseFixture(
+      final noStore = await writeReleaseFixture(
         files: {
           FixturePaths.keyProperties: fixtureKeyProperties(
             storeFile: 'keys/lost.jks',
@@ -260,8 +273,8 @@ void main() {
   );
 
   test('a_tilde_store_path_resolves_to_the_home_directory', () async {
-    if (!requireTool('git') || !requireTool('dart')) return;
-    final root = writeReleaseFixture(
+    if (!await requireTool('git') || !await requireTool('dart')) return;
+    final root = await writeReleaseFixture(
       files: {
         FixturePaths.keyProperties: fixtureKeyProperties(
           storeFile: '~/x.jks',
@@ -289,7 +302,7 @@ void main() {
   });
 
   gitTest('refuses_tracked_secrets', () async {
-    final root = writeReleaseFixture();
+    final root = await writeReleaseFixture();
     final add = await runTool('git', [
       'add',
       '-f',
@@ -303,7 +316,7 @@ void main() {
   });
 
   test('refuses_when_git_cannot_list_files', () async {
-    final root = writeReleaseFixture(gitInit: false);
+    final root = await writeReleaseFixture(gitInit: false);
     final found = await refusals(
       root,
       ReleasePlatform.android,
@@ -314,7 +327,7 @@ void main() {
   });
 
   gitTest('refuses_placeholder_links', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       files: {FixturePaths.appLinks: placeholderAppLinks},
     );
     final found = await refusals(root, ReleasePlatform.android);
@@ -322,7 +335,7 @@ void main() {
     for (final which in const ['privacy', 'terms', 'support']) {
       expect(found.single.message, contains(which));
     }
-    final onlyTerms = writeReleaseFixture(
+    final onlyTerms = await writeReleaseFixture(
       files: {
         FixturePaths.appLinks: fixtureAppLinks.replaceFirst(
           'legal.remotely.test/terms',
@@ -337,7 +350,7 @@ void main() {
   });
 
   gitTest('refuses_the_placeholder_app_store_id_on_ios_only', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       files: {
         FixturePaths.appLinks: fixtureAppLinks.replaceFirst(
           'id1234567890',
@@ -350,7 +363,7 @@ void main() {
   });
 
   gitTest('reports_every_problem_at_once', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       omit: everyConfigFile,
       files: {FixturePaths.appLinks: placeholderAppLinks},
     );
@@ -371,7 +384,7 @@ void main() {
   });
 
   gitTest('manifest_stage_refuses_a_missing_merged_manifest', () async {
-    final root = writeReleaseFixture();
+    final root = await writeReleaseFixture();
     expect(
       await codes(root, ReleasePlatform.android, stage: ReleaseStage.manifest),
       ['manifest-missing'],
@@ -388,7 +401,7 @@ void main() {
       'android:fullBackupContent',
       'android:dataExtractionRules',
     ]) {
-      final root = writeReleaseFixture(
+      final root = await writeReleaseFixture(
         omit: everyConfigFile,
         files: {
           FixturePaths.mergedManifest: fixtureMergedManifest(
@@ -412,7 +425,7 @@ void main() {
       (35, <String>[]),
       (36, <String>[]),
     ]) {
-      final root = writeReleaseFixture(
+      final root = await writeReleaseFixture(
         files: {
           FixturePaths.mergedManifest: fixtureMergedManifest(targetSdk: sdk),
         },
@@ -430,7 +443,7 @@ void main() {
   });
 
   gitTest('post_stage_refuses_a_missing_bundle', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       files: {FixturePaths.mergedManifest: fixtureMergedManifest()},
     );
     expect(
@@ -440,7 +453,7 @@ void main() {
   });
 
   gitTest('post_stage_refuses_a_debug_signed_bundle', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       files: {..._post, FixturePaths.mergedManifest: fixtureMergedManifest()},
     );
     expect(
@@ -459,7 +472,7 @@ void main() {
   });
 
   gitTest('post_stage_refuses_an_unreadable_signature', () async {
-    final root = writeReleaseFixture(
+    final root = await writeReleaseFixture(
       files: {..._post, FixturePaths.mergedManifest: fixtureMergedManifest()},
     );
     final found = await refusals(
@@ -478,7 +491,7 @@ void main() {
   gitTest(
     'post_stage_refuses_the_test_admob_id_in_the_merged_manifest',
     () async {
-      final root = writeReleaseFixture(
+      final root = await writeReleaseFixture(
         files: {
           ..._post,
           FixturePaths.mergedManifest: fixtureMergedManifest(
@@ -502,15 +515,150 @@ void main() {
   );
 
   gitTest('ios_post_stage_refuses_a_missing_ipa', () async {
-    final root = writeReleaseFixture();
+    final root = await writeReleaseFixture();
     expect(await codes(root, ReleasePlatform.ios, stage: ReleaseStage.post), [
       'artifact-missing',
     ]);
-    final built = writeReleaseFixture(files: {FixturePaths.ipa: 'fake ipa'});
+    final built = await writeReleaseFixture(
+      files: {FixturePaths.ipa: 'fake ipa'},
+    );
     expect(
       await codes(built, ReleasePlatform.ios, stage: ReleaseStage.post),
       <String>[],
     );
+  });
+
+  test('the_real_keytool_printer_returns_null_for_an_unsigned_zip', () async {
+    if (!await requireTool('keytool', const ['-help'])) return;
+    final dir = Directory.systemTemp.createTempSync('release_fixture_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    // An empty zip (end-of-central-directory record only): keytool prints
+    // "Not a signed jar file" and exits 0 for it.
+    final zip = File('${dir.path}/unsigned.aab')
+      ..writeAsBytesSync([0x50, 0x4b, 0x05, 0x06, ...List.filled(18, 0)]);
+    expect(await keytoolPrintCertificate(zip), isNull);
+  });
+
+  test('tool_output_that_is_not_utf8_is_decoded_leniently', () {
+    // "Owner: CN=Jos" + e-acute in Windows-1252, as keytool may print it on
+    // a Windows console code page.
+    final bytes = [...'Owner: CN=Jos'.codeUnits, 0xe9, ...', O=X'.codeUnits];
+    final text = decodeToolOutput(bytes);
+    expect(text, startsWith('Owner: CN=Jos'));
+    expect(text, endsWith(', O=X'));
+    expect(text, contains('\uFFFD'));
+  });
+
+  test('refuses_every_never_commit_path_and_exempts_the_example', () async {
+    final root = await writeReleaseFixture(gitInit: false);
+    Future<List<Refusal>> tracking(List<String> paths) => refusals(
+      root,
+      ReleasePlatform.android,
+      listTrackedFiles: (_) async => paths,
+    );
+    for (final path in const [
+      'keys/upload.jks',
+      'app/android/release.keystore',
+      'AuthKey_ABC123.p8',
+      'app/android/key.properties',
+      'app/android/app/src/prod/google-services.json',
+      'app/android/app/google-services.json',
+      'app/ios/config/prod/GoogleService-Info.plist',
+      'app/android/secrets.properties',
+      'app/ios/Flutter/Secrets.xcconfig',
+      '.env',
+      'app/env/prod.json',
+      'app/env/dev.json',
+    ]) {
+      final found = await tracking(['README.md', path]);
+      expect(found.map((r) => r.code), ['secrets-tracked'], reason: path);
+      expect(found.single.message, contains(path), reason: path);
+      expect(found.single.message, isNot(contains('README.md')));
+    }
+    expect(
+      await tracking(const [
+        'app/env/example.json',
+        'app/android/secrets.example.properties',
+        'app/ios/Flutter/Secrets.example.xcconfig',
+        'app/android/key.properties.example',
+        'app/lib/main_prod.dart',
+      ]),
+      <Refusal>[],
+    );
+  });
+
+  test('the_real_git_lister_is_null_outside_a_work_tree', () async {
+    if (!await requireTool('git')) return;
+    final dir = Directory.systemTemp.createTempSync('release_fixture_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final inside = await runTool('git', const [
+      'rev-parse',
+      '--is-inside-work-tree',
+    ], workingDirectory: dir.path);
+    if (inside.exitCode == 0) {
+      markTestSkipped('the temp directory is inside a git work tree');
+      return;
+    }
+    expect(await gitTrackedFiles(dir), isNull);
+  });
+
+  gitTest('refuses_an_invalid_google_services_json', () async {
+    final root = await writeReleaseFixture(
+      files: {FixturePaths.googleServices: '{"client": ['},
+    );
+    final found = await refusals(root, ReleasePlatform.android);
+    expect(found.map((r) => r.code), ['firebase-android-config']);
+    expect(found.single.message, contains("isn't valid JSON"));
+  });
+
+  gitTest('refuses_the_test_unit_as_the_android_interstitial', () async {
+    final root = await writeReleaseFixture(
+      env: {'ADMOB_INTERSTITIAL_ANDROID': AdMobTestIds.androidInterstitial},
+    );
+    expect(await codes(root, ReleasePlatform.android), [
+      'interstitial-android',
+    ]);
+  });
+
+  gitTest('refuses_a_malformed_banner_id', () async {
+    for (final value in const [
+      'ca-app-pub-123/456',
+      'ca-app-pub-1234567890123456~1234567890',
+      ' ca-app-pub-1234567890123456/1234567890',
+    ]) {
+      final root = await writeReleaseFixture(env: {'ADMOB_BANNER_IOS': value});
+      final found = await refusals(root, ReleasePlatform.ios);
+      expect(found.map((r) => r.code), ['banner-ios'], reason: value);
+      expect(found.single.message, isNot(contains(value.trim())));
+    }
+  });
+
+  gitTest('manifest_stage_refuses_a_missing_target_sdk', () async {
+    final root = await writeReleaseFixture(
+      files: {
+        FixturePaths.mergedManifest: fixtureMergedManifest(targetSdk: null),
+      },
+    );
+    expect(
+      await codes(root, ReleasePlatform.android, stage: ReleaseStage.manifest),
+      ['manifest-target-sdk'],
+    );
+  });
+
+  gitTest('post_stage_refuses_a_missing_admob_application_id', () async {
+    final root = await writeReleaseFixture(
+      files: {
+        ..._post,
+        FixturePaths.mergedManifest: fixtureMergedManifest(admobAppId: null),
+      },
+    );
+    final found = await refusals(
+      root,
+      ReleasePlatform.android,
+      stage: ReleaseStage.post,
+    );
+    expect(found.map((r) => r.code), ['manifest-admob-id']);
+    expect(found.single.message, contains('no AdMob APPLICATION_ID'));
   });
 
   test('refusal_has_value_equality_and_a_readable_form', () {
@@ -521,8 +669,8 @@ void main() {
   });
 
   test('cli_prints_one_line_per_refusal_and_exits_1', () async {
-    if (!requireTool('git') || !requireTool('dart')) return;
-    final root = writeReleaseFixture(
+    if (!await requireTool('git') || !await requireTool('dart')) return;
+    final root = await writeReleaseFixture(
       omit: everyConfigFile,
       files: {FixturePaths.appLinks: placeholderAppLinks},
     );
@@ -540,8 +688,8 @@ void main() {
   });
 
   test('cli_passes_with_exit_0', () async {
-    if (!requireTool('git') || !requireTool('dart')) return;
-    final root = writeReleaseFixture();
+    if (!await requireTool('git') || !await requireTool('dart')) return;
+    final root = await writeReleaseFixture();
     final result = await runTool('dart', [
       'tool/release_check.dart',
       '--platform',
@@ -557,7 +705,7 @@ void main() {
   });
 
   test('cli_exits_64_on_bad_arguments', () async {
-    if (!requireTool('dart')) return;
+    if (!await requireTool('dart')) return;
     for (final args in const [
       ['--platform', 'windows'],
       <String>[],
