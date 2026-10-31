@@ -478,13 +478,30 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text(l.appsLoadFailed), findsOneWidget);
 
-      // The storage error reaches the reporter as the error handlers send it
-      // (a framework error) and as a caught error.
-      await reporter.recordFlutterError(
-        const FlutterErrorDetails(exception: disk),
-        fatal: true,
+      // In production an Apps read error is shown, never reported.
+      expect(
+        crashSink.errors,
+        isEmpty,
+        reason: 'an Apps read error is shown, never reported',
       );
-      await reporter.recordError(disk, StackTrace.current);
+
+      // If the storage error were reported (by an error handler, as a
+      // framework error, or as a caught error), it would arrive scrubbed:
+      // the real bootstrap seeded the scrubber. The log reporter's console
+      // echo is captured, so the test output stays clean.
+      final echoed = <String>[];
+      final print = debugPrint;
+      debugPrint = (message, {wrapWidth}) => echoed.add('$message');
+      try {
+        await reporter.recordFlutterError(
+          const FlutterErrorDetails(exception: disk),
+          fatal: true,
+        );
+        await reporter.recordError(disk, StackTrace.current);
+      } finally {
+        debugPrint = print;
+      }
+      expect(echoed, hasLength(2), reason: 'both were logged here');
 
       expect(crashSink.errors, hasLength(2));
       final sent = [
