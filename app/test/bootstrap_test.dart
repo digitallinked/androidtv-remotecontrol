@@ -60,6 +60,28 @@ class _HangingDeviceRepository extends _SilentDeviceRepository {
   Future<List<SavedDevice>> all() => Completer<List<SavedDevice>>().future;
 }
 
+/// A repository whose one-shot read and saved-list stream answer only when
+/// the test says so, and which reports no last-used TV.
+class _LateDeviceRepository extends InMemoryDeviceRepository {
+  _LateDeviceRepository() : super(const []);
+
+  /// Completes the one-shot read.
+  final Completer<List<SavedDevice>> read = Completer<List<SavedDevice>>();
+
+  /// Emits the saved lists.
+  final StreamController<List<SavedDevice>> lists =
+      StreamController<List<SavedDevice>>.broadcast();
+
+  @override
+  Future<List<SavedDevice>> all() => read.future;
+
+  @override
+  Stream<List<SavedDevice>> watchAll() => lists.stream;
+
+  @override
+  Future<SavedDevice?> lastUsed() async => null;
+}
+
 void main() {
   testWidgets('failing_step_is_reported_and_later_steps_run', (tester) async {
     final recorder = RecordingCrashReporter();
@@ -882,9 +904,75 @@ void main() {
       expect(app, isNull, reason: 'still within the bound');
       await tester.pump(const Duration(milliseconds: 200));
       expect(app, isNotNull, reason: 'the read is bounded at 500 ms');
-      expect(reporter.delegate, isA<CompositeCrashReporter>());
+      // The saved names are still unknown, so nothing may reach Crashlytics.
+      expect(reporter.delegate, isNot(isA<CompositeCrashReporter>()));
 
       await tester.pumpWidget(app!);
+      await tester.pumpAndSettle();
+    });
+
+    Future<Widget> startWithALateRead(
+      WidgetTester tester,
+      DelegatingCrashReporter reporter,
+      RecordingCrashlyticsSink sink,
+      _LateDeviceRepository devices,
+    ) async {
+      Widget? app;
+      unawaited(rootWith(reporter, sink, devices).then((w) => app = w));
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(app, isNotNull, reason: 'the read is bounded at 500 ms');
+      return app!;
+    }
+
+    testWidgets('a_timed_out_seed_sends_nothing_until_the_saved_list_arrives', (
+      tester,
+    ) async {
+      final logging = RecordingCrashReporter();
+      final reporter = DelegatingCrashReporter(logging);
+      final sink = RecordingCrashlyticsSink();
+      final devices = _LateDeviceRepository();
+      final app = await startWithALateRead(tester, reporter, sink, devices);
+      await tester.pumpWidget(app);
+      await tester.pump();
+
+      // Before the saved names are known: logged, never sent.
+      await reporter.recordError(StateError('lost Bedroom TV'), null);
+      expect(sink.errors, isEmpty);
+      expect(logging.errors, hasLength(1));
+
+      devices.lists.add([savedTv(name: 'Bedroom TV')]);
+      await tester.pump();
+
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+      await reporter.recordError(StateError('lost Bedroom TV'), null);
+      expect(
+        sink.errors.single.error.toString(),
+        'StateError: Bad state: lost <tv>',
+      );
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a_late_seed_read_installs_the_scrubbing_reporter', (
+      tester,
+    ) async {
+      final reporter = DelegatingCrashReporter(RecordingCrashReporter());
+      final sink = RecordingCrashlyticsSink();
+      final devices = _LateDeviceRepository();
+      final app = await startWithALateRead(tester, reporter, sink, devices);
+      await tester.pumpWidget(app);
+      await tester.pump();
+      expect(reporter.delegate, isNot(isA<CompositeCrashReporter>()));
+
+      // The read answers late; the saved-list stream never emits.
+      devices.read.complete([savedTv(name: 'Bedroom TV', nickname: 'Big')]);
+      await tester.pump();
+
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+      await reporter.recordError(StateError('lost Bedroom TV (Big)'), null);
+      expect(
+        sink.errors.single.error.toString(),
+        'StateError: Bad state: lost <tv> (<tv>)',
+      );
       await tester.pumpAndSettle();
     });
 

@@ -121,15 +121,18 @@ class DiscoveryController extends _$DiscoveryController {
 
   /// Moves the saved TV [manualServiceName] (added by IP address) to [tv],
   /// its mDNS entry, in one transaction (decision #33), and moves the remote
-  /// with it. Returns whether it merged; storage errors propagate.
+  /// with it. Returns whether it merged; storage errors from the merge
+  /// propagate. An app torn down after the merge doesn't turn it into a
+  /// failure: the merge has happened.
   ///
   /// [opening] is asked once the merge is done: whether the user is still
   /// opening this TV. Then the merged TV becomes the active one. Otherwise
   /// (the user left meanwhile, and this controller may be gone) only a
   /// session that still points at the deleted row moves (Ruling P8-R10):
   /// the active target names it, so it moves to the merged name; or there
-  /// is no target and the default session was built on it, so that session
-  /// is rebuilt on the merged row. Nobody else is pulled onto this TV.
+  /// is no target and the default session was built on it (or is still
+  /// loading), so that session is rebuilt on the merged row. Nobody else is
+  /// pulled onto this TV.
   Future<bool> adoptManualDevice({
     required String manualServiceName,
     required DiscoveredTv tv,
@@ -139,28 +142,45 @@ class DiscoveryController extends _$DiscoveryController {
     // discovery meanwhile, which disposes this controller.
     final container = ref.container;
     final devices = ref.read(deviceRepositoryProvider);
-    final adopted = await devices.adoptManualDevice(
-      manualServiceName: manualServiceName,
-      tv: tv,
-    );
-    if (!adopted) return false;
+    // Closed when the container is disposed (the app was torn down during
+    // the merge): then there is no remote left to move, and the merge that
+    // succeeded must not be reported as failed.
+    final alive = container.listen(activeTargetProvider, (_, _) {});
+    try {
+      final adopted = await devices.adoptManualDevice(
+        manualServiceName: manualServiceName,
+        tv: tv,
+      );
+      if (adopted && !alive.closed) {
+        _followMerge(container, manualServiceName, tv, opening);
+      }
+      return adopted;
+    } finally {
+      alive.close();
+    }
+  }
 
+  static void _followMerge(
+    ProviderContainer container,
+    String manualServiceName,
+    DiscoveredTv tv,
+    bool Function() opening,
+  ) {
     final target = container.read(activeTargetProvider);
     if (opening() || target == DeviceTarget(manualServiceName)) {
       container
           .read(activeTargetProvider.notifier)
           .activateDevice(tv.serviceName);
-    } else if (target == null &&
-        container.exists(remoteSessionProvider) &&
-        container
-                .read(remoteSessionProvider)
-                .value
-                ?.pairingTarget
-                ?.serviceName ==
-            manualServiceName) {
-      container.invalidate(remoteSessionProvider);
+    } else if (target == null && container.exists(remoteSessionProvider)) {
+      final session = container.read(remoteSessionProvider);
+      // A default session still loading may have read the manual row
+      // already; rebuilding it is safe (the build discards itself when it
+      // is no longer mounted) and makes it read the merged row.
+      if (session.isLoading ||
+          session.value?.pairingTarget?.serviceName == manualServiceName) {
+        container.invalidate(remoteSessionProvider);
+      }
     }
-    return true;
   }
 
   static List<DiscoveredTv> _sorted(List<DiscoveredTv> tvs) {

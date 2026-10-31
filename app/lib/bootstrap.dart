@@ -147,17 +147,24 @@ Future<Widget> buildRootWidget({
     // saved names before the saved-list stream's first event (Ruling
     // P8-R11). The database was just read, so this is quick; the bound
     // keeps a stuck read from holding the first frame (decision #38). A
-    // failed or late read seeds nothing; the stream still follows.
+    // failed read seeds nothing; the stream still follows. A late read
+    // holds every report back until the saved names are known.
     var saved = const <SavedDevice>[];
+    Future<List<SavedDevice>>? lateRead;
+    final read = container.read(deviceRepositoryProvider).all();
     try {
-      saved = await container
-          .read(deviceRepositoryProvider)
-          .all()
-          .timeout(scrubSeedTimeout);
+      saved = await read.timeout(scrubSeedTimeout);
+    } on TimeoutException {
+      lateRead = read;
     } on Object {
       // Nothing to seed.
     }
-    _installCrashlytics(container, crashReporter, seed: saved);
+    _installCrashlytics(
+      container,
+      crashReporter,
+      seed: saved,
+      lateSeed: lateRead,
+    );
   }
   // Step after Firebase and the passed steps; see the note above.
   await runStartupSteps(
@@ -174,22 +181,40 @@ Future<Widget> buildRootWidget({
 /// Seeds the scrubber with [seed], the saved TVs, then points [reporter] at
 /// the log and the scrubbing Crashlytics reporter. A failure leaves it
 /// logging only; the app still starts.
+///
+/// With [lateSeed], the seed read that timed out, nothing is seeded yet and
+/// [reporter] keeps only logging until the scrubber knows the saved names:
+/// when [lateSeed] answers or the saved list's first event arrives, whichever
+/// comes first. So no report sent before then can carry a saved TV's name.
 void _installCrashlytics(
   ProviderContainer container,
   DelegatingCrashReporter reporter, {
   required List<SavedDevice> seed,
+  Future<List<SavedDevice>>? lateSeed,
 }) {
   try {
     // Riverpod pauses what nothing listens to, and the collection's own
     // listeners must keep following the privacy choice. The container ends
     // this subscription when it is disposed.
-    container.listen(crashCollectionProvider, (_, _) {});
-    final collection = container.read(crashCollectionProvider.notifier)
-      ..seedTerms(seed);
-    reporter.delegate = CompositeCrashReporter([
+    final listening = container.listen(crashCollectionProvider, (_, _) {});
+    final collection = container.read(crashCollectionProvider.notifier);
+    void install() => reporter.delegate = CompositeCrashReporter([
       const LoggingCrashReporter(),
       collection.reporter,
     ]);
+    if (lateSeed == null) {
+      collection.seedTerms(seed);
+      install();
+      return;
+    }
+    unawaited(lateSeed.then(collection.seedTerms, onError: (Object _) {}));
+    unawaited(
+      collection.savedNamesKnown.then((_) {
+        // A start that was given up on (Try again) disposed its container,
+        // which closed this subscription; it must not take over.
+        if (!listening.closed) install();
+      }),
+    );
   } on Object catch (error, stack) {
     unawaited(
       safeRecordError(reporter, error, stack, reason: 'crash reporter setup'),

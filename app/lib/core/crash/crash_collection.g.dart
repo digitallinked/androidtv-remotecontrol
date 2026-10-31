@@ -179,7 +179,7 @@ final class CrashCollectionProvider
   }
 }
 
-String _$crashCollectionHash() => r'b319638a8763aa76118997bcca64fbd00281ff51';
+String _$crashCollectionHash() => r'f848c66a09ec35672c63d19880ee2af0f38864ab';
 
 /// Wires Crashlytics to the user's choice.
 ///

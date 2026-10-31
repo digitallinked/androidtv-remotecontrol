@@ -14,6 +14,7 @@ import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
@@ -22,6 +23,7 @@ import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_device_repository.dart';
+import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/manual_session_signals.dart';
 import '../../helpers/recording_analytics_sink.dart';
 import '../../helpers/recording_crashlytics_sink.dart';
@@ -315,7 +317,10 @@ void main() {
 
     /// A container with real sessions over [repo]. The session is listened
     /// to (as the remote keeps it alive); discovery isn't.
-    ProviderContainer sessionContainer(InMemoryDeviceRepository repo) {
+    ProviderContainer sessionContainer(
+      InMemoryDeviceRepository repo, {
+      IdentityStore? identities,
+    }) {
       clients = FakeRemoteClients();
       return ProviderContainer.test(
         overrides: [
@@ -323,7 +328,9 @@ void main() {
           settingsStoreProvider.overrideWithValue(settings),
           analyticsSinkProvider.overrideWithValue(analyticsSink),
           deviceRepositoryProvider.overrideWithValue(repo),
-          identityStoreProvider.overrideWithValue(testIdentityStore()),
+          identityStoreProvider.overrideWithValue(
+            identities ?? testIdentityStore(),
+          ),
           remoteClientFactoryProvider.overrideWithValue(clients.create),
           hostResolverProvider.overrideWithValue((_) async => null),
           sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
@@ -363,6 +370,68 @@ void main() {
       expect(session, isNot(same(old)));
       expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
       expect(clients.created.first.closed, isTrue);
+    });
+
+    test('merge_while_the_default_session_loads_moves_it', () async {
+      final repo = InMemoryDeviceRepository([savedTv(name: manual)]);
+      // The default session has read the manual row and waits for the
+      // client identity.
+      final identityReady = Completer<void>();
+      final c = sessionContainer(
+        repo,
+        identities: IdentityStore(
+          InMemorySecureKeyValueStore(),
+          generate: () async {
+            await identityReady.future;
+            return testIdentity();
+          },
+        ),
+      );
+      await pumpEventQueue();
+      expect(c.read(remoteSessionProvider).isLoading, isTrue);
+
+      final discovery = c.listen(discoveryControllerProvider, (_, _) {});
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      discovery.close();
+      expect(merged, isTrue);
+
+      identityReady.complete();
+      final session = await c.read(remoteSessionProvider.future);
+      expect(c.read(activeTargetProvider), isNull);
+      expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
+    });
+
+    test('a_failing_follow_up_still_reports_the_merge', () async {
+      final repo = _SlowAdoptRepository([savedTv(name: manual)]);
+      // Not ProviderContainer.test: this test disposes it itself.
+      final c = ProviderContainer(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          deviceRepositoryProvider.overrideWithValue(repo),
+        ],
+      )..listen(discoveryControllerProvider, (_, _) {});
+      final merging = c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      // The app is torn down while the merge runs: the follow-up can't
+      // read the session any more, but the merge itself succeeded.
+      c.dispose();
+      repo.release.complete();
+
+      expect(await merging, isTrue);
+      expect(repo.saved.keys, ['Living Room TV 3']);
     });
 
     test('merge_leaves_a_session_on_another_tv_alone', () async {

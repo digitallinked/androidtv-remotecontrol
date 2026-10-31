@@ -263,6 +263,26 @@ void main() {
     expect(sent, isNot(contains('4B2F')));
   });
 
+  test('saved_names_are_known_after_a_seed_or_the_first_list', () async {
+    devices = _SilentDeviceRepository();
+    var known = false;
+    final silent = start(await containerFor());
+    unawaited(silent.savedNamesKnown.then((_) => known = true));
+    await pumpEventQueue();
+    expect(known, isFalse, reason: 'no seed and no saved list yet');
+    silent.seedTerms(const <SavedDevice>[]);
+    await pumpEventQueue();
+    expect(known, isTrue, reason: 'an empty seed is a known list');
+
+    devices = InMemoryDeviceRepository();
+    known = false;
+    final container = await containerFor();
+    final listed = start(container);
+    unawaited(listed.savedNamesKnown.then((_) => known = true));
+    await flush(container);
+    expect(known, isTrue, reason: 'the first saved list arrived');
+  });
+
   test('the_first_watch_event_replaces_the_seeded_names', () async {
     final container = await containerFor();
     final collection = start(container)..seedTerms([savedTv(name: 'Den')]);

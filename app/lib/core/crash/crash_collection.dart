@@ -53,6 +53,15 @@ class CrashCollection extends _$CrashCollection {
   final Map<String, List<String>> _discovered = {};
   bool? _collecting;
 
+  /// Completes once the saved TVs' names are known: seeded, or the first
+  /// saved list arrived.
+  final Completer<void> _savedKnown = Completer<void>();
+
+  /// Completes once the scrubber knows the saved TVs' names, from
+  /// [seedTerms] or the saved list's first event. Bootstrap holds reports
+  /// until then when its seed read times out (Ruling P8-R11).
+  Future<void> get savedNamesKnown => _savedKnown.future;
+
   /// The scrubber, loaded with the saved and discovered TVs' names.
   late CrashScrubber scrubber;
 
@@ -87,6 +96,7 @@ class CrashCollection extends _$CrashCollection {
       _saved
         ..clear()
         ..addAll(_namesOf(saved));
+      _markSavedKnown();
     }, onError: (Object _) {});
     ref.onDispose(subscription.cancel);
 
@@ -101,8 +111,14 @@ class CrashCollection extends _$CrashCollection {
   /// Adds the names of [devices] (display names, service names and
   /// nicknames) to the scrubber now. The next saved list replaces them, as
   /// it replaces every earlier list.
-  void seedTerms(Iterable<SavedDevice> devices) =>
-      _saved.addAll(_namesOf(devices));
+  void seedTerms(Iterable<SavedDevice> devices) {
+    _saved.addAll(_namesOf(devices));
+    _markSavedKnown();
+  }
+
+  void _markSavedKnown() {
+    if (!_savedKnown.isCompleted) _savedKnown.complete();
+  }
 
   /// Adds the display and service names of [tvs], one list of TVs seen by
   /// discovery, to the scrubber (Ruling P8-R11). Beyond
