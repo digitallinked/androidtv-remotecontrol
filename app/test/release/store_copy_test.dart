@@ -159,6 +159,47 @@ void main() {
     }
   });
 
+  test('ads_are_described_as_the_privacy_policy_does', () {
+    // Ruling P9-C9: banners on Apps and Settings, and an occasional
+    // full-screen ad (switchable by Remote Config) when leaving Settings,
+    // never while pairing. No field may claim banners are the only ads.
+    const rules = {
+      'en': (
+        mentionsAds: r'\bads?\b',
+        banned: ['banner ads only', 'only banner ads', 'ads only'],
+        disclosure: ['full-screen ad', 'leave settings', 'pair'],
+      ),
+      'ms': (
+        mentionsAds: r'\biklan\b',
+        banned: ['iklan sepanduk hanya', 'hanya iklan sepanduk'],
+        disclosure: ['iklan skrin penuh', 'keluar dari tetapan', 'gandingkan'],
+      ),
+    };
+    for (final locale in locales) {
+      final rule = rules[locale]!;
+      final mentionsAds = RegExp(rule.mentionsAds, caseSensitive: false);
+      var described = 0;
+      for (final field in loadStoreCopy(locale).values) {
+        final lower = fillTokens(field.text, values).toLowerCase();
+        for (final banned in rule.banned) {
+          expect(
+            lower,
+            isNot(contains(banned)),
+            reason: '$locale ${field.id}',
+          );
+        }
+        // "Premium removes ads" alone doesn't describe where ads appear.
+        final where = lower.replaceAll(RegExp(r'premium[^.\n]*'), '');
+        if (!mentionsAds.hasMatch(where)) continue;
+        described++;
+        for (final phrase in rule.disclosure) {
+          expect(where, contains(phrase), reason: '$locale ${field.id}');
+        }
+      }
+      expect(described, greaterThanOrEqualTo(2), reason: locale);
+    }
+  });
+
   test('malay_copy_is_marked_unreviewed', () {
     final ms = File('../docs/release/store-listing/ms.md').readAsStringSync();
     expect(const LineSplitter().convert(ms).first, malayStatusLine);

@@ -58,7 +58,7 @@ PREMIUM
 • Premium membuang iklan dan menambah tiga gaya warna: Ocean, Ember dan Midnight, dalam mod cerah dan gelap.
 • Pilih bulanan, tahunan atau pembelian sekali bayar seumur hidup. Apl ini memaparkan harga sebelum anda membeli.
 • Semua yang lain kekal percuma: setiap TV, semua kawalan alat kawalan jauh, pintasan apl, papan kekunci dan menghidupkan TV anda.
-• Iklan sepanduk hanya dipaparkan di bahagian bawah skrin Apl dan Tetapan, tidak pernah pada alat kawalan jauh.
+• Versi percuma memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan. Kami juga mungkin menghidupkan iklan skrin penuh sekali-sekala apabila anda keluar dari Tetapan, tidak pernah semasa anda menggandingkan TV.
 
 PRIVASI
 • Nama, alamat rangkaian dan alamat MAC TV anda tidak pernah keluar dari telefon anda, dan sandaran tidak menyalinnya.
@@ -131,7 +131,7 @@ PREMIUM
 • Pilih bulanan, tahunan atau pembelian sekali bayar seumur hidup. Apl ini memaparkan harga sebelum anda membeli.
 • Langganan diperbaharui secara automatik sehingga anda membatalkannya dalam tetapan akaun App Store anda.
 • Semua yang lain kekal percuma: setiap TV, semua kawalan alat kawalan jauh, pintasan apl dan papan kekunci.
-• Iklan sepanduk hanya dipaparkan di bahagian bawah skrin Apl dan Tetapan, tidak pernah pada alat kawalan jauh.
+• Versi percuma memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan. Kami juga mungkin menghidupkan iklan skrin penuh sekali-sekala apabila anda keluar dari Tetapan, tidak pernah semasa anda menggandingkan TV.
 
 PRIVASI
 • Nama, alamat rangkaian dan alamat MAC TV anda tidak pernah keluar dari iPhone anda, dan sandaran tidak menyalinnya.

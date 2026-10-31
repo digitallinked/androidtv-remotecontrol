@@ -57,7 +57,7 @@ PREMIUM
 • Premium removes ads and adds three colour styles: Ocean, Ember and Midnight, in light and dark.
 • Choose monthly, yearly or a one-time lifetime purchase. The app shows the price before you buy.
 • Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.
-• Banner ads only appear at the bottom of the Apps and Settings screens, never on the remote.
+• The free version shows banner ads at the bottom of the Apps and Settings screens. We may also switch on an occasional full-screen ad when you leave Settings, never while you pair a TV.
 
 PRIVACY
 • Your TVs' names, network addresses and MAC addresses never leave your phone, and backups don't copy them.
@@ -130,7 +130,7 @@ PREMIUM
 • Choose monthly, yearly or a one-time lifetime purchase. The app shows the price before you buy.
 • Subscriptions renew automatically until you cancel them in your App Store account settings.
 • Everything else stays free: every TV, every remote control, app shortcuts and the keyboard.
-• Banner ads only appear at the bottom of the Apps and Settings screens, never on the remote.
+• The free version shows banner ads at the bottom of the Apps and Settings screens. We may also switch on an occasional full-screen ad when you leave Settings, never while you pair a TV.
 
 PRIVACY
 • Your TVs' names, network addresses and MAC addresses never leave your iPhone, and backups don't copy them.
