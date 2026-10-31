@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/fitted_label.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
@@ -41,6 +43,7 @@ import '../helpers/fake_tv_discovery.dart';
 import '../helpers/gather_consent.dart';
 import '../helpers/in_memory_device_repository.dart';
 import '../helpers/in_memory_shortcut_repository.dart';
+import '../helpers/nonlinear_text_scaler.dart';
 import '../helpers/pseudo_localizations.dart';
 import '../helpers/pump_router_app.dart';
 import '../helpers/test_app_config.dart';
@@ -52,6 +55,7 @@ typedef _Look = ({
   Brightness brightness,
   Size size,
   double textScale,
+  TextScaler? textScaler,
   Locale? locale,
   List<LocalizationsDelegate<Object?>>? delegates,
 });
@@ -66,6 +70,7 @@ typedef _Screen = ({
 });
 
 const String _tvName = 'Living Room TV 3';
+const String _otherTvName = 'Bedroom TV';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
 const _offline = TvConnectionState(status: ConnectionStatus.offline);
@@ -73,14 +78,6 @@ const _offline = TvConnectionState(status: ConnectionStatus.offline);
 /// The colour and media rows need a taller screen: a 640 dp remote gives
 /// its pad the room and drops the quick row by design.
 const Set<String> _tallScreens = {'remote_colour_row', 'remote_media_row'};
-
-/// The parts of the app that Task 8.12 translates into Malay.
-const Set<String> _firstHalfGroups = {
-  'onboarding',
-  'discovery',
-  'pairing',
-  'remote',
-};
 
 /// A context inside the app's `Localizations`, on any screen (the update
 /// gate replaces the navigator).
@@ -126,6 +123,7 @@ Future<SettingsStore> _pump(
     initialLocation: route,
     brightness: look.brightness,
     textScale: look.textScale,
+    textScaler: look.textScaler,
     locale: look.locale,
     localizationsDelegates: look.delegates,
     settle: settle,
@@ -248,7 +246,7 @@ Future<FakeRemoteSession> _openRemote(
 }) async {
   final devices = [
     savedTv(),
-    savedTv(name: 'Bedroom TV', host: '192.168.0.21'),
+    savedTv(name: _otherTvName, host: '192.168.0.21'),
   ];
   final fake = FakeRemoteSession(
     pairingTarget: devices.first.toDiscoveredTv(),
@@ -798,7 +796,8 @@ final Map<String, _Screen> _screens = {
     ios: false,
     open: (t, look) async {
       await _pumpWithSavedTv(t, look, AppRoutes.manageApps);
-      await t.tap(find.byTooltip(_l(t).manageAppsEdit('Netflix')));
+      // At 200% the row can sit below the fold.
+      await _tap(t, find.byTooltip(_l(t).manageAppsEdit('Netflix')));
       await t.pumpAndSettle();
       _expectOn(find.text(_l(t).commonSave), 'edit shortcut');
     },
@@ -1048,26 +1047,31 @@ final Map<String, _Screen> _screens = {
 };
 
 /// Opens every screen of the sweep in turn, as [locale] (or with
-/// [delegates]' strings) at [textScale] on a [size] screen in
-/// [brightness], and calls [check] with each screen's name once it is on
-/// show. [groups] limits the sweep to those parts of the app.
-Future<void> forEachScreen(
+/// [delegates]' strings) at [textScale] (or with [textScaler]) on a [size]
+/// screen in [brightness], and calls [check] with each screen's name once it
+/// is on show. [groups] limits the sweep to those parts of the app.
+///
+/// Returns the names of the routes the screens were on.
+Future<Set<String?>> forEachScreen(
   WidgetTester t,
   Future<void> Function(String name) check, {
   Locale? locale,
   List<LocalizationsDelegate<Object?>>? delegates,
   double textScale = 1,
+  TextScaler? textScaler,
   Size size = const Size(320, 640),
   Brightness brightness = Brightness.light,
   Set<String>? groups,
 }) async {
   var opened = 0;
+  final routes = <String?>{};
   for (final MapEntry(key: name, value: screen) in _screens.entries) {
     if (groups != null && !groups.contains(screen.group)) continue;
     final look = (
       brightness: brightness,
       size: _tallScreens.contains(name) ? Size(size.width, 844) : size,
       textScale: textScale,
+      textScaler: textScaler,
       locale: locale,
       delegates: delegates,
     );
@@ -1075,6 +1079,12 @@ Future<void> forEachScreen(
     if (screen.ios) debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     try {
       await screen.open(t, look);
+      final router = ProviderScope.containerOf(
+        t.element(find.byType(MaterialApp)),
+      ).read(appRouterProvider);
+      // An address that matches no route has no state.
+      final matches = router.routerDelegate.currentConfiguration;
+      routes.add(matches.isEmpty ? null : router.state.name);
       await check(name);
     } finally {
       debugDefaultTargetPlatformOverride = previous;
@@ -1084,13 +1094,112 @@ Future<void> forEachScreen(
     opened++;
   }
   expect(opened, greaterThan(0), reason: 'the sweep opened screens');
+  return routes;
+}
+
+/// Every named route of the app was on show in [routes], so a new route
+/// has to join the sweep.
+void _expectEveryRoute(Set<String?> routes, String why) {
+  final missing = AppRouteNames.all.difference(routes);
+  expect(missing, isEmpty, reason: '$why: routes the sweep never opens');
+}
+
+/// The Malay strings are on show, the second half included.
+void _expectMalay(WidgetTester t, String name) {
+  expect(Localizations.localeOf(_inside(t)), const Locale('ms'), reason: name);
+  expect(_l(t).statusConnected, 'Disambungkan', reason: name);
+  expect(_l(t).paywallRestore, 'Pulihkan pembelian', reason: name);
+}
+
+/// Whether [paragraph] cuts its text: it ran past its lines, or is wider
+/// than its box on one line, or taller than its box.
+bool _truncated(RenderParagraph paragraph) {
+  final width = paragraph.size.width;
+  return paragraph.didExceedMaxLines ||
+      (!paragraph.softWrap &&
+          paragraph.getMaxIntrinsicWidth(double.infinity) > width + 0.5) ||
+      paragraph.getMaxIntrinsicHeight(width) > paragraph.size.height + 0.5;
+}
+
+/// The Remote layout page's preview: a scaled-down picture of the remote,
+/// one image to a screen reader, never tapped.
+final Finder _layoutPreview = find.byKey(const Key('layout_preview'));
+
+/// The `RichText`s under [of] that hold words; icons are text too, in their
+/// font, and have no words to lose. Text inside the layout preview is part
+/// of a picture, so it is left out; the real remote is checked on its own.
+Iterable<(Element, RenderParagraph)> _paragraphs(Finder of) sync* {
+  final inPicture = find
+      .descendant(of: _layoutPreview, matching: find.byType(RichText))
+      .evaluate()
+      .toSet();
+  for (final element
+      in find.descendant(of: of, matching: find.byType(RichText)).evaluate()) {
+    if (inPicture.contains(element)) continue;
+    final paragraph = element.renderObject! as RenderParagraph;
+    final text = paragraph.text.toPlainText();
+    if (text.trim().isEmpty || text.runes.length == 1) continue;
+    yield (element, paragraph);
+  }
+}
+
+/// [element]'s text is shown in full, or ends in an ellipsis and gives its
+/// full text to a screen reader (the Phase 7 rule). Semantics must be on.
+void _expectReadable(WidgetTester t, Element element, String why) {
+  final paragraph = element.renderObject! as RenderParagraph;
+  if (!_truncated(paragraph)) return;
+  final text = paragraph.text.toPlainText();
+  final reason = '$why: "$text" is cut';
+  expect(paragraph.overflow, TextOverflow.ellipsis, reason: reason);
+  final data = t
+      .getSemantics(find.byElementPredicate((e) => e == element))
+      .getSemanticsData();
+  expect(
+    '${data.label} ${data.tooltip}',
+    contains(text),
+    reason: '$reason: semantics "${data.label}" / "${data.tooltip}"',
+  );
+}
+
+/// App-bar titles may end in an ellipsis only with their full text in
+/// semantics; button labels are never cut.
+///
+/// Two kinds of button text follow the title rule instead, by design:
+/// - a TV name (the user's data, not our copy), such as the remote's TV
+///   switcher, ends in an ellipsis like a long TV name does everywhere
+///   (Task 8.4);
+/// - a `FittedLabel` (the pad tabs) ellipsises once it is back at its 100%
+///   size; `l10n_short_labels_test` checks with the real font that it
+///   doesn't at 100%.
+void _expectTitlesAndButtonsReadable(WidgetTester t, String why) {
+  for (final (element, _) in _paragraphs(find.byType(AppBar))) {
+    _expectReadable(t, element, '$why app-bar title');
+  }
+  final tvNames = {_tvName, _otherTvName, _l(t).demoTvName};
+  for (final (element, paragraph) in _paragraphs(
+    find.byWidgetPredicate((w) => w is ButtonStyleButton),
+  )) {
+    if (tvNames.contains(paragraph.text.toPlainText())) {
+      _expectReadable(t, element, '$why TV name');
+      continue;
+    }
+    if (element.findAncestorWidgetOfExactType<FittedLabel>() != null) {
+      _expectReadable(t, element, '$why fitted label');
+      continue;
+    }
+    expect(
+      _truncated(paragraph),
+      isFalse,
+      reason: '$why: button "${paragraph.text.toPlainText()}" is cut',
+    );
+  }
 }
 
 void main() {
   testWidgets('every_screen_fits_the_pseudo_locale_at_320dp', (t) async {
     for (final b in Brightness.values) {
       final seen = <String>[];
-      await forEachScreen(
+      final routes = await forEachScreen(
         t,
         (name) async {
           seen.add(name);
@@ -1106,34 +1215,72 @@ void main() {
         brightness: b,
       );
       expect(seen, _screens.keys.toList(), reason: 'every screen, ${b.name}');
+      _expectEveryRoute(routes, b.name);
     }
   });
 
-  testWidgets('malay_first_half_screens_fit_320dp_at_200_percent', (t) async {
-    for (final b in Brightness.values) {
+  testWidgets('every_screen_fits_320dp_in_malay_at_200_percent_text', (
+    t,
+  ) async {
+    await withSemantics(t, () async {
+      for (final b in Brightness.values) {
+        final seen = <String>[];
+        final routes = await forEachScreen(
+          t,
+          (name) async {
+            seen.add(name);
+            _expectMalay(t, name);
+            final why = '$name ${b.name}';
+            expectNoClipping(t, reason: why);
+            _expectTitlesAndButtonsReadable(t, why);
+          },
+          locale: const Locale('ms'),
+          textScale: 2,
+          brightness: b,
+        );
+        expect(seen, _screens.keys.toList(), reason: 'every screen, ${b.name}');
+        _expectEveryRoute(routes, b.name);
+      }
+    });
+  });
+
+  testWidgets('every_screen_fits_a_non_linear_text_scaler_in_malay', (
+    t,
+  ) async {
+    await withSemantics(t, () async {
+      for (final b in Brightness.values) {
+        final seen = <String>[];
+        await forEachScreen(
+          t,
+          (name) async {
+            seen.add(name);
+            _expectMalay(t, name);
+            final why = '$name ${b.name} non-linear';
+            expectNoClipping(t, reason: why);
+            _expectTitlesAndButtonsReadable(t, why);
+          },
+          locale: const Locale('ms'),
+          textScaler: const NonlinearTwoXScaler(),
+          brightness: b,
+        );
+        expect(seen, _screens.keys.toList(), reason: 'every screen, ${b.name}');
+      }
+    });
+  });
+
+  testWidgets('malay_screens_meet_the_guidelines', (t) async {
+    await withSemantics(t, () async {
       final seen = <String>[];
       await forEachScreen(
         t,
         (name) async {
           seen.add(name);
-          expect(
-            Localizations.localeOf(_inside(t)),
-            const Locale('ms'),
-            reason: name,
-          );
-          expect(_l(t).statusConnected, 'Disambungkan', reason: name);
-          expectNoClipping(t, reason: '$name ${b.name}');
+          _expectMalay(t, name);
+          await expectMeetsGuidelines(t, reason: name);
         },
         locale: const Locale('ms'),
-        textScale: 2,
-        brightness: b,
-        groups: _firstHalfGroups,
       );
-      expect(seen, [
-        for (final MapEntry(:key, :value) in _screens.entries)
-          if (_firstHalfGroups.contains(value.group)) key,
-      ], reason: 'every first-half screen, ${b.name}');
-      expect(seen, hasLength(greaterThanOrEqualTo(30)));
-    }
+      expect(seen, _screens.keys.toList(), reason: 'every screen');
+    });
   });
 }

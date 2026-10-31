@@ -66,7 +66,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Apl ini hanya mencari pada rangkaian Wi-Fi anda. Apl ini tidak pernah meminta lokasi anda.';
 
   @override
-  String get onboardingControlTitle => 'Kawal TV dari telefon anda';
+  String get onboardingControlTitle => 'Kawal TV menggunakan telefon anda';
 
   @override
   String get onboardingControlBody =>
@@ -84,7 +84,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get onboardingLocalNetworkBody =>
-      'Seterusnya, iPhone anda akan meminta kebenaran supaya apl ini dapat mencari peranti pada rangkaian setempat anda. Pilih Benarkan supaya apl ini dapat mencari TV anda. Anda boleh mengubahnya kemudian dalam Tetapan → Privasi & Keselamatan → Rangkaian Setempat.';
+      'Seterusnya, iPhone anda akan meminta kebenaran supaya apl ini dapat mencari peranti pada rangkaian setempat anda. Pilih Benarkan supaya apl ini dapat mencari TV anda. Anda boleh mengubahnya kemudian dalam Seting → Privasi & Keselamatan → Rangkaian Setempat.';
 
   @override
   String get onboardingContinue => 'Teruskan';
@@ -105,7 +105,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get demoLeaveConfirm => 'Keluar demo';
 
   @override
-  String get demoStay => 'Kekal';
+  String get demoStay => 'Terus di sini';
 
   @override
   String get tvPreviewTitle => 'Pratonton TV';
@@ -191,7 +191,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Pastikan Wi-Fi dihidupkan, kemudian imbas semula.';
 
   @override
-  String get troubleshootTitle => 'Tidak menemui TV anda?';
+  String get troubleshootTitle => 'Tidak dapat menemui TV anda?';
 
   @override
   String get troubleshootSameWifi =>
@@ -203,15 +203,15 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get troubleshootRemoteService =>
-      'Pada TV, pastikan \"Android TV Remote Service\" dipasang dan dikemas kini di Play Store.';
+      'Pada TV, pastikan \"Android TV Remote Service\" dipasang dan versinya terkini di Play Store.';
 
   @override
   String get troubleshootLocalNetwork =>
-      'Pada iPhone, benarkan akses Rangkaian Setempat untuk apl ini dalam Tetapan → Privasi & Keselamatan → Rangkaian Setempat.';
+      'Pada iPhone, benarkan akses Rangkaian Setempat untuk apl ini dalam Seting → Privasi & Keselamatan → Rangkaian Setempat.';
 
   @override
   String get troubleshootRestart =>
-      'Masih tiada? Mulakan semula TV dan penghala anda, kemudian imbas semula.';
+      'Masih tidak berjaya? Mulakan semula TV dan penghala anda, kemudian imbas semula.';
 
   @override
   String get troubleshootManualIp =>
@@ -222,7 +222,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String legacyBody(String tvName) {
-    return '$tvName menggunakan perkhidmatan alat kawalan jauh versi lama. Pada TV, buka Play Store, cari \"Android TV Remote Service\", kemas kininya, kemudian imbas semula.';
+    return '$tvName menggunakan perkhidmatan alat kawalan jauh versi lama. Pada TV, buka Play Store, cari \"Android TV Remote Service\" dan kemas kinikannya, kemudian imbas semula.';
   }
 
   @override
@@ -297,7 +297,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String remoteIdentityChangedMessage(String tvName) {
-    return '$tvName memberikan kunci keselamatan yang berbeza daripada semasa anda menggandingkannya. Jika TV itu telah ditetapkan semula atau diganti, gandingkannya semula.';
+    return '$tvName memberikan kunci keselamatan yang berbeza daripada kunci semasa anda menggandingkannya. Jika TV itu telah ditetapkan semula atau diganti, gandingkannya semula.';
   }
 
   @override
@@ -382,7 +382,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get keyPrevious => 'Sebelumnya';
 
   @override
-  String get keyRewind => 'Mundur';
+  String get keyRewind => 'Undur';
 
   @override
   String get keyFastForward => 'Mara laju';
@@ -409,7 +409,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get keySettings => 'Tetapan';
 
   @override
-  String get keyGuide => 'Panduan';
+  String get keyGuide => 'Panduan rancangan';
 
   @override
   String get keyInfo => 'Maklumat';
@@ -487,7 +487,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String pairNoResponseTitle(String tvName) {
-    return '$tvName tidak memberikan respons';
+    return '$tvName tidak bertindak balas';
   }
 
   @override
@@ -573,7 +573,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String quickAppNowOnTv(String app) {
-    return '$app, kini pada TV';
+    return '$app, kini dibuka pada TV';
   }
 
   @override
@@ -671,10 +671,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get quickAccessAllApps => 'Semua apl';
 
   @override
-  String get pageTitleManageApps => 'Edit apl';
+  String get pageTitleManageApps => 'Sunting apl';
 
   @override
-  String get pageTitleEditDevice => 'Edit TV';
+  String get pageTitleEditDevice => 'Sunting TV';
 
   @override
   String get pageTitleAppearance => 'Penampilan';
@@ -745,7 +745,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String manageAppsEdit(String app) {
-    return 'Edit $app';
+    return 'Sunting $app';
   }
 
   @override
@@ -776,738 +776,756 @@ class AppLocalizationsMs extends AppLocalizations {
   String get addAppCustom => 'Cipta pintasan tersuai';
 
   @override
-  String get addAppRecentTitle => 'Recently used on your TV';
+  String get addAppRecentTitle => 'Baru digunakan pada TV anda';
 
   @override
-  String get addAppRecentEmpty => 'Apps you open on your TV show up here.';
+  String get addAppRecentEmpty =>
+      'Apl yang anda buka pada TV akan dipaparkan di sini.';
 
   @override
-  String get addAppPopularTitle => 'Suggested apps';
+  String get addAppPopularTitle => 'Apl cadangan';
 
   @override
   String get addAppNoResults =>
-      'No apps found. If you know the app\'s ID, type it to add it.';
+      'Tiada apl ditemui. Jika anda tahu ID apl itu, taipkannya untuk menambahnya.';
 
   @override
   String addAppById(String package) {
-    return 'Add app ID \"$package\"';
+    return 'Tambah ID apl \"$package\"';
   }
 
   @override
   String addAppAdded(String app) {
-    return '$app added';
+    return '$app ditambah';
   }
 
   @override
-  String get addAppAlreadyAdded => 'Already on your list';
+  String get addAppAlreadyAdded => 'Sudah ada dalam senarai anda';
 
   @override
-  String get shortcutNewTitle => 'New shortcut';
+  String get shortcutNewTitle => 'Pintasan baharu';
 
   @override
-  String get shortcutEditTitle => 'Edit shortcut';
+  String get shortcutEditTitle => 'Sunting pintasan';
 
   @override
-  String get shortcutNameLabel => 'Name';
+  String get shortcutNameLabel => 'Nama';
 
   @override
-  String get shortcutNameError => 'Enter a name of up to 30 characters.';
+  String get shortcutNameError => 'Masukkan nama hingga 30 aksara.';
 
   @override
-  String get shortcutPackageLabel => 'App ID';
+  String get shortcutPackageLabel => 'ID apl';
 
   @override
   String get shortcutPackageHint => 'com.example.app';
 
   @override
   String get shortcutPackageHelp =>
-      'The app\'s ID on the TV. It\'s in the app\'s Play Store web address, after \"id=\".';
+      'ID apl itu pada TV. ID ini ada dalam alamat web apl itu di Play Store, selepas \"id=\".';
 
   @override
-  String get shortcutPackageError => 'Enter an app ID like com.example.app.';
+  String get shortcutPackageError => 'Masukkan ID apl seperti com.example.app.';
 
   @override
-  String get shortcutPackageTaken => 'This app is already on your list.';
+  String get shortcutPackageTaken => 'Apl ini sudah ada dalam senarai anda.';
 
   @override
-  String get shortcutColourLabel => 'Tile colour';
+  String get shortcutColourLabel => 'Warna jubin';
 
   @override
-  String get shortcutColourDefault => 'Default';
+  String get shortcutColourDefault => 'Lalai';
 
   @override
-  String get shortcutColourSlate => 'Slate';
+  String get shortcutColourSlate => 'Kelabu batu';
 
   @override
-  String get shortcutColourBlue => 'Blue';
+  String get shortcutColourBlue => 'Biru';
 
   @override
-  String get shortcutColourTeal => 'Teal';
+  String get shortcutColourTeal => 'Hijau kebiruan';
 
   @override
-  String get shortcutColourGreen => 'Green';
+  String get shortcutColourGreen => 'Hijau';
 
   @override
-  String get shortcutColourAmber => 'Amber';
+  String get shortcutColourAmber => 'Ambar';
 
   @override
-  String get shortcutColourOrange => 'Orange';
+  String get shortcutColourOrange => 'Oren';
 
   @override
-  String get shortcutColourRed => 'Red';
+  String get shortcutColourRed => 'Merah';
 
   @override
-  String get shortcutColourPurple => 'Purple';
+  String get shortcutColourPurple => 'Ungu';
 
   @override
-  String get shortcutIconLabel => 'Icon';
+  String get shortcutIconLabel => 'Ikon';
 
   @override
-  String get shortcutIconLetter => 'First letter';
+  String get shortcutIconLetter => 'Huruf pertama';
 
   @override
-  String get shortcutIconApp => 'App';
+  String get shortcutIconApp => 'Apl';
 
   @override
-  String get shortcutIconMovies => 'Movies';
+  String get shortcutIconMovies => 'Filem';
 
   @override
-  String get shortcutIconLive => 'Live TV';
+  String get shortcutIconLive => 'TV langsung';
 
   @override
-  String get shortcutIconSports => 'Sports';
+  String get shortcutIconSports => 'Sukan';
 
   @override
-  String get shortcutIconMusic => 'Music';
+  String get shortcutIconMusic => 'Muzik';
 
   @override
-  String get shortcutIconKids => 'Kids';
+  String get shortcutIconKids => 'Kanak-kanak';
 
   @override
-  String get shortcutIconNews => 'News';
+  String get shortcutIconNews => 'Berita';
 
   @override
-  String get shortcutIconGames => 'Games';
+  String get shortcutIconGames => 'Permainan';
 
   @override
-  String get shortcutIconLearning => 'Learning';
+  String get shortcutIconLearning => 'Pembelajaran';
 
   @override
-  String get shortcutPreview => 'Preview';
+  String get shortcutPreview => 'Pratonton';
 
   @override
-  String get shortcutSaved => 'Shortcut saved';
+  String get shortcutSaved => 'Pintasan disimpan';
 
   @override
-  String get devicesEmptyTitle => 'No TVs yet';
+  String get devicesEmptyTitle => 'Belum ada TV';
 
   @override
-  String get devicesLoadFailed => 'Couldn\'t load your TVs.';
+  String get devicesLoadFailed => 'Tidak dapat memuatkan TV anda.';
 
   @override
-  String get devicesEmptyBody => 'Pair a TV to control it from this phone.';
+  String get devicesEmptyBody =>
+      'Gandingkan TV untuk mengawalnya menggunakan telefon ini.';
 
   @override
-  String get devicesInUse => 'In use';
+  String get devicesInUse => 'Sedang digunakan';
 
   @override
   String devicesEditTv(String tvName) {
-    return 'Edit $tvName';
+    return 'Sunting $tvName';
   }
 
   @override
-  String get editDeviceNameLabel => 'Name on this phone';
+  String get editDeviceNameLabel => 'Nama pada telefon ini';
 
   @override
   String editDeviceNameHelp(String tvName) {
-    return 'Leave empty to use the TV\'s own name, $tvName.';
+    return 'Biarkan kosong untuk menggunakan nama TV itu sendiri, $tvName.';
   }
 
   @override
-  String get editDeviceNameError => 'Use 40 characters or fewer.';
+  String get editDeviceNameError => 'Gunakan 40 aksara atau kurang.';
 
   @override
-  String get editDeviceWolTitle => 'Turn on from your phone';
+  String get editDeviceWolTitle => 'Hidupkan dari telefon anda';
 
   @override
   String get editDeviceWolBody =>
-      'Add the TV\'s MAC address so the power key can wake it from standby.';
+      'Tambah alamat MAC TV supaya kekunci kuasa dapat menghidupkannya daripada mod tunggu sedia.';
 
   @override
-  String get editDeviceWolHelp => 'Where do I find it?';
+  String get editDeviceWolHelp => 'Di mana saya boleh mencarinya?';
 
   @override
   String get editDeviceWolUnavailable =>
-      'Turning the TV on from an iPhone isn\'t available yet. You can still save the address.';
+      'Menghidupkan TV dari iPhone belum tersedia lagi. Anda masih boleh menyimpan alamat ini.';
 
   @override
   String get wolMacTooLong =>
-      'That\'s longer than a MAC address. Check what you pasted.';
+      'Itu lebih panjang daripada alamat MAC. Semak apa yang anda tampal.';
 
   @override
-  String get wolHelpTitle => 'Find the TV\'s MAC address';
+  String get wolHelpTitle => 'Cari alamat MAC TV';
 
   @override
   String editDeviceLastAddress(String host) {
-    return 'Last address: $host';
+    return 'Alamat terakhir: $host';
   }
 
   @override
-  String get editDeviceSaved => 'Saved';
+  String get editDeviceSaved => 'Disimpan';
 
   @override
-  String get editDeviceSaveFailed => 'Couldn\'t save. Try again.';
+  String get editDeviceSaveFailed => 'Tidak dapat menyimpan. Cuba lagi.';
 
   @override
-  String get editDeviceRemove => 'Remove TV';
+  String get editDeviceRemove => 'Alih keluar TV';
 
   @override
-  String get editDeviceRemoveFailed => 'Couldn\'t remove this TV. Try again.';
+  String get editDeviceRemoveFailed =>
+      'Tidak dapat mengalih keluar TV ini. Cuba lagi.';
 
   @override
   String editDeviceRemoveTitle(String tvName) {
-    return 'Remove $tvName?';
+    return 'Alih keluar $tvName?';
   }
 
   @override
   String get editDeviceRemoveBody =>
-      'This phone forgets the TV and its settings. To use it again, pair it with a new code. The TV may still list this phone.';
+      'Telefon ini akan melupakan TV ini dan tetapannya. Untuk menggunakannya semula, gandingkannya dengan kod baharu. TV itu mungkin masih menyenaraikan telefon ini.';
 
   @override
-  String get editDeviceRemoveConfirm => 'Remove';
+  String get editDeviceRemoveConfirm => 'Alih keluar';
 
   @override
   String editDeviceRemoved(String tvName) {
-    return '$tvName removed';
+    return '$tvName dialih keluar';
   }
 
   @override
   String get editDeviceNotFound =>
-      'This TV isn\'t saved on this phone anymore.';
+      'TV ini tidak lagi disimpan pada telefon ini.';
 
   @override
-  String get editDeviceBackToTvs => 'Back to your TVs';
+  String get editDeviceBackToTvs => 'Kembali ke TV anda';
 
   @override
-  String get discoverOpenFailed => 'Couldn\'t open this TV. Try again.';
+  String get discoverOpenFailed => 'Tidak dapat membuka TV ini. Cuba lagi.';
 
   @override
-  String get settingsSectionRemote => 'Remote';
+  String get settingsSectionRemote => 'Alat kawalan jauh';
 
   @override
-  String get settingsSectionApp => 'App';
+  String get settingsSectionApp => 'Apl';
 
   @override
-  String get settingsSectionSupport => 'Help and feedback';
+  String get settingsSectionSupport => 'Bantuan dan maklum balas';
 
   @override
-  String get settingsSectionAbout => 'About';
+  String get settingsSectionAbout => 'Perihal';
 
   @override
   String get settingsRemoteLayoutSubtitle =>
-      'Touchpad or D-pad, and the row of keys above it';
+      'Pad sentuh atau D-pad, dan baris kekunci di atasnya';
 
   @override
   String get settingsRemoteBehaviourSubtitle =>
-      'Vibration, Smooth Press, screen and keyboard';
+      'Getaran, Smooth Press, skrin dan papan kekunci';
 
   @override
-  String get settingsAppsSubtitle => 'Choose and order your app shortcuts';
+  String get settingsAppsSubtitle => 'Pilih dan susun pintasan apl anda';
 
   @override
   String get settingsDevicesSubtitle =>
-      'Rename, remove, or turn on from your phone';
+      'Namakan semula, alih keluar atau hidupkan dari telefon anda';
 
   @override
-  String get settingsAppearanceSubtitle => 'Theme and language';
+  String get settingsAppearanceSubtitle => 'Tema dan bahasa';
 
   @override
-  String get settingsHelpSubtitle => 'Common questions and troubleshooting';
+  String get settingsHelpSubtitle => 'Soalan lazim dan penyelesaian masalah';
 
   @override
-  String get settingsFeedback => 'Send feedback';
+  String get settingsFeedback => 'Hantar maklum balas';
 
   @override
-  String get settingsFeedbackSubtitle => 'Write to us by email';
+  String get settingsFeedbackSubtitle => 'Tulis kepada kami melalui e-mel';
 
   @override
-  String get settingsAboutSubtitle => 'Version and licences';
+  String get settingsAboutSubtitle => 'Versi dan lesen';
 
   @override
-  String get settingsPrivacy => 'Privacy policy';
+  String get settingsPrivacy => 'Dasar privasi';
 
   @override
-  String get settingsTerms => 'Terms of use';
+  String get settingsTerms => 'Terma penggunaan';
 
   @override
-  String get settingsOpensInBrowser => 'Opens in your browser';
+  String get settingsOpensInBrowser => 'Dibuka dalam pelayar anda';
 
   @override
   String get settingsLinkFailed =>
-      'Couldn\'t open the page. Check your internet connection and try again.';
+      'Tidak dapat membuka halaman itu. Semak sambungan internet anda dan cuba lagi.';
 
   @override
-  String get appearanceTheme => 'Theme';
+  String get appearanceTheme => 'Tema';
 
   @override
-  String get appearanceThemeSystem => 'Same as phone';
+  String get appearanceThemeSystem => 'Sama seperti telefon';
 
   @override
-  String get appearanceThemeLight => 'Light';
+  String get appearanceThemeLight => 'Cerah';
 
   @override
-  String get appearanceThemeDark => 'Dark';
+  String get appearanceThemeDark => 'Gelap';
 
   @override
-  String get appearanceDynamicColour => 'Colours from wallpaper';
+  String get appearanceDynamicColour => 'Warna daripada kertas dinding';
 
   @override
   String get appearanceDynamicColourSubtitle =>
-      'Use your phone\'s wallpaper colours in the app.';
+      'Gunakan warna kertas dinding telefon anda dalam apl ini.';
 
   @override
-  String get appearanceLanguage => 'Language';
+  String get appearanceLanguage => 'Bahasa';
 
   @override
-  String get appearanceLanguageSystem => 'Same as phone';
+  String get appearanceLanguageSystem => 'Sama seperti telefon';
 
   @override
-  String get layoutPreviewTitle => 'Preview';
+  String get layoutPreviewTitle => 'Pratonton';
 
   @override
   String get layoutPreviewSemantics =>
-      'Preview of the remote with these choices';
+      'Pratonton alat kawalan jauh dengan pilihan ini';
 
   @override
-  String get layoutNavigation => 'Navigation';
+  String get layoutNavigation => 'Navigasi';
 
   @override
-  String get layoutTouchpadSubtitle => 'Swipe to move, tap to select.';
+  String get layoutTouchpadSubtitle =>
+      'Leret untuk bergerak, ketik untuk memilih.';
 
   @override
   String get layoutDpadSubtitle =>
-      'Arrow keys around an OK button, like a TV remote.';
+      'Kekunci anak panah di sekeliling butang OK, seperti alat kawalan jauh TV.';
 
   @override
-  String get layoutQuickAccess => 'Row above the pad';
+  String get layoutQuickAccess => 'Baris di atas pad';
 
   @override
-  String get layoutQuickApps => 'App shortcuts';
+  String get layoutQuickApps => 'Pintasan apl';
 
   @override
-  String get layoutQuickAppsSubtitle => 'Open your TV apps with one tap.';
+  String get layoutQuickAppsSubtitle => 'Buka apl TV anda dengan satu ketikan.';
 
   @override
-  String get layoutQuickColourSubtitle => 'Red, green, yellow and blue keys.';
+  String get layoutQuickColourSubtitle =>
+      'Kekunci merah, hijau, kuning dan biru.';
 
   @override
   String get layoutQuickMediaSubtitle =>
-      'Previous, rewind, play or pause, fast-forward and next.';
+      'Sebelumnya, undur, main atau jeda, mara laju dan seterusnya.';
 
   @override
-  String get layoutQuickNone => 'Nothing';
+  String get layoutQuickNone => 'Tiada';
 
   @override
-  String get layoutQuickNoneSubtitle => 'More room for the touchpad or D-pad.';
+  String get layoutQuickNoneSubtitle =>
+      'Lebih ruang untuk pad sentuh atau D-pad.';
 
   @override
-  String get behaviourHaptics => 'Vibrate on key press';
+  String get behaviourHaptics => 'Bergetar apabila kekunci ditekan';
 
   @override
   String get behaviourHapticsSubtitle =>
-      'A short vibration when a key reaches the TV.';
+      'Getaran pendek apabila kekunci sampai ke TV.';
 
   @override
   String get behaviourSmoothPress => 'Smooth Press';
 
   @override
   String get behaviourSmoothPressSubtitle =>
-      'Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.';
+      'Menahan kekunci kelantangan, saluran atau anak panah sama seperti menahan kekunci pada alat kawalan jauh TV. Apabila dimatikan, kekunci yang ditahan akan berulang.';
 
   @override
-  String get behaviourKeepAwake => 'Keep screen on';
+  String get behaviourKeepAwake => 'Biarkan skrin hidup';
 
   @override
   String get behaviourKeepAwakeSubtitle =>
-      'Your phone\'s screen stays on while the remote is open.';
+      'Skrin telefon anda kekal hidup semasa alat kawalan jauh dibuka.';
 
   @override
-  String get behaviourTheater => 'Theater mode';
+  String get behaviourTheater => 'Mod teater';
 
   @override
   String get behaviourTheaterSubtitle =>
-      'Dims your phone after 30 seconds without a touch. The first touch only brightens it.';
+      'Memalapkan telefon anda selepas 30 saat tanpa sentuhan. Sentuhan pertama hanya menerangkan skrin.';
 
   @override
-  String get behaviourAutoKeyboard => 'Open keyboard automatically';
+  String get behaviourAutoKeyboard => 'Buka papan kekunci secara automatik';
 
   @override
   String get behaviourAutoKeyboardSubtitle =>
-      'Opens the keyboard when the TV asks for text, like in a search box.';
+      'Membuka papan kekunci apabila TV meminta teks, seperti dalam kotak carian.';
 
   @override
-  String get helpCantConnectTitle => 'Can\'t connect?';
+  String get helpCantConnectTitle => 'Tidak dapat menyambung?';
 
   @override
   String get helpCantConnectBody =>
-      'Go through the checks one at a time. Most problems come from the Wi-Fi network or the TV\'s remote service.';
+      'Lakukan semakan satu demi satu. Kebanyakan masalah berpunca daripada rangkaian Wi-Fi atau perkhidmatan alat kawalan jauh TV.';
 
   @override
-  String get helpTroubleshootingAction => 'Show troubleshooting steps';
+  String get helpTroubleshootingAction =>
+      'Tunjukkan langkah penyelesaian masalah';
 
   @override
-  String get helpFaqTitle => 'Common questions';
+  String get helpFaqTitle => 'Soalan lazim';
 
   @override
-  String get helpStillStuck => 'Still stuck?';
+  String get helpStillStuck => 'Masih belum selesai?';
 
   @override
-  String get faqTvsQ => 'Which TVs does this app work with?';
+  String get faqTvsQ => 'TV manakah yang berfungsi dengan apl ini?';
 
   @override
   String get faqTvsA =>
-      'TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can\'t be controlled by this app.';
+      'TV dan kotak penstriman yang menjalankan Android TV atau Google TV, pada rangkaian Wi-Fi yang sama dengan telefon anda. TV dengan sistem lain, seperti Samsung (Tizen), LG (webOS), Roku atau Fire TV, tidak dapat dikawal oleh apl ini.';
 
   @override
-  String get faqNotFoundQ => 'My TV isn\'t in the list.';
+  String get faqNotFoundQ => 'TV saya tiada dalam senarai.';
 
   @override
   String get faqNotFoundA =>
-      'Make sure the TV is on and connected to the same Wi-Fi as your phone, and that \"Android TV Remote Service\" is up to date on the TV. You can also add the TV by its IP address. The troubleshooting steps go through each check.';
+      'Pastikan TV dihidupkan dan disambungkan ke Wi-Fi yang sama dengan telefon anda, dan \"Android TV Remote Service\" pada TV ialah versi terkini. Anda juga boleh menambah TV itu melalui alamat IPnya. Langkah penyelesaian masalah membawa anda melalui setiap semakan.';
 
   @override
-  String get faqCodeQ => 'Why does the TV ask for a code again?';
+  String get faqCodeQ => 'Mengapakah TV meminta kod sekali lagi?';
 
   @override
   String get faqCodeA =>
-      'Pairing makes the TV and this phone trust each other. Clearing the app\'s data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.';
+      'Penggandingan membuatkan TV dan telefon ini saling mempercayai. Mengosongkan data apl, memasang semula apl atau menetapkan semula TV akan membuang kepercayaan itu, jadi anda perlu menggandingkannya sekali lagi dengan kod baharu.';
 
   @override
-  String get faqPowerQ => 'Why can\'t the app turn my TV on?';
+  String get faqPowerQ =>
+      'Mengapakah apl ini tidak dapat menghidupkan TV saya?';
 
   @override
   String get faqPowerA =>
-      'A TV that is fully off can\'t hear the app. The app can send a wake-up signal if you add the TV\'s MAC address under Settings → Your TVs, but some TVs ignore it in deep standby. On iPhone this isn\'t available yet.';
+      'TV yang dimatikan sepenuhnya tidak dapat menerima isyarat daripada apl ini. Apl ini boleh menghantar isyarat untuk menghidupkan TV jika anda menambah alamat MAC TV di bawah Tetapan → TV anda, tetapi sesetengah TV mengabaikannya dalam mod tunggu sedia mendalam. Pada iPhone, ciri ini belum tersedia lagi.';
 
   @override
-  String get faqTypingQ => 'What I type doesn\'t show up on the TV.';
+  String get faqTypingQ => 'Apa yang saya taip tidak muncul pada TV.';
 
   @override
   String get faqTypingA =>
-      'Select a text field on the TV first, such as a search box. When the TV asks for text, the keyboard opens on your phone by itself.';
+      'Pilih medan teks pada TV dahulu, seperti kotak carian. Apabila TV meminta teks, papan kekunci akan terbuka pada telefon anda dengan sendirinya.';
 
   @override
-  String get faqAppQ => 'An app shortcut doesn\'t open.';
+  String get faqAppQ => 'Pintasan apl tidak dapat dibuka.';
 
   @override
   String get faqAppA =>
-      'The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.';
+      'Apl itu mesti dipasang pada TV. Sesetengah apl mempunyai versi berbeza bagi setiap negara: tambah versi yang betul melalui ID aplnya di bawah Tetapan → Apl.';
 
   @override
-  String get faqPrivacyQ => 'What does the app keep about my TV?';
+  String get faqPrivacyQ =>
+      'Apakah yang disimpan oleh apl ini tentang TV saya?';
 
   @override
   String get faqPrivacyA =>
-      'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.';
+      'Nama, alamat rangkaian dan alamat MAC TV anda kekal pada telefon ini. Apl ini boleh menghantar statistik penggunaan dan laporan ranap tanpa nama, yang tidak pernah mengandungi maklumat itu. Anda boleh menghidupkan atau mematikan setiap satu dalam Tetapan → Pilihan privasi.';
 
   @override
-  String get faqNewPhoneQ => 'I moved to a new phone. Where are my TVs?';
+  String get faqNewPhoneQ =>
+      'Saya bertukar ke telefon baharu. Di manakah TV saya?';
 
   @override
   String get faqNewPhoneA =>
-      'Your TVs and their pairing stay on the phone you paired them with. They aren\'t copied by backups or when you move to a new phone, so pair each TV again on the new phone.';
+      'TV anda dan penggandingannya kekal pada telefon yang anda gunakan untuk menggandingkannya. Semua itu tidak disalin oleh sandaran atau apabila anda bertukar ke telefon baharu, jadi gandingkan setiap TV sekali lagi pada telefon baharu itu.';
 
   @override
   String aboutVersion(String version, String build) {
-    return 'Version $version ($build)';
+    return 'Versi $version ($build)';
   }
 
   @override
-  String get aboutVersionUnknown => 'Version unavailable';
+  String get aboutVersionUnknown => 'Versi tidak tersedia';
 
   @override
-  String get aboutLicences => 'Open-source licences';
+  String get aboutLicences => 'Lesen sumber terbuka';
 
   @override
   String get aboutProtocol =>
-      'Talks to your TV over Wi-Fi with the Android TV Remote protocol. Its message formats come from the open-source androidtvremote2 project.';
+      'Berhubung dengan TV anda melalui Wi-Fi menggunakan protokol Android TV Remote. Format mesejnya diambil daripada projek sumber terbuka androidtvremote2.';
 
   @override
   String get aboutTrademark =>
-      'Android TV and Google TV are trademarks of Google LLC. This app isn\'t made or endorsed by Google.';
+      'Android TV dan Google TV ialah tanda dagangan Google LLC. Apl ini tidak dibuat atau disokong oleh Google.';
 
   @override
-  String get feedbackTitle => 'Send feedback?';
+  String get feedbackTitle => 'Hantar maklum balas?';
 
   @override
   String get feedbackBody =>
-      'Your email app opens with a message to us. It includes the app version and your phone\'s system version, and nothing about your TV.';
+      'Apl e-mel anda akan dibuka dengan mesej kepada kami. Mesej itu mengandungi versi apl dan versi sistem telefon anda, dan tiada apa-apa tentang TV anda.';
 
   @override
-  String get feedbackConfirm => 'Write email';
+  String get feedbackConfirm => 'Tulis e-mel';
 
   @override
   String feedbackSubject(String appName, String version) {
-    return 'Feedback on $appName $version';
+    return 'Maklum balas tentang $appName $version';
   }
 
   @override
-  String get feedbackPrompt => 'Write your message here.';
+  String get feedbackPrompt => 'Tulis mesej anda di sini.';
 
   @override
   String feedbackNoEmailApp(String email) {
-    return 'No email app found. Write to us at $email.';
+    return 'Tiada apl e-mel ditemui. Tulis kepada kami di $email.';
   }
 
   @override
-  String get settingsPremiumSubtitle => 'No ads and extra colour styles';
+  String get settingsPremiumSubtitle => 'Tanpa iklan dan gaya warna tambahan';
 
   @override
-  String get settingsPremiumActiveSubtitle => 'You have Premium. Thank you!';
+  String get settingsPremiumActiveSubtitle =>
+      'Anda mempunyai Premium. Terima kasih!';
 
   @override
-  String get pageTitlePrivacyChoices => 'Privacy choices';
+  String get pageTitlePrivacyChoices => 'Pilihan privasi';
 
   @override
   String get settingsPrivacyChoicesSubtitle =>
-      'Usage statistics, crash reports and ads';
+      'Statistik penggunaan, laporan ranap dan iklan';
 
   @override
-  String get aboutTestCrash => 'Send a test crash report';
+  String get aboutTestCrash => 'Hantar laporan ranap ujian';
 
   @override
   String get aboutTestCrashSent =>
-      'Test crash report sent. It shows in Crashlytics within a few minutes.';
+      'Laporan ranap ujian dihantar. Laporan itu akan muncul dalam Crashlytics dalam beberapa minit.';
 
   @override
   String get privacyIntro =>
-      'Choose what the app may share. Your TV\'s name, network address and MAC address never leave this phone.';
+      'Pilih perkara yang boleh dikongsi oleh apl ini. Nama, alamat rangkaian dan alamat MAC TV anda tidak pernah keluar dari telefon ini.';
 
   @override
-  String get privacySectionImprove => 'Help improve the app';
+  String get privacySectionImprove => 'Bantu menambah baik apl ini';
 
   @override
-  String get privacyUsageTitle => 'Share usage statistics';
+  String get privacyUsageTitle => 'Kongsi statistik penggunaan';
 
   @override
   String get privacyUsageSubtitle =>
-      'Anonymous counts of the screens and features you use. Never what you type or anything about your TV.';
+      'Kiraan tanpa nama bagi skrin dan ciri yang anda gunakan. Tidak termasuk apa yang anda taip atau apa-apa tentang TV anda.';
 
   @override
-  String get privacyCrashTitle => 'Share crash reports';
+  String get privacyCrashTitle => 'Kongsi laporan ranap';
 
   @override
   String get privacyCrashSubtitle =>
-      'Sent when something goes wrong, so it can be fixed. Names, addresses and codes are removed first.';
+      'Dihantar apabila berlaku masalah supaya masalah itu dapat dibaiki. Nama, alamat dan kod dibuang terlebih dahulu.';
 
   @override
   String get privacyServicesOff =>
-      'This build of the app doesn\'t send usage statistics or crash reports.';
+      'Binaan apl ini tidak menghantar statistik penggunaan atau laporan ranap.';
 
   @override
-  String get privacySectionAds => 'Ads';
+  String get privacySectionAds => 'Iklan';
 
   @override
   String get privacyAdsInfo =>
-      'The free app shows a banner ad at the bottom of the Apps and Settings screens only.';
+      'Apl percuma memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan sahaja.';
 
   @override
-  String get privacyAdsPremium => 'You have Premium, so the app shows no ads.';
+  String get privacyAdsPremium =>
+      'Anda mempunyai Premium, jadi apl ini tidak memaparkan iklan.';
 
   @override
-  String get privacyAdChoices => 'Ad privacy choices';
+  String get privacyAdChoices => 'Pilihan privasi iklan';
 
   @override
-  String get privacyAdChoicesSubtitle => 'Choose how ads are picked for you.';
+  String get privacyAdChoicesSubtitle => 'Pilih cara iklan dipilih untuk anda.';
 
   @override
   String get privacyAdChoicesFailed =>
-      'Couldn\'t open ad privacy choices. Check your internet connection and try again.';
+      'Tidak dapat membuka pilihan privasi iklan. Semak sambungan internet anda dan cuba lagi.';
 
   @override
-  String get privacyRemoveAds => 'Remove ads with Premium';
+  String get privacyRemoveAds => 'Buang iklan dengan Premium';
 
   @override
-  String get privacyTrackingTitle => 'Ad tracking';
+  String get privacyTrackingTitle => 'Penjejakan iklan';
 
   @override
   String get privacyTrackingAllowed =>
-      'Allowed. You can change this in your iPhone\'s Settings.';
+      'Dibenarkan. Anda boleh mengubahnya dalam Seting iPhone anda.';
 
   @override
   String get privacyTrackingDenied =>
-      'Not allowed. You can change this in your iPhone\'s Settings.';
+      'Tidak dibenarkan. Anda boleh mengubahnya dalam Seting iPhone anda.';
 
   @override
   String get privacyTrackingNotDetermined =>
-      'Not chosen yet. The app asks before it first shows an ad.';
+      'Belum dipilih. Apl ini akan bertanya sebelum memaparkan iklan buat kali pertama.';
 
   @override
-  String get privacyTrackingRestricted => 'Turned off on this iPhone.';
+  String get privacyTrackingRestricted => 'Dimatikan pada iPhone ini.';
 
   @override
-  String get privacyOpensSettings => 'Opens your phone\'s Settings';
+  String get privacyOpensSettings => 'Membuka Seting telefon anda';
 
   @override
-  String get trackingPrepromptTitle => 'About ads in this app';
+  String get trackingPrepromptTitle => 'Tentang iklan dalam apl ini';
 
   @override
   String get trackingPrepromptBody =>
-      'The free app shows a small ad at the bottom of this screen. Next, your iPhone asks whether the app may use your activity in other apps to choose ads. You see the same number of ads whatever you choose, and the remote works the same.';
+      'Apl percuma memaparkan iklan kecil di bahagian bawah skrin ini. Seterusnya, iPhone anda akan bertanya sama ada apl ini boleh menggunakan aktiviti anda dalam apl lain untuk memilih iklan. Bilangan iklan yang anda lihat tetap sama walau apa pun pilihan anda, dan alat kawalan jauh berfungsi seperti biasa.';
 
   @override
-  String get trackingPrepromptContinue => 'Continue';
+  String get trackingPrepromptContinue => 'Teruskan';
 
   @override
-  String get adLabel => 'Advertisement';
+  String get adLabel => 'Iklan';
 
   @override
-  String get paywallHeadline => 'Make the remote yours';
+  String get paywallHeadline => 'Jadikan alat kawalan jauh milik anda';
 
   @override
   String get paywallSubhead =>
-      'Premium removes ads, adds colour styles and supports the app\'s development.';
+      'Premium membuang iklan, menambah gaya warna dan menyokong pembangunan apl ini.';
 
   @override
-  String get paywallBenefitNoAds => 'No ads';
+  String get paywallBenefitNoAds => 'Tanpa iklan';
 
   @override
   String get paywallBenefitNoAdsBody =>
-      'No banner on the Apps and Settings screens.';
+      'Tiada sepanduk pada skrin Apl dan Tetapan.';
 
   @override
-  String get paywallBenefitStyles => 'Colour styles';
+  String get paywallBenefitStyles => 'Gaya warna';
 
   @override
   String get paywallBenefitStylesBody =>
-      'Ocean, Ember and Midnight, in light and dark.';
+      'Ocean, Ember dan Midnight, dalam mod cerah dan gelap.';
 
   @override
   String get paywallFreeForever =>
-      'Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.';
+      'Semua yang lain kekal percuma: setiap TV, semua kawalan alat kawalan jauh, pintasan apl, papan kekunci dan menghidupkan TV anda.';
 
   @override
-  String get paywallChoosePlan => 'Choose a plan';
+  String get paywallChoosePlan => 'Pilih pelan';
 
   @override
-  String get paywallPlanMonthly => 'Monthly';
+  String get paywallPlanMonthly => 'Bulanan';
 
   @override
-  String get paywallPlanYearly => 'Yearly';
+  String get paywallPlanYearly => 'Tahunan';
 
   @override
-  String get paywallPlanLifetime => 'Lifetime';
+  String get paywallPlanLifetime => 'Seumur hidup';
 
   @override
   String paywallPricePerMonth(String price) {
-    return '$price per month';
+    return '$price sebulan';
   }
 
   @override
   String paywallPricePerYear(String price) {
-    return '$price per year';
+    return '$price setahun';
   }
 
   @override
   String paywallPriceOnce(String price) {
-    return '$price, one payment';
+    return '$price, sekali bayar';
   }
 
   @override
-  String get paywallRenewsMonthly => 'Renews every month until you cancel.';
+  String get paywallRenewsMonthly =>
+      'Diperbaharui setiap bulan sehingga anda membatalkannya.';
 
   @override
-  String get paywallRenewsYearly => 'Renews every year until you cancel.';
+  String get paywallRenewsYearly =>
+      'Diperbaharui setiap tahun sehingga anda membatalkannya.';
 
   @override
-  String get paywallLifetimeTerms => 'Pay once. No subscription.';
+  String get paywallLifetimeTerms => 'Bayar sekali. Tiada langganan.';
 
   @override
-  String get paywallBestValue => 'Best value';
+  String get paywallBestValue => 'Nilai terbaik';
 
   @override
   String paywallSavePercent(int percent) {
-    return 'Save $percent%';
+    return 'Jimat $percent%';
   }
 
   @override
-  String get paywallContinue => 'Continue';
+  String get paywallContinue => 'Teruskan';
 
   @override
-  String get paywallRestore => 'Restore purchases';
+  String get paywallRestore => 'Pulihkan pembelian';
 
   @override
   String get paywallTermsAndroid =>
-      'Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, and you keep Premium until the end of the period you paid for.';
+      'Bayaran dikenakan pada akaun Google Play anda. Langganan diperbaharui secara automatik sehingga anda membatalkannya dalam Google Play, dan anda kekal mendapat Premium sehingga akhir tempoh yang telah anda bayar.';
 
   @override
   String get paywallTermsIos =>
-      'Payment is charged to your Apple ID. Subscriptions renew automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel them in your Apple ID settings.';
+      'Bayaran dikenakan pada Apple ID anda. Langganan diperbaharui secara automatik melainkan anda membatalkannya sekurang-kurangnya 24 jam sebelum tempoh semasa tamat. Urus atau batalkan langganan dalam seting Apple ID anda.';
 
   @override
-  String get paywallLoading => 'Loading plans…';
+  String get paywallLoading => 'Memuatkan pelan…';
 
   @override
-  String get paywallUnavailableTitle => 'Premium isn\'t available right now';
+  String get paywallUnavailableTitle => 'Premium tidak tersedia buat masa ini';
 
   @override
   String get paywallUnavailableBody =>
-      'Check your internet connection and try again.';
+      'Semak sambungan internet anda dan cuba lagi.';
 
   @override
-  String get paywallPurchasing => 'Confirming your purchase…';
+  String get paywallPurchasing => 'Mengesahkan pembelian anda…';
 
   @override
-  String get paywallRestoring => 'Restoring your purchases…';
+  String get paywallRestoring => 'Memulihkan pembelian anda…';
 
   @override
-  String get paywallWelcome => 'Welcome to Premium. Thank you!';
+  String get paywallWelcome => 'Selamat datang ke Premium. Terima kasih!';
 
   @override
   String get paywallPending =>
-      'Your purchase is waiting for approval. Premium starts as soon as it\'s complete.';
+      'Pembelian anda sedang menunggu kelulusan. Premium akan bermula sebaik sahaja pembelian itu selesai.';
 
   @override
-  String get paywallFailed => 'The purchase didn\'t go through. Try again.';
+  String get paywallFailed => 'Pembelian tidak berjaya. Cuba lagi.';
 
   @override
   String get paywallNetworkError =>
-      'Couldn\'t reach the store. Check your internet connection and try again.';
+      'Tidak dapat menghubungi gedung apl. Semak sambungan internet anda dan cuba lagi.';
 
   @override
-  String get paywallNotAllowed => 'Purchases aren\'t allowed on this phone.';
+  String get paywallNotAllowed =>
+      'Pembelian tidak dibenarkan pada telefon ini.';
 
   @override
   String get paywallAlreadyOwned =>
-      'You already own Premium. Tap Restore purchases to get it back.';
+      'Anda sudah memiliki Premium. Ketik Pulihkan pembelian untuk mendapatkannya semula.';
 
   @override
-  String get paywallRestored => 'Purchases restored. You have Premium.';
+  String get paywallRestored => 'Pembelian dipulihkan. Anda mempunyai Premium.';
 
   @override
-  String get paywallNothingToRestore => 'No purchases found for this account.';
+  String get paywallNothingToRestore =>
+      'Tiada pembelian ditemui untuk akaun ini.';
 
   @override
-  String get paywallRestoreFailed => 'Couldn\'t restore purchases. Try again.';
+  String get paywallRestoreFailed =>
+      'Tidak dapat memulihkan pembelian. Cuba lagi.';
 
   @override
-  String get paywallActiveTitle => 'You have Premium';
+  String get paywallActiveTitle => 'Anda mempunyai Premium';
 
   @override
   String get paywallActiveBody =>
-      'Thank you for supporting the app. There are no ads, and every colour style is yours.';
+      'Terima kasih kerana menyokong apl ini. Tiada iklan, dan setiap gaya warna milik anda.';
 
   @override
-  String get paywallActiveLifetime => 'Lifetime Premium: it never expires.';
+  String get paywallActiveLifetime =>
+      'Premium seumur hidup: tidak akan tamat tempoh.';
 
   @override
-  String get paywallManageSubscription => 'Manage subscription';
+  String get paywallManageSubscription => 'Urus langganan';
 
   @override
-  String get appearanceStyle => 'Colour style';
+  String get appearanceStyle => 'Gaya warna';
 
   @override
-  String get appearanceStyleStandard => 'Standard';
+  String get appearanceStyleStandard => 'Lalai';
 
   @override
   String get appearanceStyleOcean => 'Ocean';
@@ -1519,34 +1537,34 @@ class AppLocalizationsMs extends AppLocalizations {
   String get appearanceStyleMidnight => 'Midnight';
 
   @override
-  String get appearanceStyleLocked => 'Included with Premium';
+  String get appearanceStyleLocked => 'Termasuk dalam Premium';
 
   @override
   String get appearanceStyleWallpaperOn =>
-      'Colours from wallpaper are on, so colour styles don\'t show.';
+      'Warna daripada kertas dinding dihidupkan, jadi gaya warna tidak dipaparkan.';
 
   @override
-  String get updateRequiredTitle => 'Update required';
+  String get updateRequiredTitle => 'Kemas kini diperlukan';
 
   @override
   String get updateRequiredBody =>
-      'This version of the app is too old to keep working reliably. Update to the latest version to continue.';
+      'Versi apl ini terlalu lama untuk terus berfungsi dengan baik. Kemas kini kepada versi terkini untuk meneruskan.';
 
   @override
-  String get updateRequiredAction => 'Update';
+  String get updateRequiredAction => 'Kemas kini';
 
   @override
   String get updateRequiredFailed =>
-      'Couldn\'t open the store. Update the app from your phone\'s app store.';
+      'Tidak dapat membuka gedung apl. Kemas kini apl ini daripada gedung apl telefon anda.';
 
   @override
-  String get loadingLabel => 'Loading…';
+  String get loadingLabel => 'Memuatkan…';
 
   @override
-  String get manageAppsMoreOptions => 'More options';
+  String get manageAppsMoreOptions => 'Lagi pilihan';
 
   @override
   String manageAppsMoved(String app, int position, int count) {
-    return '$app moved to position $position of $count';
+    return '$app dialihkan ke kedudukan $position daripada $count';
   }
 }

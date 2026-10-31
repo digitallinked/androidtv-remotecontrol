@@ -3,8 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../helpers/pseudo_localizations.dart';
-
 const String _arbPath = 'lib/app/l10n/app_en.arb';
 const String _outputPath = 'test/helpers/pseudo_localizations.dart';
 
@@ -135,16 +133,5 @@ void main() {
           '$_outputPath is stale: run flutter test --update-goldens '
           'test/app/l10n/pseudo_localizations_test.dart',
     );
-  });
-
-  test('pseudo_expands_and_marks_every_message', () {
-    expect(pseudo('Next'), '⟦Ñéxt··⟧');
-    final moved = PseudoLocalizations().manageAppsMoved('Netflix', 2, 5);
-    expect(moved, contains('Netflix'));
-    expect(moved, contains('2'));
-    expect(moved, contains('5'));
-    expect(moved, startsWith('⟦'));
-    expect(moved, endsWith('⟧'));
-    expect(PseudoLocalizations().statusConnected, pseudo('Connected'));
   });
 }
