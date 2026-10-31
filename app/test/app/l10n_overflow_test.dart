@@ -30,6 +30,7 @@ import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 
 import '../helpers/a11y.dart';
@@ -1154,26 +1155,38 @@ void _expectReadable(WidgetTester t, Element element, String why) {
   final data = t
       .getSemantics(find.byElementPredicate((e) => e == element))
       .getSemanticsData();
+  // A field's hint and value count: a screen reader reads them out.
+  final spoken = [data.label, data.tooltip, data.hint, data.value];
   expect(
-    '${data.label} ${data.tooltip}',
+    spoken.join(' '),
     contains(text),
-    reason: '$reason: semantics "${data.label}" / "${data.tooltip}"',
+    reason: '$reason: semantics ${spoken.map((s) => '"$s"').join(' / ')}',
   );
 }
 
-/// App-bar titles may end in an ellipsis only with their full text in
-/// semantics; button labels are never cut.
+/// App-bar, dialog and sheet titles may end in an ellipsis only with their
+/// full text in semantics; button labels are never cut.
 ///
 /// Two kinds of button text follow the title rule instead, by design:
 /// - a TV name (the user's data, not our copy), such as the remote's TV
 ///   switcher, ends in an ellipsis like a long TV name does everywhere
 ///   (Task 8.4);
-/// - a `FittedLabel` (the pad tabs) ellipsises once it is back at its 100%
-///   size; `l10n_short_labels_test` checks with the real font that it
-///   doesn't at 100%.
+/// - a pad tab's `FittedLabel` (in the `SegmentedButton<PadPage>`)
+///   ellipsises once it is back at its 100% size; `l10n_short_labels_test`
+///   checks with the real font that it doesn't at 100%.
+///
+/// Dialog and sheet text follows the title rule too.
 void _expectTitlesAndButtonsReadable(WidgetTester t, String why) {
   for (final (element, _) in _paragraphs(find.byType(AppBar))) {
     _expectReadable(t, element, '$why app-bar title');
+  }
+  // Dialogs and sheets: their titles, and everything else in them, are
+  // shown in full or ellipsised with the full text in semantics.
+  for (final (element, _) in _paragraphs(find.byType(Dialog))) {
+    _expectReadable(t, element, '$why dialog');
+  }
+  for (final (element, _) in _paragraphs(find.byType(BottomSheet))) {
+    _expectReadable(t, element, '$why sheet');
   }
   final tvNames = {_tvName, _otherTvName, _l(t).demoTvName};
   for (final (element, paragraph) in _paragraphs(
@@ -1183,8 +1196,12 @@ void _expectTitlesAndButtonsReadable(WidgetTester t, String why) {
       _expectReadable(t, element, '$why TV name');
       continue;
     }
-    if (element.findAncestorWidgetOfExactType<FittedLabel>() != null) {
-      _expectReadable(t, element, '$why fitted label');
+    // Only the pad tabs: any other FittedLabel button has no real-font
+    // test behind it, so it gets the button rule.
+    if (element.findAncestorWidgetOfExactType<FittedLabel>() != null &&
+        element.findAncestorWidgetOfExactType<SegmentedButton<PadPage>>() !=
+            null) {
+      _expectReadable(t, element, '$why pad tab');
       continue;
     }
     expect(

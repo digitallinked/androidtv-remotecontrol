@@ -594,7 +594,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String wolSetupTitle(String tvName) {
-    return 'Hidupkan $tvName dari telefon anda';
+    return 'Hidupkan $tvName melalui telefon anda';
   }
 
   @override
@@ -776,7 +776,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get addAppCustom => 'Cipta pintasan tersuai';
 
   @override
-  String get addAppRecentTitle => 'Baru digunakan pada TV anda';
+  String get addAppRecentTitle => 'Digunakan baru-baru ini pada TV anda';
 
   @override
   String get addAppRecentEmpty =>
@@ -929,7 +929,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get editDeviceNameError => 'Gunakan 40 aksara atau kurang.';
 
   @override
-  String get editDeviceWolTitle => 'Hidupkan dari telefon anda';
+  String get editDeviceWolTitle => 'Hidupkan melalui telefon anda';
 
   @override
   String get editDeviceWolBody =>
@@ -940,7 +940,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get editDeviceWolUnavailable =>
-      'Menghidupkan TV dari iPhone belum tersedia lagi. Anda masih boleh menyimpan alamat ini.';
+      'Menghidupkan TV melalui iPhone belum tersedia lagi. Anda masih boleh menyimpan alamat ini.';
 
   @override
   String get wolMacTooLong =>
@@ -1019,7 +1019,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsDevicesSubtitle =>
-      'Namakan semula, alih keluar atau hidupkan dari telefon anda';
+      'Namakan semula, alih keluar atau hidupkan melalui telefon anda';
 
   @override
   String get settingsAppearanceSubtitle => 'Tema dan bahasa';
@@ -1114,7 +1114,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get layoutQuickNoneSubtitle =>
-      'Lebih ruang untuk pad sentuh atau D-pad.';
+      'Lebih banyak ruang untuk pad sentuh atau D-pad.';
 
   @override
   String get behaviourHaptics => 'Bergetar apabila kekunci ditekan';
@@ -1142,7 +1142,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get behaviourTheaterSubtitle =>
-      'Memalapkan telefon anda selepas 30 saat tanpa sentuhan. Sentuhan pertama hanya menerangkan skrin.';
+      'Memalapkan skrin telefon anda selepas 30 saat tanpa sentuhan. Sentuhan pertama hanya mencerahkan skrin semula.';
 
   @override
   String get behaviourAutoKeyboard => 'Buka papan kekunci secara automatik';
@@ -1180,7 +1180,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get faqNotFoundA =>
-      'Pastikan TV dihidupkan dan disambungkan ke Wi-Fi yang sama dengan telefon anda, dan \"Android TV Remote Service\" pada TV ialah versi terkini. Anda juga boleh menambah TV itu melalui alamat IPnya. Langkah penyelesaian masalah membawa anda melalui setiap semakan.';
+      'Pastikan TV dihidupkan dan disambungkan ke Wi-Fi yang sama dengan telefon anda, dan \"Android TV Remote Service\" pada TV ialah versi terkini. Anda juga boleh menambah TV itu melalui alamat IP-nya. Langkah penyelesaian masalah membawa anda melalui setiap semakan.';
 
   @override
   String get faqCodeQ => 'Mengapakah TV meminta kod sekali lagi?';
@@ -1225,7 +1225,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get faqNewPhoneA =>
-      'TV anda dan penggandingannya kekal pada telefon yang anda gunakan untuk menggandingkannya. Semua itu tidak disalin oleh sandaran atau apabila anda bertukar ke telefon baharu, jadi gandingkan setiap TV sekali lagi pada telefon baharu itu.';
+      'TV anda dan penggandingannya kekal pada telefon yang anda gunakan untuk menggandingkannya. Semua itu tidak disalin dalam sandaran atau apabila anda bertukar ke telefon baharu, jadi gandingkan setiap TV sekali lagi pada telefon baharu itu.';
 
   @override
   String aboutVersion(String version, String build) {
@@ -1244,7 +1244,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get aboutTrademark =>
-      'Android TV dan Google TV ialah tanda dagangan Google LLC. Apl ini tidak dibuat atau disokong oleh Google.';
+      'Android TV dan Google TV ialah tanda dagangan Google LLC. Apl ini tidak dibuat atau diendors oleh Google.';
 
   @override
   String get feedbackTitle => 'Hantar maklum balas?';
@@ -1270,7 +1270,8 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get settingsPremiumSubtitle => 'Tanpa iklan dan gaya warna tambahan';
+  String get settingsPremiumSubtitle =>
+      'Bebas iklan, dengan gaya warna tambahan';
 
   @override
   String get settingsPremiumActiveSubtitle =>
@@ -1302,7 +1303,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacyUsageSubtitle =>
-      'Kiraan tanpa nama bagi skrin dan ciri yang anda gunakan. Tidak termasuk apa yang anda taip atau apa-apa tentang TV anda.';
+      'Kiraan tanpa nama bagi skrin dan ciri yang anda gunakan. Tidak pernah termasuk apa yang anda taip atau apa-apa tentang TV anda.';
 
   @override
   String get privacyCrashTitle => 'Kongsi laporan ranap';
@@ -1320,7 +1321,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacyAdsInfo =>
-      'Apl percuma memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan sahaja.';
+      'Versi percuma apl ini memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan sahaja.';
 
   @override
   String get privacyAdsPremium =>
@@ -1365,7 +1366,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get trackingPrepromptBody =>
-      'Apl percuma memaparkan iklan kecil di bahagian bawah skrin ini. Seterusnya, iPhone anda akan bertanya sama ada apl ini boleh menggunakan aktiviti anda dalam apl lain untuk memilih iklan. Bilangan iklan yang anda lihat tetap sama walau apa pun pilihan anda, dan alat kawalan jauh berfungsi seperti biasa.';
+      'Versi percuma apl ini memaparkan iklan kecil di bahagian bawah skrin ini. Seterusnya, iPhone anda akan bertanya sama ada apl ini boleh menggunakan aktiviti anda dalam apl lain untuk memilih iklan. Bilangan iklan yang anda lihat tetap sama walau apa pun pilihan anda, dan alat kawalan jauh berfungsi seperti biasa.';
 
   @override
   String get trackingPrepromptContinue => 'Teruskan';

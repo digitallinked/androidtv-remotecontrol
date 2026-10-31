@@ -64,9 +64,11 @@ class _ManualIpFormState extends State<_ManualIpForm> {
             labelText: l10n.manualIpLabel,
             hintText: l10n.manualIpHint,
             helperText: l10n.manualIpHelp,
-            helperMaxLines: 3,
+            // At 200% text on a 320 dp phone the help and the error each
+            // take up to 5 lines; never cut them.
+            helperMaxLines: 6,
             errorText: _invalid ? l10n.manualIpError : null,
-            errorMaxLines: 3,
+            errorMaxLines: 6,
           ),
         ),
         FilledButton(onPressed: _submit, child: Text(l10n.manualIpContinue)),

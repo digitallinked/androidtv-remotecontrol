@@ -238,6 +238,9 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
           decoration: InputDecoration(
             labelText: l10n.shortcutPackageLabel,
             hintText: l10n.shortcutPackageHint,
+            // At 200% text on a 320 dp phone the example ID wraps; one line
+            // would cut it.
+            hintMaxLines: 3,
             helperText: l10n.shortcutPackageHelp,
             helperMaxLines: 4,
             errorText: _packageTouched || _submitted
