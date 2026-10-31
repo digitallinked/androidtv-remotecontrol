@@ -18,7 +18,9 @@ const double _probe = 16;
 /// A field's help as `InputDecoration.helper`: unlike `helperText` it has no
 /// line limit, so it wraps in full at any text size (Ruling P9-C6). The
 /// decorator doesn't style a helper widget, so it gets the style Material 3
-/// gives an enabled field's helper text.
+/// gives an enabled field's helper text. That colour is for enabled fields
+/// only: Material 3 dims a disabled field's helper to `onSurface` at 38 %,
+/// so a field that can be disabled needs its own helper style first.
 Widget fieldHelper(BuildContext context, String text) {
   final theme = Theme.of(context);
   return Text(

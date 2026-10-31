@@ -33,60 +33,65 @@ class TvListTile extends StatelessWidget {
         : (isPaired ? l10n.discoverPaired : null);
     // Built like a Material 3 list tile, but as a row whose height follows
     // its tallest part: a ListTile caps its trailing slot's height, which
-    // cut a wrapped label at large text sizes (Ruling P9-C6).
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: AppSizes.keyMin),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.s,
-          ),
-          child: Row(
-            spacing: AppSpacing.l,
-            children: [
-              ExcludeSemantics(
-                child: Icon(Icons.tv, color: colors.textSecondary),
-              ),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // One line at any text size: a long name ends in an
-                    // ellipsis, and a screen reader still reads it in full.
-                    Text(
-                      tv.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      tv.host,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+    // cut a wrapped label at large text sizes (Ruling P9-C6). The button
+    // role and enabled state are a ListTile's own, which InkWell lacks.
+    return Semantics(
+      button: true,
+      enabled: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSizes.keyMin),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.s,
+            ),
+            child: Row(
+              spacing: AppSpacing.l,
+              children: [
+                ExcludeSemantics(
+                  child: Icon(Icons.tv, color: colors.textSecondary),
                 ),
-              ),
-              // Capped so a long label wraps at large text sizes instead of
-              // squeezing the name; the row grows to fit it.
-              if (label != null)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 112),
-                  child: Text(
-                    label,
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: colors.textSecondary,
-                    ),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // One line at any text size: a long name ends in an
+                      // ellipsis, and a screen reader still reads it in full.
+                      Text(
+                        tv.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        tv.host,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
+                // Capped so a long label wraps at large text sizes instead of
+                // squeezing the name; the row grows to fit it.
+                if (label != null)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 112),
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -4,7 +4,11 @@ import 'package:flutter/widgets.dart';
 /// [minHeight], at [minHeight] in a scroll view, so a page squeezed by very
 /// large text (or by the demo strip arriving above it) scrolls instead of
 /// overflowing (Ruling P9-C6).
-class ScrollWhenShort extends StatelessWidget {
+///
+/// [child] keeps its state when the height crosses [minHeight] either way:
+/// it is moved between the two layouts under one global key. At full height
+/// there is no scroll view, so nothing changes there.
+class ScrollWhenShort extends StatefulWidget {
   /// Creates the fallback around [child].
   const ScrollWhenShort({
     required this.minHeight,
@@ -19,11 +23,19 @@ class ScrollWhenShort extends StatelessWidget {
   final Widget child;
 
   @override
+  State<ScrollWhenShort> createState() => _ScrollWhenShortState();
+}
+
+class _ScrollWhenShortState extends State<ScrollWhenShort> {
+  final GlobalKey _child = GlobalKey();
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      if (constraints.maxHeight >= minHeight) return child;
+      final child = KeyedSubtree(key: _child, child: widget.child);
+      if (constraints.maxHeight >= widget.minHeight) return child;
       return SingleChildScrollView(
-        child: SizedBox(height: minHeight, child: child),
+        child: SizedBox(height: widget.minHeight, child: child),
       );
     },
   );

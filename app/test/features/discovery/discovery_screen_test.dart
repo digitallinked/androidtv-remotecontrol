@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
@@ -136,6 +137,20 @@ void main() {
     expect(titles, ['Attic', 'bedroom', 'Den']);
     expect(find.text('192.168.0.20'), findsNWidgets(3));
     expect(find.text('Enter IP address'), findsOneWidget);
+  });
+
+  testWidgets('a_tv_row_is_an_enabled_button_to_a_screen_reader', (t) async {
+    // As a ListTile's was: the row is a custom one now (Ruling P9-C6).
+    final handle = t.ensureSemantics();
+    await pumpDiscover(t);
+    await found(t, [tv('Den')]);
+    final data = t.getSemantics(find.byType(TvListTile)).getSemanticsData();
+    expect(data.flagsCollection.isButton, isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    // The label is what the ListTile row gave: the name, then the address.
+    expect(data.label, 'Den\n192.168.0.20');
+    handle.dispose();
   });
 
   testWidgets('tv_tiles_are_at_least_56dp_tall', (t) async {
