@@ -9,14 +9,17 @@
     <!-- Nothing about the user's TVs leaves the phone (Ruling P8-R1): backup is
          off, and the extraction rules exclude every domain, because on
          Android 12+ allowBackup="false" doesn't stop device-to-device
-         transfer. The privacy copy (privacyIntro) depends on this. -->
+         transfer. The privacy copy (privacyIntro) depends on this.
+         localeConfig lists the app's languages for Android 13+ per-app
+         language settings (Ruling P9-R7); the in-app picker still wins. -->
     <application
         android:label="${appName}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
-        android:dataExtractionRules="@xml/data_extraction_rules">
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:localeConfig="@xml/locales_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"

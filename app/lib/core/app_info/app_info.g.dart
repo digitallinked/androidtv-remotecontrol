@@ -8,24 +8,21 @@ part of 'app_info.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Reads the release the user knows from `device_info_plus`: `Android 12`
-/// (`version.release`), `iOS 17.5` (`systemVersion`). Elsewhere, the
-/// platform's own strings.
+/// Reads the release from `device_info_plus` (`version.release` on Android,
+/// `systemVersion` on iOS), choosing by `defaultTargetPlatform`.
 
 @ProviderFor(osVersionReader)
 final osVersionReaderProvider = OsVersionReaderProvider._();
 
-/// Reads the release the user knows from `device_info_plus`: `Android 12`
-/// (`version.release`), `iOS 17.5` (`systemVersion`). Elsewhere, the
-/// platform's own strings.
+/// Reads the release from `device_info_plus` (`version.release` on Android,
+/// `systemVersion` on iOS), choosing by `defaultTargetPlatform`.
 
 final class OsVersionReaderProvider
     extends
         $FunctionalProvider<OsVersionReader, OsVersionReader, OsVersionReader>
     with $Provider<OsVersionReader> {
-  /// Reads the release the user knows from `device_info_plus`: `Android 12`
-  /// (`version.release`), `iOS 17.5` (`systemVersion`). Elsewhere, the
-  /// platform's own strings.
+  /// Reads the release from `device_info_plus` (`version.release` on Android,
+  /// `systemVersion` on iOS), choosing by `defaultTargetPlatform`.
   OsVersionReaderProvider._()
     : super(
         from: null,
@@ -64,7 +61,7 @@ String _$osVersionReaderHash() => r'd07bca7a31fd0b48d795d410db9f6b7d106f6fcd';
 /// Reads the app's package info and the phone's system version.
 ///
 /// The system version never makes this fail: a reader that throws, or takes
-/// longer than [osVersionTimeout], gives the platform strings. Package info
+/// longer than [osVersionTimeout], gives [fallbackOsVersion]. Package info
 /// that can't be read does fail it. Callers show "unavailable" and carry on;
 /// a retry would not help, so there isn't one.
 
@@ -74,7 +71,7 @@ final appInfoProvider = AppInfoProvider._();
 /// Reads the app's package info and the phone's system version.
 ///
 /// The system version never makes this fail: a reader that throws, or takes
-/// longer than [osVersionTimeout], gives the platform strings. Package info
+/// longer than [osVersionTimeout], gives [fallbackOsVersion]. Package info
 /// that can't be read does fail it. Callers show "unavailable" and carry on;
 /// a retry would not help, so there isn't one.
 
@@ -84,7 +81,7 @@ final class AppInfoProvider
   /// Reads the app's package info and the phone's system version.
   ///
   /// The system version never makes this fail: a reader that throws, or takes
-  /// longer than [osVersionTimeout], gives the platform strings. Package info
+  /// longer than [osVersionTimeout], gives [fallbackOsVersion]. Package info
   /// that can't be read does fail it. Callers show "unavailable" and carry on;
   /// a retry would not help, so there isn't one.
   AppInfoProvider._()

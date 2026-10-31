@@ -1,5 +1,4 @@
-import 'dart:io' show Platform;
-
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/app_links.dart';
@@ -35,8 +34,8 @@ Uri feedbackMailUri({
 /// Asks before opening the mail app, then opens a draft addressed to us.
 ///
 /// When the app's details can't be read the draft still opens, with the
-/// flavor's name and `?` for the version. When no mail app answers, a
-/// snackbar gives the address.
+/// flavor's name, `?` for the version and [fallbackOsVersion] for the
+/// system. When no mail app answers, a snackbar gives the address.
 Future<void> sendFeedback(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context);
   final opener = ref.read(linkOpenerProvider);
@@ -62,12 +61,13 @@ Future<void> sendFeedback(BuildContext context, WidgetRef ref) async {
   try {
     info = await ref.read(appInfoProvider.future);
   } on Object {
+    final system = fallbackOsVersion(defaultTargetPlatform);
     info = AppInfo(
       appName: flavorName,
       version: '?',
       buildNumber: '?',
-      os: Platform.operatingSystem,
-      osVersion: Platform.operatingSystemVersion,
+      os: system.os,
+      osVersion: system.version,
     );
   }
   if (!context.mounted) return;

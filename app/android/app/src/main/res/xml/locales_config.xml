@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's languages for Android 13+ per-app language settings (Ruling
+     P9-R7). Written by hand, not with AGP's generateLocaleConfig: the
+     translations live in lib/app/l10n/app_*.arb, not in Android resources, so
+     a generated list would come from the plugins' resources instead.
+     test/platform/locale_config_test.dart keeps it equal to the ARB files. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en"/>
+    <locale android:name="ms"/>
+</locale-config>
