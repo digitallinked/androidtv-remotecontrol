@@ -1,7 +1,10 @@
+import 'dart:ui' show Tristate;
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -548,6 +551,135 @@ void main() {
     await t.pumpAndSettle();
     expect(stored().take(2), ['YouTube', 'Netflix']);
     handle.dispose();
+  });
+
+  /// The tooltip of the button that has keyboard focus, if any.
+  String? focusedTooltip() {
+    String? message;
+    FocusManager.instance.primaryFocus?.context?.visitAncestorElements((e) {
+      final widget = e.widget;
+      if (widget is Tooltip) {
+        message = widget.message;
+        return false;
+      }
+      return true;
+    });
+    return message;
+  }
+
+  /// Whether keyboard focus is inside the row of [package].
+  bool focusInRow(String package) {
+    var inRow = false;
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null) return false;
+    bool check(Element e) {
+      if (e.widget.key == ValueKey('manage_app_$package')) {
+        inRow = true;
+        return false;
+      }
+      return true;
+    }
+
+    if (context is Element && !check(context)) return true;
+    context.visitAncestorElements(check);
+    return inRow;
+  }
+
+  /// Records what is announced to screen readers.
+  List<String> recordAnnouncements(WidgetTester t) {
+    final announced = <String>[];
+    t.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+      SystemChannels.accessibility,
+      (message) async {
+        final map = message! as Map<Object?, Object?>;
+        if (map['type'] == 'announce') {
+          announced.add(
+            (map['data']! as Map<Object?, Object?>)['message']! as String,
+          );
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => t.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            null,
+          ),
+    );
+    return announced;
+  }
+
+  testWidgets('tab_order_skips_the_drag_handle', (t) async {
+    await pumpManage(t);
+    Focus.of(
+      t.element(
+        find.descendant(
+          of: find.byTooltip('Edit Netflix'),
+          matching: find.byIcon(Icons.edit_outlined),
+        ),
+      ),
+    ).requestFocus();
+    await t.pump();
+    expect(focusedTooltip(), 'Edit Netflix');
+
+    await t.sendKeyEvent(LogicalKeyboardKey.tab);
+    await t.pump();
+    expect(focusedTooltip(), 'Remove Netflix');
+
+    await t.sendKeyEvent(LogicalKeyboardKey.tab);
+    await t.pump();
+    expect(focusedTooltip(), 'Edit YouTube');
+    // The handle keeps its label for touch exploration.
+    final handle = t.ensureSemantics();
+    try {
+      expect(find.bySemanticsLabel('Reorder Netflix'), findsOneWidget);
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  testWidgets('overflow_menu_is_named_more_options', (t) async {
+    await pumpManage(t);
+    expect(find.byTooltip('More options'), findsOneWidget);
+    expect(find.byType(PopupMenuButton<void>), findsOneWidget);
+  });
+
+  testWidgets('a_move_keeps_focus_and_announces_the_position', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      final announced = recordAnnouncements(t);
+      await pumpManage(t);
+      perform(t, 'Netflix', 'Move down');
+      await t.pumpAndSettle();
+
+      expect(stored().take(2), ['YouTube', 'Netflix']);
+      expect(announced, ['Netflix moved to position 2 of 6']);
+      expect(focusInRow('com.netflix.ninja'), isTrue);
+      final row = t.getSemantics(find.text('Netflix')).getSemanticsData();
+      expect(row.flagsCollection.isFocused, Tristate.isTrue);
+
+      perform(t, 'Netflix', 'Move up');
+      await t.pumpAndSettle();
+      expect(announced.last, 'Netflix moved to position 1 of 6');
+      expect(focusInRow('com.netflix.ninja'), isTrue);
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  testWidgets('a_drag_announces_the_new_position', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      final announced = recordAnnouncements(t);
+      await pumpManage(t);
+      await drag(t, 'Prime Video', const Offset(0, -140)); // two rows up
+      expect(stored().first, 'Prime Video');
+      expect(announced, ['Prime Video moved to position 1 of 6']);
+      expect(focusInRow('com.amazon.amazonvideo.livingroom'), isTrue);
+    } finally {
+      handle.dispose();
+    }
   });
 
   for (final b in Brightness.values) {

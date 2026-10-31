@@ -6,6 +6,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/core/device/modal_route_tracker.dart';
 import 'package:tv_remote/features/demo/demo_providers.dart';
 
 /// Shows a "Demo mode" strip above [child] while the demo TV is active.
@@ -13,6 +14,10 @@ import 'package:tv_remote/features/demo/demo_providers.dart';
 /// The strip is a row of its own, not an overlay: the screen below starts
 /// under it, so no control is ever covered. Outside demo mode [child] fills
 /// the space and the strip is gone.
+///
+/// The strip sits above the navigator, so a sheet's or a dialog's barrier
+/// doesn't cover it: while one is open its Leave button takes no taps and
+/// is hidden from screen readers ([ModalRouteTracker]).
 class DemoBadgeOverlay extends ConsumerWidget {
   /// Creates the overlay around [child] (usually the app's navigator).
   const DemoBadgeOverlay({required this.child, super.key});
@@ -99,11 +104,16 @@ class _DemoStripState extends ConsumerState<_DemoStrip> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = context.appColors;
+    final tracker = ref.watch(modalRouteTrackerProvider);
     return Semantics(
       container: true,
       label: l10n.demoBadgeLabel,
+      // On `surface`, not `surfaceRaised`: the Leave button's accent text
+      // reaches 4.5:1 there in every colour style (P6-C10); the outline
+      // still sets the strip apart from the screen below.
       child: Material(
-        color: colors.surfaceRaised,
+        color: colors.surface,
+        shape: Border(bottom: BorderSide(color: colors.outline)),
         child: SafeArea(
           bottom: false,
           child: ConstrainedBox(
@@ -123,9 +133,19 @@ class _DemoStripState extends ConsumerState<_DemoStrip> {
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: _askToLeave,
-                    child: Text(l10n.demoLeaveAction),
+                  ListenableBuilder(
+                    listenable: tracker,
+                    builder: (context, child) => IgnorePointer(
+                      ignoring: tracker.modalOpen,
+                      child: ExcludeSemantics(
+                        excluding: tracker.modalOpen,
+                        child: child,
+                      ),
+                    ),
+                    child: TextButton(
+                      onPressed: _askToLeave,
+                      child: Text(l10n.demoLeaveAction),
+                    ),
                   ),
                 ],
               ),

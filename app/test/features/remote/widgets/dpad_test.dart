@@ -1,5 +1,6 @@
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
@@ -216,6 +217,25 @@ void main() {
     await t.pump();
     expect(rec.calls.last, 'tap:${KeyCodes.dpadLeft}');
     handle.dispose();
+  });
+
+  testWidgets('screen_reader_order_is_up_left_ok_right_down', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      await pumpPad(t);
+      final pad = find.semantics.byLabel('Up').evaluate().single.parent!;
+      expect(
+        [
+          for (final node in pad.debugListChildrenInOrder(
+            DebugSemanticsDumpOrder.traversalOrder,
+          ))
+            node.label,
+        ],
+        ['Up', 'Left', 'OK', 'Right', 'Down'],
+      );
+    } finally {
+      handle.dispose();
+    }
   });
 
   testWidgets('pad_is_clamped_between_160_and_320', (t) async {

@@ -211,7 +211,11 @@ class _Message extends StatelessWidget {
       spacing: AppSpacing.l,
       children: [
         if (progress != null) ...[
-          const Center(child: CircularProgressIndicator()),
+          Center(
+            child: CircularProgressIndicator(
+              semanticsLabel: AppLocalizations.of(context).loadingLabel,
+            ),
+          ),
           Text(
             progress,
             textAlign: TextAlign.center,
@@ -339,9 +343,12 @@ class _CodeEntryState extends State<_CodeEntry> {
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: AppSpacing.m,
             children: [
-              const SizedBox.square(
+              SizedBox.square(
                 dimension: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  semanticsLabel: l10n.loadingLabel,
+                ),
               ),
               Flexible(
                 child: Text(

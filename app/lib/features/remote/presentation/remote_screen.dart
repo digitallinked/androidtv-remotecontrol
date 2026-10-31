@@ -330,7 +330,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     if (sessionState.isLoading && session == null) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.pageTitleRemote)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
+        ),
       );
     }
     if (sessionState.hasError) {

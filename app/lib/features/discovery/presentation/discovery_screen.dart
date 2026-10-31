@@ -229,7 +229,9 @@ class _Searching extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: AppSpacing.l,
           children: [
-            const CircularProgressIndicator(),
+            CircularProgressIndicator(
+              semanticsLabel: AppLocalizations.of(context).loadingLabel,
+            ),
             Text(
               label,
               textAlign: TextAlign.center,

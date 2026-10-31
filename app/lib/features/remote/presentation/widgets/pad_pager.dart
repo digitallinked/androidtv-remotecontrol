@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/fitted_label.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/number_pad.dart';
@@ -198,10 +199,7 @@ class _PadPagerState extends State<PadPager> {
               for (final page in PadPage.values)
                 ButtonSegment(
                   value: page,
-                  label: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(_label(l10n, page), maxLines: 1),
-                  ),
+                  label: FittedLabel(_label(l10n, page)),
                 ),
             ],
             selected: {selected},

@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Checks what is on screen against Flutter's four accessibility guidelines,
@@ -42,4 +43,20 @@ Future<T> withSemantics<T>(
 /// `RenderFlex` reports itself as an exception.
 void expectNoClipping(WidgetTester t, {required String reason}) {
   expect(t.takeException(), isNull, reason: reason);
+}
+
+/// Every node of the semantics tree, depth first from the root of the
+/// test's view. Semantics must be on.
+List<SemanticsNode> allSemanticsNodes(WidgetTester t) {
+  final nodes = <SemanticsNode>[];
+  void visit(SemanticsNode node) {
+    nodes.add(node);
+    node.visitChildren((child) {
+      visit(child);
+      return true;
+    });
+  }
+
+  visit(t.binding.renderViews.first.owner!.semanticsOwner!.rootSemanticsNode!);
+  return nodes;
 }

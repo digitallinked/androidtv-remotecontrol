@@ -184,7 +184,13 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
         ),
         SliverToBoxAdapter(child: _searchField(l10n)),
         if (loadingList)
-          fill(const Center(child: CircularProgressIndicator()))
+          fill(
+            Center(
+              child: CircularProgressIndicator(
+                semanticsLabel: l10n.loadingLabel,
+              ),
+            ),
+          )
         else if (loadFailed)
           fill(_LoadFailed(onRetry: () => ref.invalidate(shortcutsProvider)))
         else if (listEmpty)

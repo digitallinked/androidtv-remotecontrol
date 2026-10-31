@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 
+import '../../helpers/a11y.dart';
 import '../../helpers/pump_app.dart';
 
 const _actions = [
@@ -132,6 +133,59 @@ void main() {
           'confirms this action, long enough to wrap many times at 200%.',
     );
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets('dialog_names_its_route_with_the_title', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      await _open(t, (_) {});
+      final named = allSemanticsNodes(t).where((n) {
+        final flags = n.getSemanticsData().flagsCollection;
+        return flags.scopesRoute && flags.namesRoute;
+      }).toList();
+      expect(named, hasLength(1));
+      expect(named.single.label, 'Remove TV');
+      // The title and the message are still read as their own lines.
+      expect(find.bySemanticsLabel('This forgets the TV.'), findsOneWidget);
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  testWidgets('dialog_body_is_at_least_288dp_wide_on_a_320dp_screen', (
+    t,
+  ) async {
+    t.view
+      ..physicalSize = const Size(320, 640)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await _open(t, (_) {}, textScale: 2);
+    final surface = find
+        .descendant(
+          of: find.byType(AppDialog<String>),
+          matching: find.byType(Material),
+        )
+        .first;
+    expect(t.getSize(surface).width, greaterThanOrEqualTo(288));
+    expect(t.getRect(surface).left, greaterThanOrEqualTo(16));
+    expect(t.getRect(surface).right, lessThanOrEqualTo(320 - 16));
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('wide_screens_keep_the_40dp_dialog_inset', (t) async {
+    t.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await _open(t, (_) {});
+    final surface = find
+        .descendant(
+          of: find.byType(AppDialog<String>),
+          matching: find.byType(Material),
+        )
+        .first;
+    expect(t.getRect(surface).left, 40);
+    expect(t.getRect(surface).right, 390 - 40);
   });
 
   testWidgets('reduce_motion_opens_and_closes_the_dialog_in_one_frame', (

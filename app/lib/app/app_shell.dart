@@ -96,18 +96,30 @@ class _UpdateRequiredScreenState extends ConsumerState<_UpdateRequiredScreen> {
                   mainAxisSize: MainAxisSize.min,
                   spacing: AppSpacing.l,
                   children: [
+                    // One announcement when the gate appears: the title and
+                    // the reason, read together (the button isn't in it).
                     Semantics(
-                      header: true,
-                      child: Text(
-                        l10n.updateRequiredTitle,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineSmall,
+                      container: true,
+                      liveRegion: true,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: AppSpacing.l,
+                        children: [
+                          Semantics(
+                            header: true,
+                            child: Text(
+                              l10n.updateRequiredTitle,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.headlineSmall,
+                            ),
+                          ),
+                          Text(
+                            l10n.updateRequiredBody,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      l10n.updateRequiredBody,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyLarge,
                     ),
                     FilledButton(
                       onPressed: _openStore,

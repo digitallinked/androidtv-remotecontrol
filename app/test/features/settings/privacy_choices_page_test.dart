@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/app_links.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
@@ -20,6 +21,7 @@ import 'package:tv_remote/features/settings/presentation/privacy_choices_page.da
 
 import '../../helpers/fake_consent_service.dart';
 import '../../helpers/fake_tracking_service.dart';
+import '../../helpers/fit_checks.dart';
 import '../../helpers/gather_consent.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
@@ -438,6 +440,73 @@ void main() {
           }
           expect(t.takeException(), isNull, reason: reason);
           expect(find.byType(BannerSlot), findsNothing, reason: reason);
+        }
+      }
+    },
+  );
+
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'privacy_fits_320dp_at_200_percent_including_the_switch_rows',
+    (t) async {
+      consent.optionsRequired = true;
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      for (final scaler in [
+        const TextScaler.linear(2),
+        const NonlinearTwoXScaler(),
+      ]) {
+        for (final b in Brightness.values) {
+          final reason = '$scaler ${b.name}';
+          await pumpPage(
+            t,
+            size: const Size(320, 640),
+            textScaler: scaler,
+            brightness: b,
+            firebase: FirebaseStatus.notConfigured,
+            tracking: FakeTrackingService(current: TrackingStatus.denied),
+          );
+          expect(t.takeException(), isNull, reason: reason);
+          // Every row, the two switch rows first, lies inside the list's
+          // viewport (below the app bar), not merely inside the screen.
+          for (final title in [
+            l10n.privacyUsageTitle,
+            l10n.privacyCrashTitle,
+            l10n.privacyRemoveAds,
+            l10n.privacyAdChoices,
+            l10n.privacyTrackingTitle,
+            l10n.settingsPrivacy,
+          ]) {
+            final row = find.ancestor(
+              of: find.text(title),
+              matching: find.byType(ListTile),
+            );
+            await t.scrollUntilVisible(
+              row,
+              100,
+              scrollable: find.byType(Scrollable),
+            );
+            await expectWithinViewport(t, row, reason: '$title $reason');
+          }
+          // The switches themselves are whole.
+          for (final title in [
+            l10n.privacyUsageTitle,
+            l10n.privacyCrashTitle,
+          ]) {
+            final toggle = find.descendant(
+              of: find.widgetWithText(SwitchListTile, title),
+              matching: find.byType(Switch),
+            );
+            // From the top of the list: the switch rows are near it.
+            await t.drag(find.byType(Scrollable), const Offset(0, 10000));
+            await t.pumpAndSettle();
+            await t.scrollUntilVisible(
+              toggle,
+              100,
+              scrollable: find.byType(Scrollable),
+            );
+            await expectWithinViewport(t, toggle, reason: '$title $reason');
+          }
+          expect(t.takeException(), isNull, reason: reason);
         }
       }
     },

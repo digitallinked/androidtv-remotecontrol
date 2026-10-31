@@ -6,6 +6,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/widgets/placeholder_screen.dart';
 import 'package:tv_remote/core/analytics/analytics_route_observer.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/device/modal_route_tracker.dart';
 import 'package:tv_remote/core/device/page_route_observer.dart';
 import 'package:tv_remote/core/storage/device_repository.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -224,6 +225,7 @@ GoRouter appRouter(Ref ref) {
     observers: [
       ref.watch(pageRouteObserverProvider),
       ref.watch(analyticsRouteObserverProvider),
+      ref.watch(modalRouteTrackerProvider),
     ],
     initialLocation: ref.watch(initialLocationProvider),
     routes: [

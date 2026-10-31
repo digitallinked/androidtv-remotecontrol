@@ -5,6 +5,7 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -22,6 +23,7 @@ import 'package:tv_remote/features/demo/demo_providers.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
+import '../../helpers/a11y.dart';
 import '../../helpers/fake_config_source.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
@@ -343,6 +345,27 @@ void main() {
     await t.tap(find.text('Update'));
     await t.pumpAndSettle();
     expect(opener.opened, hasLength(2));
+  });
+
+  testWidgets('update_gate_announces_itself', (t) async {
+    final semantics = t.ensureSemantics();
+    try {
+      await pumpGate(t, {'min_supported_version': '9.0.0'});
+      final live = [
+        for (final node in allSemanticsNodes(t))
+          if (node.getSemanticsData().flagsCollection.isLiveRegion) node,
+      ];
+      // One announcement: the title and the reason together, not the button.
+      expect(live, hasLength(1));
+      expect(live.single.label, contains('Update required'));
+      expect(live.single.label, contains('too old'));
+      expect(
+        live.single.getSemanticsData().hasAction(SemanticsAction.tap),
+        isFalse,
+      );
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('update_gate_fits_320dp_at_200_percent_text', (t) async {

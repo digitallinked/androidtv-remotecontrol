@@ -10,21 +10,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/app/widgets/fitted_label.dart';
 import 'package:tv_remote/bootstrap.dart';
+import 'package:tv_remote/core/purchases/purchase_service.dart';
+import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
+import 'package:tv_remote/features/apps/application/shortcuts.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
 import '../helpers/a11y.dart';
 import '../helpers/fake_pairing_client.dart';
+import '../helpers/fake_purchase_service.dart';
 import '../helpers/fake_remote_session.dart';
 import '../helpers/fake_tv_discovery.dart';
 import '../helpers/in_memory_device_repository.dart';
@@ -475,15 +483,6 @@ class _AppearanceScope extends StatelessWidget {
   );
 }
 
-/// Guideline failures that Task 8.5 owns, by test name, with the reason.
-const Map<String, String> _task85 = {
-  // The demo strip's Leave button: accent text on surfaceRaised, 4.42:1
-  // (P6-C10, all colour styles together). Its dark variant passes all four.
-  'demo_remote_meets_the_guidelines_light':
-      'Task 8.5: P6-C10 accent text on surfaceRaised (demo strip Leave, '
-      '4.42:1)',
-};
-
 /// Guideline failures deferred by a ruling, by test name, with the reason.
 /// The theater-dimmed remote keeps the semantics under its wake cover
 /// (P8-R13 defers `ExcludeSemantics` to the Voice/Switch Access device
@@ -503,7 +502,7 @@ void main() {
   for (final b in Brightness.values) {
     for (final name in _screens.keys) {
       final description = '${name}_meets_the_guidelines_${b.name}';
-      final skip = _task85[description] ?? _deferred[description];
+      final skip = _deferred[description];
       _semanticsTest(description, skip: skip, (t) async {
         await _screens[name]!(t, (
           brightness: b,
@@ -680,6 +679,83 @@ void main() {
       expectNoClipping(t, reason: screen);
     }
   });
+
+  _semanticsTest('every_spinner_has_a_spoken_label', (t) async {
+    const look = (
+      brightness: Brightness.light,
+      size: Size(390, 844),
+      textScaler: null,
+    );
+    for (final e in _loadingStates.entries) {
+      await e.value(t, look);
+      final spinners = find.byType(CircularProgressIndicator);
+      expect(spinners, findsWidgets, reason: '${e.key}: it is loading');
+      for (final element in spinners.evaluate()) {
+        final spinner = element.widget as CircularProgressIndicator;
+        var excluded = false;
+        element.visitAncestorElements((a) {
+          final w = a.widget;
+          if (w is ExcludeSemantics && w.excluding) {
+            excluded = true;
+            return false;
+          }
+          return true;
+        });
+        expect(
+          spinner.semanticsLabel == 'Loading…' || excluded,
+          isTrue,
+          reason: '${e.key}: the spinner says "Loading…"',
+        );
+      }
+      expect(
+        find.bySemanticsLabel(RegExp('Loading…')),
+        findsWidgets,
+        reason: '${e.key}: a screen reader hears it',
+      );
+      // Leave the screen before the next one: spinners never settle.
+      await t.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  for (final (name, textScaler) in [
+    ('fitted_labels_never_shrink_at_100_percent_text', TextScaler.noScaling),
+    (
+      'fitted_labels_stay_at_least_base_size_at_200_percent_text',
+      const TextScaler.linear(2),
+    ),
+  ]) {
+    _semanticsTest(name, (t) async {
+      final look = (
+        brightness: Brightness.light,
+        size: const Size(390, 844),
+        textScaler: textScaler,
+      );
+      final problems = <String>[];
+      for (final e in _fittedScreens.entries) {
+        await e.value(t, look);
+        final labels = _fittedLabels(t);
+        // The layout page's only FittedBox is its preview: a miniature of
+        // the remote, scaled down on purpose, whose labels aren't read.
+        if (e.key != 'remote_layout_page') {
+          expect(labels, isNotEmpty, reason: '${e.key}: has fitted labels');
+        }
+        for (final label in labels) {
+          final why = '${e.key} "${label.text}"';
+          if (textScaler == TextScaler.noScaling) {
+            if ((label.fit - 1).abs() > 0.001) {
+              problems.add('$why shrinks to ${label.fit}');
+            }
+          } else if (label.effectiveSize < label.baseSize - 0.01) {
+            problems.add(
+              '$why is ${label.effectiveSize} sp, under its base '
+              '${label.baseSize} sp (fit ${label.fit})',
+            );
+          }
+        }
+      }
+      expect(problems, isEmpty);
+    });
+  }
 }
 
 /// [finder]'s text is cut to one line with an ellipsis, and a screen reader
@@ -775,4 +851,222 @@ void _semanticsTest(
     return;
   }
   testWidgets(description, (t) => withSemantics(t, () => body(t)));
+}
+
+/// A label that shrinks to fit: a text inside a `FittedLabel` or a
+/// `FittedBox(fit: BoxFit.scaleDown)`.
+typedef _FittedLabel = ({
+  String text,
+  double fit,
+  double baseSize,
+  double effectiveSize,
+});
+
+/// Every fitted label on screen: the scale it is drawn at (read from its
+/// paint transform), its unscaled size and its size as drawn (text scaler ×
+/// that scale).
+///
+/// A `FittedBox` that scales a whole miniature (the Remote layout preview,
+/// `BoxFit.contain`) is not a label, and neither is anything inside one.
+List<_FittedLabel> _fittedLabels(WidgetTester t) {
+  final labels = <_FittedLabel>[];
+  final fitters = find.byWidgetPredicate(
+    (w) => w is FittedLabel || (w is FittedBox && w.fit == BoxFit.scaleDown),
+  );
+  for (final element in fitters.evaluate()) {
+    var inMiniature = false;
+    element.visitAncestorElements((a) {
+      final w = a.widget;
+      if (w is FittedBox && w.fit != BoxFit.scaleDown) {
+        inMiniature = true;
+        return false;
+      }
+      return true;
+    });
+    if (inMiniature) continue;
+    void visit(RenderObject node) {
+      if (node is RenderParagraph) {
+        final fit =
+            node.getTransformTo(null).getMaxScaleOnAxis() /
+            t.view.devicePixelRatio;
+        final base = node.text.style?.fontSize ?? 14;
+        labels.add((
+          text: node.text.toPlainText(),
+          fit: fit,
+          baseSize: base,
+          effectiveSize: node.textScaler.scale(base) * fit,
+        ));
+      }
+      node.visitChildren(visit);
+    }
+
+    visit(element.renderObject!);
+  }
+  return labels;
+}
+
+/// The screens with fitted labels (the Phase 2 `FittedBox` callers): the
+/// rockers and the pad tabs, the number pad, the colour keys, the app
+/// letters and the Remote layout page.
+final Map<String, Future<void> Function(WidgetTester t, _Look look)>
+_fittedScreens = {
+  'remote': (t, look) async {
+    await _openRemote(t, look);
+    _expectOn(find.text('VOL'));
+  },
+  'remote_numbers': (t, look) async {
+    await _openRemote(t, look);
+    await _tap(t, find.text('Numbers'));
+    await t.pumpAndSettle();
+    _expectOn(find.text('5'));
+  },
+  'remote_colour_row': (t, look) async {
+    await _openRemote(
+      t,
+      look,
+      prepareSettings: (s) => s.setQuickAccessRow(QuickAccessRow.colourKeys),
+    );
+    _expectOn(find.bySemanticsLabel('Red'));
+  },
+  'apps': (t, look) async {
+    await _openRemote(t, look);
+    await _go(t, AppRoutes.apps);
+    _expectOn(find.text('Netflix'));
+  },
+  'remote_layout_page': (t, look) async {
+    await _openRemote(t, look);
+    await _go(t, AppRoutes.settingsRemoteLayout);
+    _expectOn(find.text('Remote layout'));
+    _expectOn(
+      find.byWidgetPredicate((w) => w is FittedBox && w.fit == BoxFit.contain),
+    );
+  },
+};
+
+/// Every loading state with a spinner, by screen.
+final Map<String, Future<void> Function(WidgetTester t, _Look look)>
+_loadingStates = {
+  'apps': (t, look) => _pump(
+    t,
+    look,
+    route: AppRoutes.apps,
+    settle: false,
+    overrides: [
+      shortcutsProvider.overrideWith(
+        (ref) => StreamController<List<AppEntry>>().stream,
+      ),
+    ],
+  ),
+  'edit_apps': (t, look) => _pump(
+    t,
+    look,
+    route: AppRoutes.manageApps,
+    settle: false,
+    overrides: [
+      shortcutsProvider.overrideWith(
+        (ref) => StreamController<List<AppEntry>>().stream,
+      ),
+    ],
+  ),
+  'add_app_sheet': (t, look) async {
+    await _pump(
+      t,
+      look,
+      route: AppRoutes.manageApps,
+      overrides: [
+        recommendedAppsProvider.overrideWith(
+          (ref) => Completer<List<AppEntry>>().future,
+        ),
+      ],
+    );
+    await _tap(t, find.byTooltip('Add app'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 500));
+  },
+  'your_tvs': (t, look) => _pump(
+    t,
+    look,
+    route: AppRoutes.devices,
+    settle: false,
+    overrides: [
+      savedDevicesProvider.overrideWith(
+        (ref) => StreamController<List<SavedDevice>>().stream,
+      ),
+    ],
+  ),
+  'edit_tv': (t, look) => _pump(
+    t,
+    look,
+    route: AppRoutes.editDevice('tv'),
+    settle: false,
+    overrides: [
+      savedDevicesProvider.overrideWith(
+        (ref) => StreamController<List<SavedDevice>>().stream,
+      ),
+    ],
+  ),
+  'discovery': (t, look) async {
+    await _openDiscovery(t, look);
+    _expectOn(find.text('Looking for TVs on this Wi-Fi…'));
+  },
+  'pairing_starting': (t, look) async {
+    await _openPairing(t, look, script: (c) => c.holdStart = Completer());
+  },
+  'pairing_verifying': (t, look) async {
+    await _openPairing(t, look, script: (c) => c.holdSubmit = Completer());
+    await _enterCode(t, 'AB12CD');
+    _expectOn(find.text('Checking the code…'));
+  },
+  'paywall_loading': (t, look) => _pump(
+    t,
+    look,
+    route: AppRoutes.paywall(source: PaywallSource.settings),
+    settle: false,
+    overrides: [
+      purchaseServiceProvider.overrideWithValue(_HeldOfferService()),
+    ],
+  ),
+  'paywall_purchasing': (t, look) async {
+    final service = FakePurchaseService(offer: testOffer())
+      ..holdPurchase = Completer();
+    await _pump(
+      t,
+      look,
+      route: AppRoutes.paywall(source: PaywallSource.settings),
+      overrides: [purchaseServiceProvider.overrideWithValue(service)],
+    );
+    await _tap(t, find.widgetWithText(FilledButton, 'Continue'));
+    await t.pump();
+    _expectOn(find.text('Confirming your purchase…'));
+  },
+  'remote': (t, look) => _pump(
+    t,
+    look,
+    route: AppRoutes.remote,
+    settle: false,
+    overrides: [
+      remoteSessionProvider.overrideWith(
+        (ref) => Completer<RemoteSession?>().future,
+      ),
+    ],
+  ),
+};
+
+/// Goes to [location] on the app on screen and lets the page transition
+/// end.
+Future<void> _go(WidgetTester t, String location) async {
+  ProviderScope.containerOf(
+    t.element(find.byType(MaterialApp)),
+  ).read(appRouterProvider).go(location);
+  await t.pump();
+  await t.pump(const Duration(milliseconds: 500));
+  await t.pumpAndSettle();
+}
+
+/// A purchase service whose offer never arrives: the paywall keeps loading.
+class _HeldOfferService extends FakePurchaseService {
+  final Completer<PremiumOffer?> _offer = Completer();
+
+  @override
+  Future<PremiumOffer?> loadOffer() => _offer.future;
 }

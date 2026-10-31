@@ -54,7 +54,9 @@ class _EditDeviceScreenState extends ConsumerState<EditDeviceScreen> {
     if (devices == null && saved.isLoading) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.pageTitleEditDevice)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
+        ),
       );
     }
     if (saved.hasError && devices == null) {
