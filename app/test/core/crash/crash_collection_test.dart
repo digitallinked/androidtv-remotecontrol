@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -6,13 +9,24 @@ import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crashlytics_sink.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/privacy/privacy_choices.dart';
+import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/recording_crashlytics_sink.dart';
 import '../../helpers/test_devices.dart';
+
+/// A repository whose saved list never arrives: `watchAll` never emits.
+class _SilentDeviceRepository extends InMemoryDeviceRepository {
+  final StreamController<List<SavedDevice>> _never =
+      StreamController<List<SavedDevice>>.broadcast();
+
+  @override
+  Stream<List<SavedDevice>> watchAll() => _never.stream;
+}
 
 void main() {
   late RecordingCrashlyticsSink sink;
@@ -219,6 +233,119 @@ void main() {
     await flush(container);
 
     expect(collection.scrubber.scrub('Den'), 'Den');
+  });
+
+  test('saved_names_are_scrubbed_before_the_first_watch_event', () async {
+    devices = _SilentDeviceRepository();
+    final container = await containerFor();
+    final collection = start(container)
+      ..seedTerms([
+        savedTv(name: 'Bedroom TV', nickname: 'Big screen'),
+        SavedDevice(
+          serviceName: 'Android TV 4B2F',
+          displayName: 'Lounge',
+          lastHost: '192.168.0.21',
+          port: 6466,
+          lastConnectedAt: DateTime.utc(2026, 10, 25),
+        ),
+      ]);
+    await flush(container);
+
+    await collection.reporter.recordError(
+      StateError('lost Bedroom TV, Big screen, Lounge, Android TV 4B2F'),
+      null,
+    );
+
+    final sent = sink.errors.single.error.toString();
+    expect(sent, isNot(contains('Bedroom TV')));
+    expect(sent, isNot(contains('Big screen')));
+    expect(sent, isNot(contains('Lounge')));
+    expect(sent, isNot(contains('4B2F')));
+  });
+
+  test('the_first_watch_event_replaces_the_seeded_names', () async {
+    final container = await containerFor();
+    final collection = start(container)..seedTerms([savedTv(name: 'Den')]);
+    await flush(container);
+    // The repository is empty: its first list has no Den, so the seed goes.
+    expect(collection.scrubber.scrub('Den'), 'Den');
+
+    collection.seedTerms([savedTv(name: 'Attic')]);
+    expect(collection.scrubber.scrub('Attic'), '<tv>');
+    await devices.upsert(savedTv(name: 'Den'));
+    await flush(container);
+    expect(collection.scrubber.scrub('Den'), '<tv>');
+    expect(collection.scrubber.scrub('Attic'), 'Attic');
+  });
+
+  test('discovered_unsaved_names_are_scrubbed', () async {
+    final container = await containerFor();
+    final collection = start(container);
+    await flush(container);
+
+    collection.addDiscoveredTerms([
+      const DiscoveredTv(
+        serviceName: 'Kitchen TV (2)',
+        displayName: 'Kitchen TV',
+        host: '192.168.0.30',
+        port: 6466,
+        isLegacyService: false,
+      ),
+    ]);
+    await collection.reporter.recordError(
+      StateError('pairing Kitchen TV failed for Kitchen TV (2)'),
+      null,
+    );
+
+    final sent = sink.errors.single.error.toString();
+    expect(sent, isNot(contains('Kitchen')));
+    expect(sent, 'StateError: Bad state: pairing <tv> failed for <tv>');
+  });
+
+  test('discovered_terms_survive_a_saved_list_change_and_cap_at_64', () async {
+    final container = await containerFor();
+    final collection = start(container);
+    await flush(container);
+
+    collection.addDiscoveredTerms([tv('Kitchen TV')]);
+    await devices.upsert(savedTv(name: 'Den'));
+    await flush(container);
+    await devices.delete('Den');
+    await flush(container);
+    expect(collection.scrubber.scrub('Kitchen TV'), '<tv>');
+    expect(collection.scrubber.scrub('Den'), 'Den');
+
+    // 64 more terms (32 TVs, each a display and a service name): the oldest,
+    // Kitchen TV, is dropped first.
+    collection.addDiscoveredTerms([
+      for (var i = 0; i < 32; i++)
+        DiscoveredTv(
+          serviceName: 'Service $i',
+          displayName: 'Shown $i',
+          host: '192.168.0.40',
+          port: 6466,
+          isLegacyService: false,
+        ),
+    ]);
+    expect(collection.scrubber.scrub('Kitchen TV'), 'Kitchen TV');
+    expect(collection.scrubber.scrub('Shown 0'), '<tv>');
+    expect(collection.scrubber.scrub('Service 31'), '<tv>');
+
+    // Seeing a TV again makes it the newest, so it outlives older ones.
+    collection
+      ..addDiscoveredTerms([
+        const DiscoveredTv(
+          serviceName: 'Service 0',
+          displayName: 'Shown 0',
+          host: '192.168.0.40',
+          port: 6466,
+          isLegacyService: false,
+        ),
+      ])
+      ..addDiscoveredTerms([tv('Porch'), tv('Garage')]);
+    expect(collection.scrubber.scrub('Shown 0'), '<tv>');
+    expect(collection.scrubber.scrub('Shown 1'), 'Shown 1');
+    expect(collection.scrubber.scrub('Porch'), '<tv>');
   });
 
   test('a_failing_device_list_is_ignored', () async {

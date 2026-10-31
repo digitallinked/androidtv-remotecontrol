@@ -139,7 +139,16 @@ Future<Widget> buildRootWidget({
   );
   if (firebaseResult == FirebaseStatus.ready &&
       crashReporter is DelegatingCrashReporter) {
-    _installCrashlytics(container, crashReporter);
+    // Read once, before the first frame, so an early error is scrubbed of
+    // saved names before the saved-list stream's first event (Ruling
+    // P8-R11). A failed read seeds nothing; the stream still follows.
+    var saved = const <SavedDevice>[];
+    try {
+      saved = await container.read(deviceRepositoryProvider).all();
+    } on Object {
+      // Nothing to seed.
+    }
+    _installCrashlytics(container, crashReporter, seed: saved);
   }
   // Step after Firebase and the passed steps; see the note above.
   await runStartupSteps(
@@ -153,20 +162,24 @@ Future<Widget> buildRootWidget({
   return _RootHost(container: container);
 }
 
-/// Points [reporter] at the log and the scrubbing Crashlytics reporter. A
-/// failure leaves it logging only; the app still starts.
+/// Seeds the scrubber with [seed], the saved TVs, then points [reporter] at
+/// the log and the scrubbing Crashlytics reporter. A failure leaves it
+/// logging only; the app still starts.
 void _installCrashlytics(
   ProviderContainer container,
-  DelegatingCrashReporter reporter,
-) {
+  DelegatingCrashReporter reporter, {
+  required List<SavedDevice> seed,
+}) {
   try {
     // Riverpod pauses what nothing listens to, and the collection's own
     // listeners must keep following the privacy choice. The container ends
     // this subscription when it is disposed.
     container.listen(crashCollectionProvider, (_, _) {});
+    final collection = container.read(crashCollectionProvider.notifier)
+      ..seedTerms(seed);
     reporter.delegate = CompositeCrashReporter([
       const LoggingCrashReporter(),
-      container.read(crashCollectionProvider.notifier).reporter,
+      collection.reporter,
     ]);
   } on Object catch (error, stack) {
     unawaited(

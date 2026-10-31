@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
-import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
@@ -9,7 +8,7 @@ import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
-import 'package:tv_remote/core/session/not_connected_notices.dart';
+import 'package:tv_remote/core/session/connection_trouble.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
@@ -21,7 +20,7 @@ enum InterstitialTrigger {
   leftSettings,
 }
 
-/// How long after a connection loss or a "Not connected" notice no
+/// How long after connection trouble (see [ConnectionTrouble]) no
 /// interstitial shows.
 const Duration interstitialQuietAfterTrouble = Duration(seconds: 60);
 
@@ -46,28 +45,13 @@ class Interstitials extends _$Interstitials {
   LoadedInterstitial? _loaded;
   DateTime? _loadedAt;
   Future<void>? _loading;
-  DateTime? _lastTroubleAt;
-  bool _wasConnected = false;
 
   @override
   void build() {
     ref
       ..onDispose(_drop)
-      ..listen(connectionStateProvider, (_, next) {
-        final status = next.value?.status;
-        if (next.isLoading || status == null) return;
-        if (status == ConnectionStatus.connected) {
-          _wasConnected = true;
-        } else if (_wasConnected) {
-          // Any way out of "connected" counts, the app's own disconnects
-          // included: the cost of a missed ad is nothing.
-          _wasConnected = false;
-          _lastTroubleAt = clock.now();
-        }
-      })
-      ..listen(notConnectedNoticesProvider, (_, _) {
-        _lastTroubleAt = clock.now();
-      })
+      // Started with this, so it hears trouble from launch on.
+      ..listen(connectionTroubleProvider, (_, _) {})
       // Premium and consent arrive after start; each may allow the preload.
       // So does the SDK starting, which on iOS only happens once the tracking
       // question has been answered.
@@ -152,8 +136,8 @@ class Interstitials extends _$Interstitials {
   /// The rules: Remote Config has them on; the user is known not to have
   /// Premium and is not in the demo; ads may be requested; this is at least
   /// the second launch; the minimum interval since the last one has passed
-  /// (it survives restarts); and no connection loss or "Not connected"
-  /// notice happened in the last 60 s.
+  /// (it survives restarts); and there was no connection trouble (a loss, a
+  /// failed connect or a "Not connected" notice) in the last 60 s.
   Future<bool> maybeShow(InterstitialTrigger trigger) async {
     try {
       final config = ref.read(appConfigProvider);
@@ -161,7 +145,9 @@ class Interstitials extends _$Interstitials {
       final store = ref.read(settingsStoreProvider);
       final now = clock.now();
       final last = store.interstitialLastShownAt;
-      final trouble = _lastTroubleAt;
+      final trouble = ref
+          .read(connectionTroubleProvider.notifier)
+          .troubleWithin(interstitialQuietAfterTrouble);
       final isDemo = ref.read(remoteSessionProvider).value?.isDemo ?? false;
       var ad = _loaded;
 
@@ -173,10 +159,7 @@ class Interstitials extends _$Interstitials {
           now.difference(last) < config.adsInterstitialMinInterval) {
         return false;
       }
-      if (trouble != null &&
-          now.difference(trouble) < interstitialQuietAfterTrouble) {
-        return false;
-      }
+      if (trouble) return false;
       final loadedAt = _loadedAt;
       if (ad != null &&
           loadedAt != null &&

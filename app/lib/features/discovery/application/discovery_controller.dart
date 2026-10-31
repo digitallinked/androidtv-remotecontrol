@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show immutable, listEquals;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -88,6 +89,12 @@ class DiscoveryController extends _$DiscoveryController {
 
     final subscription = discovery.watch().listen(
       (found) {
+        // Names of TVs nobody saved must not reach a crash report either
+        // (Ruling P8-R11). Crash collection runs only once Firebase is ready;
+        // without it there is nothing to scrub, so it isn't started here.
+        if (ref.mounted && ref.exists(crashCollectionProvider)) {
+          ref.read(crashCollectionProvider.notifier).addDiscoveredTerms(found);
+        }
         tvs = _sorted(found);
         publish();
       },

@@ -8,6 +8,8 @@ import 'package:nsd/nsd.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/crash/crash_collection.dart';
+import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
@@ -22,6 +24,7 @@ import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/manual_session_signals.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crashlytics_sink.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
 
@@ -220,6 +223,54 @@ void main() {
       expect(first.stopped, isTrue);
       // The timer was cancelled: nothing is left to fire.
       expect(async.pendingTimers, isEmpty);
+    });
+  });
+
+  test('each_found_list_reaches_the_crash_scrubber', () {
+    fakeAsync((async) {
+      final c =
+          ProviderContainer.test(
+              overrides: [
+                tvDiscoveryFactoryProvider.overrideWithValue(
+                  discoveries.create,
+                ),
+                settingsStoreProvider.overrideWithValue(settings),
+                analyticsSinkProvider.overrideWithValue(analyticsSink),
+                analyticsDebugBuildProvider.overrideWithValue(true),
+                deviceRepositoryProvider.overrideWithValue(
+                  InMemoryDeviceRepository(),
+                ),
+                firebaseStatusProvider.overrideWithValue(FirebaseStatus.ready),
+                crashlyticsSinkProvider.overrideWithValue(
+                  RecordingCrashlyticsSink(),
+                ),
+              ],
+            )
+            // Running, as bootstrap keeps it once Firebase is ready.
+            ..listen(crashCollectionProvider, (_, _) {})
+            ..listen(discoveryControllerProvider, (_, _) {});
+      final scrubber = c.read(crashCollectionProvider.notifier).scrubber;
+      async.flushMicrotasks();
+      discoveries.created.single.emit([_named('Kitchen TV (2)', 'Kitchen TV')]);
+      async.flushMicrotasks();
+      discoveries.created.single.emit([tv('Porch')]);
+      async.flushMicrotasks();
+
+      expect(scrubber.scrub('Kitchen TV (2)'), '<tv>');
+      expect(scrubber.scrub('Kitchen TV'), '<tv>');
+      expect(scrubber.scrub('Porch'), '<tv>');
+      c.dispose();
+    });
+  });
+
+  test('without_crash_collection_discovery_starts_nothing_for_it', () {
+    fakeAsync((async) {
+      final c = makeContainer();
+      discoveries.created.single.emit([tv('Porch')]);
+      async.flushMicrotasks();
+
+      expect(read(c).tvs, hasLength(1));
+      expect(c.exists(crashCollectionProvider), isFalse);
     });
   });
 

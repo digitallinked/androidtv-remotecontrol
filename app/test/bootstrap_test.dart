@@ -27,6 +27,30 @@ import 'helpers/fake_config_source.dart';
 import 'helpers/in_memory_device_repository.dart';
 import 'helpers/recording_crash_reporter.dart';
 import 'helpers/recording_crashlytics_sink.dart';
+import 'helpers/test_devices.dart';
+
+/// Holds saved TVs whose list stream never emits, and reports no last-used
+/// TV, so the app opens on onboarding.
+class _SilentDeviceRepository extends InMemoryDeviceRepository {
+  _SilentDeviceRepository(super.initial);
+
+  final StreamController<List<SavedDevice>> _never =
+      StreamController<List<SavedDevice>>.broadcast();
+
+  @override
+  Stream<List<SavedDevice>> watchAll() => _never.stream;
+
+  @override
+  Future<SavedDevice?> lastUsed() async => null;
+}
+
+/// A repository whose one-shot read fails.
+class _UnreadableDeviceRepository extends _SilentDeviceRepository {
+  _UnreadableDeviceRepository() : super(const []);
+
+  @override
+  Future<List<SavedDevice>> all() async => throw StateError('db is gone');
+}
 
 void main() {
   testWidgets('failing_step_is_reported_and_later_steps_run', (tester) async {
@@ -770,6 +794,67 @@ void main() {
         expect(sink.untouched, isTrue);
       });
     }
+
+    Future<Widget> rootWith(
+      CrashReporter reporter,
+      RecordingCrashlyticsSink sink,
+      InMemoryDeviceRepository devices,
+    ) => buildRootWidget(
+      flavor: Flavor.dev,
+      crashReporter: reporter,
+      serviceConfig: const ServiceConfig(firebaseEnabled: true),
+      initFirebase: (_) async => FirebaseStatus.ready,
+      openSettings: () async {
+        final store = await SettingsStore.open();
+        await store.setConsentRegion(ConsentRegion.notRequired);
+        return store;
+      },
+      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      overrides: [
+        ...fakeAdsOverrides(),
+        crashlyticsSinkProvider.overrideWithValue(sink),
+        crashDebugBuildProvider.overrideWithValue(false),
+        deviceRepositoryProvider.overrideWithValue(devices),
+      ],
+    );
+
+    testWidgets('bootstrap_seeds_scrub_terms_before_run_app', (tester) async {
+      final reporter = DelegatingCrashReporter(RecordingCrashReporter());
+      final sink = RecordingCrashlyticsSink();
+      // The saved list stream never emits: only the seed can know the name.
+      final devices = _SilentDeviceRepository([
+        savedTv(name: 'Bedroom TV', nickname: 'Big screen'),
+      ]);
+
+      final app = await rootWith(reporter, sink, devices);
+      // Before the first frame: an error now must already be scrubbed.
+      await reporter.recordError(
+        StateError('lost Bedroom TV (Big screen)'),
+        null,
+      );
+      expect(
+        sink.errors.single.error.toString(),
+        'StateError: Bad state: lost <tv> (<tv>)',
+      );
+
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('an_unreadable_saved_list_seeds_nothing_and_starts', (
+      tester,
+    ) async {
+      final logging = RecordingCrashReporter();
+      final reporter = DelegatingCrashReporter(logging);
+      final sink = RecordingCrashlyticsSink();
+
+      final app = await rootWith(reporter, sink, _UnreadableDeviceRepository());
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+      expect(sink.collectionHistory, [true]);
+    });
 
     testWidgets('a_plain_reporter_is_left_alone_even_when_firebase_is_ready', (
       tester,

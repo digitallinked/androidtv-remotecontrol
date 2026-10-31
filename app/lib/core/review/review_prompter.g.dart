@@ -166,7 +166,7 @@ final class ReviewPrompterProvider
   }
 }
 
-String _$reviewPrompterHash() => r'5596410ed8209726f1a27793cc71690ea84568a7';
+String _$reviewPrompterHash() => r'66fcfcbb5b6a3c45b8e85ec841e9bf3aae4798c4';
 
 /// Asks the store for its review prompt once the remote has proven itself
 /// (Ruling P6-R13).
