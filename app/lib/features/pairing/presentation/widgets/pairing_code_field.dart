@@ -128,7 +128,9 @@ class PairingCodeFieldState extends State<PairingCodeField> {
       decoration: InputDecoration(
         labelText: l10n.pairCodeLabel,
         errorText: widget.errorText,
-        errorMaxLines: 4,
+        // At 200% text on a 320 dp phone the mismatch message takes up to
+        // 9 lines; never cut it.
+        errorMaxLines: 10,
         border: const OutlineInputBorder(),
       ),
     );

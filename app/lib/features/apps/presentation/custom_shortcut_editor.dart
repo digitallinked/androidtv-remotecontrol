@@ -222,7 +222,8 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
           decoration: InputDecoration(
             labelText: l10n.shortcutNameLabel,
             errorText: _nameTouched || _submitted ? _nameError(l10n) : null,
-            errorMaxLines: 3,
+            // At 200% text on a 320 dp phone the error takes up to 4 lines.
+            errorMaxLines: 6,
           ),
         ),
         TextField(
@@ -242,11 +243,14 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
             // would cut it.
             hintMaxLines: 3,
             helperText: l10n.shortcutPackageHelp,
-            helperMaxLines: 4,
+            // At 200% text on a 320 dp phone the help takes up to 9 lines.
+            helperMaxLines: 10,
             errorText: _packageTouched || _submitted
                 ? _packageError(l10n, listed)
                 : null,
-            errorMaxLines: 3,
+            // At 200% text on a 320 dp phone the error, with its example
+            // ID, takes up to 5 lines.
+            errorMaxLines: 6,
           ),
         ),
         _SectionLabel(l10n.shortcutColourLabel),
