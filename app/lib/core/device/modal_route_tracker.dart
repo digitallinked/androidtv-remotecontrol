@@ -13,6 +13,7 @@ part 'modal_route_tracker.g.dart';
 /// `app/router.dart`.
 class ModalRouteTracker extends NavigatorObserver with ChangeNotifier {
   int _open = 0;
+  bool _disposed = false;
 
   /// Whether at least one popup route is on the navigator.
   bool get modalOpen => _open > 0;
@@ -27,10 +28,19 @@ class ModalRouteTracker extends NavigatorObserver with ChangeNotifier {
     // middle of that build, so they hear about it after the frame.
     if (SchedulerBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
-      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      // The tracker may be disposed before that frame ends.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_disposed) notifyListeners();
+      });
     } else {
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   @override

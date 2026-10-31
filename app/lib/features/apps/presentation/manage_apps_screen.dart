@@ -55,6 +55,24 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     () => FocusNode(debugLabel: 'Edit apps row $package', skipTraversal: true),
   );
 
+  /// Drops the focus nodes of apps no longer listed, once their rows are
+  /// gone from the tree (after this frame).
+  void _pruneRowFocus(List<AppEntry> items) {
+    final listed = {for (final app in items) app.package};
+    if (_rowFocus.keys.every(listed.contains)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final now = {
+        for (final app in _current ?? const <AppEntry>[]) app.package,
+      };
+      _rowFocus.removeWhere((package, node) {
+        if (now.contains(package)) return false;
+        node.dispose();
+        return true;
+      });
+    });
+  }
+
   @override
   void dispose() {
     for (final node in _rowFocus.values) {
@@ -254,6 +272,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     final stored = ref.watch(shortcutsProvider);
     ref.listen(shortcutsProvider, (_, next) => _onStored(next));
     final items = _items ?? stored.value;
+    if (items != null) _pruneRowFocus(items);
 
     final Widget body;
     if (items == null && stored.isLoading) {
@@ -480,3 +499,9 @@ class _AppRowItem extends StatelessWidget {
     );
   }
 }
+
+/// The packages whose rows hold a focus node, for tests: removed apps must
+/// not keep theirs.
+@visibleForTesting
+Iterable<String> debugRowFocusPackages(State<ManageAppsScreen> state) =>
+    (state as _ManageAppsScreenState)._rowFocus.keys;

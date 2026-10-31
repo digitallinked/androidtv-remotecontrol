@@ -245,6 +245,26 @@ void main() {
     expect(shown(t), _star);
   });
 
+  testWidgets('a_removed_app_drops_its_row_focus', (t) async {
+    await pumpManage(t);
+    List<String> focusRows() => [
+      ...debugRowFocusPackages(
+        t.state<State<ManageAppsScreen>>(find.byType(ManageAppsScreen)),
+      ),
+    ];
+    expect(focusRows(), contains(_packageOf('YouTube')));
+
+    await t.tap(find.byTooltip('Remove YouTube'));
+    await t.pumpAndSettle();
+    expect(focusRows(), isNot(contains(_packageOf('YouTube'))));
+    expect(focusRows(), contains(_packageOf('Netflix')));
+
+    // Undo builds the row again, with a fresh node.
+    await t.tap(find.text('Undo'));
+    await t.pumpAndSettle();
+    expect(focusRows(), contains(_packageOf('YouTube')));
+  });
+
   testWidgets('undo_puts_the_app_back_without_losing_later_changes', (
     t,
   ) async {

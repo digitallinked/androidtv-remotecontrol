@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -886,9 +887,11 @@ List<_FittedLabel> _fittedLabels(WidgetTester t) {
     if (inMiniature) continue;
     void visit(RenderObject node) {
       if (node is RenderParagraph) {
+        // The x axis's scale. Not `getMaxScaleOnAxis`: it counts z too,
+        // which a 2D scale leaves at 1, so it would never read a shrink.
+        final m = node.getTransformTo(null).storage;
         final fit =
-            node.getTransformTo(null).getMaxScaleOnAxis() /
-            t.view.devicePixelRatio;
+            math.sqrt(m[0] * m[0] + m[1] * m[1]) / t.view.devicePixelRatio;
         final base = node.text.style?.fontSize ?? 14;
         labels.add((
           text: node.text.toPlainText(),
