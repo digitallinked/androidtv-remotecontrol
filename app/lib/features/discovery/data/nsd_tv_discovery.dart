@@ -35,8 +35,9 @@ class NsdTvDiscovery implements TvDiscovery {
 
   final NsdStart _start;
   final NsdStop _stop;
-  final StreamController<List<DiscoveredTv>> _controller =
-      StreamController<List<DiscoveredTv>>();
+  // Cancelling the listener stops every browse.
+  late final StreamController<List<DiscoveredTv>> _controller =
+      StreamController<List<DiscoveredTv>>(onCancel: _onCancel);
   final Map<String, Discovery> _active = {};
   final Map<String, ServiceListener> _listeners = {};
   bool _watching = false;
@@ -132,9 +133,17 @@ class NsdTvDiscovery implements TvDiscovery {
     return host == null || host.isEmpty ? null : host;
   }
 
-  /// Stops every browse and closes the stream. Safe to call repeatedly.
+  /// Stops every browse and closes the stream. Safe to call repeatedly, and
+  /// cancelling the stream's subscription does the same.
+  ///
+  /// Completes once the browses are stopped, also when the stream was never
+  /// listened to.
   @override
   Future<void> stop() => _stopping ??= _doStop();
+
+  /// The listener cancelled: stop, unless [stop] is what closed the stream
+  /// (its done event cancels the subscription too).
+  Future<void>? _onCancel() => _stopping == null ? stop() : null;
 
   Future<void> _doStop() async {
     for (final entry in _listeners.entries) {
@@ -146,7 +155,15 @@ class NsdTvDiscovery implements TvDiscovery {
     for (final discovery in started) {
       await _stopQuietly(discovery);
     }
-    await _controller.close();
+    // Without a listener (never listened, or it just cancelled) the done
+    // event is never delivered, so waiting for it would hang.
+    final listened = _controller.hasListener;
+    final closing = _controller.close();
+    if (listened) {
+      await closing;
+    } else {
+      unawaited(closing.catchError((Object _) {}));
+    }
   }
 
   Future<void> _stopQuietly(Discovery discovery) async {

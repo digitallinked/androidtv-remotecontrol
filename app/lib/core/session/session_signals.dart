@@ -77,7 +77,7 @@ class PlatformSessionSignals implements SessionSignals {
   /// Stops both observers.
   void dispose() {
     _disposed = true;
-    unawaited(_foregroundSubscription.cancel());
+    unawaited(_foregroundSubscription.cancel().catchError((Object _) {}));
     _lifecycle.dispose();
     _connectivity.dispose();
   }

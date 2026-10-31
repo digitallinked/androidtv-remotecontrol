@@ -125,7 +125,7 @@ class RevenueCatPurchaseService implements PurchaseService {
     } on Object {
       // The plugin may be missing; there is nothing to remove then.
     }
-    unawaited(_entitlements.close());
+    unawaited(_entitlements.close().catchError((Object _) {}));
   }
 
   @override

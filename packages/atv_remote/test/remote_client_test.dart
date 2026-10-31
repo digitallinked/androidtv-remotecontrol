@@ -246,6 +246,40 @@ void main() {
       expect(client.serverPublicKeySha256, hasLength(32));
     });
 
+    test('server_public_key_sha256_is_set_at_remote_ready', () async {
+      final tv = await _startTv();
+      final pairing = PairingClient(
+        host: InternetAddress.loopbackIPv4.address,
+        port: tv.pairingPort,
+        identity: _paired,
+        timeout: _setup,
+      );
+      addTearDown(pairing.close);
+      await pairing.start(clientName: 'test phone').timeout(_setup);
+      await pairing.submitCode(tv.displayedCode!).timeout(_setup);
+      final pinned = pairing.serverPublicKeySha256;
+      expect(pinned, hasLength(32));
+
+      final client = _client(tv);
+      // Read synchronously in the listener: TvConnection checks the pin as
+      // soon as the client is ready, before anything else can run.
+      List<int>? atReady;
+      var readyEvents = 0;
+      final subscription = client.events.listen((event) {
+        if (event is RemoteReady) {
+          readyEvents++;
+          atReady = client.serverPublicKeySha256?.toList();
+        }
+      });
+      addTearDown(subscription.cancel);
+
+      await client.connect().timeout(_setup);
+
+      expect(readyEvents, 1);
+      expect(atReady, isNotNull);
+      expect(atReady, orderedEquals(pinned!));
+    });
+
     test('certificate_rejected_for_unpaired_identity', () async {
       final tv = await _startTv();
       final client = _client(tv, identity: _trustedButUnpaired);

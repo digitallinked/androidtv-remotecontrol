@@ -110,8 +110,8 @@ class DiscoveryController extends _$DiscoveryController {
 
     ref.onDispose(() {
       timer.cancel();
-      unawaited(subscription.cancel());
-      unawaited(discovery.stop());
+      unawaited(subscription.cancel().catchError((Object _) {}));
+      unawaited(discovery.stop().catchError((Object _) {}));
     });
     return current();
   }

@@ -106,7 +106,7 @@ class ReviewPrompter extends _$ReviewPrompter {
     });
     ref
       ..onDispose(() {
-        unawaited(paused.cancel());
+        unawaited(paused.cancel().catchError((Object _) {}));
         unawaited(_save());
       })
       // A status of the session that is going away says nothing about the

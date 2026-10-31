@@ -47,10 +47,18 @@ class FakeTvDiscovery implements TvDiscovery {
     return _controller.stream;
   }
 
+  /// When set, [stop] fails with it (after stopping), like a platform that
+  /// refuses to stop a browse.
+  Object? stopError;
+
   @override
   Future<void> stop() async {
     _stopped = true;
     await _controller.close();
+    final error = stopError;
+    // The test chose what to throw, an Error or not.
+    // ignore: only_throw_errors
+    if (error != null) throw error;
   }
 }
 

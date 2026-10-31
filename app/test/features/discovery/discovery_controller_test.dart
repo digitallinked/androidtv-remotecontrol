@@ -226,6 +226,17 @@ void main() {
     });
   });
 
+  test('a_failing_stop_on_dispose_is_not_an_unhandled_error', () {
+    fakeAsync((async) {
+      final c = makeContainer();
+      final first = discoveries.created.single
+        ..stopError = StateError('the platform refused');
+      c.dispose();
+      async.flushMicrotasks();
+      expect(first.stopped, isTrue);
+    });
+  });
+
   test('each_found_list_reaches_the_crash_scrubber', () {
     fakeAsync((async) {
       final c =

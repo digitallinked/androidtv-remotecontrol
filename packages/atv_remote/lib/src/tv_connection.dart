@@ -502,8 +502,8 @@ class TvConnection {
     final subscription = _clientEvents;
     _client = null;
     _clientEvents = null;
-    unawaited(subscription?.cancel());
-    if (client != null) unawaited(client.close());
+    unawaited(subscription?.cancel().catchError((Object _) {}));
+    if (client != null) unawaited(client.close().catchError((Object _) {}));
   }
 
   Future<void> _detachClient() async {

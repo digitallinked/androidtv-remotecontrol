@@ -577,6 +577,6 @@ class RemoteClient {
     _teardown = subscription?.cancel() ?? Future<void>.value();
 
     _emit(RemoteClosed(reason));
-    unawaited(_events.close());
+    unawaited(_events.close().catchError((Object _) {}));
   }
 }

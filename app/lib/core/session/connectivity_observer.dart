@@ -51,7 +51,7 @@ class ConnectivityObserver {
 
   /// Stops listening and closes [changes].
   void dispose() {
-    unawaited(_subscription.cancel());
-    unawaited(_changes.close());
+    unawaited(_subscription.cancel().catchError((Object _) {}));
+    unawaited(_changes.close().catchError((Object _) {}));
   }
 }
