@@ -41,4 +41,22 @@ void main() {
     );
     await g.up();
   });
+
+  testWidgets('dpad_pressed_up_light', (t) async {
+    await pumpForGolden(
+      t,
+      Dpad(input: KeyInputRecorder()),
+      brightness: Brightness.light,
+      size: const Size(320, 320),
+    );
+    final g = await t.startGesture(
+      t.getCenter(find.byType(Dpad)) - const Offset(0, 100),
+    );
+    await t.pump();
+    await expectLater(
+      find.byType(Dpad),
+      matchesGoldenFile('goldens/dpad_pressed_up_light.png'),
+    );
+    await g.up();
+  });
 }

@@ -204,6 +204,10 @@ class _TheaterModeState extends ConsumerState<TheaterMode> {
               onTap: _onWakeTouch,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
+                // The label above is the cover's one node, and its onTap the
+                // one action. The detector's own tap would clash with it and
+                // become a second, unlabelled full-screen node.
+                excludeFromSemantics: true,
                 // Whichever gesture the first touch turns into, it ends here.
                 onTapDown: (_) => _onWakeTouch(),
                 onPanDown: (_) => _onWakeTouch(),

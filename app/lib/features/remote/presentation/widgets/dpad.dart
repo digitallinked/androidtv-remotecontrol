@@ -118,8 +118,11 @@ class _DpadState extends State<Dpad> {
     if (region != null) widget.input.tap(dpadKeyCode(region));
   }
 
+  /// A hold is on the region the finger went down on, like a tap: not one
+  /// the finger drifted into, and not one the spot falls in after the pad
+  /// changed size under the finger.
   void _holdStart(LongPressStartDetails details) {
-    final region = _regionAt(details.localPosition);
+    final region = _downRegion;
     if (region == null) return;
     _held = region;
     _holdInput = widget.input;

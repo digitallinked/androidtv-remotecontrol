@@ -239,7 +239,7 @@ class _RemoteBodyState extends State<RemoteBody> {
       if (!scroll) const Spacer(),
       if (scroll) const SizedBox(height: AppSpacing.m),
       Padding(
-        padding: const EdgeInsets.only(right: AppSpacing.l),
+        padding: const EdgeInsetsDirectional.only(end: AppSpacing.l),
         child: _cluster(),
       ),
       const SizedBox(height: _bottom),
@@ -253,10 +253,10 @@ class _RemoteBodyState extends State<RemoteBody> {
       ),
     );
     final left = Padding(
-      padding: const EdgeInsets.only(
-        left: AppSpacing.l,
+      padding: const EdgeInsetsDirectional.only(
+        start: AppSpacing.l,
         top: _top,
-        right: AppSpacing.s,
+        end: AppSpacing.s,
         bottom: _bottom,
       ),
       child: _pad(fixedHeight: scroll),

@@ -126,6 +126,22 @@ void main() {
     expect(find.text('Hold to turn the TV on or off'), findsNothing);
   });
 
+  testWidgets('dragging_off_power_before_600ms_cancels', (t) async {
+    await pumpRemote(t);
+    final gesture = await t.startGesture(t.getCenter(power));
+    await t.pump(const Duration(milliseconds: 200));
+    // Off the key, well past the touch slop, before the hold is reached.
+    await gesture.moveBy(const Offset(0, 80));
+    await t.pump(const Duration(milliseconds: 600));
+    await gesture.up();
+    await t.pumpAndSettle();
+    expect(fake.sentPresses, isEmpty);
+    expect(wol.wakes, isEmpty);
+    expect(haptics.events, isNot(contains('heavy')));
+    // Not a tap either.
+    expect(find.text('Hold to turn the TV on or off'), findsNothing);
+  });
+
   testWidgets('semantic_long_press_on_power_sends_power', (t) async {
     final handle = t.ensureSemantics();
     await pumpRemote(t);

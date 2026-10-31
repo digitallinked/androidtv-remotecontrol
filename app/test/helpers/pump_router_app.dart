@@ -72,7 +72,8 @@ import 'test_identity.dart';
 ///
 /// [textScaler] replaces the linear [textScale] with a scaler of your own, for
 /// the non-linear curves of Android 14+. [disableAnimations] turns on reduce
-/// motion in that same `MediaQuery`.
+/// motion in that same `MediaQuery`. [textDirection] overrides the locale's
+/// reading direction (no supported locale is right-to-left).
 ///
 /// The theme follows the stored colour style and Premium exactly as `App`
 /// does; [brightness] stands in for the system theme. [dynamicScheme] stands
@@ -96,6 +97,7 @@ Future<SettingsStore> pumpRouterApp(
   bool accessibleNavigation = false,
   bool disableAnimations = false,
   ColorScheme? dynamicScheme,
+  TextDirection? textDirection,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
@@ -135,7 +137,12 @@ Future<SettingsStore> pumpRouterApp(
               disableAnimations:
                   disableAnimations || MediaQuery.disableAnimationsOf(context),
             ),
-            child: buildAppShell(context, app),
+            child: textDirection == null
+                ? buildAppShell(context, app)
+                : Directionality(
+                    textDirection: textDirection,
+                    child: buildAppShell(context, app),
+                  ),
           ),
           routerConfig: ref.watch(appRouterProvider),
         ),

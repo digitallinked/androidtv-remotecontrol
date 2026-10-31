@@ -236,6 +236,14 @@ final Map<String, Future<void> Function(WidgetTester t, _Look look)> _screens =
         );
         // 30 s without a touch: the screen dims to the theater theme.
         await t.pump(const Duration(seconds: 30));
+        // And the frame Flutter schedules after it. The theme swap gives
+        // the quick row's Scrollable a new ScrollPosition, and the dim frame
+        // describes the row's semantics before layout has given that
+        // position its dimensions, so for that one frame the row has no
+        // implicit-scrolling flag and its clipped edge tile counts as a
+        // 38 dp tap target. The next frame (already scheduled) puts it back.
+        expect(t.binding.hasScheduledFrame, isTrue);
+        await t.pump();
         expect(
           t.element(find.byType(RemoteBody)).appColors.bg,
           AppColors.theater.bg,
@@ -484,27 +492,13 @@ class _AppearanceScope extends StatelessWidget {
   );
 }
 
-/// Guideline failures deferred by a ruling, by test name, with the reason.
-/// The theater-dimmed remote keeps the semantics under its wake cover
-/// (P8-R13 defers `ExcludeSemantics` to the Voice/Switch Access device
-/// check). After the dim's theme swap the quick row's scrollable loses its
-/// implicit-scrolling flag, so its partly scrolled tile counts as a 38 dp
-/// target. Its text contrast is still checked, below.
-const Map<String, String> _deferred = {
-  'remote_theater_palette_meets_the_guidelines_dark':
-      'P8-R13: semantics under the theater wake cover (needs a ruling)',
-  'remote_theater_palette_meets_the_guidelines_light':
-      'P8-R13: semantics under the theater wake cover (needs a ruling)',
-};
-
 void main() {
   setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   for (final b in Brightness.values) {
     for (final name in _screens.keys) {
       final description = '${name}_meets_the_guidelines_${b.name}';
-      final skip = _deferred[description];
-      _semanticsTest(description, skip: skip, (t) async {
+      _semanticsTest(description, (t) async {
         await _screens[name]!(t, (
           brightness: b,
           size: const Size(390, 844),
@@ -839,18 +833,10 @@ Future<void> _expectReachable(
 }
 
 /// A `testWidgets` that runs with semantics on (see [withSemantics]).
-///
-/// With a [skip] reason it is registered as a skipped test of the same name,
-/// so the reason is printed with it (`testWidgets` takes only a bool).
 void _semanticsTest(
   String description,
-  Future<void> Function(WidgetTester t) body, {
-  String? skip,
-}) {
-  if (skip != null) {
-    test(description, () {}, skip: skip);
-    return;
-  }
+  Future<void> Function(WidgetTester t) body,
+) {
   testWidgets(description, (t) => withSemantics(t, () => body(t)));
 }
 

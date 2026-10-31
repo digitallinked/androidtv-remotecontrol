@@ -267,4 +267,148 @@ void main() {
     await t.pump();
     expect(rec.calls, ['tap:${KeyCodes.dpadUp}']);
   });
+
+  /// The region the pad tints now.
+  DpadRegion? tinted(WidgetTester t) {
+    final paint = t.widget<CustomPaint>(
+      find.descendant(
+        of: find.byType(Dpad),
+        matching: find.byType(CustomPaint),
+      ),
+    );
+    // The painter is private; `pressed` is what it tints.
+    return (paint.painter! as dynamic).pressed as DpadRegion?;
+  }
+
+  testWidgets('hold_starts_on_the_region_the_finger_went_down_on', (t) async {
+    await pumpPad(t);
+    // 8 dp outside the 54 dp OK disc of a 300 dp pad: Up.
+    final g = await t.startGesture(centre(t) + const Offset(0, -62));
+    await t.pump(const Duration(milliseconds: 100));
+    // A drift into the OK disc before the threshold. It stays under the
+    // 18 dp touch slop (a 20 dp drift would cancel the hold altogether).
+    await g.moveBy(const Offset(0, 15));
+    await t.pump(kHoldThreshold);
+    expect(rec.calls, ['holdStart:${KeyCodes.dpadUp}']);
+    await g.up();
+    expect(rec.calls.last, 'holdEnd:${KeyCodes.dpadUp}');
+  });
+
+  testWidgets('a_hold_keeps_its_down_region_when_the_pad_resizes', (t) async {
+    // The pad can change size under a finger: the quick row or the preview
+    // card coming and going changes the room the remote gives it.
+    final side = ValueNotifier<double>(300);
+    addTearDown(side.dispose);
+    await pumpApp(
+      t,
+      ValueListenableBuilder<double>(
+        valueListenable: side,
+        builder: (_, s, _) => SizedBox.square(
+          dimension: s,
+          child: Dpad(input: rec),
+        ),
+      ),
+    );
+    final g = await t.startGesture(centre(t) + const Offset(0, -62));
+    await t.pump();
+    expect(tinted(t), DpadRegion.up);
+    // On a 160 dp pad the same spot of the old box lies in the Right wedge.
+    side.value = 160;
+    await t.pump(const Duration(milliseconds: 100));
+    expect(rec.calls, isEmpty, reason: 'resized before the hold starts');
+    await t.pump(kHoldThreshold);
+    expect(rec.calls, ['holdStart:${KeyCodes.dpadUp}']);
+    await g.up();
+    expect(rec.calls, [
+      'holdStart:${KeyCodes.dpadUp}',
+      'holdEnd:${KeyCodes.dpadUp}',
+    ]);
+  });
+
+  testWidgets('dpad_clamps_to_100x100', (t) async {
+    await pumpPad(t, side: 100);
+    expect(t.takeException(), isNull);
+    final size = t.getSize(
+      find.descendant(
+        of: find.byType(Dpad),
+        matching: find.byType(CustomPaint),
+      ),
+    );
+    expect(size, const Size(100, 100));
+
+    // The OK disc keeps its 56 dp; each wedge is at least 48 dp across its
+    // middle, where its tap lands.
+    const radius = 50.0;
+    final okRadius = dpadCenterRadius(100);
+    expect(okRadius * 2, greaterThanOrEqualTo(56));
+    final mid = (okRadius + radius) / 2;
+    for (final (region, along, across) in const [
+      (DpadRegion.up, Offset(0, -1), Offset(1, 0)),
+      (DpadRegion.down, Offset(0, 1), Offset(1, 0)),
+      (DpadRegion.left, Offset(-1, 0), Offset(0, 1)),
+      (DpadRegion.right, Offset(1, 0), Offset(0, 1)),
+    ]) {
+      var span = 0;
+      for (var d = -50; d <= 50; d++) {
+        final p = const Offset(50, 50) + along * mid + across * d.toDouble();
+        if (dpadRegionAt(p, size) == region) span++;
+      }
+      expect(span, greaterThanOrEqualTo(48), reason: '$region');
+    }
+
+    // And a tap on each region reaches it.
+    for (final offset in [
+      Offset(0, -mid),
+      Offset(0, mid),
+      Offset(-mid, 0),
+      Offset(mid, 0),
+      Offset.zero,
+    ]) {
+      await t.tapAt(centre(t) + offset);
+      await t.pump();
+    }
+    expect(rec.calls, [
+      'tap:${KeyCodes.dpadUp}',
+      'tap:${KeyCodes.dpadDown}',
+      'tap:${KeyCodes.dpadLeft}',
+      'tap:${KeyCodes.dpadRight}',
+      'tap:${KeyCodes.dpadCenter}',
+    ]);
+  });
+
+  testWidgets('dragging_across_wedges_keeps_the_first_region', (t) async {
+    await pumpPad(t);
+    final g = await t.startGesture(centre(t) + up);
+    await t.pump();
+    expect(tinted(t), DpadRegion.up);
+    // Across the Up/Right diagonal and deep into the Right wedge.
+    for (var i = 0; i < 10; i++) {
+      await g.moveBy(const Offset(12, 8));
+      await t.pump(const Duration(milliseconds: 10));
+    }
+    expect(tinted(t), DpadRegion.up);
+    await g.up();
+    await t.pump();
+    expect(tinted(t), isNull);
+    // A drag is not a tap: nothing is sent, and never the Right key.
+    expect(rec.calls, isEmpty);
+  });
+
+  testWidgets('a_hold_stays_on_its_region_while_dragging', (t) async {
+    await pumpPad(t);
+    final g = await t.startGesture(centre(t) + up);
+    await t.pump(kHoldThreshold);
+    expect(rec.calls, ['holdStart:${KeyCodes.dpadUp}']);
+    for (var i = 0; i < 10; i++) {
+      await g.moveBy(const Offset(12, 8));
+      await t.pump(const Duration(milliseconds: 10));
+    }
+    expect(tinted(t), DpadRegion.up);
+    expect(rec.calls, ['holdStart:${KeyCodes.dpadUp}']);
+    await g.up();
+    expect(rec.calls, [
+      'holdStart:${KeyCodes.dpadUp}',
+      'holdEnd:${KeyCodes.dpadUp}',
+    ]);
+  });
 }
