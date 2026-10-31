@@ -1,19 +1,23 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/app_usage_repository.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
+import 'package:tv_remote/features/apps/data/shortcut_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 
 import '../../helpers/fake_remote_session.dart';
@@ -121,6 +125,61 @@ void main() {
       expect(await c.read(shortcutsProvider.future), [_netflix]);
       expect(shortcutRepo.writes, 0);
       expect(store.shortcutsSeeded, isTrue);
+    });
+
+    // On iOS the preferences come back with an iCloud restore or Quick
+    // Start and the database doesn't (Ruling P8-R1): the flag then describes
+    // a database that isn't there.
+    test(
+      'a_fresh_database_is_seeded_even_when_the_flag_was_restored',
+      () async {
+        await store.setShortcutsSeeded(true);
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final c = makeContainer(
+          overrides: [
+            shortcutRepositoryProvider.overrideWithValue(
+              DriftShortcutRepository(db),
+            ),
+          ],
+        );
+        await c.read(shortcutsSeedProvider.future);
+        expect(_packages(await DriftShortcutRepository(db).all()), myRow);
+        expect(store.shortcutsSeeded, isTrue);
+      },
+    );
+
+    test('a_database_from_an_earlier_run_keeps_an_emptied_list', () async {
+      final dir = Directory.systemTemp.createTempSync('shortcuts_seed');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final file = File('${dir.path}/remotely.sqlite');
+      // The first run creates the database and seeds it; the user then
+      // empties the list.
+      final first = AppDatabase(NativeDatabase(file));
+      final c = makeContainer(
+        overrides: [
+          shortcutRepositoryProvider.overrideWithValue(
+            DriftShortcutRepository(first),
+          ),
+        ],
+      );
+      await c.read(shortcutsSeedProvider.future);
+      await DriftShortcutRepository(first).replaceAll(const []);
+      c.dispose();
+      await first.close();
+
+      // The next run opens the same file: nothing is refilled.
+      final second = AppDatabase(NativeDatabase(file));
+      addTearDown(second.close);
+      final next = makeContainer(
+        overrides: [
+          shortcutRepositoryProvider.overrideWithValue(
+            DriftShortcutRepository(second),
+          ),
+        ],
+      );
+      await next.read(shortcutsSeedProvider.future);
+      expect(await DriftShortcutRepository(second).all(), isEmpty);
     });
 
     test('once_the_flag_is_set_the_seed_never_reads_the_catalogue', () async {

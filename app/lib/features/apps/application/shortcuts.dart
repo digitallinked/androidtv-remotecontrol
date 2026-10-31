@@ -22,15 +22,26 @@ part 'shortcuts.g.dart';
 /// later (flag set) is never refilled. Errors (a corrupt catalogue, storage
 /// that won't open) are swallowed: the flag stays unset and the next launch
 /// tries again.
+///
+/// The flag lives in the preferences, which an iPhone restore or Quick Start
+/// brings back without the database (Ruling P8-R1). A store created in this
+/// run is seeded whatever the flag says.
 @Riverpod(keepAlive: true)
 Future<void> shortcutsSeed(Ref ref) async {
   final store = ref.watch(settingsStoreProvider);
   final repository = ref.watch(shortcutRepositoryProvider);
-  // Seeded already (every start after the first): the catalogue is not even
-  // read.
-  if (store.shortcutsSeeded) return;
-  // Watched before the first await. `ignore` keeps a catalogue error that
-  // this run never awaits from surfacing as an unhandled one.
+  if (store.shortcutsSeeded) {
+    // Seeded already (every start after the first): the catalogue is not
+    // even read, unless the store is new.
+    try {
+      if (!await repository.isNewStore()) return;
+    } on Object {
+      // Storage that won't open: the shortcuts read shows the error.
+      return;
+    }
+  }
+  // `ignore` keeps a catalogue error that this run never awaits from
+  // surfacing as an unhandled one.
   final catalogueFuture = ref.watch(catalogueProvider.future)..ignore();
   final region = ref.watch(deviceRegionProvider);
   try {

@@ -26,6 +26,13 @@ class InMemoryShortcutRepository implements ShortcutRepository {
   /// When set, the next write throws it and clears it.
   Object? failNextWrite;
 
+  /// What [isNewStore] answers: by default an existing store, so the
+  /// `shortcutsSeeded` flag decides.
+  bool newStore = false;
+
+  @override
+  Future<bool> isNewStore() async => newStore;
+
   void _beginWrite() {
     writes++;
     final failure = failNextWrite;

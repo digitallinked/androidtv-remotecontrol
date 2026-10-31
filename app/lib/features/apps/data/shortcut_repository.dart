@@ -42,6 +42,11 @@ abstract interface class ShortcutRepository {
   /// transaction. Returns whether it inserted them. First-run seeding uses it,
   /// so rows added in the meantime are never overwritten.
   Future<bool> seedIfEmpty(List<AppEntry> apps);
+
+  /// Whether the store was created, empty, in this run, so it was never
+  /// seeded whatever the preferences say: on iOS they come back with an
+  /// iCloud restore or Quick Start, and the database doesn't (Ruling P8-R1).
+  Future<bool> isNewStore();
 }
 
 /// [ShortcutRepository] backed by the drift [AppDatabase].
@@ -154,6 +159,9 @@ class DriftShortcutRepository implements ShortcutRepository {
     await _db.delete(_db.shortcuts).go();
     await _insertAll(apps);
   });
+
+  @override
+  Future<bool> isNewStore() => _db.createdThisRun();
 
   @override
   Future<bool> seedIfEmpty(List<AppEntry> apps) => _db.transaction(() async {

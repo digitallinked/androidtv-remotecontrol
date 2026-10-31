@@ -101,4 +101,25 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  bool _createdThisRun = false;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+      _createdThisRun = true;
+    },
+  );
+
+  /// Whether this run created the database file, empty: a fresh install, or
+  /// a phone whose preferences came back from a backup or a transfer while
+  /// the database didn't (Ruling P8-R1). Preferences that describe the
+  /// database's contents, such as "shortcuts seeded", don't apply to it.
+  ///
+  /// Opens the database if nothing has yet.
+  Future<bool> createdThisRun() async {
+    await customSelect('SELECT 1').get();
+    return _createdThisRun;
+  }
 }
