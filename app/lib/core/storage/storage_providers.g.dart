@@ -9,16 +9,19 @@ part of 'storage_providers.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// The local database, opened on first use and closed with its container.
+/// On iOS it lives in the backup-excluded directory (Ruling P8-R1).
 
 @ProviderFor(appDatabase)
 final appDatabaseProvider = AppDatabaseProvider._();
 
 /// The local database, opened on first use and closed with its container.
+/// On iOS it lives in the backup-excluded directory (Ruling P8-R1).
 
 final class AppDatabaseProvider
     extends $FunctionalProvider<AppDatabase, AppDatabase, AppDatabase>
     with $Provider<AppDatabase> {
   /// The local database, opened on first use and closed with its container.
+  /// On iOS it lives in the backup-excluded directory (Ruling P8-R1).
   AppDatabaseProvider._()
     : super(
         from: null,
@@ -52,7 +55,7 @@ final class AppDatabaseProvider
   }
 }
 
-String _$appDatabaseHash() => r'365ef3f215d780c29a21b6328f0b547a8363c6a6';
+String _$appDatabaseHash() => r'944f59a6c30e777944ef56665944c5e4d7410ff5';
 
 /// Saved TVs, stored in [appDatabaseProvider].
 

@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -55,8 +54,6 @@ final Map<String, String> _routes = {
 };
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   Future<void> pump(
     WidgetTester t,
     String route, {
@@ -230,6 +227,44 @@ void main() {
     expect(find.text('Send feedback?'), findsOneWidget);
     await check('feedback_dialog');
   }
+
+  // Touch targets at least 8 dp apart (global constraints): the hit boxes
+  // of every app-bar button, the leading one included, never touch.
+  testWidgets('app_bar_actions_keep_8dp_apart_at_320dp', (t) async {
+    var checked = 0;
+    for (final e in _routes.entries) {
+      for (final scale in [1.0, 2.0]) {
+        await pump(t, e.key, size: const Size(320, 640), textScale: scale);
+        // A Material 3 IconButton is built on a ButtonStyleButton: one hit
+        // box is found twice, so the set keeps it once.
+        final boxes = {
+          for (final element
+              in find
+                  .descendant(
+                    of: find.byType(AppBar),
+                    matching: find.byWidgetPredicate(
+                      (w) => w is IconButton || w is ButtonStyleButton,
+                    ),
+                  )
+                  .evaluate())
+            (element.renderObject! as RenderBox).paintBounds.shift(
+              (element.renderObject! as RenderBox).localToGlobal(Offset.zero),
+            ),
+        }.toList()..sort((a, b) => a.left.compareTo(b.left));
+        for (var i = 1; i < boxes.length; i++) {
+          final gap = boxes[i].left - boxes[i - 1].right;
+          expect(
+            gap,
+            greaterThanOrEqualTo(8),
+            reason: '${e.value} at ${scale}x: ${boxes[i - 1]} and ${boxes[i]}',
+          );
+          checked++;
+        }
+      }
+    }
+    // Some app bars have more than one button, so the gaps were measured.
+    expect(checked, greaterThan(0));
+  });
 
   testWidgets('every_new_screen_fits_320dp_at_200_percent_text', (t) async {
     for (final b in Brightness.values) {

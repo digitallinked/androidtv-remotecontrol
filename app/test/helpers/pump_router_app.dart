@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -72,7 +73,8 @@ import 'test_identity.dart';
 ///
 /// [textScaler] replaces the linear [textScale] with a scaler of your own, for
 /// the non-linear curves of Android 14+. [disableAnimations] turns on reduce
-/// motion in that same `MediaQuery`.
+/// motion in that same `MediaQuery`. [textDirection] overrides the locale's
+/// reading direction (no supported locale is right-to-left).
 ///
 /// The theme follows the stored colour style and Premium exactly as `App`
 /// does; [brightness] stands in for the system theme. [dynamicScheme] stands
@@ -83,6 +85,11 @@ import 'test_identity.dart';
 /// go idle: a screen with a running progress indicator never goes idle, and
 /// `pumpAndSettle` would then run the fake clock forward until the screen
 /// changes.
+///
+/// The language follows the stored setting as `App` does; [locale] replaces
+/// it. [localizationsDelegates] replaces the app's strings delegate (for
+/// example with a pseudo-locale's) and keeps the Material, Cupertino and
+/// Widgets delegates.
 Future<SettingsStore> pumpRouterApp(
   WidgetTester tester, {
   required String initialLocation,
@@ -96,6 +103,9 @@ Future<SettingsStore> pumpRouterApp(
   bool accessibleNavigation = false,
   bool disableAnimations = false,
   ColorScheme? dynamicScheme,
+  TextDirection? textDirection,
+  Locale? locale,
+  List<LocalizationsDelegate<Object?>>? localizationsDelegates,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
@@ -106,8 +116,12 @@ Future<SettingsStore> pumpRouterApp(
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
-      overrides: _withDefaults(
-        _defaults(store: store, db: db, initialLocation: initialLocation),
+      overrides: mergeOverrides(
+        testAppOverrides(
+          store: store,
+          db: db,
+          initialLocation: initialLocation,
+        ),
         overrides,
       ),
       child: Consumer(
@@ -121,7 +135,17 @@ Future<SettingsStore> pumpRouterApp(
                 ? dynamicScheme
                 : null,
           ),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale:
+              locale ??
+              localeFromCode(ref.watch(settingsControllerProvider).localeCode),
+          localizationsDelegates: localizationsDelegates == null
+              ? AppLocalizations.localizationsDelegates
+              : [
+                  ...localizationsDelegates,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                ],
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, app) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
@@ -131,7 +155,12 @@ Future<SettingsStore> pumpRouterApp(
               disableAnimations:
                   disableAnimations || MediaQuery.disableAnimationsOf(context),
             ),
-            child: buildAppShell(context, app),
+            child: textDirection == null
+                ? buildAppShell(context, app)
+                : Directionality(
+                    textDirection: textDirection,
+                    child: buildAppShell(context, app),
+                  ),
           ),
           routerConfig: ref.watch(appRouterProvider),
         ),
@@ -171,8 +200,12 @@ Future<SettingsStore> pumpRealApp(
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
-      overrides: _withDefaults(
-        _defaults(store: store, db: db, initialLocation: initialLocation),
+      overrides: mergeOverrides(
+        testAppOverrides(
+          store: store,
+          db: db,
+          initialLocation: initialLocation,
+        ),
         overrides,
       ),
       child: const App(),
@@ -186,8 +219,13 @@ Future<SettingsStore> pumpRealApp(
   return store;
 }
 
-/// The overrides every pumped app starts with; see [pumpRouterApp].
-List<Override> _defaults({
+/// The overrides every pumped app starts with, on [store] and [db] at
+/// [initialLocation]: everything platform-backed is replaced (see
+/// [pumpRouterApp]).
+///
+/// For a `ProviderContainer` built without a widget tree; combine it with a
+/// test's own overrides through [mergeOverrides].
+List<Override> testAppOverrides({
   required SettingsStore store,
   required AppDatabase db,
   required String initialLocation,
@@ -261,7 +299,7 @@ List<Override> _defaults({
 
 /// [defaults] followed by [overrides]; an override replaces the default of the
 /// same provider, because a container rejects two overrides of one provider.
-List<Override> _withDefaults(
+List<Override> mergeOverrides(
   List<Override> defaults,
   List<Override> overrides,
 ) {

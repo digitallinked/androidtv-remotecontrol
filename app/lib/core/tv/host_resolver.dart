@@ -10,6 +10,21 @@ typedef TvDiscoveryFactory = TvDiscovery Function();
 /// Returns `null` when the TV isn't found.
 typedef HostResolver = Future<String?> Function(String serviceName);
 
+/// Looks [serviceName] up with [resolve], counting a look-up that throws
+/// (at once or later) or takes longer than [timeout] as "not found" (Ruling
+/// P8-R10): the caller then falls back to the address it already has.
+Future<String?> resolveHostOrNull(
+  HostResolver resolve,
+  String serviceName, {
+  Duration timeout = const Duration(seconds: 4),
+}) async {
+  try {
+    return await resolve(serviceName).timeout(timeout);
+  } on Object {
+    return null;
+  }
+}
+
 /// Browses the network until a current-generation TV called [serviceName]
 /// shows up and returns its host, or returns `null` after [timeout] or when
 /// discovery fails.

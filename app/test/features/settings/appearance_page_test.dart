@@ -62,7 +62,7 @@ void main() {
     );
 
     final language = find.byType(RadioListTile<String?>);
-    expect(language, findsNWidgets(2));
+    expect(language, findsNWidgets(3));
     expect(
       find.descendant(of: language, matching: find.text('Same as phone')),
       findsOneWidget,
@@ -87,6 +87,33 @@ void main() {
     await t.tap(find.descendant(of: language, matching: find.text('English')));
     await t.pumpAndSettle();
     expect(store.localeCode, 'en');
+  });
+
+  testWidgets('language_picker_offers_bahasa_melayu', (t) async {
+    final store = await pumpAppearance(t);
+
+    final language = find.byType(RadioListTile<String?>);
+    expect(
+      [
+        for (final tile in language.evaluate())
+          ((tile.widget as RadioListTile<String?>).title! as Text).data,
+      ],
+      ['Same as phone', 'English', 'Bahasa Melayu'],
+    );
+
+    await t.tap(
+      find.descendant(of: language, matching: find.text('Bahasa Melayu')),
+    );
+    await t.pumpAndSettle();
+
+    expect(store.localeCode, 'ms');
+    final context = t.element(find.byType(RadioGroup<String?>));
+    expect(Localizations.localeOf(context), const Locale('ms'));
+    // The page itself is now in Malay: its title and the language name,
+    // which is always in its own language.
+    expect(find.text('Appearance'), findsNothing);
+    expect(find.text('Penampilan'), findsOneWidget);
+    expect(find.text('Bahasa Melayu'), findsOneWidget);
   });
 
   testWidgets('stored_theme_is_selected', (t) async {

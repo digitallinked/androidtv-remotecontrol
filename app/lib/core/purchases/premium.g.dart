@@ -67,7 +67,7 @@ final class PremiumProvider extends $NotifierProvider<Premium, PremiumState> {
   }
 }
 
-String _$premiumHash() => r'176fbc500ac53688f27366b52aad7c85649c3372';
+String _$premiumHash() => r'e1348632c40e540a3c6d47fba63255e667389e32';
 
 /// The user's Premium state (Ruling P6-R10).
 ///

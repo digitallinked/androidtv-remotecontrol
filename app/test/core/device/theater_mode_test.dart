@@ -241,6 +241,31 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('the_wake_cover_is_one_labelled_node', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      await pumpHome(t);
+      await idle(t, 30);
+      final cover = find.semantics
+          .byLabel('Screen dimmed. Touch to brighten.')
+          .evaluate()
+          .single;
+      expect(
+        cover,
+        isSemantics(
+          label: 'Screen dimmed. Touch to brighten.',
+          hasTapAction: true,
+        ),
+      );
+      // The cover's touch handler adds no unlabelled tappable node of its
+      // own under the label.
+      expect(cover.childrenCount, 0);
+      await expectLater(t, meetsGuideline(labeledTapTargetGuideline));
+    } finally {
+      handle.dispose();
+    }
+  });
+
   testWidgets('disabled_never_dims', (t) async {
     enabled.value = false;
     await pumpHome(t);

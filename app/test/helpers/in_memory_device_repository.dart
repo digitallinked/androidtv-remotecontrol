@@ -54,8 +54,12 @@ class InMemoryDeviceRepository implements DeviceRepository {
   /// When set, `watchAll` fails with it (the list can't be read).
   Object? watchError;
 
+  /// How many times `watchAll` was called.
+  int watchAllCalls = 0;
+
   @override
   Stream<List<SavedDevice>> watchAll() {
+    watchAllCalls++;
     final error = watchError;
     if (error != null) return Stream<List<SavedDevice>>.error(error);
     return Stream.multi((controller) {
@@ -64,6 +68,9 @@ class InMemoryDeviceRepository implements DeviceRepository {
       controller.onCancel = sub.cancel;
     });
   }
+
+  @override
+  Future<List<SavedDevice>> all() async => _newestFirst;
 
   @override
   Future<void> upsert(SavedDevice device) async {
@@ -127,8 +134,12 @@ class InMemoryDeviceRepository implements DeviceRepository {
     _beginWrite();
     _update(
       serviceName,
+      // The MAC goes with the pin (Ruling P8-R10).
       (d) => d.serverKeyPin == distrustedPin
-          ? d.copyWith(serverKeyPin: const Value(null))
+          ? d.copyWith(
+              serverKeyPin: const Value(null),
+              wolMac: const Value(null),
+            )
           : d,
     );
   }

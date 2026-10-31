@@ -28,7 +28,10 @@ class AppDialogAction<T> {
 
 /// A themed confirmation dialog with a title, a message and actions.
 ///
-/// Use [showAppDialog] to open it.
+/// Use [showAppDialog] to open it. Screen readers announce the dialog by its
+/// [title] (it names its route) and keep their focus inside it. On a screen
+/// narrower than [narrowWidth] it sits 16 dp from the sides instead of
+/// 40 dp, so large text still gets a readable line; the body scrolls.
 class AppDialog<T> extends StatelessWidget {
   /// Creates a dialog.
   const AppDialog({
@@ -47,37 +50,51 @@ class AppDialog<T> extends StatelessWidget {
   /// Buttons, laid out at the end of the dialog and wrapping when narrow.
   final List<AppDialogAction<T>> actions;
 
+  /// Screens narrower than this get the narrow side insets.
+  static const double narrowWidth = 360;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final text = Theme.of(context).textTheme;
+    final narrow = MediaQuery.sizeOf(context).width < narrowWidth;
     return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: text.titleLarge),
-              const SizedBox(height: AppSpacing.m),
-              Text(
-                message,
-                style: text.bodyLarge?.copyWith(color: colors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: AppSpacing.s,
-                  runSpacing: AppSpacing.s,
-                  children: [
-                    for (final action in actions) _buttonFor(context, action),
-                  ],
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: narrow ? AppSpacing.l : 40,
+        vertical: AppSpacing.xl,
+      ),
+      child: Semantics(
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        label: title,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: text.titleLarge),
+                const SizedBox(height: AppSpacing.m),
+                Text(
+                  message,
+                  style: text.bodyLarge?.copyWith(color: colors.textSecondary),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.xl),
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: AppSpacing.s,
+                    runSpacing: AppSpacing.s,
+                    children: [
+                      for (final action in actions) _buttonFor(context, action),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

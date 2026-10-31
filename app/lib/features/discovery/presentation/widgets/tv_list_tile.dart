@@ -37,7 +37,13 @@ class TvListTile extends StatelessWidget {
       leading: ExcludeSemantics(
         child: Icon(Icons.tv, color: colors.textSecondary),
       ),
-      title: Text(tv.displayName),
+      // One line at any text size: a long name ends in an ellipsis, and a
+      // screen reader still reads it in full.
+      title: Text(
+        tv.displayName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       subtitle: Text(tv.host),
       // Capped so a long label wraps at large text sizes instead of
       // squeezing the name.

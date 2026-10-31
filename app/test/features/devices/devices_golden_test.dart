@@ -1,7 +1,7 @@
 @Tags(['golden'])
 library;
 
-import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -17,8 +17,6 @@ import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   // One nicknamed TV that is in use, and one that was never paired.
   Future<void> pump(
     WidgetTester t, {

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/foundation.dart' show mapEquals, visibleForTesting;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -118,8 +118,11 @@ class _DpadState extends State<Dpad> {
     if (region != null) widget.input.tap(dpadKeyCode(region));
   }
 
+  /// A hold is on the region the finger went down on, like a tap: not one
+  /// the finger drifted into, and not one the spot falls in after the pad
+  /// changed size under the finger.
   void _holdStart(LongPressStartDetails details) {
-    final region = _regionAt(details.localPosition);
+    final region = _downRegion;
     if (region == null) return;
     _held = region;
     _holdInput = widget.input;
@@ -216,6 +219,13 @@ class _DpadState extends State<Dpad> {
     );
   }
 }
+
+/// The region [painter], a D-pad's painter, tints as pressed; `null` for no
+/// region or another painter. Lets tests read the tint without depending on
+/// the private painter's fields.
+@visibleForTesting
+DpadRegion? dpadTintedRegion(CustomPainter? painter) =>
+    painter is _DpadPainter ? painter.pressed : null;
 
 /// Paints the pad and describes its five buttons to screen readers.
 class _DpadPainter extends CustomPainter {
@@ -321,6 +331,15 @@ class _DpadPainter extends CustomPainter {
   bool shouldRepaint(_DpadPainter old) =>
       old.pressed != pressed || old.colors != colors;
 
+  /// Where each region comes in a screen reader's reading order.
+  static const Map<DpadRegion, double> _readingOrder = {
+    DpadRegion.up: 0,
+    DpadRegion.left: 1,
+    DpadRegion.center: 2,
+    DpadRegion.right: 3,
+    DpadRegion.down: 4,
+  };
+
   @override
   SemanticsBuilderCallback get semanticsBuilder => (size) {
     final diameter = math.min(size.width, size.height);
@@ -361,6 +380,9 @@ class _DpadPainter extends CustomPainter {
           key: ValueKey(region),
           rect: rects[region]!,
           properties: SemanticsProperties(
+            // Up, Left, OK, Right, Down: the order a screen reader reads,
+            // whatever the pad's size does to the geometric order.
+            sortKey: OrdinalSortKey(_readingOrder[region]!),
             label: labels[region],
             textDirection: textDirection,
             button: true,

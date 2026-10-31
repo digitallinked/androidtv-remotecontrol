@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 flutter pub get
 
 echo "== format =="
-dart format --output=none --set-exit-if-changed app/lib app/test packages/atv_remote/lib packages/atv_remote/test packages/atv_remote/bin
+dart format --output=none --set-exit-if-changed app/lib app/test app/integration_test packages/atv_remote/lib packages/atv_remote/test packages/atv_remote/bin
 
 echo "== analyze =="
 (cd app && flutter analyze)

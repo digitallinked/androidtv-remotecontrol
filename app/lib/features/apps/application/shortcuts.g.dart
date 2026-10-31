@@ -68,11 +68,17 @@ final class ShortcutsSeedProvider
 String _$shortcutsSeedHash() => r'9217a8770e36bbc323d84e0b3c3ce2abd1d4f963';
 
 /// The user's shortcuts by position, once the first-run seeding is done.
+///
+/// A read failure is shown at once ([noRetry], Ruling P8-R10): the Apps
+/// screen offers "Try again" itself.
 
 @ProviderFor(shortcuts)
 final shortcutsProvider = ShortcutsProvider._();
 
 /// The user's shortcuts by position, once the first-run seeding is done.
+///
+/// A read failure is shown at once ([noRetry], Ruling P8-R10): the Apps
+/// screen offers "Try again" itself.
 
 final class ShortcutsProvider
     extends
@@ -83,11 +89,14 @@ final class ShortcutsProvider
         >
     with $FutureModifier<List<AppEntry>>, $StreamProvider<List<AppEntry>> {
   /// The user's shortcuts by position, once the first-run seeding is done.
+  ///
+  /// A read failure is shown at once ([noRetry], Ruling P8-R10): the Apps
+  /// screen offers "Try again" itself.
   ShortcutsProvider._()
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'shortcutsProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -109,7 +118,7 @@ final class ShortcutsProvider
   }
 }
 
-String _$shortcutsHash() => r'88c719a8296f7c5653e401a0f5a84aded1a9ec08';
+String _$shortcutsHash() => r'970dbe160f9d7941157392b66019e3eb4875ee45';
 
 /// The [ShortcutActions] for the widgets.
 
@@ -158,12 +167,16 @@ final class ShortcutActionsProvider
 
 String _$shortcutActionsHash() => r'3d779c20ee8616bfb33606248683e6510c557b23';
 
-/// The most used apps seen on the TV, kept up to date.
+/// The most used apps seen on the TV, kept up to date. System packages are
+/// dropped before the limit (Ruling P8-R10), so they never crowd out the
+/// apps worth recommending.
 
 @ProviderFor(appUsage)
 final appUsageProvider = AppUsageProvider._();
 
-/// The most used apps seen on the TV, kept up to date.
+/// The most used apps seen on the TV, kept up to date. System packages are
+/// dropped before the limit (Ruling P8-R10), so they never crowd out the
+/// apps worth recommending.
 
 final class AppUsageProvider
     extends
@@ -175,12 +188,14 @@ final class AppUsageProvider
     with
         $FutureModifier<List<AppUsageStat>>,
         $StreamProvider<List<AppUsageStat>> {
-  /// The most used apps seen on the TV, kept up to date.
+  /// The most used apps seen on the TV, kept up to date. System packages are
+  /// dropped before the limit (Ruling P8-R10), so they never crowd out the
+  /// apps worth recommending.
   AppUsageProvider._()
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'appUsageProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -202,16 +217,16 @@ final class AppUsageProvider
   }
 }
 
-String _$appUsageHash() => r'bf666e3159006485d5db987298cd5c4e4ab2f90f';
+String _$appUsageHash() => r'e811eab5e3c7fd521f98385dea3f8a4d3482bd9c';
 
 /// "Recently used on your TV": see [recommendApps]. An error state when the
-/// catalogue can't be read.
+/// catalogue or the usage can't be read, shown at once ([noRetry]).
 
 @ProviderFor(recommendedApps)
 final recommendedAppsProvider = RecommendedAppsProvider._();
 
 /// "Recently used on your TV": see [recommendApps]. An error state when the
-/// catalogue can't be read.
+/// catalogue or the usage can't be read, shown at once ([noRetry]).
 
 final class RecommendedAppsProvider
     extends
@@ -222,12 +237,12 @@ final class RecommendedAppsProvider
         >
     with $FutureModifier<List<AppEntry>>, $FutureProvider<List<AppEntry>> {
   /// "Recently used on your TV": see [recommendApps]. An error state when the
-  /// catalogue can't be read.
+  /// catalogue or the usage can't be read, shown at once ([noRetry]).
   RecommendedAppsProvider._()
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'recommendedAppsProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -249,7 +264,7 @@ final class RecommendedAppsProvider
   }
 }
 
-String _$recommendedAppsHash() => r'21a7bf2829c38c881d1a8716c0e0361d801c7050';
+String _$recommendedAppsHash() => r'9fb75aa7cb4b317f323d742271c0d7f284211c54';
 
 /// Counts each app that comes to the TV's foreground (Ruling P5-R6).
 ///

@@ -11,7 +11,9 @@ import 'package:tv_remote/features/remote/presentation/key_labels.dart';
 /// A card under the demo remote's status that says what the simulated TV
 /// just did and what state it is in, so the keys visibly do something.
 ///
-/// Its text is a live region: screen readers announce each change.
+/// Only its last-action line is a live region: screen readers announce each
+/// new action, not the whole card (the title and the status are read when
+/// the card is explored).
 class TvPreviewCard extends ConsumerWidget {
   /// Creates the card.
   const TvPreviewCard({super.key});
@@ -43,7 +45,6 @@ class TvPreviewCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.l),
         child: Semantics(
           container: true,
-          liveRegion: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: AppSpacing.xs,
@@ -52,7 +53,11 @@ class TvPreviewCard extends ConsumerWidget {
                 l10n.tvPreviewTitle,
                 style: text.labelLarge?.copyWith(color: colors.textSecondary),
               ),
-              Text(_describe(l10n, action), style: text.titleMedium),
+              Semantics(
+                container: true,
+                liveRegion: true,
+                child: Text(_describe(l10n, action), style: text.titleMedium),
+              ),
               if (status.isNotEmpty)
                 Wrap(
                   spacing: AppSpacing.s,

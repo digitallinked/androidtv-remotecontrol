@@ -88,9 +88,38 @@ class AppDatabase extends _$AppDatabase {
   /// Creates a database over [e], for example `NativeDatabase.memory()`.
   AppDatabase(super.e);
 
-  /// Opens the on-device database file named `remotely`.
-  factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'remotely'));
+  /// Opens the on-device database file named `remotely`, in
+  /// [databaseDirectory] when given (see `databaseDirectoryFor`), otherwise
+  /// in drift's default directory.
+  factory AppDatabase.open({Future<Object> Function()? databaseDirectory}) =>
+      AppDatabase(
+        driftDatabase(
+          name: 'remotely',
+          native: DriftNativeOptions(databaseDirectory: databaseDirectory),
+        ),
+      );
 
   @override
   int get schemaVersion => 1;
+
+  bool _createdThisRun = false;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+      _createdThisRun = true;
+    },
+  );
+
+  /// Whether this run created the database file, empty: a fresh install, or
+  /// a phone whose preferences came back from a backup or a transfer while
+  /// the database didn't (Ruling P8-R1). Preferences that describe the
+  /// database's contents, such as "shortcuts seeded", don't apply to it.
+  ///
+  /// Opens the database if nothing has yet.
+  Future<bool> createdThisRun() async {
+    await customSelect('SELECT 1').get();
+    return _createdThisRun;
+  }
 }

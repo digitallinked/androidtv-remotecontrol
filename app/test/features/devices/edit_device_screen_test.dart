@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -35,7 +35,6 @@ void main() {
   late FakeRemoteSession session;
   late IdentityStore identityStore;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     repo = InMemoryDeviceRepository([
       savedTv(at: DateTime.utc(2026, 10, 25, 12, 5)),
@@ -484,6 +483,48 @@ void main() {
     await t.tap(find.text('Back to your TVs'));
     await t.pumpAndSettle();
     expect(find.byType(DevicesScreen), findsOneWidget);
+  });
+
+  testWidgets('removing_the_tv_in_use_never_pops_twice', (t) async {
+    // Remote (on this TV) → Your TVs → Edit TV.
+    await pumpEdit(t, location: AppRoutes.remote);
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    unawaited(
+      GoRouter.of(t.element(find.byType(RemoteScreen))).push(AppRoutes.devices),
+    );
+    await t.pumpAndSettle();
+    await openEdit(t);
+    final router = GoRouter.of(t.element(find.byType(EditDeviceScreen)));
+    List<String> stack() => [
+      for (final m in router.routerDelegate.currentConfiguration.matches)
+        m.matchedLocation,
+    ];
+    final before = stack();
+    expect(before, hasLength(3));
+
+    await t.tap(find.text('Remove TV'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+
+    // Through the whole page transition, frame by frame.
+    final seen = <List<String>>[before];
+    for (var frame = 0; frame < 60; frame++) {
+      await t.pump(const Duration(milliseconds: 16));
+      final now = stack();
+      if (now.join(' ') != seen.last.join(' ')) seen.add(now);
+      expect(
+        find.text("This TV isn't saved on this phone anymore."),
+        findsNothing,
+        reason: 'frame $frame',
+      );
+    }
+    await t.pumpAndSettle();
+
+    // Exactly one step back: Edit TV goes, Your TVs and the remote stay.
+    expect(seen, [before, before.take(2).toList()]);
+    expect(find.byType(DevicesScreen), findsOneWidget);
+    expect(find.text('$_name removed'), findsOneWidget);
+    expect(repo.saved.containsKey(_name), isFalse);
   });
 
   testWidgets('edit_screen_opened_directly_goes_back_to_your_tvs_on_remove', (

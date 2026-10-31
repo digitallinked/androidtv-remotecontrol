@@ -240,7 +240,7 @@ class PairingController extends _$PairingController {
     _timer = null;
     final client = _client;
     _client = null;
-    if (client != null) unawaited(client.close());
+    if (client != null) unawaited(client.close().catchError((Object _) {}));
   }
 
   static PairingErrorKind _kindOf(PairingFailure reason) => switch (reason) {

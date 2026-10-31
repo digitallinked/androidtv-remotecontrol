@@ -7,8 +7,10 @@ import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/host_resolver.dart';
 import 'package:tv_remote/features/devices/application/device_actions.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
+import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import '../../helpers/fake_remote_client.dart';
 import '../../helpers/in_memory_device_repository.dart';
@@ -182,5 +184,26 @@ void main() {
     await expectLater(actions.rename('A', 'x'), throwsStateError);
     repo.failNextWrite = StateError('disk');
     await expectLater(actions.setWolMac('A', null), throwsStateError);
+  });
+
+  test('pair_again_uses_the_saved_host_when_the_resolver_throws', () async {
+    // "Pair again" looks the TV up afresh (decision #33); a look-up that
+    // throws, at once or later, counts as "not found" (Ruling P8-R10).
+    for (final resolver in <HostResolver>[
+      (_) async => throw StateError('nsd failed'),
+      (_) => throw StateError('nsd failed'),
+    ]) {
+      final c = ProviderContainer.test(
+        overrides: [
+          deviceRepositoryProvider.overrideWithValue(repo),
+          hostResolverProvider.overrideWithValue(resolver),
+        ],
+      );
+      final sub = c.listen(pairingTargetProvider('B'), (_, _) {});
+      final target = await c.read(pairingTargetProvider('B').future);
+      expect(target!.serviceName, 'B');
+      expect(target.host, '192.168.0.21');
+      sub.close();
+    }
   });
 }

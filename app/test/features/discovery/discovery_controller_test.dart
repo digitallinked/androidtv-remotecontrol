@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,13 +8,29 @@ import 'package:nsd/nsd.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/crash/crash_collection.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
+import 'package:tv_remote/core/session/remote_client_factory.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
+import 'package:tv_remote/core/session/session_signals.dart';
+import 'package:tv_remote/core/session/session_target.dart';
+import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import '../../helpers/fake_remote_client.dart';
 import '../../helpers/fake_tv_discovery.dart';
+import '../../helpers/in_memory_device_repository.dart';
+import '../../helpers/in_memory_secure_store.dart';
+import '../../helpers/manual_session_signals.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crash_reporter.dart';
+import '../../helpers/recording_crashlytics_sink.dart';
+import '../../helpers/test_devices.dart';
+import '../../helpers/test_identity.dart';
 
 DiscoveredTv _named(String serviceName, String displayName) => DiscoveredTv(
   serviceName: serviceName,
@@ -21,6 +39,25 @@ DiscoveredTv _named(String serviceName, String displayName) => DiscoveredTv(
   port: 6466,
   isLegacyService: false,
 );
+
+/// A repository whose manual-to-mDNS merge waits until [release] completes.
+class _SlowAdoptRepository extends InMemoryDeviceRepository {
+  _SlowAdoptRepository(super.initial);
+
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<bool> adoptManualDevice({
+    required String manualServiceName,
+    required DiscoveredTv tv,
+  }) async {
+    await release.future;
+    return super.adoptManualDevice(
+      manualServiceName: manualServiceName,
+      tv: tv,
+    );
+  }
+}
 
 void main() {
   late FakeTvDiscoveries discoveries;
@@ -193,6 +230,65 @@ void main() {
     });
   });
 
+  test('a_failing_stop_on_dispose_is_not_an_unhandled_error', () {
+    fakeAsync((async) {
+      final c = makeContainer();
+      final first = discoveries.created.single
+        ..stopError = StateError('the platform refused');
+      c.dispose();
+      async.flushMicrotasks();
+      expect(first.stopped, isTrue);
+    });
+  });
+
+  test('each_found_list_reaches_the_crash_scrubber', () {
+    fakeAsync((async) {
+      final c =
+          ProviderContainer.test(
+              overrides: [
+                tvDiscoveryFactoryProvider.overrideWithValue(
+                  discoveries.create,
+                ),
+                settingsStoreProvider.overrideWithValue(settings),
+                analyticsSinkProvider.overrideWithValue(analyticsSink),
+                analyticsDebugBuildProvider.overrideWithValue(true),
+                deviceRepositoryProvider.overrideWithValue(
+                  InMemoryDeviceRepository(),
+                ),
+                firebaseStatusProvider.overrideWithValue(FirebaseStatus.ready),
+                crashlyticsSinkProvider.overrideWithValue(
+                  RecordingCrashlyticsSink(),
+                ),
+              ],
+            )
+            // Running, as bootstrap keeps it once Firebase is ready.
+            ..listen(crashCollectionProvider, (_, _) {})
+            ..listen(discoveryControllerProvider, (_, _) {});
+      final scrubber = c.read(crashCollectionProvider.notifier).scrubber;
+      async.flushMicrotasks();
+      discoveries.created.single.emit([_named('Kitchen TV (2)', 'Kitchen TV')]);
+      async.flushMicrotasks();
+      discoveries.created.single.emit([tv('Porch')]);
+      async.flushMicrotasks();
+
+      expect(scrubber.scrub('Kitchen TV (2)'), '<tv>');
+      expect(scrubber.scrub('Kitchen TV'), '<tv>');
+      expect(scrubber.scrub('Porch'), '<tv>');
+      c.dispose();
+    });
+  });
+
+  test('without_crash_collection_discovery_starts_nothing_for_it', () {
+    fakeAsync((async) {
+      final c = makeContainer();
+      discoveries.created.single.emit([tv('Porch')]);
+      async.flushMicrotasks();
+
+      expect(read(c).tvs, hasLength(1));
+      expect(c.exists(crashCollectionProvider), isFalse);
+    });
+  });
+
   test('tv_discovered_logged_once_with_a_count', () {
     fakeAsync((async) {
       final c = makeContainer();
@@ -214,6 +310,214 @@ void main() {
       discoveries.created.last.emit([tv('a')]);
       async.flushMicrotasks();
       expect(analyticsSink.eventNames, ['tv_discovered']);
+    });
+  });
+
+  group('merge follow-up', () {
+    const manual = 'manual:192.168.0.20';
+    late FakeRemoteClients clients;
+
+    /// A container with real sessions over [repo]. The session is listened
+    /// to (as the remote keeps it alive); discovery isn't.
+    ProviderContainer sessionContainer(
+      InMemoryDeviceRepository repo, {
+      IdentityStore? identities,
+    }) {
+      clients = FakeRemoteClients();
+      return ProviderContainer.test(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          deviceRepositoryProvider.overrideWithValue(repo),
+          identityStoreProvider.overrideWithValue(
+            identities ?? testIdentityStore(),
+          ),
+          remoteClientFactoryProvider.overrideWithValue(clients.create),
+          hostResolverProvider.overrideWithValue((_) async => null),
+          sessionSignalsProvider.overrideWithValue(ManualSessionSignals()),
+        ],
+      )..listen(remoteSessionProvider, (_, _) {});
+    }
+
+    test('merge_after_leaving_discovery_moves_the_default_session', () async {
+      final repo = _SlowAdoptRepository([
+        savedTv(name: manual, nickname: 'Den'),
+      ]);
+      final c = sessionContainer(repo);
+      // No explicit target: the default session follows the manual row.
+      final old = (await c.read(remoteSessionProvider.future))!;
+      expect(old.pairingTarget!.serviceName, manual);
+
+      final discovery = c.listen(discoveryControllerProvider, (_, _) {});
+      final merging = c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      // The user leaves discovery while the merge is still running.
+      discovery.close();
+      await pumpEventQueue();
+      expect(c.exists(discoveryControllerProvider), isFalse);
+
+      repo.release.complete();
+      expect(await merging, isTrue);
+
+      expect(repo.saved.keys, ['Living Room TV 3']);
+      // Nobody is pulled onto a target: the default session moves instead.
+      expect(c.read(activeTargetProvider), isNull);
+      final session = await c.read(remoteSessionProvider.future);
+      expect(session, isNot(same(old)));
+      expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
+      expect(clients.created.first.closed, isTrue);
+    });
+
+    test('merge_while_the_default_session_loads_moves_it', () async {
+      final repo = InMemoryDeviceRepository([savedTv(name: manual)]);
+      // The default session has read the manual row and waits for the
+      // client identity.
+      final identityReady = Completer<void>();
+      final c = sessionContainer(
+        repo,
+        identities: IdentityStore(
+          InMemorySecureKeyValueStore(),
+          generate: () async {
+            await identityReady.future;
+            return testIdentity();
+          },
+        ),
+      );
+      await pumpEventQueue();
+      expect(c.read(remoteSessionProvider).isLoading, isTrue);
+
+      final discovery = c.listen(discoveryControllerProvider, (_, _) {});
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      discovery.close();
+      expect(merged, isTrue);
+
+      identityReady.complete();
+      final session = await c.read(remoteSessionProvider.future);
+      await pumpEventQueue();
+      expect(c.read(activeTargetProvider), isNull);
+      expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
+      // The build parked on the identity discarded itself: the one client
+      // is the merged session's, none was made for the deleted manual row.
+      expect(clients.created, hasLength(1));
+      expect(clients.created.single.closed, isFalse);
+    });
+
+    test('a_follow_up_that_throws_is_reported_and_the_merge_stands', () async {
+      final repo = InMemoryDeviceRepository([savedTv(name: manual)]);
+      final crashes = RecordingCrashReporter();
+      final c = ProviderContainer.test(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          deviceRepositoryProvider.overrideWithValue(repo),
+          crashReporterProvider.overrideWithValue(crashes),
+        ],
+      )..listen(discoveryControllerProvider, (_, _) {});
+
+      // A bug after the merge committed: the follow-up throws.
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => throw StateError('follow-up bug'),
+          );
+      await pumpEventQueue();
+
+      // The TVs are merged, so the caller must not say "couldn't open"; the
+      // bug is reported instead.
+      expect(merged, isTrue);
+      expect(repo.saved.keys, ['Living Room TV 3']);
+      expect(crashes.errors.single.reason, 'merge follow-up');
+      expect(crashes.errors.single.fatal, isFalse);
+    });
+
+    test('a_follow_up_after_teardown_still_reports_the_merge', () async {
+      final repo = _SlowAdoptRepository([savedTv(name: manual)]);
+      // Not ProviderContainer.test: this test disposes it itself.
+      final c = ProviderContainer(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          deviceRepositoryProvider.overrideWithValue(repo),
+        ],
+      )..listen(discoveryControllerProvider, (_, _) {});
+      final merging = c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      // The app is torn down while the merge runs: the follow-up can't
+      // read the session any more, but the merge itself succeeded.
+      c.dispose();
+      repo.release.complete();
+
+      expect(await merging, isTrue);
+      expect(repo.saved.keys, ['Living Room TV 3']);
+    });
+
+    test('merge_leaves_a_session_on_another_tv_alone', () async {
+      final repo = InMemoryDeviceRepository([
+        savedTv(name: manual, at: DateTime.utc(2026, 10, 25, 9)),
+        savedTv(name: 'Bedroom TV', at: DateTime.utc(2026, 10, 25, 12)),
+      ]);
+      final c = sessionContainer(repo);
+      final old = (await c.read(remoteSessionProvider.future))!;
+      expect(old.pairingTarget!.serviceName, 'Bedroom TV');
+
+      final discovery = c.listen(discoveryControllerProvider, (_, _) {});
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => false,
+          );
+      discovery.close();
+
+      expect(merged, isTrue);
+      expect(c.read(activeTargetProvider), isNull);
+      expect(await c.read(remoteSessionProvider.future), same(old));
+    });
+
+    test('merge_while_opening_activates_the_merged_tv', () async {
+      final repo = InMemoryDeviceRepository([
+        savedTv(name: manual, at: DateTime.utc(2026, 10, 25, 9)),
+        savedTv(name: 'Bedroom TV', at: DateTime.utc(2026, 10, 25, 12)),
+      ]);
+      final c = sessionContainer(repo)
+        ..listen(discoveryControllerProvider, (_, _) {});
+      final merged = await c
+          .read(discoveryControllerProvider.notifier)
+          .adoptManualDevice(
+            manualServiceName: manual,
+            tv: tv('Living Room TV 3'),
+            opening: () => true,
+          );
+
+      expect(merged, isTrue);
+      expect(
+        c.read(activeTargetProvider),
+        const DeviceTarget('Living Room TV 3'),
+      );
+      final session = await c.read(remoteSessionProvider.future);
+      expect(session!.pairingTarget!.serviceName, 'Living Room TV 3');
     });
   });
 }

@@ -19,6 +19,10 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+/// How long startup waits for the saved TVs that seed the crash scrubber
+/// (Ruling P8-R11) before it starts without them.
+const Duration scrubSeedTimeout = Duration(milliseconds: 500);
+
 /// One piece of work to finish before the first frame, such as a service
 /// initialisation.
 typedef StartupStep = Future<void> Function();
@@ -139,7 +143,31 @@ Future<Widget> buildRootWidget({
   );
   if (firebaseResult == FirebaseStatus.ready &&
       crashReporter is DelegatingCrashReporter) {
-    _installCrashlytics(container, crashReporter);
+    // Read once, before the first frame, so an early error is scrubbed of
+    // saved names before the saved-list stream's first event (Ruling
+    // P8-R11). The database was just read, so this is quick; the bound
+    // keeps a stuck read from holding the first frame (decision #38). Until
+    // the saved names are known (a read that failed or is late, Ruling
+    // P8-C11), reports are logged only, never sent.
+    List<SavedDevice>? saved;
+    Future<List<SavedDevice>>? lateRead;
+    // A read that throws before it returns a future fails like any other.
+    final read = Future.sync(
+      () => container.read(deviceRepositoryProvider).all(),
+    );
+    try {
+      saved = await read.timeout(scrubSeedTimeout);
+    } on TimeoutException {
+      lateRead = read;
+    } on Object {
+      // Unknown: the saved-list stream decides.
+    }
+    _installCrashlytics(
+      container,
+      crashReporter,
+      seed: saved,
+      lateSeed: lateRead,
+    );
   }
   // Step after Firebase and the passed steps; see the note above.
   await runStartupSteps(
@@ -153,21 +181,46 @@ Future<Widget> buildRootWidget({
   return _RootHost(container: container);
 }
 
-/// Points [reporter] at the log and the scrubbing Crashlytics reporter. A
-/// failure leaves it logging only; the app still starts.
+/// Seeds the scrubber with [seed], the saved TVs, then points [reporter] at
+/// the log and the scrubbing Crashlytics reporter. A failure leaves it
+/// logging only; the app still starts.
+///
+/// With no [seed] (the read failed or timed out) [reporter] keeps logging
+/// only until the scrubber knows the saved names: when [lateSeed], the read
+/// that timed out, answers or the saved list's first event arrives,
+/// whichever comes first. Reports before then are logged, never sent, so
+/// none can carry a saved TV's name.
 void _installCrashlytics(
   ProviderContainer container,
-  DelegatingCrashReporter reporter,
-) {
+  DelegatingCrashReporter reporter, {
+  required List<SavedDevice>? seed,
+  Future<List<SavedDevice>>? lateSeed,
+}) {
   try {
     // Riverpod pauses what nothing listens to, and the collection's own
     // listeners must keep following the privacy choice. The container ends
     // this subscription when it is disposed.
-    container.listen(crashCollectionProvider, (_, _) {});
-    reporter.delegate = CompositeCrashReporter([
+    final listening = container.listen(crashCollectionProvider, (_, _) {});
+    final collection = container.read(crashCollectionProvider.notifier);
+    void install() => reporter.delegate = CompositeCrashReporter([
       const LoggingCrashReporter(),
-      container.read(crashCollectionProvider.notifier).reporter,
+      collection.reporter,
     ]);
+    if (seed != null) {
+      collection.seedTerms(seed);
+      install();
+      return;
+    }
+    if (lateSeed != null) {
+      unawaited(lateSeed.then(collection.seedTerms, onError: (Object _) {}));
+    }
+    unawaited(
+      collection.savedNamesKnown.then((_) {
+        // A start that was given up on (Try again) disposed its container,
+        // which closed this subscription; it must not take over.
+        if (!listening.closed) install();
+      }),
+    );
   } on Object catch (error, stack) {
     unawaited(
       safeRecordError(reporter, error, stack, reason: 'crash reporter setup'),

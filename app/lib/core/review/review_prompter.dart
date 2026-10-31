@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
@@ -11,8 +10,8 @@ import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/review/in_app_review_requester.dart';
+import 'package:tv_remote/core/session/connection_trouble.dart';
 import 'package:tv_remote/core/session/lifecycle_observer.dart';
-import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_signals.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -39,7 +38,7 @@ abstract interface class ReviewRequester {
 @Riverpod(keepAlive: true)
 ReviewRequester reviewRequester(Ref ref) => InAppReviewRequester();
 
-/// How long after a connection loss or a "Not connected" notice the review
+/// How long after connection trouble (see [ConnectionTrouble]) the review
 /// prompt is not asked.
 const Duration reviewQuietAfterTrouble = Duration(seconds: 60);
 
@@ -49,14 +48,6 @@ const int reviewFirstLaunch = 2;
 /// The key press count is written to storage every this many presses (and
 /// when the app goes to the background).
 const int reviewPressSaveInterval = 10;
-
-/// The statuses that mean the connection is in trouble: lost, refused or
-/// unreachable.
-const Set<ConnectionStatus> _troubled = {
-  ConnectionStatus.reconnecting,
-  ConnectionStatus.needsPairing,
-  ConnectionStatus.offline,
-};
 
 /// Asks the store for its review prompt once the remote has proven itself
 /// (Ruling P6-R13).
@@ -90,7 +81,6 @@ class ReviewPrompter extends _$ReviewPrompter {
   int _presses = 0;
   int _saved = 0;
   ConnectionStatus? _last;
-  DateTime? _lastTroubleAt;
   bool _asking = false;
   bool _awaitingConsent = false;
 
@@ -100,7 +90,6 @@ class ReviewPrompter extends _$ReviewPrompter {
     final signals = ref.watch(sessionSignalsProvider);
     _presses = _saved = _store.reviewKeyPresses;
     _last = null;
-    _lastTroubleAt = null;
     _asking = false;
     _awaitingConsent = false;
 
@@ -109,7 +98,7 @@ class ReviewPrompter extends _$ReviewPrompter {
     });
     ref
       ..onDispose(() {
-        unawaited(paused.cancel());
+        unawaited(paused.cancel().catchError((Object _) {}));
         unawaited(_save());
       })
       // A status of the session that is going away says nothing about the
@@ -120,17 +109,14 @@ class ReviewPrompter extends _$ReviewPrompter {
         if (next.isLoading || status == null) return;
         final was = _last;
         _last = status;
-        if (_troubled.contains(status)) {
-          _lastTroubleAt = clock.now();
-        } else if (status == ConnectionStatus.connected &&
+        if (status == ConnectionStatus.connected &&
             was != ConnectionStatus.connected &&
-            !_troubled.contains(was)) {
+            !troubledStatuses.contains(was)) {
           unawaited(_maybePrompt());
         }
       })
-      ..listen(notConnectedNoticesProvider, (_, _) {
-        _lastTroubleAt = clock.now();
-      })
+      // Started with this, so it hears trouble from launch on.
+      ..listen(connectionTroubleProvider, (_, _) {})
       // A prompt held back by the consent step gets its chance when the step
       // ends, if the session it was for is still connected.
       ..listen(consentControllerProvider, (_, next) {
@@ -187,9 +173,9 @@ class ReviewPrompter extends _$ReviewPrompter {
       if (consent.formShown) return;
       final threshold = ref.read(appConfigProvider).reviewPromptMinKeyPresses;
       if (_presses < threshold) return;
-      final trouble = _lastTroubleAt;
-      if (trouble != null &&
-          clock.now().difference(trouble) < reviewQuietAfterTrouble) {
+      if (ref
+          .read(connectionTroubleProvider.notifier)
+          .troubleWithin(reviewQuietAfterTrouble)) {
         return;
       }
 

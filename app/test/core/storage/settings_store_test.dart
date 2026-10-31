@@ -192,4 +192,40 @@ void main() {
       ]),
     );
   });
+
+  test('settings_keys_hold_no_tv_data', () {
+    // Preferences stay in iOS backups (Ruling P8-R1), so no key may hold a
+    // TV's name, address, MAC, pin or service name. A new key must be added
+    // here on purpose.
+    expect(SettingsStore.keys, const {
+      'settings.navigation_style',
+      'settings.quick_access_row',
+      'settings.haptics',
+      'settings.smooth_press',
+      'settings.keep_screen_awake',
+      'settings.theater_mode',
+      'settings.theme',
+      'settings.dynamic_color',
+      'settings.locale',
+      'settings.auto_open_keyboard',
+      'settings.onboarding_complete',
+      'apps.shortcuts_seeded',
+      'settings.colour_style',
+      'privacy.share_usage',
+      'privacy.share_crashes',
+      'privacy.consent_region',
+      'privacy.att_preprompt_shown',
+      'premium.active',
+      'premium.expires_at',
+      'ads.interstitial_last_shown_at',
+      'review.key_presses',
+      'review.launch_count',
+      'review.prompt_shown',
+    });
+    final tvData = RegExp(
+      'device|tv|host|mac|pin|service',
+      caseSensitive: false,
+    );
+    expect(SettingsStore.keys.where(tvData.hasMatch), isEmpty);
+  });
 }

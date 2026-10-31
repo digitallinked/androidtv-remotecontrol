@@ -1,7 +1,9 @@
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -12,6 +14,7 @@ import 'package:tv_remote/features/apps/presentation/manage_apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
 import '../../helpers/in_memory_shortcut_repository.dart';
+import '../../helpers/ink_features.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_catalogue.dart';
@@ -35,7 +38,6 @@ const _star = [
 void main() {
   // Some tests pump the screen twice, each time on a fresh in-memory
   // database: two databases at once are intended here.
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   late InMemoryShortcutRepository repo;
 
@@ -46,11 +48,13 @@ void main() {
     List<Override> overrides = const [],
     double textScale = 1,
     Brightness brightness = Brightness.light,
+    bool disableAnimations = false,
   }) => pumpRouterApp(
     t,
     initialLocation: AppRoutes.manageApps,
     textScale: textScale,
     brightness: brightness,
+    disableAnimations: disableAnimations,
     overrides: [
       shortcutRepositoryProvider.overrideWithValue(repo),
       ...overrides,
@@ -88,7 +92,14 @@ void main() {
     );
   }
 
-  Future<void> drag(WidgetTester t, String name, Offset by) async {
+  /// Drags the row of [name] by [by] and drops it; with [settle] false the
+  /// drop draws one frame and stops there.
+  Future<void> drag(
+    WidgetTester t,
+    String name,
+    Offset by, {
+    bool settle = true,
+  }) async {
     final handle = find.bySemanticsLabel('Reorder $name');
     final g = await t.startGesture(t.getCenter(handle));
     await t.pump(kLongPressTimeout);
@@ -99,7 +110,11 @@ void main() {
       await t.pump(const Duration(milliseconds: 50));
     }
     await g.up();
-    await t.pumpAndSettle();
+    if (settle) {
+      await t.pumpAndSettle();
+    } else {
+      await t.pump();
+    }
   }
 
   testWidgets('lists_the_shortcuts_with_their_controls', (t) async {
@@ -227,6 +242,26 @@ void main() {
     await t.pumpAndSettle();
     expect(stored(), _star);
     expect(shown(t), _star);
+  });
+
+  testWidgets('a_removed_app_drops_its_row_focus', (t) async {
+    await pumpManage(t);
+    List<String> focusRows() => [
+      ...debugRowFocusPackages(
+        t.state<State<ManageAppsScreen>>(find.byType(ManageAppsScreen)),
+      ),
+    ];
+    expect(focusRows(), contains(_packageOf('YouTube')));
+
+    await t.tap(find.byTooltip('Remove YouTube'));
+    await t.pumpAndSettle();
+    expect(focusRows(), isNot(contains(_packageOf('YouTube'))));
+    expect(focusRows(), contains(_packageOf('Netflix')));
+
+    // Undo builds the row again, with a fresh node.
+    await t.tap(find.text('Undo'));
+    await t.pumpAndSettle();
+    expect(focusRows(), contains(_packageOf('YouTube')));
   });
 
   testWidgets('undo_puts_the_app_back_without_losing_later_changes', (
@@ -485,6 +520,55 @@ void main() {
     }
   });
 
+  testWidgets('a_stacked_edit_apps_row_drags_by_its_handle', (t) async {
+    t.view
+      // Tall enough that both rows are built: the list is lazy.
+      ..physicalSize = const Size(320, 1400)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpManage(t, textScale: 2);
+    final before = stored();
+    final first = before[0];
+    final second = before[1];
+    final r = rowOf(t, first);
+    expect(r.controls[0].top, greaterThan(r.name.bottom), reason: 'stacked');
+
+    // Down to the second row's handle: into the second row's place.
+    final from = t.getCenter(find.bySemanticsLabel('Reorder $first'));
+    final to = t.getCenter(find.bySemanticsLabel('Reorder $second'));
+    await drag(t, first, Offset(0, to.dy - from.dy));
+
+    final after = [second, first, ...before.skip(2)];
+    expect(stored(), after);
+    expect(shown(t), after);
+  });
+
+  // The real row button, not a copy of its style (the Task 7.6 review): held
+  // under reduce motion it shows no pressed highlight, and on release it
+  // removes the app with Undo.
+  testWidgets('holding_the_real_remove_button_removes_with_undo', (t) async {
+    await pumpManage(t, disableAnimations: true);
+    final before = stored();
+    expect(before, contains('Netflix'));
+
+    final press = await t.startGesture(
+      t.getCenter(find.byTooltip('Remove Netflix')),
+    );
+    // Past the press timeout (the list scrolls, so tap-down waits for it)
+    // but short of a long press, which would show the tooltip instead.
+    await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+    expectNoVisibleInk(t, 'remove pressed');
+    expect(stored(), before, reason: 'nothing happens until release');
+    await press.up();
+    await t.pumpAndSettle();
+
+    expect(stored(), isNot(contains('Netflix')));
+    expect(find.text('Netflix removed'), findsOneWidget);
+    await t.tap(find.widgetWithText(SnackBarAction, 'Undo'));
+    await t.pumpAndSettle();
+    expect(stored(), before);
+  });
+
   testWidgets('edit_apps_rows_stack_under_a_non_linear_text_scaler', (
     t,
   ) async {
@@ -548,6 +632,176 @@ void main() {
     await t.pumpAndSettle();
     expect(stored().take(2), ['YouTube', 'Netflix']);
     handle.dispose();
+  });
+
+  /// The tooltip of the button that has keyboard focus, if any.
+  String? focusedTooltip() {
+    String? message;
+    FocusManager.instance.primaryFocus?.context?.visitAncestorElements((e) {
+      final widget = e.widget;
+      if (widget is Tooltip) {
+        message = widget.message;
+        return false;
+      }
+      return true;
+    });
+    return message;
+  }
+
+  /// Whether keyboard focus is inside the row of [package].
+  bool focusInRow(String package) {
+    var inRow = false;
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null) return false;
+    bool check(Element e) {
+      if (e.widget.key == ValueKey('manage_app_$package')) {
+        inRow = true;
+        return false;
+      }
+      return true;
+    }
+
+    if (context is Element && !check(context)) return true;
+    context.visitAncestorElements(check);
+    return inRow;
+  }
+
+  /// Records what is announced to screen readers.
+  List<String> recordAnnouncements(WidgetTester t) {
+    final announced = <String>[];
+    t.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+      SystemChannels.accessibility,
+      (message) async {
+        final map = message! as Map<Object?, Object?>;
+        if (map['type'] == 'announce') {
+          announced.add(
+            (map['data']! as Map<Object?, Object?>)['message']! as String,
+          );
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => t.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(
+            SystemChannels.accessibility,
+            null,
+          ),
+    );
+    return announced;
+  }
+
+  testWidgets('tab_order_skips_the_drag_handle', (t) async {
+    await pumpManage(t);
+    Focus.of(
+      t.element(
+        find.descendant(
+          of: find.byTooltip('Edit Netflix'),
+          matching: find.byIcon(Icons.edit_outlined),
+        ),
+      ),
+    ).requestFocus();
+    await t.pump();
+    expect(focusedTooltip(), 'Edit Netflix');
+
+    await t.sendKeyEvent(LogicalKeyboardKey.tab);
+    await t.pump();
+    expect(focusedTooltip(), 'Remove Netflix');
+
+    await t.sendKeyEvent(LogicalKeyboardKey.tab);
+    await t.pump();
+    expect(focusedTooltip(), 'Edit YouTube');
+    // The handle keeps its label for touch exploration.
+    final handle = t.ensureSemantics();
+    try {
+      expect(find.bySemanticsLabel('Reorder Netflix'), findsOneWidget);
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  testWidgets('overflow_menu_is_named_more_options', (t) async {
+    await pumpManage(t);
+    expect(find.byTooltip('More options'), findsOneWidget);
+    expect(find.byType(PopupMenuButton<void>), findsOneWidget);
+  });
+
+  testWidgets('overflow_menu_closes_without_animation', (t) async {
+    await pumpManage(t, disableAnimations: true);
+    await t.tap(find.byTooltip('More options'));
+    await t.pump();
+    expect(find.text('Reset to suggested apps'), findsOneWidget);
+    await t.tap(find.text('Reset to suggested apps'));
+    await t.pump();
+    expect(find.text('Reset to suggested apps'), findsNothing);
+    expect(find.byType(PopupMenuItem<void>), findsNothing);
+    // What the item opens is there at once, too, and nothing still moves.
+    expect(find.text('Reset your apps?'), findsOneWidget);
+    expect(t.hasRunningAnimations, isFalse);
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('reorder_drop_does_not_animate_under_reduce_motion', (t) async {
+    // Ruling P8-R7: the platform flag, which is what a phone sets.
+    t.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await pumpManage(t);
+    await drag(t, 'Prime Video', const Offset(0, -140), settle: false);
+    // Flutter's list still eases the dropped row into place (250 ms, scaled
+    // by 0.05 under the platform flag): accepted because it is over by the
+    // next frame, so no in-between position is drawn.
+    await t.pump(const Duration(milliseconds: 16));
+    expect(t.hasRunningAnimations, isFalse);
+    // The list reports the move when the row lands.
+    expect(stored().first, 'Prime Video');
+  });
+
+  testWidgets('with_motion_the_reorder_drop_animates', (t) async {
+    // The control for the test above: the same drag and pumps, no flag.
+    await pumpManage(t);
+    await drag(t, 'Prime Video', const Offset(0, -140), settle: false);
+    await t.pump(const Duration(milliseconds: 16));
+    expect(t.hasRunningAnimations, isTrue);
+    await t.pumpAndSettle();
+    expect(stored().first, 'Prime Video');
+  });
+
+  testWidgets('a_move_keeps_focus_and_announces_the_position', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      final announced = recordAnnouncements(t);
+      await pumpManage(t);
+      perform(t, 'Netflix', 'Move down');
+      await t.pumpAndSettle();
+
+      expect(stored().take(2), ['YouTube', 'Netflix']);
+      expect(announced, ['Netflix moved to position 2 of 6']);
+      expect(focusInRow('com.netflix.ninja'), isTrue);
+      final row = t.getSemantics(find.text('Netflix')).getSemanticsData();
+      expect(row.flagsCollection.isFocused, Tristate.isTrue);
+
+      perform(t, 'Netflix', 'Move up');
+      await t.pumpAndSettle();
+      expect(announced.last, 'Netflix moved to position 1 of 6');
+      expect(focusInRow('com.netflix.ninja'), isTrue);
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  testWidgets('a_drag_announces_the_new_position', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      final announced = recordAnnouncements(t);
+      await pumpManage(t);
+      await drag(t, 'Prime Video', const Offset(0, -140)); // two rows up
+      expect(stored().first, 'Prime Video');
+      expect(announced, ['Prime Video moved to position 1 of 6']);
+      expect(focusInRow('com.amazon.amazonvideo.livingroom'), isTrue);
+    } finally {
+      handle.dispose();
+    }
   });
 
   for (final b in Brightness.values) {

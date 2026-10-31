@@ -1208,6 +1208,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.';
 
   @override
+  String get faqNewPhoneQ => 'I moved to a new phone. Where are my TVs?';
+
+  @override
+  String get faqNewPhoneA =>
+      'Your TVs and their pairing stay on the phone you paired them with. They aren\'t copied by backups or when you move to a new phone, so pair each TV again on the new phone.';
+
+  @override
   String aboutVersion(String version, String build) {
     return 'Version $version ($build)';
   }
@@ -1528,4 +1535,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get updateRequiredFailed =>
       'Couldn\'t open the store. Update the app from your phone\'s app store.';
+
+  @override
+  String get loadingLabel => 'Loading…';
+
+  @override
+  String get manageAppsMoreOptions => 'More options';
+
+  @override
+  String manageAppsMoved(String app, int position, int count) {
+    return '$app moved to position $position of $count';
+  }
 }

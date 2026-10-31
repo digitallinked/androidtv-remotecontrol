@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
+import 'package:tv_remote/app/widgets/fitted_label.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
@@ -255,13 +256,9 @@ class _ColourPill extends StatelessWidget {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: style?.copyWith(color: colourKeyLabelColor(fill)),
-                ),
+              child: FittedLabel(
+                label,
+                style: style?.copyWith(color: colourKeyLabelColor(fill)),
               ),
             ),
           ),

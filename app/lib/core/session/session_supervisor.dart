@@ -141,7 +141,7 @@ class SessionSupervisor {
     _graceTimer?.cancel();
     _cancelNudge();
     for (final subscription in _subscriptions) {
-      unawaited(subscription.cancel());
+      unawaited(subscription.cancel().catchError((Object _) {}));
     }
   }
 }

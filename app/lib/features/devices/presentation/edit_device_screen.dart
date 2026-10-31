@@ -54,7 +54,9 @@ class _EditDeviceScreenState extends ConsumerState<EditDeviceScreen> {
     if (devices == null && saved.isLoading) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.pageTitleEditDevice)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
+        ),
       );
     }
     if (saved.hasError && devices == null) {
@@ -304,7 +306,10 @@ class _EditFormState extends ConsumerState<_EditForm> {
                 decoration: InputDecoration(
                   labelText: l10n.editDeviceNameLabel,
                   helperText: l10n.editDeviceNameHelp(device.displayName),
-                  helperMaxLines: 3,
+                  // It quotes the TV's own name: at 200% text on a 320 dp
+                  // phone it takes 7 lines with a short name, more with a
+                  // long one.
+                  helperMaxLines: 10,
                   errorText: _nameError,
                   errorMaxLines: 3,
                 ),

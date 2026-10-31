@@ -11,7 +11,7 @@ import '../../helpers/recording_link_opener.dart';
 
 final _l10n = AppLocalizationsEn();
 
-/// The seven questions and answers, in the order of the FAQ.
+/// The eight questions and answers, in the order of the FAQ.
 final List<(String, String)> _faq = [
   (_l10n.faqTvsQ, _l10n.faqTvsA),
   (_l10n.faqNotFoundQ, _l10n.faqNotFoundA),
@@ -20,6 +20,7 @@ final List<(String, String)> _faq = [
   (_l10n.faqTypingQ, _l10n.faqTypingA),
   (_l10n.faqAppQ, _l10n.faqAppA),
   (_l10n.faqPrivacyQ, _l10n.faqPrivacyA),
+  (_l10n.faqNewPhoneQ, _l10n.faqNewPhoneA),
 ];
 
 const _info = AppInfo(
@@ -92,11 +93,35 @@ void main() {
   testWidgets('faq_answers_are_ours', (t) async {
     await pumpHelp(t);
 
-    expect(find.byType(ExpansionTile, skipOffstage: false), findsNWidgets(7));
+    expect(
+      find.byType(ExpansionTile, skipOffstage: false),
+      findsNWidgets(_faq.length),
+    );
     for (final (question, answer) in _faq) {
       await open(t, question);
       expect(find.text(answer), findsOneWidget, reason: question);
     }
+  });
+
+  testWidgets('faq_explains_a_new_phone', (t) async {
+    await pumpHelp(t);
+    const question = 'I moved to a new phone. Where are my TVs?';
+
+    final titles = [
+      for (final tile in t.widgetList<ExpansionTile>(
+        find.byType(ExpansionTile, skipOffstage: false),
+      ))
+        (tile.title as Text).data,
+    ];
+    expect(
+      titles.indexOf(question),
+      titles.indexOf(_l10n.faqPrivacyQ) + 1,
+      reason: 'the new-phone question follows the privacy question',
+    );
+
+    expect(find.text(_l10n.faqNewPhoneA), findsNothing);
+    await open(t, question);
+    expect(find.text(_l10n.faqNewPhoneA), findsOneWidget);
   });
 
   testWidgets('troubleshooting_button_opens_the_steps', (t) async {

@@ -9,6 +9,7 @@ import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/data/shortcut_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/domain/package_names.dart';
 import 'package:tv_remote/features/apps/domain/recommendations.dart';
 
 part 'shortcuts.g.dart';
@@ -21,15 +22,26 @@ part 'shortcuts.g.dart';
 /// later (flag set) is never refilled. Errors (a corrupt catalogue, storage
 /// that won't open) are swallowed: the flag stays unset and the next launch
 /// tries again.
+///
+/// The flag lives in the preferences, which an iPhone restore or Quick Start
+/// brings back without the database (Ruling P8-R1). A store created in this
+/// run is seeded whatever the flag says.
 @Riverpod(keepAlive: true)
 Future<void> shortcutsSeed(Ref ref) async {
   final store = ref.watch(settingsStoreProvider);
   final repository = ref.watch(shortcutRepositoryProvider);
-  // Seeded already (every start after the first): the catalogue is not even
-  // read.
-  if (store.shortcutsSeeded) return;
-  // Watched before the first await. `ignore` keeps a catalogue error that
-  // this run never awaits from surfacing as an unhandled one.
+  if (store.shortcutsSeeded) {
+    // Seeded already (every start after the first): the catalogue is not
+    // even read, unless the store is new.
+    try {
+      if (!await repository.isNewStore()) return;
+    } on Object {
+      // Storage that won't open: the shortcuts read shows the error.
+      return;
+    }
+  }
+  // `ignore` keeps a catalogue error that this run never awaits from
+  // surfacing as an unhandled one.
   final catalogueFuture = ref.watch(catalogueProvider.future)..ignore();
   final region = ref.watch(deviceRegionProvider);
   try {
@@ -47,7 +59,10 @@ Future<void> shortcutsSeed(Ref ref) async {
 }
 
 /// The user's shortcuts by position, once the first-run seeding is done.
-@riverpod
+///
+/// A read failure is shown at once ([noRetry], Ruling P8-R10): the Apps
+/// screen offers "Try again" itself.
+@Riverpod(retry: noRetry)
 Stream<List<AppEntry>> shortcuts(Ref ref) async* {
   final repository = ref.watch(shortcutRepositoryProvider);
   await ref.watch(shortcutsSeedProvider.future);
@@ -104,14 +119,17 @@ class ShortcutActions {
 @riverpod
 ShortcutActions shortcutActions(Ref ref) => ShortcutActions(ref);
 
-/// The most used apps seen on the TV, kept up to date.
-@riverpod
-Stream<List<AppUsageStat>> appUsage(Ref ref) =>
-    ref.watch(appUsageRepositoryProvider).watchMostUsed();
+/// The most used apps seen on the TV, kept up to date. System packages are
+/// dropped before the limit (Ruling P8-R10), so they never crowd out the
+/// apps worth recommending.
+@Riverpod(retry: noRetry)
+Stream<List<AppUsageStat>> appUsage(Ref ref) => ref
+    .watch(appUsageRepositoryProvider)
+    .watchMostUsed(exclude: isSystemPackage);
 
 /// "Recently used on your TV": see [recommendApps]. An error state when the
-/// catalogue can't be read.
-@riverpod
+/// catalogue or the usage can't be read, shown at once ([noRetry]).
+@Riverpod(retry: noRetry)
 Future<List<AppEntry>> recommendedApps(Ref ref) async {
   final usageFuture = ref.watch(appUsageProvider.future);
   // `ignore`: when one of them fails first, the others are never awaited, and

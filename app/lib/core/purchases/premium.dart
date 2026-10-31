@@ -88,7 +88,7 @@ class Premium extends _$Premium {
     );
     ref.onDispose(() {
       _knownTimer?.cancel();
-      unawaited(_subscription?.cancel());
+      unawaited(_subscription?.cancel().catchError((Object _) {}));
     });
 
     if (service.isConfigured) {

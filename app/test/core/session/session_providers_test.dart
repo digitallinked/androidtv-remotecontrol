@@ -1,13 +1,14 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/core/session/lifecycle_observer.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
@@ -22,6 +23,7 @@ import 'package:tv_remote/features/demo/demo_remote_session.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 import '../../helpers/fake_remote_client.dart';
+import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/manual_session_signals.dart';
 import '../../helpers/test_devices.dart';
@@ -38,7 +40,6 @@ void main() {
   late FakeRemoteClients clients;
   late ManualSessionSignals signals;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);
@@ -68,6 +69,28 @@ void main() {
   }) => ProviderContainer.test(
     overrides: overrides(identityStore: identityStore, timing: timing),
   );
+
+  /// A container for a `fakeAsync` test: the TVs live in an in-memory
+  /// repository, because drift's database runs on real time. Create it inside
+  /// the `fakeAsync` callback. It is disposed when the test ends, also when
+  /// an `expect` inside `fakeAsync` failed first; disposing it again earlier
+  /// is fine.
+  ProviderContainer fakeTimeContainer(
+    List<SavedDevice> devices, {
+    IdentityStore? identityStore,
+    SessionTiming timing = const SessionTiming(),
+  }) {
+    final container = ProviderContainer(
+      overrides: [
+        ...overrides(identityStore: identityStore, timing: timing),
+        deviceRepositoryProvider.overrideWithValue(
+          InMemoryDeviceRepository(devices),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    return container;
+  }
 
   Future<void> saveTwo() async {
     await repo.upsert(
@@ -230,27 +253,35 @@ void main() {
     expect(inert.current.status, ConnectionStatus.needsPairing);
   });
 
-  test('identity_failure_surfaces_as_error_without_retry', () async {
-    await repo.upsert(savedTv(name: 'a'));
-    var generated = 0;
-    final store = IdentityStore(
-      InMemorySecureKeyValueStore()
-        ..throwOnWrite = PlatformException(code: 'x'),
-      generate: () async {
-        generated++;
-        return testIdentity();
-      },
-    );
-    final c = makeContainer(identityStore: store)
-      ..listen(remoteSessionProvider, (_, _) {});
-    await expectLater(
-      c.read(remoteSessionProvider.future),
-      throwsA(isA<IdentityStoreException>()),
-    );
-    // Riverpod's default first retry would come after 200 ms.
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    expect(generated, 1);
-    expect(clients.created, isEmpty);
+  test('identity_failure_surfaces_as_error_without_retry', () {
+    fakeAsync((async) {
+      var generated = 0;
+      final store = IdentityStore(
+        InMemorySecureKeyValueStore()
+          ..throwOnWrite = PlatformException(code: 'x'),
+        generate: () async {
+          generated++;
+          return testIdentity();
+        },
+      );
+      final c = fakeTimeContainer([savedTv(name: 'a')], identityStore: store)
+        ..listen(remoteSessionProvider, (_, _) {});
+      Object? error;
+      c
+          .read(remoteSessionProvider.future)
+          .then<void>((_) {}, onError: (Object e) => error = e)
+          .ignore();
+      async.flushMicrotasks();
+      expect(error, isA<IdentityStoreException>());
+
+      // Riverpod's default retry starts at 200 ms and backs off to 6.4 s.
+      async.elapse(const Duration(minutes: 1));
+      expect(generated, 1);
+      expect(clients.created, isEmpty);
+      expect(c.read(remoteSessionProvider).hasError, isTrue);
+      c.dispose();
+      async.flushMicrotasks();
+    });
   });
 
   test(
@@ -280,23 +311,22 @@ void main() {
     },
   );
 
-  test(
-    'session_backed_providers_surface_the_identity_error_and_keep_it',
-    () async {
-      await repo.upsert(savedTv(name: 'a'));
+  test('session_backed_providers_surface_the_identity_error_and_keep_it', () {
+    fakeAsync((async) {
       final store = IdentityStore(
         InMemorySecureKeyValueStore()
           ..throwOnWrite = PlatformException(code: 'x'),
         generate: () async => testIdentity(),
       );
-      final c = makeContainer(identityStore: store)
+      final c = fakeTimeContainer([savedTv(name: 'a')], identityStore: store)
         ..listen(remoteSessionProvider, (_, _) {})
         ..listen(connectionStateProvider, (_, _) {})
         ..listen(volumeProvider, (_, _) {})
         ..listen(powerStateProvider, (_, _) {})
         ..listen(currentAppProvider, (_, _) {});
-      // Riverpod's default retry would re-run them from 200 ms on.
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      // Riverpod's default retry would re-run them from 200 ms on, behind a
+      // loading state.
+      async.elapse(const Duration(minutes: 1));
       for (final state in [
         c.read(connectionStateProvider),
         c.read(volumeProvider),
@@ -307,8 +337,10 @@ void main() {
         expect(state.error, isA<IdentityStoreException>());
         expect(state.isLoading, isFalse);
       }
-    },
-  );
+      c.dispose();
+      async.flushMicrotasks();
+    });
+  });
 
   test('volume_power_and_current_app_follow_session_events', () async {
     await repo.upsert(savedTv(name: 'a'));
@@ -385,6 +417,42 @@ void main() {
     await pumpEventQueue();
 
     expect(values, [null, true, null]);
+  });
+
+  test('the_second_tvs_first_volume_is_null', () async {
+    await saveTwo();
+    final values = <AsyncValue<VolumeChanged?>>[];
+    final c = makeContainer()
+      ..listen(volumeProvider, (_, next) => values.add(next));
+    await c.read(volumeProvider.future);
+    final first = (await c.read(remoteSessionProvider.future))!;
+    expect(first.tvName, 'b');
+    await untilConnected(first);
+    clients.created.last.push(const VolumeChanged(30, 100, false));
+    await pumpEventQueue();
+    expect(c.read(volumeProvider).value, const VolumeChanged(30, 100, false));
+
+    final switchedAt = values.length;
+    c.read(activeTargetProvider.notifier).activateDevice('a');
+    final second = (await c.read(remoteSessionProvider.future))!;
+    expect(second.tvName, 'a');
+    await untilConnected(second);
+    await pumpEventQueue();
+
+    // TV a has said nothing yet: its first volume is null, never b's. (While
+    // the session rebuilds, Riverpod's loading state still carries b's value;
+    // the remote shows "connecting" then and only shows a volume while
+    // connected.)
+    expect(c.read(volumeProvider).value, isNull);
+    final afterSwitch = values.sublist(switchedAt);
+    expect(afterSwitch.first.isLoading, isTrue);
+    final data = afterSwitch.where((v) => !v.isLoading).map((v) => v.value);
+    expect(data, isNotEmpty);
+    expect(data, everyElement(isNull));
+
+    clients.created.last.push(const VolumeChanged(4, 50, true));
+    await pumpEventQueue();
+    expect(c.read(volumeProvider).value, const VolumeChanged(4, 50, true));
   });
 
   test('values_cached_before_a_provider_is_read_are_replayed', () async {
@@ -517,16 +585,56 @@ void main() {
       expect(clients.created.where((x) => !x.closed), isEmpty);
     });
 
-    test('no_saved_device_creates_no_supervisor_work', () async {
-      final c = makeContainer(timing: quick)
-        ..listen(remoteSessionProvider, (_, _) {});
-      expect(await c.read(remoteSessionProvider.future), isNull);
-      signals
-        ..background()
-        ..networkChanged();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(clients.created, isEmpty);
+    test('no_saved_device_creates_no_supervisor_work', () {
+      fakeAsync((async) {
+        final c = fakeTimeContainer(const [], timing: quick)
+          ..listen(remoteSessionProvider, (_, _) {});
+        async.flushMicrotasks();
+        expect(c.read(remoteSessionProvider).value, isNull);
+        expect(
+          (signals.visibilityListeners, signals.networkListeners),
+          (0, 0),
+        );
+        signals
+          ..background()
+          ..networkChanged();
+        // Far past the grace and the debounce.
+        async.elapse(const Duration(minutes: 1));
+        expect(clients.created, isEmpty);
+        c.dispose();
+        async.flushMicrotasks();
+      });
     });
+
+    test(
+      'a_session_built_in_the_background_starts_its_grace_at_provider_level',
+      () async {
+        fakeAsync((async) {
+          signals = ManualSessionSignals(initial: AppVisibility.background);
+          final c = fakeTimeContainer([savedTv(name: 'a')])
+            ..listen(remoteSessionProvider, (_, _) {});
+          async.flushMicrotasks();
+          final session = c.read(remoteSessionProvider).value!;
+          expect(session.current.status, ConnectionStatus.connected);
+
+          // The production grace, counted from when the session was built:
+          // no visibility change ever arrives.
+          async.elapse(const Duration(seconds: 59));
+          expect(session.current.status, ConnectionStatus.connected);
+          async
+            ..elapse(const Duration(seconds: 1))
+            ..flushMicrotasks();
+          expect(session.current.status, ConnectionStatus.disconnected);
+          expect(clients.created, hasLength(1));
+        });
+        // The client's close continues on a root-zone future, which runs on
+        // the real microtask queue, outside fake time. So this only proves
+        // the grace closed the client at some point; the 59 s and 60 s
+        // status checks above carry the timing.
+        await pumpEventQueue();
+        expect(clients.created.single.closed, isTrue);
+      },
+    );
   });
 
   test('no_retry_never_schedules_a_retry', () {

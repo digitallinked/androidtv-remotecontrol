@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/core/ads/tracking_preprompt.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
@@ -11,6 +12,7 @@ import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
 import '../../helpers/fake_tracking_service.dart';
+import '../../helpers/fit_checks.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_app.dart';
@@ -182,6 +184,7 @@ void main() {
         ..physicalSize = const Size(320, 640)
         ..devicePixelRatio = 1;
       addTearDown(t.view.reset);
+      final l10n = lookupAppLocalizations(const Locale('en'));
       // The linear 200% and Android 14's non-linear curve, light and dark.
       for (final scaler in [
         const TextScaler.linear(2),
@@ -195,22 +198,38 @@ void main() {
           await ask(t);
 
           expect(t.takeException(), isNull, reason: reason);
-          expect(find.text('About ads in this app'), findsOneWidget);
-          // The body and Continue are reachable and not cut off.
-          await t.ensureVisible(find.text('Continue'));
-          await t.pumpAndSettle();
+          // Narrow screens give the dialog 16 dp insets, not 40: the body
+          // gets 288 dp, not 240, so it isn't a column of single words.
+          final surface = find
+              .descendant(
+                of: find.byType(AppDialog<void>),
+                matching: find.byType(Material),
+              )
+              .first;
+          expect(t.getSize(surface).width, 288, reason: reason);
+          // The title, the body and the dialog's one button (Continue: no
+          // "Not now", see above) each lie inside the dialog's scroll area,
+          // or can be scrolled through it, not just inside the screen.
+          for (final (what, text) in [
+            ('title', l10n.trackingPrepromptTitle),
+            ('body', l10n.trackingPrepromptBody),
+            ('button', l10n.trackingPrepromptContinue),
+          ]) {
+            await expectWithinViewport(
+              t,
+              find.text(text),
+              reason: '$what $reason',
+            );
+          }
           final button = find.ancestor(
-            of: find.text('Continue'),
+            of: find.text(l10n.trackingPrepromptContinue),
             matching: find.byType(FilledButton),
           );
+          await expectWithinViewport(t, button, reason: 'Continue $reason');
           expect(button.hitTestable(), findsOneWidget, reason: reason);
-          final rect = t.getRect(button);
-          expect(rect.height, greaterThanOrEqualTo(48), reason: reason);
-          expect(rect.left, greaterThanOrEqualTo(0), reason: reason);
-          expect(rect.right, lessThanOrEqualTo(320), reason: reason);
-          expect(rect.bottom, lessThanOrEqualTo(640), reason: reason);
+          expect(t.getSize(button).height, greaterThanOrEqualTo(48));
 
-          await t.tap(find.text('Continue'));
+          await t.tap(find.text(l10n.trackingPrepromptContinue));
           await t.pumpAndSettle();
           expect(find.byType(AppDialog<void>), findsNothing, reason: reason);
         }

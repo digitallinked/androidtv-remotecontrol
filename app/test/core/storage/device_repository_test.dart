@@ -16,11 +16,19 @@ SavedDevice dev(String name, {int minute = 0, String? pin}) => SavedDevice(
   lastConnectedAt: DateTime.utc(2026, 10, 25, 12, minute),
 );
 
+/// A repository whose `delete` fails, as a full disk would.
+class _DeleteFailsRepository extends DriftDeviceRepository {
+  _DeleteFailsRepository(super._db);
+
+  @override
+  Future<void> delete(String serviceName) async =>
+      throw StateError('disk full');
+}
+
 void main() {
   late AppDatabase db;
   late DriftDeviceRepository repo;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);
@@ -132,10 +140,40 @@ void main() {
     );
     await repo.upsert(a);
     await repo.clearServerKeyPin('a', distrustedPin: 'ab12');
+    // The MAC goes with the pin (Ruling P8-R10); everything else stays.
     expect(
       await repo.find('a'),
-      a.copyWith(serverKeyPin: const Value(null)),
+      a.copyWith(serverKeyPin: const Value(null), wolMac: const Value(null)),
     );
+  });
+
+  test('identity_change_clears_the_mac_with_the_pin', () async {
+    // The TV was reset or replaced: its MAC may be stale too.
+    await repo.upsert(
+      dev('a', pin: 'aa11').copyWith(wolMac: const Value('AA:BB:CC:DD:EE:F0')),
+    );
+    await repo.clearServerKeyPin('a', distrustedPin: 'aa11');
+    final cleared = (await repo.find('a'))!;
+    expect((cleared.serverKeyPin, cleared.wolMac), (null, null));
+
+    // A newer pairing's pin is kept, and so is its MAC.
+    await repo.upsert(
+      dev('b', pin: 'bb22').copyWith(wolMac: const Value('AA:BB:CC:DD:EE:F1')),
+    );
+    await repo.clearServerKeyPin('b', distrustedPin: 'aa11');
+    final kept = (await repo.find('b'))!;
+    expect((kept.serverKeyPin, kept.wolMac), ('bb22', 'AA:BB:CC:DD:EE:F1'));
+  });
+
+  test('all_returns_every_saved_tv_most_recent_first', () async {
+    expect(await repo.all(), isEmpty);
+    await repo.upsert(dev('a', minute: 1));
+    await repo.upsert(dev('b', minute: 3));
+    await repo.upsert(dev('c', minute: 2));
+    final all = await repo.all();
+    expect(all.map((d) => d.serviceName), ['b', 'c', 'a']);
+    expect(all, await repo.watchAll().first);
+    expect(all.every((d) => d.lastConnectedAt.isUtc), isTrue);
   });
 
   test('clear_server_key_pin_leaves_a_newer_pin_alone', () async {
@@ -264,6 +302,41 @@ void main() {
       expect(await repo.find('Living Room TV 3'), named);
     },
   );
+
+  test('ip_only_merge_keeps_the_mac', () async {
+    // The pin moves unchanged, so the first connection proves it is the same
+    // TV; if it isn't, the identity-change rule clears both (P8-R10).
+    await repo.upsert(
+      savedTv(name: 'manual:192.168.0.20', wolMac: 'AA:BB:CC:DD:EE:F0'),
+    );
+    final ok = await repo.adoptManualDevice(
+      manualServiceName: 'manual:192.168.0.20',
+      tv: mdnsTv,
+    );
+    expect(ok, isTrue);
+    final moved = (await repo.find('Living Room TV 3'))!;
+    expect((moved.wolMac, moved.serverKeyPin), ('AA:BB:CC:DD:EE:F0', testPin));
+  });
+
+  test('merge_rolls_back_when_the_delete_fails', () async {
+    final failing = _DeleteFailsRepository(db);
+    final manual = savedTv(
+      name: 'manual:192.168.0.20',
+      nickname: 'Den',
+      wolMac: 'AA:BB:CC:DD:EE:F0',
+    );
+    await failing.upsert(manual);
+    await expectLater(
+      failing.adoptManualDevice(
+        manualServiceName: 'manual:192.168.0.20',
+        tv: mdnsTv,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    // Nothing of the merge is left: the insert was rolled back with it.
+    expect(await failing.find(mdnsTv.serviceName), isNull);
+    expect(await failing.find('manual:192.168.0.20'), manual);
+  });
 
   test('adopt_manual_device_is_a_no_op_for_unknown_rows', () async {
     await repo.upsert(dev('a'));

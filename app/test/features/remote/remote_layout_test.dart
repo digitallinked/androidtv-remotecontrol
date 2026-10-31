@@ -25,6 +25,7 @@ import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart'
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 
 import '../../helpers/fake_remote_session.dart';
+import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_devices.dart';
 
@@ -49,6 +50,8 @@ void main() {
     bool? autoOpen,
     Size size = const Size(390, 844),
     double textScale = 1,
+    TextScaler? textScaler,
+    TextDirection? textDirection,
     bool accessibleNavigation = false,
     List<Override> overrides = const [],
   }) {
@@ -60,6 +63,8 @@ void main() {
       t,
       initialLocation: AppRoutes.remote,
       textScale: textScale,
+      textScaler: textScaler,
+      textDirection: textDirection,
       accessibleNavigation: accessibleNavigation,
       prepareSettings: (store) async {
         if (quick != null) await store.setQuickAccessRow(quick);
@@ -287,6 +292,69 @@ void main() {
     }
   });
 
+  testWidgets('every_layout_fits_a_non_linear_text_scaler', (t) async {
+    // Portrait phone, landscape phone (split) and tablet (split).
+    for (final size in const [
+      Size(320, 568),
+      Size(568, 320),
+      Size(834, 1194),
+    ]) {
+      for (final quick in QuickAccessRow.values) {
+        for (final page in pages) {
+          await pumpRemote(
+            t,
+            quick: quick,
+            size: size,
+            textScaler: const NonlinearTwoXScaler(),
+          );
+          await t.tap(find.text(page));
+          await t.pumpAndSettle();
+          expect(t.takeException(), isNull, reason: '$size $quick $page');
+        }
+      }
+    }
+  });
+
+  testWidgets('split_layout_mirrors_in_rtl', (t) async {
+    const size = Size(844, 390);
+    Future<(Rect, Rect, Rect)> rects(TextDirection direction) async {
+      await pumpRemote(t, size: size, textDirection: direction);
+      expect(t.takeException(), isNull);
+      return (
+        t.getRect(find.byType(PageView)),
+        t.getRect(find.byType(BottomCluster)),
+        t.getRect(find.byType(QuickAccessBar)),
+      );
+    }
+
+    Rect mirror(Rect r) => Rect.fromLTRB(
+      size.width - r.right,
+      r.top,
+      size.width - r.left,
+      r.bottom,
+    );
+
+    final (ltrPad, ltrCluster, ltrRow) = await rects(TextDirection.ltr);
+    final (rtlPad, rtlCluster, rtlRow) = await rects(TextDirection.rtl);
+
+    // The right column's 16 dp gutter is at the screen edge: on the right in
+    // LTR, on the left in RTL.
+    expect(size.width - ltrCluster.right, closeTo(AppSpacing.l, 0.5));
+    expect(rtlCluster.left, closeTo(AppSpacing.l, 0.5));
+    // The whole split layout is the mirror image of LTR.
+    for (final (name, ltr, rtl) in [
+      ('pad', ltrPad, rtlPad),
+      ('cluster', ltrCluster, rtlCluster),
+      ('quick row', ltrRow, rtlRow),
+    ]) {
+      final m = mirror(ltr);
+      expect(rtl.left, closeTo(m.left, 0.5), reason: name);
+      expect(rtl.right, closeTo(m.right, 0.5), reason: name);
+      expect(rtl.top, closeTo(m.top, 0.5), reason: name);
+      expect(rtl.bottom, closeTo(m.bottom, 0.5), reason: name);
+    }
+  });
+
   testWidgets('the_demo_preview_card_fits_320dp_at_200_percent_text', (
     t,
   ) async {
@@ -345,7 +413,7 @@ void main() {
             matching: find.byType(Opacity),
           ),
         )
-        .where((o) => o.opacity == 0.4)
+        .where((o) => o.opacity == AppOpacity.unavailable)
         .length;
     // The quick row, the pad pages and the bottom cluster.
     expect(faded, 3);

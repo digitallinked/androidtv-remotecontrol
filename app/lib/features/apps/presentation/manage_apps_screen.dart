@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
@@ -17,7 +18,9 @@ import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 /// shortcuts.
 ///
 /// A row is reordered by dragging its handle, so scrolling never drags; every
-/// row also offers Move up and Move down as screen-reader actions. Removing
+/// row also offers Move up and Move down as screen-reader actions. After a
+/// move, focus stays on the moved row and its new place is announced
+/// ("Netflix moved to position 2 of 6"). Removing
 /// is immediate and offers Undo, which puts the app back where it was.
 /// Resetting asks first.
 ///
@@ -42,6 +45,41 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
 
   int _writes = 0;
   bool _anyFailed = false;
+
+  /// Each row's focus, by package. A moved row is built anew (the list keys
+  /// its items by index too), so focus is handed back to it after a move.
+  final Map<String, FocusNode> _rowFocus = {};
+
+  FocusNode _focusOf(String package) => _rowFocus.putIfAbsent(
+    package,
+    () => FocusNode(debugLabel: 'Edit apps row $package', skipTraversal: true),
+  );
+
+  /// Drops the focus nodes of apps no longer listed, once their rows are
+  /// gone from the tree (after this frame).
+  void _pruneRowFocus(List<AppEntry> items) {
+    final listed = {for (final app in items) app.package};
+    if (_rowFocus.keys.every(listed.contains)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final now = {
+        for (final app in _current ?? const <AppEntry>[]) app.package,
+      };
+      _rowFocus.removeWhere((package, node) {
+        if (now.contains(package)) return false;
+        node.dispose();
+        return true;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final node in _rowFocus.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
 
   List<AppEntry>? get _current => _items ?? ref.read(shortcutsProvider).value;
 
@@ -108,10 +146,25 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       return;
     }
     final next = [...items];
-    next.insert(to, next.removeAt(from));
-    await _run(
-      (actions) => actions.reorder([for (final app in next) app.package]),
+    final app = next.removeAt(from);
+    next.insert(to, app);
+    // The moved row keeps the focus: a screen reader stays on it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _rowFocus[app.package]?.requestFocus();
+    });
+    final ok = await _run(
+      (actions) => actions.reorder([for (final a in next) a.package]),
       next: next,
+    );
+    if (!ok || !mounted) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        AppLocalizations.of(
+          context,
+        ).manageAppsMoved(app.name, to + 1, next.length),
+        Directionality.of(context),
+      ),
     );
   }
 
@@ -219,10 +272,13 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     final stored = ref.watch(shortcutsProvider);
     ref.listen(shortcutsProvider, (_, next) => _onStored(next));
     final items = _items ?? stored.value;
+    if (items != null) _pruneRowFocus(items);
 
     final Widget body;
     if (items == null && stored.isLoading) {
-      body = const Center(child: CircularProgressIndicator());
+      body = Center(
+        child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
+      );
     } else if (items == null || items.isEmpty) {
       body = Center(
         child: Padding(
@@ -265,6 +321,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
           key: ValueKey('manage_app_${items[i].package}'),
           app: items[i],
           index: i,
+          focusNode: _focusOf(items[i].package),
           onEdit: () => unawaited(
             showCustomShortcutEditor(context, existing: items[i]),
           ),
@@ -285,7 +342,10 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
             ),
             onPressed: () => unawaited(showAddAppSheet(context)),
           ),
+          // Touch targets at least 8 dp apart (design system).
+          const SizedBox(width: AppSpacing.s),
           PopupMenuButton<void>(
+            tooltip: l10n.manageAppsMoreOptions,
             // It colours its IconButton, which derives a pressed overlay;
             // the icon-button theme's style (no pressed overlay under reduce
             // motion) wins over that.
@@ -318,6 +378,7 @@ class _AppRowItem extends StatelessWidget {
   const _AppRowItem({
     required this.app,
     required this.index,
+    required this.focusNode,
     required this.onEdit,
     required this.onRemove,
     super.key,
@@ -325,6 +386,9 @@ class _AppRowItem extends StatelessWidget {
 
   final AppEntry app;
   final int index;
+
+  /// The row's own focus: not a Tab stop, but where focus goes after a move.
+  final FocusNode focusNode;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
 
@@ -373,57 +437,73 @@ class _AppRowItem extends StatelessWidget {
         style: buttonStyle.merge(foregroundOnly(colors.dangerText)),
         onPressed: onRemove,
       ),
-      Semantics(
-        container: true,
-        label: l10n.manageAppsDragHandle(app.name),
-        child: ReorderableDragStartListener(
-          index: index,
-          child: const SizedBox.square(
-            dimension: AppSizes.touchMin,
-            child: ExcludeSemantics(child: Icon(Icons.drag_handle)),
+      // Dragging needs a pointer, so the handle is no keyboard stop; its
+      // label stays for touch exploration.
+      Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        child: Semantics(
+          container: true,
+          label: l10n.manageAppsDragHandle(app.name),
+          child: ReorderableDragStartListener(
+            index: index,
+            child: const SizedBox.square(
+              dimension: AppSizes.touchMin,
+              child: ExcludeSemantics(child: Icon(Icons.drag_handle)),
+            ),
           ),
         ),
       ),
     ];
 
     // No semantics of its own: the list wraps every item in a node with the
-    // Move up / Move down actions, and the name and app ID merge into it.
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.s,
-          vertical: AppSpacing.xs,
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // The name column's width on one line: the row less the icon,
-            // the three 48 dp controls and the four gaps between them.
-            final oneLineName =
-                constraints.maxWidth -
-                _iconSize -
-                controls.length * AppSizes.touchMin -
-                (controls.length + 1) * AppSpacing.s;
-            if (!largeText || oneLineName >= _minNameWidth) {
-              return Row(
-                spacing: AppSpacing.s,
-                children: [icon, name, ...controls],
-              );
-            }
-            return Column(
-              spacing: AppSpacing.xs,
-              children: [
-                Row(spacing: AppSpacing.s, children: [icon, name]),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+    // Move up / Move down actions, and the name and app ID merge into it
+    // (so does the focus below).
+    return Focus(
+      focusNode: focusNode,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.s,
+            vertical: AppSpacing.xs,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The name column's width on one line: the row less the icon,
+              // the three 48 dp controls and the four gaps between them.
+              final oneLineName =
+                  constraints.maxWidth -
+                  _iconSize -
+                  controls.length * AppSizes.touchMin -
+                  (controls.length + 1) * AppSpacing.s;
+              if (!largeText || oneLineName >= _minNameWidth) {
+                return Row(
                   spacing: AppSpacing.s,
-                  children: controls,
-                ),
-              ],
-            );
-          },
+                  children: [icon, name, ...controls],
+                );
+              }
+              return Column(
+                spacing: AppSpacing.xs,
+                children: [
+                  Row(spacing: AppSpacing.s, children: [icon, name]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    spacing: AppSpacing.s,
+                    children: controls,
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 }
+
+/// The packages whose rows hold a focus node, for tests: removed apps must
+/// not keep theirs.
+@visibleForTesting
+Iterable<String> debugRowFocusPackages(State<ManageAppsScreen> state) =>
+    (state as _ManageAppsScreenState)._rowFocus.keys;

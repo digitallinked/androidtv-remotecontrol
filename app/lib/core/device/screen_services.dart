@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -14,26 +15,28 @@ abstract interface class ScreenWakeLock {
   Future<void> disable();
 }
 
-/// [ScreenWakeLock] from the `wakelock_plus` plugin. Platform errors (a
-/// missing plugin in a test) are swallowed: a screen that sleeps is never
-/// worth failing the remote.
+/// [ScreenWakeLock] from the `wakelock_plus` plugin.
+///
+/// The plugin answers over a Pigeon channel, which fails with a
+/// [PlatformException] (`channel-error` when no platform side is there, as
+/// in a host test, or the error the platform reports). A
+/// [MissingPluginException] means a platform without the plugin. Both are
+/// tolerated: a screen that sleeps is never worth failing the remote.
+/// Anything else is a bug and propagates.
 class WakelockPlusScreenWakeLock implements ScreenWakeLock {
-  /// Creates the plugin-backed wake lock.
-  const WakelockPlusScreenWakeLock();
+  /// Creates the plugin-backed wake lock. Tests may pass their own `toggle`
+  /// in place of `WakelockPlus.toggle`.
+  const WakelockPlusScreenWakeLock({
+    this._toggle = WakelockPlus.toggle,
+  });
+
+  final Future<void> Function({required bool enable}) _toggle;
 
   @override
-  Future<void> enable() => _run(WakelockPlus.enable);
+  Future<void> enable() => _tolerated(() => _toggle(enable: true));
 
   @override
-  Future<void> disable() => _run(WakelockPlus.disable);
-
-  Future<void> _run(Future<void> Function() change) async {
-    try {
-      await change();
-    } on Object {
-      // No platform channel: nothing to do.
-    }
-  }
+  Future<void> disable() => _tolerated(() => _toggle(enable: false));
 }
 
 /// Dims the app's screen brightness (Theater Mode, Ruling P4-R14).
@@ -47,26 +50,39 @@ abstract interface class ScreenDimmer {
 
 /// [ScreenDimmer] from the `screen_brightness` plugin. It only changes the
 /// brightness of this app's window; the system setting is left alone.
-/// Platform errors are swallowed.
+///
+/// The plugin's method channel fails with a [PlatformException] (for
+/// example Android's "no activity", code -10) or, with no platform side, a
+/// [MissingPluginException]. Both are tolerated, as for the wake lock. The
+/// plugin checks the brightness range in Dart and throws a [RangeError]
+/// outside 0 to 1: a bug, so it propagates, like anything else unexpected.
 class ScreenBrightnessDimmer implements ScreenDimmer {
-  /// Creates the plugin-backed dimmer.
-  const ScreenBrightnessDimmer();
+  /// Creates the plugin-backed dimmer. Tests may pass their own `plugin` in
+  /// place of `ScreenBrightness.instance`.
+  const ScreenBrightnessDimmer({this._plugin});
+
+  final ScreenBrightness? _plugin;
+
+  ScreenBrightness get _brightness => _plugin ?? ScreenBrightness.instance;
 
   @override
-  Future<void> dim(double brightness) => _run(
-    () => ScreenBrightness.instance.setApplicationScreenBrightness(brightness),
+  Future<void> dim(double brightness) => _tolerated(
+    () => _brightness.setApplicationScreenBrightness(brightness),
   );
 
   @override
   Future<void> restore() =>
-      _run(ScreenBrightness.instance.resetApplicationScreenBrightness);
+      _tolerated(_brightness.resetApplicationScreenBrightness);
+}
 
-  Future<void> _run(Future<void> Function() change) async {
-    try {
-      await change();
-    } on Object {
-      // No platform channel: nothing to do.
-    }
+/// Runs a plugin [call], tolerating a platform that can't do it.
+Future<void> _tolerated(Future<void> Function() call) async {
+  try {
+    await call();
+  } on PlatformException {
+    // The platform side failed or isn't there: nothing to do.
+  } on MissingPluginException {
+    // No plugin on this platform: nothing to do.
   }
 }
 

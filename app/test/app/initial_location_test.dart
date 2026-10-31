@@ -1,5 +1,4 @@
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -12,6 +11,9 @@ import 'package:tv_remote/core/storage/settings_store.dart';
 class _ThrowingDevices implements DeviceRepository {
   @override
   Stream<List<SavedDevice>> watchAll() => const Stream.empty();
+
+  @override
+  Future<List<SavedDevice>> all() => Future.error(StateError('db is broken'));
 
   @override
   Future<void> upsert(SavedDevice device) async {}
@@ -59,7 +61,6 @@ void main() {
   late AppDatabase db;
   late DriftDeviceRepository devices;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();

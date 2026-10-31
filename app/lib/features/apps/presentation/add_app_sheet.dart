@@ -147,12 +147,17 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
         ..add(_SectionHeader(l10n.addAppRecentTitle));
       if (recent.isLoading && !recent.hasValue && !recent.hasError) {
         children.add(
-          const Padding(
-            padding: EdgeInsetsDirectional.symmetric(vertical: AppSpacing.m),
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              vertical: AppSpacing.m,
+            ),
             child: Center(
               child: SizedBox.square(
                 dimension: 24,
-                child: CircularProgressIndicator(strokeWidth: 3),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  semanticsLabel: l10n.loadingLabel,
+                ),
               ),
             ),
           ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +20,7 @@ import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
+import '../../helpers/a11y.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/pump_router_app.dart';
 
@@ -46,6 +48,24 @@ class _FlakyNavigatorKey extends LabeledGlobalKey<NavigatorState> {
   @override
   BuildContext? get currentContext => context.value ?? super.currentContext;
 }
+
+/// The live-region nodes outside the status pill (which announces the
+/// connection, Phase 4).
+List<SemanticsNode> _liveRegions(WidgetTester t) => [
+  for (final n in allSemanticsNodes(t))
+    if (n.getSemanticsData().flagsCollection.isLiveRegion &&
+        !n.label.startsWith('Connection'))
+      n,
+];
+
+/// How many nodes a screen reader can tap to leave the demo.
+int _leaveActions(WidgetTester t) => allSemanticsNodes(t)
+    .where(
+      (n) =>
+          n.label == 'Leave' &&
+          n.getSemanticsData().hasAction(SemanticsAction.tap),
+    )
+    .length;
 
 void main() {
   late ProviderContainer container;
@@ -255,6 +275,63 @@ void main() {
     expect(find.bySemanticsLabel('Demo mode'), findsOneWidget);
     expect(find.bySemanticsLabel('Leave'), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('demo_strip_leave_is_inert_while_a_sheet_is_open', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      await tryDemo(t);
+      final leave = find.widgetWithText(TextButton, 'Leave');
+      expect(_leaveActions(t), 1);
+
+      await t.tap(find.bySemanticsLabel('Keyboard'));
+      await t.pumpAndSettle();
+      expect(find.text('Type on your TV'), findsOneWidget);
+
+      // The strip sits above the navigator, outside the sheet's barrier.
+      await t.tap(leave, warnIfMissed: false);
+      await t.pumpAndSettle();
+      expect(find.text('Leave demo?'), findsNothing);
+      expect(find.text('Type on your TV'), findsOneWidget);
+      expect(_leaveActions(t), 0);
+
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(find.text('Type on your TV'), findsNothing);
+      expect(_leaveActions(t), 1);
+
+      await t.tap(leave);
+      await t.pumpAndSettle();
+      expect(find.text('Leave demo?'), findsOneWidget);
+      // The dialog is a modal too: Leave can't stack a second one.
+      expect(_leaveActions(t), 0);
+      await t.tap(find.text('Stay'));
+      await t.pumpAndSettle();
+      expect(_leaveActions(t), 1);
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  testWidgets('only_the_last_action_line_is_a_live_region', (t) async {
+    final handle = t.ensureSemantics();
+    try {
+      await tryDemo(t);
+      await t.tap(find.bySemanticsLabel('Home'));
+      await t.pump();
+
+      final live = _liveRegions(t);
+      expect(live, hasLength(1), reason: '${live.map((n) => n.label)}');
+      expect(live.single.label, 'Pressed Home');
+      // The card's title and its status line are read, but not announced.
+      expect(find.bySemanticsLabel(RegExp('^TV preview')), findsOneWidget);
+      expect(
+        _liveRegions(t).any((n) => n.label.contains('TV preview')),
+        isFalse,
+      );
+    } finally {
+      handle.dispose();
+    }
   });
 
   testWidgets('leave_demo_returns_to_discover_and_hides_badge', (t) async {

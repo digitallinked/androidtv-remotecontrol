@@ -6,10 +6,17 @@
     <!-- AdMob reads the advertising id (Android 13+ needs it declared). Analytics never
          does: google_analytics_adid_collection_enabled stays false below. -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    <!-- Nothing about the user's TVs leaves the phone (Ruling P8-R1): backup is
+         off, and the extraction rules exclude every domain, because on
+         Android 12+ allowBackup="false" doesn't stop device-to-device
+         transfer. The privacy copy (privacyIntro) depends on this. -->
     <application
         android:label="${appName}"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

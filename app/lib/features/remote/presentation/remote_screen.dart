@@ -9,6 +9,8 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/app/widgets/not_connected_snack_bar.dart';
+import 'package:tv_remote/app/widgets/settings_button.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
@@ -55,9 +57,8 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// The session the identity-changed dialog was last shown for.
   RemoteSession? _askedAboutIdentityFor;
 
-  /// The "Not connected" snackbar on screen, if any. One is enough: a swipe
-  /// on the touchpad refuses several steps at once.
-  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _notConnectedBar;
+  /// The "Not connected" snackbar: one at a time.
+  final NotConnectedSnackBar _notConnected = NotConnectedSnackBar();
 
   /// A power action is in flight (see [_power]).
   bool _powering = false;
@@ -102,13 +103,6 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       if (!mounted) return;
       unawaited(ref.read(consentControllerProvider.notifier).ensureGathered());
     });
-  }
-
-  /// The status the controls and the pill show: the socket's state, never the
-  /// saved one. Loading and errors count as not connected.
-  ConnectionStatus _statusOf(AsyncValue<TvConnectionState> state) {
-    if (state.isLoading) return ConnectionStatus.connecting;
-    return state.value?.status ?? ConnectionStatus.disconnected;
   }
 
   /// The name to show for [session]'s TV: the saved label (so a rename shows
@@ -183,36 +177,17 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
   /// command, with Reconnect when the connection is closed.
   void _showNotConnected() {
     // A sheet or dialog on top (the keyboard) explains it itself.
-    if (!mounted ||
-        _notConnectedBar != null ||
-        !(ModalRoute.isCurrentOf(context) ?? false)) {
-      return;
-    }
-    final l10n = AppLocalizations.of(context);
+    if (!mounted) return;
     final sessionState = ref.read(remoteSessionProvider);
-    final session = sessionState.value;
-    final status = sessionState.isLoading
-        ? ConnectionStatus.connecting
-        : _statusOf(ref.read(connectionStateProvider));
-    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
-    final bar = messenger.showAppSnackBar(
-      SnackBar(
-        content: Text(l10n.remoteNotConnected),
-        // Offline and needs-pairing have an action in the status pill;
-        // a closed connection has none, so offer it here.
-        action: session != null && status == ConnectionStatus.disconnected
-            ? SnackBarAction(
-                label: l10n.statusReconnectAction,
-                onPressed: session.reconnect,
-              )
-            : null,
+    _notConnected.show(
+      context,
+      session: sessionState.value,
+      status: shownConnectionStatus(
+        sessionState,
+        ref.read(connectionStateProvider),
       ),
-    );
-    _notConnectedBar = bar;
-    unawaited(
-      bar.closed.then((_) {
-        if (identical(_notConnectedBar, bar)) _notConnectedBar = null;
-      }),
+      // Replaces a hint, such as "Hold to turn off".
+      replaceCurrent: true,
     );
   }
 
@@ -330,7 +305,9 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     if (sessionState.isLoading && session == null) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.pageTitleRemote)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
+        ),
       );
     }
     if (sessionState.hasError) {
@@ -350,9 +327,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
           title: Text(l10n.pageTitleRemote),
           actions: [
             // Settings before pairing (Ruling P7-R7).
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: l10n.pageTitleSettings,
+            SettingsButton(
               onPressed: () =>
                   unawaited(context.push(AppRoutes.settingsFromSetup)),
             ),
@@ -403,9 +378,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     // The session is rebuilding for another TV: the old one is disposed and
     // its state is stale, so the remote shows "connecting".
     final reloading = sessionState.isLoading;
-    final status = reloading
-        ? ConnectionStatus.connecting
-        : _statusOf(connection);
+    final status = shownConnectionStatus(sessionState, connection);
     final connected = status == ConnectionStatus.connected;
     final canPairAgain = !reloading && session.pairingTarget != null;
 
@@ -432,13 +405,11 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
       appBar: AppBar(
         toolbarHeight: 64,
         leadingWidth: 56,
-        leading: IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: l10n.pageTitleSettings,
-          style: IconButton.styleFrom(
-            minimumSize: const Size.square(AppSizes.touchMin),
+        // Centred, as the app bar centres a bare IconButton leading.
+        leading: Center(
+          child: SettingsButton(
+            onPressed: () => unawaited(context.push(AppRoutes.settings)),
           ),
-          onPressed: () => unawaited(context.push(AppRoutes.settings)),
         ),
         titleSpacing: AppSpacing.s,
         title: DeviceSwitcher(

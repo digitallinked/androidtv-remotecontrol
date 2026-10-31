@@ -207,4 +207,60 @@ void main() {
     final d = create()..watch().listen((_) {});
     expect(d.watch, throwsStateError);
   });
+
+  test('stop_completes_when_never_listened', () async {
+    // Never watched at all.
+    await create().stop().timeout(const Duration(seconds: 1));
+
+    // Watched, but nobody ever listened to the stream.
+    final d = create()..watch();
+    await pumpEventQueue();
+    await d.stop().timeout(const Duration(seconds: 1));
+    expect(stopped, unorderedEquals(discoveries.values));
+    expect(stopped, hasLength(2));
+  });
+
+  test('cancelling_the_stream_stops_discovery', () async {
+    var stopCalls = 0;
+    Future<void> countingStop(Discovery d) async {
+      stopCalls++;
+      stopped.add(d);
+    }
+
+    final d = NsdTvDiscovery(start: start, stop: countingStop);
+    final subscription = d.watch().listen((_) {});
+    await pumpEventQueue();
+    await subscription.cancel().timeout(const Duration(seconds: 1));
+    expect(stopped, unorderedEquals(discoveries.values));
+    expect(stopCalls, 2, reason: 'one stopDiscovery per browse');
+
+    // An explicit stop afterwards changes nothing.
+    await d.stop().timeout(const Duration(seconds: 1));
+    expect(stopCalls, 2);
+  });
+
+  // `_stopQuietly` already swallows a failing stop, so this pins the cancel
+  // path: an unawaited cancel (as DiscoveryController makes) still stops
+  // both browses and leaves nothing unhandled. DiscoveryController's own
+  // test is the proof for its `catchError` on the cancel.
+  test('an_unawaited_cancel_stops_both_browses_even_when_stop_fails', () async {
+    final uncaught = <Object>[];
+    var stopCalls = 0;
+    await runZonedGuarded(() async {
+      final d = NsdTvDiscovery(
+        start: start,
+        stop: (_) async {
+          stopCalls++;
+          throw NsdError(ErrorCause.internalError, 'stop failed');
+        },
+      );
+      final subscription = d.watch().listen((_) {});
+      await pumpEventQueue();
+      // Like DiscoveryController: the cancel isn't awaited.
+      unawaited(subscription.cancel());
+      await pumpEventQueue();
+    }, (error, _) => uncaught.add(error));
+    expect(stopCalls, 2, reason: 'both browses were asked to stop');
+    expect(uncaught, isEmpty);
+  });
 }

@@ -34,6 +34,16 @@ void main() {
     expect(l.onboardingContinue, 'Continue');
   });
 
+  test('phase_8_strings_load', () async {
+    final l = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(
+      l.manageAppsMoved('Netflix', 2, 5),
+      'Netflix moved to position 2 of 5',
+    );
+    expect(l.loadingLabel, 'Loading…');
+    expect(l.manageAppsMoreOptions, 'More options');
+  });
+
   test('arb_has_no_lone_carriage_returns', () {
     // A lone CR survives gen-l10n and the format check, and joins two lines
     // into one for tools that only split on LF.

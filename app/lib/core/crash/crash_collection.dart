@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:atv_remote/atv_remote.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -8,9 +10,14 @@ import 'package:tv_remote/core/crash/crashlytics_sink.dart';
 import 'package:tv_remote/core/crash/scrubbing_crash_reporter.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/privacy/privacy_choices.dart';
+import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
 part 'crash_collection.g.dart';
+
+/// How many TVs found but not saved the scrubber remembers the names of
+/// (Ruling P8-R11). The oldest goes first, but never one of the latest list.
+const int maxDiscoveredScrubTvs = 64;
 
 /// Where crash reports go. Tests override it with a recording fake.
 @Riverpod(keepAlive: true)
@@ -29,15 +36,33 @@ bool crashDebugBuild(Ref ref) => kDebugMode;
 /// - Native collection follows the same choice on every change; reports
 ///   already waiting on the device are deleted when sharing turns off.
 /// - The scrubber knows the saved TVs' names and nicknames and follows the
-///   saved list.
+///   saved list. Bootstrap seeds it with the saved TVs before the first
+///   frame ([seedTerms]), so an early error is scrubbed before the list
+///   stream's first event. It also knows the names of TVs discovery found
+///   but nobody saved ([addDiscoveredTerms]); those stay in memory only.
 ///
 /// With Firebase not ready it never calls the sink.
 @Riverpod(keepAlive: true)
 class CrashCollection extends _$CrashCollection {
-  final Set<String> _terms = {};
+  /// The saved TVs' names: the seed, then each saved list.
+  final Set<String> _saved = {};
+
+  /// The display and service names of TVs found by discovery, by service
+  /// name, oldest first (a map literal keeps insertion order). Never cleared
+  /// by a saved-list change.
+  final Map<String, List<String>> _discovered = {};
   bool? _collecting;
 
-  /// The scrubber, loaded with the saved TVs' names.
+  /// Completes once the saved TVs' names are known: seeded, or the first
+  /// saved list arrived.
+  final Completer<void> _savedKnown = Completer<void>();
+
+  /// Completes once the scrubber knows the saved TVs' names, from
+  /// [seedTerms] or the saved list's first event. Bootstrap holds reports
+  /// until then when its seed read times out (Ruling P8-R11).
+  Future<void> get savedNamesKnown => _savedKnown.future;
+
+  /// The scrubber, loaded with the saved and discovered TVs' names.
   late CrashScrubber scrubber;
 
   /// The reporter that scrubs and sends to Crashlytics.
@@ -50,9 +75,18 @@ class CrashCollection extends _$CrashCollection {
     final debugBuild = ref.watch(crashDebugBuildProvider);
     final devices = ref.watch(deviceRepositoryProvider);
 
-    _terms.clear();
+    // Riverpod 3.3.2 keeps this notifier instance across rebuilds (its old
+    // CHANGELOG said otherwise; crash_collection_test pins the behaviour),
+    // so the fields above survive one. The saved names are not cleared on a
+    // rebuild: the list stream replaces them, and until then over-scrubbing
+    // is the safe side.
     _collecting = null;
-    scrubber = CrashScrubber(knownTerms: () => _terms);
+    scrubber = CrashScrubber(
+      knownTerms: () => [
+        ..._saved,
+        for (final names in _discovered.values) ...names,
+      ],
+    );
     reporter = ScrubbingCrashReporter(
       sink: sink,
       scrubber: scrubber,
@@ -62,15 +96,10 @@ class CrashCollection extends _$CrashCollection {
     );
 
     final subscription = devices.watchAll().listen((saved) {
-      _terms
+      _saved
         ..clear()
-        ..addAll([
-          for (final tv in saved) ...[
-            tv.displayName,
-            tv.serviceName,
-            if (tv.nickname != null) tv.nickname!,
-          ],
-        ]);
+        ..addAll(_namesOf(saved));
+      _markSavedKnown();
     }, onError: (Object _) {});
     ref.onDispose(subscription.cancel);
 
@@ -81,6 +110,52 @@ class CrashCollection extends _$CrashCollection {
       fireImmediately: true,
     );
   }
+
+  /// Adds the names of [devices] (display names, service names and
+  /// nicknames) to the scrubber now. The next saved list replaces them, as
+  /// it replaces every earlier list.
+  void seedTerms(Iterable<SavedDevice> devices) {
+    _saved.addAll(_namesOf(devices));
+    _markSavedKnown();
+  }
+
+  void _markSavedKnown() {
+    if (!_savedKnown.isCompleted) _savedKnown.complete();
+  }
+
+  /// Adds the display and service names of [tvs], one list of TVs seen by
+  /// discovery, to the scrubber (Ruling P8-R11). Beyond
+  /// [maxDiscoveredScrubTvs] TVs the oldest go first; a TV seen again counts
+  /// as new, and the TVs of this list are never dropped, however long it is,
+  /// so the one being paired on a busy network keeps its names. They live in
+  /// memory only.
+  void addDiscoveredTerms(Iterable<DiscoveredTv> tvs) {
+    final latest = <String>{};
+    for (final tv in tvs) {
+      latest.add(tv.serviceName);
+      _discovered
+        ..remove(tv.serviceName)
+        ..[tv.serviceName] = [tv.displayName, tv.serviceName];
+    }
+    final older = [
+      for (final key in _discovered.keys)
+        if (!latest.contains(key)) key,
+    ];
+    var excess = _discovered.length - maxDiscoveredScrubTvs;
+    for (final key in older) {
+      if (excess <= 0) break;
+      _discovered.remove(key);
+      excess--;
+    }
+  }
+
+  static Iterable<String> _namesOf(Iterable<SavedDevice> devices) => [
+    for (final tv in devices) ...[
+      tv.displayName,
+      tv.serviceName,
+      if (tv.nickname != null) tv.nickname!,
+    ],
+  ];
 
   void _apply(
     CrashlyticsSink sink,

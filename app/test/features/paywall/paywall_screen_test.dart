@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui' show CheckedState, Tristate;
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -21,11 +20,13 @@ import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../../helpers/fake_purchase_service.dart';
+import '../../helpers/ink_features.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/platform_override.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_analytics_sink.dart';
 import '../../helpers/recording_link_opener.dart';
+import '../../helpers/toggle_position.dart';
 
 const _termsAndroid =
     'Payment is charged to your Google Play account. Subscriptions renew '
@@ -38,8 +39,6 @@ const _termsIos =
 const _welcome = 'Welcome to Premium. Thank you!';
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   late FakePurchaseService fake;
   late RecordingAnalyticsSink sink;
   late RecordingLinkOpener links;
@@ -185,6 +184,45 @@ void main() {
       await tapContinue(t);
       expect(fake.purchases, [PremiumPlanKind.lifetime]);
     });
+
+    // Ruling P8-R7 for the paywall's own Radio: under the platform flag the
+    // dot is in by the next frame; without it, it is still on its way.
+    final lifetime = find.ancestor(
+      of: find.text('RM 59.90, one payment'),
+      matching: find.byType(PlanTile),
+    );
+    for (final reduceMotion in [true, false]) {
+      testWidgets(
+        reduceMotion
+            ? 'plan_radio_settles_within_one_frame_under_reduce_motion'
+            : 'with_motion_the_plan_radio_animates',
+        (t) async {
+          if (reduceMotion) {
+            t.platformDispatcher.accessibilityFeaturesTestValue =
+                const FakeAccessibilityFeatures(disableAnimations: true);
+            addTearDown(
+              t.platformDispatcher.clearAccessibilityFeaturesTestValue,
+            );
+          }
+          await pumpPaywall(t);
+          expect(togglePosition(t, lifetime), 0, reason: 'not preselected');
+          await t.tap(find.text('RM 59.90, one payment'));
+          await t.pump();
+          expect(togglePosition(t, lifetime), 0, reason: 'drawn at its start');
+          await t.pump(const Duration(milliseconds: 16));
+          if (reduceMotion) {
+            expectNoVisibleInk(t, 'the plan tile');
+            expect(t.hasRunningAnimations, isFalse);
+            expect(togglePosition(t, lifetime), 1, reason: 'the dot is in');
+          } else {
+            expect(t.hasRunningAnimations, isTrue);
+            expect(togglePosition(t, lifetime), inExclusiveRange(0, 1));
+          }
+          await t.pumpAndSettle();
+          expect(selectedPlan(t), PremiumPlanKind.lifetime);
+        },
+      );
+    }
 
     testWidgets('plan_tiles_are_a_labelled_radio_group', (t) async {
       final handle = t.ensureSemantics();

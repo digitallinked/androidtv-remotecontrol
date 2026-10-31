@@ -1,14 +1,22 @@
 # Project status
 
-_Last updated: 2026-10-30 by Claude (controller, subagent-driven run, Phase 7 merged)._
+_Last updated: 2026-10-31 by Claude (controller, subagent-driven run, Phase 8 merged)._
 
 ## Current phase
 
-**Phase 8: Test and accessibility hardening** (next; plan to be written from the master plan). Phases 0–7 are merged into `main`.
+**Phase 9: Release preparation** (next; plan to be written from the master plan). Phases 0–8 are merged into `main`. Phase 9 prepares assets and scripts and stops before signing and store submission, which need the owner's accounts.
 
-The **real-device run on the owner's phone and TV is still open**. It is the exit criterion for Phases 3–7. Phase 6 adds Firebase DebugView, ads with consent, and the RevenueCat sandbox (needs the owner and real test config). Phase 7 adds the icon, splash and reduce-motion checks below.
+The **real-device run is still open** and is now scripted in `docs/knowledge/device-matrix.md` (rows DM-001…DM-102, results empty). It is the exit for Phases 3–8 and gates Phase 9's store steps.
 
 ## Done
+
+- **Phase 8 (quality and hardening):**
+  - **Release blocker closed in code** (decision #49): Android backup and device transfer off (`allowBackup`, `fullBackupContent`, `data_extraction_rules.xml`; verified in the devDebug and prodRelease merged manifests). iOS DB in a backup-excluded `Application Support/Database` via a small Swift channel; keychain this-device-only; a fresh DB re-seeds the Apps row. New-phone FAQ.
+  - **Tests:** the fake TV is a test library (`package:atv_remote/testing.dart`); discover → pair → key and demo flows run on the host and on a device; key-press latency (p95 < 30 ms, host) and a 50-cycle resume leak test; `tool/measure_android.{ps1,sh}` for cold start, trace and battery (device numbers not yet measured).
+  - **Accessibility:** every screen, sheet and state meets the four guidelines in light and dark, at 320 dp / 200 % and the non-linear scaler; Phase 2–6 a11y carry-overs fixed (dialog names, live regions, spinner labels, reorder announce, D-pad order, FittedLabel floor, demo strip contrast); reduce motion closed for Radio, Switch and the decorator.
+  - **Hardening:** `noRetry` storage errors, MAC cleared with a distrusted pin, usage pruning, merge follow-ups, NSD stop/cancel, narrowed catches, D-pad hold region, RTL split layout, one `connectionTroubleProvider`, crash reports held until saved TV names are known.
+  - **Malay:** complete `app_ms.arb` (454 keys, strict parity), Malay iOS purpose strings, pseudo-locale and Malay overflow sweeps.
+  - Decisions #49–#50. App tests +2084, atv_remote +199.
 
 - **Phase 7 (polish):**
   - **Onboarding:** 3 cards (Skip, Get started, Try demo), shown once, never trapped by a failing store. An iOS-only Local Network explainer before discovery.
@@ -77,7 +85,7 @@ _Nothing._
 
 ## Next up
 
-1. **Real-device run (owner + Claude).** This is the exit for Phases 3–6.
+1. **Real-device run (owner + Claude):** work through `docs/knowledge/device-matrix.md` (it folds in every item below and the Phase 7–8 checks). This is the exit for Phases 3–8.
    - **Setup:**
      - Install the dev flavor on the Note10+ with `flutter run --flavor dev -t lib/main_dev.dart --dart-define-from-file=env/dev.json`. Copy `env/example.json` to `env/dev.json` first; empty values keep services off.
      - Discover the TV, pair, then use every control and screen.
@@ -114,86 +122,24 @@ _Nothing._
      - TalkBack through onboarding; maximum font size on Apps, Edit apps and the quick row.
      - On a Mac/iPhone: the iOS icon set, splash, Local Network explainer, reduce motion.
    - **Ask before any Power or Wake-on-LAN test**, because it turns the TV off or on.
-2. Write and execute the Phase 8 (test and accessibility hardening) plan from the master plan, including the Phase 8 carry-overs below (the `allowBackup` release blocker first).
+2. Write and execute the Phase 9 (release preparation) plan from the master plan, including the Phase 9 carry-overs below. Stop before signing and store submission.
 
-## Carry-over to Phase 8+
-- Phase 8 (test/accessibility hardening):
-  - **From Phase 7:**
-    - **Reduce motion:** Radio and Switch animations; the InputDecorator focus transition (167 ms under the MediaQuery flag, about 8 ms under the platform flag). Decision #47.
-    - **Tests:**
-      - Drift multiple-database warnings in other test files.
-      - The predictive-back test finds a private Flutter class name; recheck on the next Flutter bump.
-      - A screen test that 'hotstar' in IN lists Disney+ Hotstar before JioHotstar; a drag test on a stacked Edit apps row; hold the real Edit apps Remove button; the popup menu closes without animation.
-      - Unreadable Premium is tested in isolation only (the App reads `premiumProvider` for the theme).
-    - **Refactor:** extract the Settings `IconButton` if a third caller appears.
-  - **RELEASE BLOCKER: decide the Android `allowBackup` / data-extraction rules.**
-    - Auto Backup copies the DB (TV names, IPs, MACs, pins, usage) off the phone, and restoring the secure-storage identity is a risk.
-    - The Privacy page's "never leave this phone" (`privacyIntro`) and `faqPrivacyA` are true only once the DB and prefs are excluded.
-    - Must land before Phase 9.
-  - **From Phase 6:**
-    - **Localisation and accessibility:**
-      - `InfoPlist.strings` (Malay) for the ATT and local-network purpose strings.
-      - A live-region announce on the update gate.
-      - Pre-prompt dialog insets at 320 dp / 200% text: the body is about 2000 dp tall in a 192 dp-wide dialog.
-      - Fit checks bounded by the scroll viewport. Tests read the pre-prompt body from `AppLocalizations`. The privacy fit test also covers the switch rows.
-      - P6-C10: audit any accent-coloured body text on `surfaceRaised`, across all styles.
-    - **Crash scrubbing:**
-      - Seed the scrub terms synchronously (a one-shot `DeviceRepository` read).
-      - Feed discovered but unsaved TV names to the scrubber terms.
-    - **Tests:**
-      - Test the real App's dynamic-scheme branch.
-      - Widen only the setup budgets around TLS in `pairing_client_test`.
-    - **Refactor:** one shared "connection trouble in the last 60 s" provider, replacing the copies in `Interstitials`, `ReviewPrompter` and `analyticsHooks`.
-    - **Pending the device run:** collapse the Apps banner while the keyboard is up, if AdMob flags covered impressions.
-  - **From Phase 5:**
-    - **Providers:**
-      - `shortcutsProvider` / `savedDevicesProvider` keep Riverpod's default retry, so a drift `SqliteException` spins for about 38 s before the new error states show. Use `retry: noRetry`, or show the error while retrying.
-      - A merge that finishes after leaving discovery with a **null** active target leaves the default session on the deleted `manual:` row until the next rebuild. Follow it when `ref.exists(remoteSessionProvider)` and its target is the manual name.
-      - A throwing HostResolver should fall back to the saved host.
-    - **Storage:**
-      - Clear a stale `wolMac` after an IP-only merge or an identity change.
-      - A merge-transaction rollback test.
-      - `watchMostUsed` applies its limit before the system filter; add usage pruning.
-    - **Layout and duplication:**
-      - The 320 dp app-bar 8 dp gap assertion.
-      - Terse ARB descriptions.
-      - Duplicated status-strip and snackbar logic (Apps vs Remote).
-    - **Accessibility:**
-      - Spinner semantics labels; the drag handle's extra focus stop; the PopupMenuButton tooltip.
-      - Focus and announce after a move.
-    - **Tests:** the Edit TV removal-guard test (needs an observable page transition).
-  - **Phase 4 tests:**
-    - **Key codes and session:**
-      - A `KeyCodes.named` source scan, and `cliKeyCodes`↔`named`.
-      - `serverPublicKeySha256` at `RemoteReady`.
-      - The second TV's first volume is null.
-      - Provider-level background-seeded grace.
-    - **Input feel:** platform haptics; the transparent-key ripple; edge glow and same-touch stale glow.
-    - **D-pad and Power:**
-      - D-pad clamp at 100×100, wedge drag and hold-stays, the `dpad_pressed_up_light` golden.
-      - Power drag-off cancel.
-    - **Accessibility and text scaling:**
-      - A11y guidelines for the disconnected state, the colour/media rows and the theater palette.
-      - Non-linear `TextScaler` across the layout matrix.
-  - **Phase 4 code:**
-    - The D-pad's `_holdStart` should use `_downRegion`; give the D-pad an explicit `OrdinalSortKey`.
-    - The split layout should use `EdgeInsetsDirectional` instead of `EdgeInsets.only` (RTL).
-    - Narrow the screen-service catches.
-    - `ExcludeSemantics` while theater-dimmed, after a Voice/Switch Access check.
-  - **From Phase 3:**
-    - **NSD and async:**
-      - NSD `stop()` hangs if never listened, and has no `onCancel`.
-      - Real-time negative waits.
-      - Unawaited cancel/stop errors.
-    - **Coverage gaps from Tasks 3.2–3.6:**
-      - 200% TV name ellipsis.
-      - 48/56 dp and dark-state tests.
-      - Pairing failure tests at 320 dp and in dark mode.
-    - **Accessibility:**
-      - The demo strip is tappable under a modal.
-      - Live regions.
-      - Phase 2 a11y items.
+## Carry-over to Phase 9+
 - **Phase 9:**
+  - **From Phase 8 (gates before store copy or upload):**
+    - Device rows DM-056/057 (Android backup and transfer), DM-060/061 (iOS restore and Quick Start; **DM-061 is a release issue if the DB travels**).
+    - Mac rows DM-058/059 (Swift storage channel compiles, DB location) and DM-066 (Malay `ms.lproj` in the Xcode build).
+    - The owner's Malay sign-off (DM-068), including "diendors" in `aboutTrademark`, "memaparkan iklan" in the iOS tracking string and `paywallFreeForever`.
+    - Re-check the prodRelease merged manifest for the three backup attributes before upload.
+  - **From Phase 8 (work):**
+    - A full-page field-text sweep (helpers and errors on pages, not only dialogs and sheets) (P8-C15).
+    - A restored iPhone carries `launch_count`, `att_preprompt_shown` and `onboarding_complete` (DM-060): decide whether any should reset with a fresh DB.
+    - The startup trace and battery runs, then set a battery threshold; TalkBack/VoiceOver and Switch/Voice Access rows; DM-006/DM-010 captures.
+    - Android 13 `localeConfig`.
+    - Edge case: if the first start on a restored iPhone creates the DB and then fails, Try again sees `createdThisRun` false → empty Apps row until Reset. Clear the seeded flag when the DB is created.
+    - `app_info.dart` uses `dart:io Platform`; switch to `defaultTargetPlatform`.
+    - Run `tool/check.sh` / the Linux CI job (40 min timeout) on the PR.
+  - **Later (conditional):** theater `ExcludeSemantics` (only if the device check calls for it); Apps banner collapse with the keyboard up (only if AdMob flags it); the predictive-back test's private class name (next Flutter bump); D-pad wedge depth below 160 dp (only if the device run shows mis-taps).
   - **From Phase 6, release script and build checks:**
     - `tool/release.ps1` must refuse a prod build unless all of these are present: `FIREBASE_ENABLED: true`, both RevenueCat keys, both banner ids, the prod Firebase config files and the AdMob app ids.
     - The iOS `check_admob_app_id.sh` Run Script.
@@ -240,6 +186,7 @@ _Nothing._
     - the empty `ADMOB_APP_ID_PROD` guard works;
     - `ensureInitialized` runs;
     - UMP works with test IDs.
+- **Phase 8 owner items:** review every Malay string (`app/lib/app/l10n/app_ms.arb`, DM-068) before Malay store copy; on the Mac, build iOS and check the Swift storage channel and `ms.lproj` (DM-058/059/066); run the device matrix with Claude.
 - **Apple entitlement:** the multicast entitlement (`com.apple.developer.networking.multicast`), for Wake-on-LAN on iOS.
 - **Accounts:** an Apple Developer account and a Google Play Console account. A new personal Play account must run a closed test with **12 testers for 14 days** before production.
 - **App name and bundle ID:** the placeholders are `Remotely for Android TV` and `com.digitallinked.atvremote`.

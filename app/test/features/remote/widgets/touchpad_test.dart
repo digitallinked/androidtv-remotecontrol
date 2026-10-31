@@ -336,6 +336,77 @@ void main() {
     expect(find.byKey(Touchpad.trailKey), paintsNothing);
   });
 
+  /// The edge glow rectangles the pad paints now.
+  List<Rect> glowRects(WidgetTester t) {
+    final rects = <Rect>[];
+    expect(
+      find.byKey(Touchpad.trailKey),
+      paints..everything((method, args) {
+        if (method == #drawRect) rects.add(args[0] as Rect);
+        return true;
+      }),
+    );
+    return rects;
+  }
+
+  /// Each step direction and the 24 dp band along the edge it lights, in a
+  /// layer of [s].
+  List<(Offset, Rect)> edges(Size s) => [
+    (const Offset(30, 0), Rect.fromLTWH(s.width - 24, 0, 24, s.height)),
+    (const Offset(-30, 0), Rect.fromLTWH(0, 0, 24, s.height)),
+    (const Offset(0, 30), Rect.fromLTWH(0, s.height - 24, s.width, 24)),
+    (const Offset(0, -30), Rect.fromLTWH(0, 0, s.width, 24)),
+  ];
+
+  testWidgets('edge_glow_shows_in_the_step_direction', (t) async {
+    await pumpPad(t);
+    final layer = t.getSize(find.byKey(Touchpad.trailKey));
+    for (final (move, edge) in edges(layer)) {
+      final g = await t.startGesture(centre(t));
+      await g.moveBy(move);
+      await g.up();
+      await t.pump();
+      expect(glowRects(t), [edge], reason: '$move');
+      // Let it fade before the next swipe.
+      await t.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(Touchpad.trailKey), paintsNothing);
+    }
+  });
+
+  testWidgets('a_new_touch_never_shows_the_previous_touchs_glow', (t) async {
+    await pumpPad(t);
+    final layer = t.getSize(find.byKey(Touchpad.trailKey));
+    final [right, _, _, top] = edges(layer);
+
+    // A swipe right; its glow fades and the ticker stops.
+    final first = await t.startGesture(centre(t));
+    await first.moveBy(right.$1);
+    await first.up();
+    await t.pump();
+    expect(glowRects(t), [right.$2]);
+    await t.pump(const Duration(milliseconds: 400));
+    expect(t.hasRunningAnimations, isFalse);
+
+    // A new touch swipes up: only the top edge lights, and it fades on time.
+    final second = await t.startGesture(centre(t));
+    await second.moveBy(top.$1);
+    await t.pump();
+    expect(glowRects(t), [top.$2]);
+
+    // The same touch pauses until everything has faded, then steps again:
+    // a fresh glow, stamped on the restarted clock.
+    await t.pump(const Duration(milliseconds: 400));
+    expect(glowRects(t), isEmpty);
+    await second.moveBy(const Offset(0, -40));
+    await t.pump();
+    expect(glowRects(t), [top.$2]);
+    await t.pump(const Duration(milliseconds: 100));
+    expect(glowRects(t), [top.$2], reason: 'still fading');
+    await t.pump(const Duration(milliseconds: 150));
+    expect(glowRects(t), isEmpty);
+    await second.up();
+  });
+
   testWidgets('touchpad_needs_bounded_constraints', (t) async {
     await t.pumpWidget(
       Directionality(

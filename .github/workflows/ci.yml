@@ -11,7 +11,10 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The whole suite (2,000+ app tests, the real-TLS host flows and the
+    # Malay sweeps) takes about 6 min on the dev PC; a hosted runner is
+    # slower, so 20 min left little room.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

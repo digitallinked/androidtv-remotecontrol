@@ -1,12 +1,25 @@
+import 'package:atv_remote/atv_remote.dart'
+    show ConnectionStatus, TvConnectionState;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/colour_styles.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
+import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
+
+import '../../helpers/a11y.dart';
+import '../../helpers/fake_remote_session.dart';
+import '../../helpers/pump_router_app.dart';
+import '../../helpers/test_devices.dart';
+import '../../helpers/test_premium.dart';
 
 const _premium = PremiumState(isPremium: true, known: true);
 
@@ -19,7 +32,89 @@ Future<AppSettings> _settingsWith(ColourStyle style) async {
   return store.snapshot();
 }
 
+/// The screens where accent text meets the raised surface or the page
+/// (P6-C10): each opener checks it got there.
+final _screens = <String, Future<void> Function(WidgetTester t)>{
+  'remote': (t) async {
+    expect(find.bySemanticsLabel('Volume up'), findsOneWidget);
+  },
+  'apps': (t) async {
+    await _go(t, AppRoutes.apps);
+    expect(find.text('Netflix'), findsWidgets);
+  },
+  'settings hub': (t) async {
+    await _go(t, AppRoutes.settings);
+    expect(find.text('Settings'), findsWidgets);
+  },
+  'paywall': (t) async {
+    await _go(t, AppRoutes.paywall(source: PaywallSource.settings));
+    expect(find.text('Premium'), findsWidgets);
+  },
+  // The demo strip's Leave button: accent text on the raised surface. The
+  // session stays the fake: the strip follows the active target alone.
+  'demo strip': (t) async {
+    ProviderScope.containerOf(
+      t.element(find.byType(MaterialApp)),
+    ).read(activeTargetProvider.notifier).startDemo();
+    await _go(t, AppRoutes.remote);
+    expect(find.text('Demo mode'), findsOneWidget);
+    expect(find.text('Leave'), findsOneWidget);
+  },
+};
+
+Future<void> _go(WidgetTester t, String location) async {
+  ProviderScope.containerOf(
+    t.element(find.byType(MaterialApp)),
+  ).read(appRouterProvider).go(location);
+  await t.pump();
+  await t.pump(const Duration(milliseconds: 500));
+  await t.pumpAndSettle();
+}
+
 void main() {
+  // P6-C10: accent-coloured text must reach 4.5:1 wherever it is drawn, in
+  // every colour style, on Premium (where the styles apply).
+  for (final style in ColourStyle.values) {
+    for (final b in Brightness.values) {
+      testWidgets('accent_text_meets_contrast_in_${style.name}_${b.name}', (
+        t,
+      ) async {
+        t.view
+          ..physicalSize = const Size(390, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(t.view.reset);
+        await withSemantics(t, () async {
+          final devices = [savedTv()];
+          await pumpRouterApp(
+            t,
+            initialLocation: AppRoutes.remote,
+            brightness: b,
+            prepareSettings: (store) => store.setColourStyle(style),
+            overrides: [
+              premiumProvider.overrideWith(() => TestPremium(_premium)),
+              remoteSessionProvider.overrideWith(
+                (ref) async => FakeRemoteSession(
+                  initial: const TvConnectionState(
+                    status: ConnectionStatus.connected,
+                  ),
+                ),
+              ),
+              savedDevicesProvider.overrideWith((ref) => Stream.value(devices)),
+            ],
+          );
+          for (final e in _screens.entries) {
+            await e.value(t);
+            await expectLater(
+              t,
+              meetsGuideline(textContrastGuideline),
+              reason: '${e.key} ${style.name} ${b.name}',
+            );
+          }
+        });
+      });
+    }
+  }
+
   test('every_colour_style_meets_contrast', () {
     for (final s in ColourStyle.values) {
       for (final b in Brightness.values) {

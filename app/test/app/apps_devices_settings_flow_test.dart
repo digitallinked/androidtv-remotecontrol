@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +50,6 @@ void main() {
   late FakeWakeOnLan wol;
   late FakeTvDiscoveries discoveries;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     devices = InMemoryDeviceRepository([savedTv()]);
     shortcuts = InMemoryShortcutRepository();

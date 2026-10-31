@@ -7,10 +7,9 @@ import 'package:atv_remote/src/identity.dart';
 import 'package:atv_remote/src/pairing_secret.dart';
 import 'package:atv_remote/src/proto/polo.pb.dart';
 import 'package:atv_remote/src/proto/remotemessage.pb.dart';
+import 'package:atv_remote/src/testing/fake_tv_identity.dart';
+import 'package:atv_remote/testing.dart';
 import 'package:test/test.dart';
-
-import 'fake_tv_identity.dart';
-import 'fake_tv_server.dart';
 
 // Generated lazily, once per test run (RSA keygen is slow).
 final ClientIdentity _clientA = ClientIdentity.generate(commonName: 'phone-a');
@@ -530,5 +529,68 @@ void main() {
     await peer.close();
 
     await _eventually(() => !tv.clientAnsweredLastPing);
+  });
+
+  test('key_codes_stream_emits_each_injected_key', () async {
+    final tv = await _start();
+    await _pair(tv, _clientA);
+    final peer = await _connectRemote(tv, _clientA);
+    final emitted = <int>[];
+    final subscription = tv.keyCodes.listen(emitted.add);
+    addTearDown(subscription.cancel);
+
+    peer.sendRemote(
+      RemoteMessage(
+        remoteKeyInject: RemoteKeyInject(
+          keyCode: RemoteKeyCode.KEYCODE_HOME,
+          direction: RemoteDirection.SHORT,
+        ),
+      ),
+    );
+
+    await _eventually(() => emitted.isNotEmpty);
+    expect(emitted, [3]);
+    expect(tv.receivedKeyCodes, [3]);
+  });
+
+  test('counts_open_and_accepted_remote_connections', () async {
+    final tv = await _start();
+    expect(tv.openRemoteConnections, 0);
+    expect(tv.acceptedRemoteConnections, 0);
+    await _pair(tv, _clientA);
+
+    final peer = await _connectRemote(tv, _clientA);
+    await tv.waitForActiveClient();
+    expect(tv.openRemoteConnections, 1);
+    expect(tv.acceptedRemoteConnections, 1);
+
+    await peer.close();
+    await _eventually(() => tv.openRemoteConnections == 0);
+    expect(tv.acceptedRemoteConnections, 1);
+  });
+
+  test('accepted_remote_connections_counts_paired_clients_only', () async {
+    final tv = await _start();
+    await _pair(tv, _clientA);
+
+    // _clientB gets through TLS but never paired: the TV hangs up at once.
+    final unpaired = await _Peer.connect(tv.remotePort, _clientB);
+    await unpaired.waitUntilClosed();
+    expect(tv.acceptedRemoteConnections, 0);
+    expect(tv.openRemoteConnections, 0);
+
+    await _connectRemote(tv, _clientA);
+    await tv.waitForActiveClient();
+    expect(tv.acceptedRemoteConnections, 1);
+  });
+
+  test('key_codes_stream_closes_when_the_tv_closes', () async {
+    final tv = await FakeTvServer.start(sendPings: false);
+    final done = Completer<void>();
+    tv.keyCodes.listen((_) {}, onDone: done.complete);
+
+    await tv.close();
+
+    await done.future.timeout(_wait);
   });
 }

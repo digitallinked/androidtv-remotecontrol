@@ -4,6 +4,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 
+import '../../helpers/ink_features.dart';
 import '../../helpers/pump_app.dart';
 
 Widget key({
@@ -218,6 +219,27 @@ void main() {
       lessThan(1),
     );
     await g.up();
+  });
+
+  testWidgets('a_transparent_key_still_shows_its_ripple', (t) async {
+    await pumpApp(t, key(color: Colors.transparent));
+    final g = await t.startGesture(t.getCenter(find.byType(AppKeyButton)));
+    await t.pump(); // Start the ripple's animations.
+    await t.pump(const Duration(milliseconds: 100));
+
+    final ripples = inkFeatures(t).whereType<InkRipple>().toSet();
+    expect(ripples, hasLength(1));
+    expect(ripples.single.color.a, greaterThan(0));
+    // Painted on the key's own (transparent) Material.
+    final material = t.renderObject(
+      find.descendant(
+        of: find.byType(AppKeyButton),
+        matching: find.byType(Material),
+      ),
+    );
+    expect(material, paints..circle());
+    await g.up();
+    await t.pumpAndSettle();
   });
 
   testWidgets('press_scale_has_no_animation_with_reduce_motion', (t) async {

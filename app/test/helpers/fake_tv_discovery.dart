@@ -18,8 +18,14 @@ DiscoveredTv tv(
 
 /// A [TvDiscovery] that tests drive by hand.
 class FakeTvDiscovery implements TvDiscovery {
-  final StreamController<List<DiscoveredTv>> _controller =
-      StreamController<List<DiscoveredTv>>.broadcast();
+  late final StreamController<List<DiscoveredTv>> _controller =
+      StreamController<List<DiscoveredTv>>.broadcast(
+        onListen: () => onListen?.call(this),
+      );
+
+  /// Called when [watch]'s stream gets its first listener, so a test can
+  /// emit what is "found" once someone is listening.
+  void Function(FakeTvDiscovery discovery)? onListen;
 
   /// How many times [watch] was called.
   int watchCalls = 0;
@@ -41,10 +47,18 @@ class FakeTvDiscovery implements TvDiscovery {
     return _controller.stream;
   }
 
+  /// When set, [stop] fails with it (after stopping), like a platform that
+  /// refuses to stop a browse.
+  Object? stopError;
+
   @override
   Future<void> stop() async {
     _stopped = true;
     await _controller.close();
+    final error = stopError;
+    // The test chose what to throw, an Error or not.
+    // ignore: only_throw_errors
+    if (error != null) throw error;
   }
 }
 

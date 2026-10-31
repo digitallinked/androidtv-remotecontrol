@@ -10,12 +10,11 @@ import 'package:atv_remote/src/proto/remotemessage.pb.dart';
 import 'package:atv_remote/src/remote_client.dart';
 import 'package:atv_remote/src/remote_events.dart';
 import 'package:atv_remote/src/socket_connector.dart';
+import 'package:atv_remote/src/testing/fake_tv_identity.dart';
 import 'package:atv_remote/src/tv_connection.dart';
+import 'package:atv_remote/testing.dart';
 import 'package:pointycastle/export.dart' show SHA256Digest;
 import 'package:test/test.dart';
-
-import 'fake_tv/fake_tv_identity.dart';
-import 'fake_tv/fake_tv_server.dart';
 
 const Duration _wait = Duration(seconds: 5);
 
@@ -24,6 +23,14 @@ Backoff _fastBackoff() => Backoff(
   initial: const Duration(milliseconds: 10),
   max: const Duration(milliseconds: 40),
 );
+
+/// Every delay is zero, for the tests that prove a retry does *not* happen.
+///
+/// Zero-length timers fire in the order they were created, so a retry
+/// scheduled with this backoff fires before the zero-length timers of a later
+/// [_pump]. Waiting for those is the proof: no real time has to pass.
+Backoff _instantBackoff() =>
+    Backoff(initial: Duration.zero, max: Duration.zero);
 
 const DeviceInfo _deviceInfo = DeviceInfo(
   model: 'Test Phone',
@@ -380,7 +387,7 @@ void main() {
     });
 
     test('routes_to_pairing_on_cert_rejection', () async {
-      final rig = await _rig();
+      final rig = await _rig(backoff: _instantBackoff());
       final conn = rig.connection;
       await _connected(rig);
 
@@ -390,9 +397,8 @@ void main() {
 
       expect(state.lastError, RemoteCloseReason.certificateRejected);
       final created = rig.clientsCreated;
-      // Negative assertion, so a wait is unavoidable: several backoff
-      // periods (10 + 20 + 40 ms ...) must pass without another attempt.
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+      // A retry scheduled by now (zero delay) would fire before these.
+      await _pump();
       expect(rig.clientsCreated, created);
       expect(conn.current.status, ConnectionStatus.needsPairing);
     });
@@ -823,7 +829,7 @@ void main() {
     });
 
     test('disconnect_cancels_a_scheduled_retry', () async {
-      final rig = await _rig();
+      final rig = await _rig(backoff: _instantBackoff());
       await _connected(rig);
 
       rig.unreachable = true;
@@ -831,9 +837,10 @@ void main() {
       await _untilStatus(rig.connection, ConnectionStatus.reconnecting);
       await rig.connection.disconnect();
       final created = rig.clientsCreated;
+      expect(created, 1, reason: 'the retry was still scheduled');
 
-      // Three times the fast backoff's cap: a retry would have fired.
-      await Future<void>.delayed(const Duration(milliseconds: 120));
+      // The cancelled retry (zero delay) would fire before these.
+      await _pump();
       expect(rig.connection.current.status, ConnectionStatus.disconnected);
       expect(rig.clientsCreated, created);
     });
@@ -851,9 +858,17 @@ void main() {
       await _eventually(() => rig.clientsCreated == 2);
 
       await rig.connection.disconnect();
+      expect(rig.tv.acceptedRemoteConnections, 1);
       hold.complete();
+      // The abandoned attempt's socket still reaches the TV, and the client
+      // hangs it up: by the time the TV sees it close, the attempt's outcome
+      // was handled.
+      await _eventually(
+        () =>
+            rig.tv.acceptedRemoteConnections == 2 &&
+            rig.tv.openRemoteConnections == 0,
+      );
       await _pump();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(rig.connection.current.status, ConnectionStatus.disconnected);
       expect(rig.clientsCreated, 2);
@@ -869,7 +884,9 @@ void main() {
       rig.connection
         ..notifyAppResumed()
         ..notifyNetworkChanged();
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      // An attempt they started would create its client within microtasks
+      // (no resolver, nothing to close): before these timers fire.
+      await _pump();
 
       expect(rig.clientsCreated, created);
       expect(rig.connection.current.status, ConnectionStatus.disconnected);
@@ -890,8 +907,8 @@ void main() {
 
       await rig.connection.disconnect();
       resolving.complete('localhost');
+      // The late lookup's continuation runs in microtasks, before these.
       await _pump();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(rig.connection.host, '127.0.0.1');
       expect(rig.clientsCreated, 1);
@@ -913,9 +930,7 @@ void main() {
 
   group('dispose', () {
     test('dispose_emits_disconnected_and_stops_reconnecting', () async {
-      final rig = await _rig(
-        backoff: Backoff(initial: const Duration(milliseconds: 50)),
-      );
+      final rig = await _rig(backoff: _instantBackoff());
       final conn = rig.connection;
       await _connected(rig);
       await rig.tv.dropConnections();
@@ -930,7 +945,9 @@ void main() {
       expect(seen.last.status, ConnectionStatus.disconnected);
       expect(conn.current.status, ConnectionStatus.disconnected);
       final created = rig.clientsCreated;
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+      expect(created, 1, reason: 'the retry was still scheduled');
+      // The cancelled retry (zero delay) would fire before these.
+      await _pump();
       expect(rig.clientsCreated, created);
     });
 

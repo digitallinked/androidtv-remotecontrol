@@ -2,6 +2,7 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/core/tv/host_resolver.dart';
 import 'package:tv_remote/core/tv/manual_tv.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
@@ -28,8 +29,9 @@ PairingClientFactory pairingClientFactory(Ref ref) =>
 /// It tries the saved TV, then an IP address typed in earlier
 /// (`manual:<ip>`), then a look-up on the network. A saved TV found by its
 /// mDNS name is looked up again first (it may have a new address) and falls
-/// back to its saved host (Ruling P5-R10 c). A TV added by IP address is
-/// never looked up. It is `null` when the TV can't be found.
+/// back to its saved host (Ruling P5-R10 c), also when the look-up throws
+/// (Ruling P8-R10). A TV added by IP address is never looked up. It is
+/// `null` when the TV can't be found.
 @Riverpod(retry: noRetry)
 Future<DiscoveredTv?> pairingTarget(Ref ref, String serviceName) async {
   final devices = ref.watch(deviceRepositoryProvider);
@@ -39,7 +41,7 @@ Future<DiscoveredTv?> pairingTarget(Ref ref, String serviceName) async {
   if (saved != null) {
     final tv = saved.toDiscoveredTv();
     if (isManualServiceName(serviceName)) return tv;
-    final host = await resolveHost(serviceName);
+    final host = await resolveHostOrNull(resolveHost, serviceName);
     if (host == null) return tv;
     return DiscoveredTv(
       serviceName: tv.serviceName,
@@ -55,7 +57,7 @@ Future<DiscoveredTv?> pairingTarget(Ref ref, String serviceName) async {
     if (ip != null) return manualTv(ip);
   }
 
-  final host = await resolveHost(serviceName);
+  final host = await resolveHostOrNull(resolveHost, serviceName);
   if (host == null) return null;
   return DiscoveredTv(
     serviceName: serviceName,

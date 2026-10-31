@@ -34,7 +34,9 @@ class DevicesScreen extends ConsumerWidget {
 
     final Widget body;
     if (devices == null && saved.isLoading) {
-      body = const Center(child: CircularProgressIndicator());
+      body = Center(
+        child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
+      );
     } else if (saved.hasError && devices == null) {
       body = DevicesLoadFailed(
         onRetry: () => ref.invalidate(savedDevicesProvider),

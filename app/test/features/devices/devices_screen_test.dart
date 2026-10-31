@@ -1,5 +1,4 @@
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +13,7 @@ import 'package:tv_remote/features/devices/presentation/edit_device_screen.dart'
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 
+import '../../helpers/disk_exception.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
@@ -25,7 +25,6 @@ void main() {
   late InMemoryDeviceRepository repo;
   late FakeRemoteSession session;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     // "Lounge" is the TV in use and has a nickname; "Bedroom TV" was never
     // paired (no key).
@@ -67,6 +66,8 @@ void main() {
       brightness: brightness,
       overrides: [
         deviceRepositoryProvider.overrideWithValue(repo),
+        // The body of savedDevicesProvider (lib/core/storage/
+        // storage_providers.dart), copied: keep the two in step.
         savedDevicesProvider.overrideWith(
           (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
         ),
@@ -141,6 +142,33 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Add a TV'));
     await t.pumpAndSettle();
     expect(find.byType(DiscoveryScreen), findsOneWidget);
+  });
+
+  testWidgets('saved_devices_error_shows_without_retrying', (t) async {
+    repo.watchError = const DiskException();
+    t.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.devices,
+      settle: false,
+      overrides: [
+        deviceRepositoryProvider.overrideWithValue(repo),
+        // A copy of the production body (lib/core/storage/
+        // storage_providers.dart): an override keeps its retry policy, but
+        // keep the body in step with the provider by hand.
+        savedDevicesProvider.overrideWith(
+          (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
+        ),
+        remoteSessionProvider.overrideWith((ref) async => session),
+      ],
+    );
+    // One settle: a retried provider would spin here for ~38 s instead.
+    await t.pumpAndSettle();
+    expect(find.text("Couldn't load your TVs."), findsOneWidget);
+    expect(repo.watchAllCalls, 1);
   });
 
   testWidgets('unreadable_tvs_show_an_error_with_retry_not_an_empty_list', (

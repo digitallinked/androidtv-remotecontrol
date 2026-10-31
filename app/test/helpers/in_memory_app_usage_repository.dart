@@ -26,7 +26,10 @@ class InMemoryAppUsageRepository implements AppUsageRepository {
   /// When set, the next write throws it and clears it.
   Object? failNextWrite;
 
-  List<AppUsageStat> _mostUsed(int limit) {
+  List<AppUsageStat> _mostUsed(
+    int limit,
+    bool Function(String package)? exclude,
+  ) {
     final sorted = stats.values.toList()
       ..sort((a, b) {
         final byCount = b.seenCount.compareTo(a.seenCount);
@@ -34,7 +37,24 @@ class InMemoryAppUsageRepository implements AppUsageRepository {
         final byTime = b.lastSeenAt.compareTo(a.lastSeenAt);
         return byTime != 0 ? byTime : a.package.compareTo(b.package);
       });
-    return sorted.take(limit).toList();
+    return sorted
+        .where((s) => exclude == null || !exclude(s.package))
+        .take(limit)
+        .toList();
+  }
+
+  /// Forgets every package outside the [AppUsageRepository.kUsageKeep] most
+  /// recently seen (ties broken by package, as in the drift repository).
+  void _prune() {
+    if (stats.length <= AppUsageRepository.kUsageKeep) return;
+    final newestFirst = stats.values.toList()
+      ..sort((a, b) {
+        final byTime = b.lastSeenAt.compareTo(a.lastSeenAt);
+        return byTime != 0 ? byTime : a.package.compareTo(b.package);
+      });
+    for (final old in newestFirst.skip(AppUsageRepository.kUsageKeep)) {
+      stats.remove(old.package);
+    }
   }
 
   @override
@@ -53,16 +73,19 @@ class InMemoryAppUsageRepository implements AppUsageRepository {
       seenCount: (old?.seenCount ?? 0) + 1,
       lastSeenAt: at.toUtc(),
     );
+    _prune();
     if (!_changes.isClosed) _changes.add(null);
   }
 
   @override
-  Stream<List<AppUsageStat>> watchMostUsed({int limit = 30}) =>
-      Stream.multi((controller) {
-        controller.add(_mostUsed(limit));
-        final sub = _changes.stream.listen(
-          (_) => controller.add(_mostUsed(limit)),
-        );
-        controller.onCancel = sub.cancel;
-      });
+  Stream<List<AppUsageStat>> watchMostUsed({
+    int limit = 30,
+    bool Function(String package)? exclude,
+  }) => Stream.multi((controller) {
+    controller.add(_mostUsed(limit, exclude));
+    final sub = _changes.stream.listen(
+      (_) => controller.add(_mostUsed(limit, exclude)),
+    );
+    controller.onCancel = sub.cancel;
+  });
 }

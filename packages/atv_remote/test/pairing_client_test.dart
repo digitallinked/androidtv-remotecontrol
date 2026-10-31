@@ -10,11 +10,11 @@ import 'package:atv_remote/src/pairing_secret.dart';
 import 'package:atv_remote/src/proto/polo.pb.dart';
 import 'package:atv_remote/src/proto/remotemessage.pb.dart';
 import 'package:atv_remote/src/remote_client.dart';
+import 'package:atv_remote/src/testing/fake_tv_identity.dart';
+import 'package:atv_remote/testing.dart';
 import 'package:pointycastle/export.dart' show SHA256Digest;
 import 'package:test/test.dart';
 
-import 'fake_tv/fake_tv_identity.dart';
-import 'fake_tv/fake_tv_server.dart';
 import 'support/unloadable_identity.dart';
 
 const Duration _wait = Duration(seconds: 5);
@@ -33,9 +33,11 @@ Matcher _pairingFailure(PairingFailure reason) =>
       reason,
     );
 
+/// A client of the TV on [port]. Its own [timeout] also bounds the TLS
+/// handshake, so it defaults to the setup budget; tests of timing pass theirs.
 PairingClient _client(
   int port, {
-  Duration timeout = const Duration(seconds: 5),
+  Duration timeout = _setup,
 }) {
   final client = PairingClient(
     host: InternetAddress.loopbackIPv4.address,
@@ -192,7 +194,7 @@ void main() {
 
     test('pairs_successfully', () async {
       final tv = await _startTv();
-      final client = _client(tv.pairingPort, timeout: _setup);
+      final client = _client(tv.pairingPort);
 
       await client.start(clientName: 'Test phone').timeout(_setup);
       final code = tv.displayedCode;
@@ -218,7 +220,7 @@ void main() {
       final client = _client(tv.pairingPort);
       expect(client.serverPublicKeySha256, isNull);
 
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       final pinned = client.serverPublicKeySha256;
       expect(pinned, hasLength(32));
       await client.submitCode(tv.displayedCode!).timeout(_wait);
@@ -236,7 +238,7 @@ void main() {
         ),
       );
       addTearDown(remote.close);
-      await remote.connect().timeout(_wait);
+      await remote.connect().timeout(_setup);
 
       expect(remote.serverPublicKeySha256, orderedEquals(pinned));
       final parts = fakeTvIdentity.publicParts;
@@ -253,14 +255,14 @@ void main() {
     test('accepts_lower_case_code', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       await client.submitCode(tv.displayedCode!.toLowerCase()).timeout(_wait);
     });
 
     test('surfaces_bad_secret_status', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
 
       await expectLater(
         client.submitCode(_wrongButValidCode(tv.displayedCode!)),
@@ -271,7 +273,7 @@ void main() {
     test('session_is_over_after_bad_secret', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       final code = tv.displayedCode!;
       await expectLater(
         client.submitCode(_wrongButValidCode(code)),
@@ -285,7 +287,7 @@ void main() {
     test('invalid_code_never_sent', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       final code = tv.displayedCode!;
 
       await expectLater(
@@ -402,7 +404,7 @@ void main() {
       final secure = await SecureSocket.secureServer(
         tcp,
         securityContextFor(fakeTvIdentity),
-      ).timeout(_wait);
+      ).timeout(_setup);
       addTearDown(secure.destroy);
       final closed = Completer<void>();
       secure.listen(
@@ -483,7 +485,7 @@ void main() {
       final tv = await _ScriptedTv.start((message, socket) {});
       // A roomy budget: the TLS handshake with the fake must not time out
       // before the request is sent. The test ends the pairing by closing it.
-      final client = _client(tv.port, timeout: _setup);
+      final client = _client(tv.port);
       final started = client.start(clientName: 'Living room phone');
       // The TV never answers; only the request matters here.
       unawaited(started.then<void>((_) {}, onError: (Object _) {}));
@@ -553,7 +555,7 @@ void main() {
     test('connection_dropped_before_code_is_connection_failed', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       final code = tv.displayedCode!;
       await tv.dropConnections();
 
@@ -573,7 +575,7 @@ void main() {
     test('start_twice_throws_state_error', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
 
       await expectLater(
         client.start(clientName: 'Test phone'),
@@ -584,7 +586,7 @@ void main() {
     test('submit_code_after_success_throws_state_error', () async {
       final tv = await _startTv();
       final client = _client(tv.pairingPort);
-      await client.start(clientName: 'Test phone').timeout(_wait);
+      await client.start(clientName: 'Test phone').timeout(_setup);
       final code = tv.displayedCode!;
       await client.submitCode(code).timeout(_wait);
 
@@ -601,7 +603,7 @@ void main() {
 
       // Waiting for the code.
       final waiting = _client(tv.pairingPort);
-      await waiting.start(clientName: 'Test phone').timeout(_wait);
+      await waiting.start(clientName: 'Test phone').timeout(_setup);
       await waiting.close();
       await waiting.close();
       await expectLater(waiting.submitCode('AABBCC'), throwsStateError);

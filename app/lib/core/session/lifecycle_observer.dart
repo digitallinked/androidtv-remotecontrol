@@ -70,6 +70,6 @@ class LifecycleObserver {
   /// Stops listening and closes [changes].
   void dispose() {
     _listener.dispose();
-    unawaited(_changes.close());
+    unawaited(_changes.close().catchError((Object _) {}));
   }
 }

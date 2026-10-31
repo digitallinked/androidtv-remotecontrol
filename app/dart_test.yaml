@@ -1,3 +1,5 @@
 tags:
   golden:
     description: Pixel comparisons. Baselines are generated on Windows; Linux CI excludes this tag.
+  integration:
+    description: End-to-end flows from integration_test/flows/ on the host; the fake TV ones talk to it over real loopback TLS.

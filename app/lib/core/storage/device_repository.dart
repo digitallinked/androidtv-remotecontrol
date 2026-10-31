@@ -7,6 +7,10 @@ abstract interface class DeviceRepository {
   /// Emits all saved TVs, most recently connected first.
   Stream<List<SavedDevice>> watchAll();
 
+  /// Every saved TV, most recently connected first (the order of
+  /// [watchAll]), read once.
+  Future<List<SavedDevice>> all();
+
   /// Inserts [device], or replaces the one with the same service name.
   Future<void> upsert(SavedDevice device);
 
@@ -55,10 +59,13 @@ abstract interface class DeviceRepository {
   /// TV.
   Future<void> setWolMac(String serviceName, String? mac);
 
-  /// Forgets the trusted key of [serviceName] (it must be paired again),
-  /// leaving every other field alone, but only while the stored pin is still
-  /// [distrustedPin]: a newer pairing's pin is kept. Does nothing for an
-  /// unknown TV.
+  /// Forgets the trusted key of [serviceName] (it must be paired again) and
+  /// its Wake-on-LAN MAC address, leaving every other field alone, but only
+  /// while the stored pin is still [distrustedPin]: a newer pairing's pin
+  /// (and MAC) is kept. Does nothing for an unknown TV.
+  ///
+  /// The TV presented a different key, so it was reset or replaced and its
+  /// MAC address may be stale too (Ruling P8-R10).
   Future<void> clearServerKeyPin(
     String serviceName, {
     required String distrustedPin,
@@ -84,6 +91,10 @@ class DriftDeviceRepository implements DeviceRepository {
   @override
   Stream<List<SavedDevice>> watchAll() =>
       _newestFirst().watch().map((rows) => rows.map(_toUtc).toList());
+
+  @override
+  Future<List<SavedDevice>> all() async =>
+      (await _newestFirst().get()).map(_toUtc).toList();
 
   @override
   Future<void> upsert(SavedDevice device) =>
@@ -178,8 +189,10 @@ class DriftDeviceRepository implements DeviceRepository {
     String serviceName, {
     required String distrustedPin,
   }) async {
-    await (_updateOne(serviceName)
-          ..where((t) => t.serverKeyPin.equals(distrustedPin)))
-        .write(const DevicesCompanion(serverKeyPin: Value(null)));
+    await (_updateOne(
+      serviceName,
+    )..where((t) => t.serverKeyPin.equals(distrustedPin))).write(
+      const DevicesCompanion(serverKeyPin: Value(null), wolMac: Value(null)),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/number_pad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
@@ -109,7 +110,7 @@ void main() {
     await pumpPager(t, enabled: false);
     final opacities = t
         .widgetList<Opacity>(find.byType(Opacity))
-        .where((o) => o.opacity == 0.4);
+        .where((o) => o.opacity == AppOpacity.unavailable);
     expect(opacities, hasLength(1));
     expect(
       find.descendant(

@@ -52,7 +52,13 @@ class DeviceSwitcher extends StatelessWidget {
           for (final device in devices)
             ListTile(
               minTileHeight: AppSizes.touchMin,
-              title: Text(device.label),
+              // One line, like the name in the app bar; a screen reader
+              // reads it in full.
+              title: Text(
+                device.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               trailing: device.serviceName == currentServiceName
                   ? const Icon(Icons.check)
                   : null,

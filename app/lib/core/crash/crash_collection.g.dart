@@ -112,7 +112,10 @@ String _$crashDebugBuildHash() => r'b077222acd79d702057591df99d19f82d0f8c4b3';
 /// - Native collection follows the same choice on every change; reports
 ///   already waiting on the device are deleted when sharing turns off.
 /// - The scrubber knows the saved TVs' names and nicknames and follows the
-///   saved list.
+///   saved list. Bootstrap seeds it with the saved TVs before the first
+///   frame ([seedTerms]), so an early error is scrubbed before the list
+///   stream's first event. It also knows the names of TVs discovery found
+///   but nobody saved ([addDiscoveredTerms]); those stay in memory only.
 ///
 /// With Firebase not ready it never calls the sink.
 
@@ -127,7 +130,10 @@ final crashCollectionProvider = CrashCollectionProvider._();
 /// - Native collection follows the same choice on every change; reports
 ///   already waiting on the device are deleted when sharing turns off.
 /// - The scrubber knows the saved TVs' names and nicknames and follows the
-///   saved list.
+///   saved list. Bootstrap seeds it with the saved TVs before the first
+///   frame ([seedTerms]), so an early error is scrubbed before the list
+///   stream's first event. It also knows the names of TVs discovery found
+///   but nobody saved ([addDiscoveredTerms]); those stay in memory only.
 ///
 /// With Firebase not ready it never calls the sink.
 final class CrashCollectionProvider
@@ -140,7 +146,10 @@ final class CrashCollectionProvider
   /// - Native collection follows the same choice on every change; reports
   ///   already waiting on the device are deleted when sharing turns off.
   /// - The scrubber knows the saved TVs' names and nicknames and follows the
-  ///   saved list.
+  ///   saved list. Bootstrap seeds it with the saved TVs before the first
+  ///   frame ([seedTerms]), so an early error is scrubbed before the list
+  ///   stream's first event. It also knows the names of TVs discovery found
+  ///   but nobody saved ([addDiscoveredTerms]); those stay in memory only.
   ///
   /// With Firebase not ready it never calls the sink.
   CrashCollectionProvider._()
@@ -170,7 +179,7 @@ final class CrashCollectionProvider
   }
 }
 
-String _$crashCollectionHash() => r'c2e8f1e50052b86f99f26be69d34163e2c982615';
+String _$crashCollectionHash() => r'f848c66a09ec35672c63d19880ee2af0f38864ab';
 
 /// Wires Crashlytics to the user's choice.
 ///
@@ -180,7 +189,10 @@ String _$crashCollectionHash() => r'c2e8f1e50052b86f99f26be69d34163e2c982615';
 /// - Native collection follows the same choice on every change; reports
 ///   already waiting on the device are deleted when sharing turns off.
 /// - The scrubber knows the saved TVs' names and nicknames and follows the
-///   saved list.
+///   saved list. Bootstrap seeds it with the saved TVs before the first
+///   frame ([seedTerms]), so an early error is scrubbed before the list
+///   stream's first event. It also knows the names of TVs discovery found
+///   but nobody saved ([addDiscoveredTerms]); those stay in memory only.
 ///
 /// With Firebase not ready it never calls the sink.
 

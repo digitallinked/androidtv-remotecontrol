@@ -1,5 +1,4 @@
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
@@ -30,7 +29,6 @@ void main() {
   late FakeRemoteClients clients;
   final sessions = <RemoteSession>[];
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);
@@ -96,6 +94,29 @@ void main() {
       '192.168.0.99',
     ]);
     expect((await repo.find('Living Room TV 3'))!.lastHost, '192.168.0.99');
+  });
+
+  test('reconnect_keeps_the_saved_host_when_the_resolver_throws', () async {
+    // The first attempt fails; the look-up before the retry throws.
+    clients.outcomes['192.168.0.20'] = FakeConnect.networkError;
+    await repo.upsert(savedTv());
+    var resolveCalls = 0;
+    final s = session(
+      savedTv(),
+      resolveHost: (_) {
+        resolveCalls++;
+        clients.outcomes.remove('192.168.0.20');
+        throw StateError('nsd failed');
+      },
+    );
+    await s.connect();
+    await until(s, ConnectionStatus.connected);
+    expect(resolveCalls, 1);
+    expect(clients.created.map((c) => c.host), [
+      '192.168.0.20',
+      '192.168.0.20',
+    ]);
+    expect((await repo.find('Living Room TV 3'))!.lastHost, '192.168.0.20');
   });
 
   test('identity_changed_clears_pin_and_reports_server_key_changed', () async {

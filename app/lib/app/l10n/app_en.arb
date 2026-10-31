@@ -274,15 +274,15 @@
   },
   "troubleshootSameWifi": "Connect your phone and TV to the same Wi-Fi network (not a guest network).",
   "@troubleshootSameWifi": {
-    "description": "Troubleshooting step 1."
+    "description": "First step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help."
   },
   "troubleshootTvOn": "Turn the TV on. Some TVs can't be found while in standby.",
   "@troubleshootTvOn": {
-    "description": "Troubleshooting step 2."
+    "description": "Second step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help."
   },
   "troubleshootRemoteService": "On the TV, make sure \"Android TV Remote Service\" is installed and up to date in the Play Store.",
   "@troubleshootRemoteService": {
-    "description": "Troubleshooting step 3."
+    "description": "Third step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help."
   },
   "troubleshootLocalNetwork": "On iPhone, allow Local Network access for this app in Settings → Privacy & Security → Local Network.",
   "@troubleshootLocalNetwork": {
@@ -290,11 +290,11 @@
   },
   "troubleshootRestart": "Still nothing? Restart the TV and your router, then scan again.",
   "@troubleshootRestart": {
-    "description": "Troubleshooting step."
+    "description": "Fourth step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help."
   },
   "troubleshootManualIp": "You can also enter the TV's IP address. Find it on the TV under Settings → Network & Internet.",
   "@troubleshootManualIp": {
-    "description": "Last troubleshooting step."
+    "description": "Last step of the troubleshooting checklist, shown in the Can't connect sheet; it points to entering the TV's IP address."
   },
   "legacyTitle": "Update needed on this TV",
   "@legacyTitle": {
@@ -982,7 +982,7 @@
   },
   "appsEmptyTitle": "No apps yet",
   "@appsEmptyTitle": {
-    "description": "Empty Apps screen."
+    "description": "Title of the Apps screen when the user has no app shortcuts yet."
   },
   "appsLoadFailed": "Couldn't load your apps.",
   "@appsLoadFailed": {
@@ -990,7 +990,7 @@
   },
   "appsEmptyBody": "Add the apps you use on your TV to open them with one tap.",
   "@appsEmptyBody": {
-    "description": "Empty Apps screen."
+    "description": "Body text of the Apps screen when the user has no app shortcuts yet, above the Add apps button."
   },
   "appsEmptyAction": "Add apps",
   "@appsEmptyAction": {
@@ -1002,19 +1002,19 @@
   },
   "manageAppsReset": "Reset to suggested apps",
   "@manageAppsReset": {
-    "description": "Overflow menu item."
+    "description": "Item in the Edit apps overflow menu that puts back the suggested apps for the phone's region."
   },
   "manageAppsResetTitle": "Reset your apps?",
   "@manageAppsResetTitle": {
-    "description": "Reset confirmation title."
+    "description": "Title of the dialog that asks the user to confirm resetting their app list on Edit apps."
   },
   "manageAppsResetBody": "Your list goes back to the suggested apps for your region. Shortcuts you added or changed are removed.",
   "@manageAppsResetBody": {
-    "description": "Reset confirmation body."
+    "description": "Body of the dialog that asks the user to confirm resetting their app list on Edit apps."
   },
   "manageAppsResetConfirm": "Reset",
   "@manageAppsResetConfirm": {
-    "description": "Destructive reset action."
+    "description": "Destructive button of the reset dialog on Edit apps; it replaces the list with the suggested apps."
   },
   "manageAppsReorderHint": "Drag the handle to change the order. The remote shows your apps in this order.",
   "@manageAppsReorderHint": {
@@ -1070,7 +1070,7 @@
   },
   "addAppTitle": "Add an app",
   "@addAppTitle": {
-    "description": "Add sheet title."
+    "description": "Title of the sheet that adds an app shortcut, opened from Edit apps."
   },
   "addAppSearchLabel": "Search apps or enter an app ID",
   "@addAppSearchLabel": {
@@ -1082,11 +1082,11 @@
   },
   "addAppRecentTitle": "Recently used on your TV",
   "@addAppRecentTitle": {
-    "description": "Section header."
+    "description": "Section header in the Add an app sheet for apps recently seen open on the TV."
   },
   "addAppRecentEmpty": "Apps you open on your TV show up here.",
   "@addAppRecentEmpty": {
-    "description": "Empty recent section."
+    "description": "Text in the Add an app sheet's recent section when no app has been seen open on the TV yet."
   },
   "addAppPopularTitle": "Suggested apps",
   "@addAppPopularTitle": {
@@ -1108,7 +1108,7 @@
   },
   "addAppAdded": "{app} added",
   "@addAppAdded": {
-    "description": "Snackbar after adding.",
+    "description": "Snackbar shown after the user adds the app {app} to their shortcuts from the Add an app sheet.",
     "placeholders": {
       "app": {
         "type": "String",
@@ -1122,43 +1122,43 @@
   },
   "shortcutNewTitle": "New shortcut",
   "@shortcutNewTitle": {
-    "description": "Editor title (create)."
+    "description": "Title of the shortcut editor sheet when the user creates a new custom shortcut."
   },
   "shortcutEditTitle": "Edit shortcut",
   "@shortcutEditTitle": {
-    "description": "Editor title (edit)."
+    "description": "Title of the shortcut editor sheet when the user edits an existing shortcut."
   },
   "shortcutNameLabel": "Name",
   "@shortcutNameLabel": {
-    "description": "Editor field."
+    "description": "Label of the name field in the shortcut editor sheet."
   },
   "shortcutNameError": "Enter a name of up to 30 characters.",
   "@shortcutNameError": {
-    "description": "Editor validation."
+    "description": "Error under the shortcut editor's name field when the name is empty or too long."
   },
   "shortcutPackageLabel": "App ID",
   "@shortcutPackageLabel": {
-    "description": "Editor field."
+    "description": "Label of the app ID (Android package name) field in the shortcut editor sheet."
   },
   "shortcutPackageHint": "com.example.app",
   "@shortcutPackageHint": {
-    "description": "Editor field hint."
+    "description": "Example value shown inside the empty app ID field of the shortcut editor; keep it as a package name."
   },
   "shortcutPackageHelp": "The app's ID on the TV. It's in the app's Play Store web address, after \"id=\".",
   "@shortcutPackageHelp": {
-    "description": "Editor helper text."
+    "description": "Helper text under the shortcut editor's app ID field that says where to find an app's ID."
   },
   "shortcutPackageError": "Enter an app ID like com.example.app.",
   "@shortcutPackageError": {
-    "description": "Editor validation."
+    "description": "Error under the shortcut editor's app ID field when the text is not a valid package name."
   },
   "shortcutPackageTaken": "This app is already on your list.",
   "@shortcutPackageTaken": {
-    "description": "Editor validation."
+    "description": "Error under the shortcut editor's app ID field when that app is already on the user's list."
   },
   "shortcutColourLabel": "Tile colour",
   "@shortcutColourLabel": {
-    "description": "Editor group label."
+    "description": "Label of the tile colour choices in the shortcut editor sheet."
   },
   "shortcutColourDefault": "Default",
   "@shortcutColourDefault": {
@@ -1198,47 +1198,47 @@
   },
   "shortcutIconLabel": "Icon",
   "@shortcutIconLabel": {
-    "description": "Editor group label."
+    "description": "Label of the icon choices in the shortcut editor sheet."
   },
   "shortcutIconLetter": "First letter",
   "@shortcutIconLetter": {
-    "description": "Icon choice: monogram."
+    "description": "Icon choice in the shortcut editor that shows the first letter of the shortcut's name on the tile."
   },
   "shortcutIconApp": "App",
   "@shortcutIconApp": {
-    "description": "Generic icon name."
+    "description": "Spoken name of the generic app icon choice in the shortcut editor."
   },
   "shortcutIconMovies": "Movies",
   "@shortcutIconMovies": {
-    "description": "Icon name."
+    "description": "Spoken name of the movies icon choice in the shortcut editor."
   },
   "shortcutIconLive": "Live TV",
   "@shortcutIconLive": {
-    "description": "Icon name."
+    "description": "Spoken name of the live TV icon choice in the shortcut editor."
   },
   "shortcutIconSports": "Sports",
   "@shortcutIconSports": {
-    "description": "Icon name."
+    "description": "Spoken name of the sports icon choice in the shortcut editor."
   },
   "shortcutIconMusic": "Music",
   "@shortcutIconMusic": {
-    "description": "Icon name."
+    "description": "Spoken name of the music icon choice in the shortcut editor."
   },
   "shortcutIconKids": "Kids",
   "@shortcutIconKids": {
-    "description": "Icon name."
+    "description": "Spoken name of the kids icon choice in the shortcut editor."
   },
   "shortcutIconNews": "News",
   "@shortcutIconNews": {
-    "description": "Icon name."
+    "description": "Spoken name of the news icon choice in the shortcut editor."
   },
   "shortcutIconGames": "Games",
   "@shortcutIconGames": {
-    "description": "Icon name."
+    "description": "Spoken name of the games icon choice in the shortcut editor."
   },
   "shortcutIconLearning": "Learning",
   "@shortcutIconLearning": {
-    "description": "Icon name."
+    "description": "Spoken name of the learning icon choice in the shortcut editor."
   },
   "shortcutPreview": "Preview",
   "@shortcutPreview": {
@@ -1246,11 +1246,11 @@
   },
   "shortcutSaved": "Shortcut saved",
   "@shortcutSaved": {
-    "description": "Snackbar after editing."
+    "description": "Snackbar shown on Edit apps after the user saves changes to a shortcut."
   },
   "devicesEmptyTitle": "No TVs yet",
   "@devicesEmptyTitle": {
-    "description": "Empty Your TVs."
+    "description": "Title of the Your TVs page when no TV is saved on this phone."
   },
   "devicesLoadFailed": "Couldn't load your TVs.",
   "@devicesLoadFailed": {
@@ -1258,7 +1258,7 @@
   },
   "devicesEmptyBody": "Pair a TV to control it from this phone.",
   "@devicesEmptyBody": {
-    "description": "Empty Your TVs."
+    "description": "Body text of the Your TVs page when no TV is saved, above the button that finds a TV."
   },
   "devicesInUse": "In use",
   "@devicesInUse": {
@@ -1276,11 +1276,11 @@
   },
   "editDeviceNameLabel": "Name on this phone",
   "@editDeviceNameLabel": {
-    "description": "Nickname field."
+    "description": "Label of the nickname field on the Edit TV page."
   },
   "editDeviceNameHelp": "Leave empty to use the TV's own name, {tvName}.",
   "@editDeviceNameHelp": {
-    "description": "Nickname helper.",
+    "description": "Helper text under the Edit TV nickname field; {tvName} is the name the TV gives itself.",
     "placeholders": {
       "tvName": {
         "type": "String",
@@ -1290,15 +1290,15 @@
   },
   "editDeviceNameError": "Use 40 characters or fewer.",
   "@editDeviceNameError": {
-    "description": "Nickname validation."
+    "description": "Error under the Edit TV nickname field when the nickname is longer than 40 characters."
   },
   "editDeviceWolTitle": "Turn on from your phone",
   "@editDeviceWolTitle": {
-    "description": "MAC section header."
+    "description": "Header of the Edit TV section where the user enters the MAC address used to wake the TV."
   },
   "editDeviceWolBody": "Add the TV's MAC address so the power key can wake it from standby.",
   "@editDeviceWolBody": {
-    "description": "MAC section text."
+    "description": "Text of the Edit TV section that explains why to enter the TV's MAC address."
   },
   "editDeviceWolHelp": "Where do I find it?",
   "@editDeviceWolHelp": {
@@ -1328,7 +1328,7 @@
   },
   "editDeviceSaved": "Saved",
   "@editDeviceSaved": {
-    "description": "Snackbar after saving."
+    "description": "Snackbar shown on the Edit TV page after the user's changes are saved."
   },
   "editDeviceSaveFailed": "Couldn't save. Try again.",
   "@editDeviceSaveFailed": {
@@ -1336,7 +1336,7 @@
   },
   "editDeviceRemove": "Remove TV",
   "@editDeviceRemove": {
-    "description": "Destructive button."
+    "description": "Destructive button at the bottom of the Edit TV page that removes the TV from this phone."
   },
   "editDeviceRemoveFailed": "Couldn't remove this TV. Try again.",
   "@editDeviceRemoveFailed": {
@@ -1344,7 +1344,7 @@
   },
   "editDeviceRemoveTitle": "Remove {tvName}?",
   "@editDeviceRemoveTitle": {
-    "description": "Confirmation title.",
+    "description": "Title of the dialog that asks the user to confirm removing the TV {tvName}.",
     "placeholders": {
       "tvName": {
         "type": "String",
@@ -1354,15 +1354,15 @@
   },
   "editDeviceRemoveBody": "This phone forgets the TV and its settings. To use it again, pair it with a new code. The TV may still list this phone.",
   "@editDeviceRemoveBody": {
-    "description": "Confirmation body."
+    "description": "Body of the dialog that asks the user to confirm removing a TV from this phone."
   },
   "editDeviceRemoveConfirm": "Remove",
   "@editDeviceRemoveConfirm": {
-    "description": "Destructive confirm action."
+    "description": "Destructive button of the remove-TV dialog that removes the TV from this phone."
   },
   "editDeviceRemoved": "{tvName} removed",
   "@editDeviceRemoved": {
-    "description": "Snackbar after removing.",
+    "description": "Snackbar shown on Your TVs after the TV {tvName} was removed from this phone.",
     "placeholders": {
       "tvName": {
         "type": "String",
@@ -1384,43 +1384,43 @@
   },
   "settingsSectionRemote": "Remote",
   "@settingsSectionRemote": {
-    "description": "Hub section header."
+    "description": "Section header on the Settings page above the remote layout and behaviour rows."
   },
   "settingsSectionApp": "App",
   "@settingsSectionApp": {
-    "description": "Hub section header."
+    "description": "Section header on the Settings page above the app-wide rows such as appearance and privacy."
   },
   "settingsSectionSupport": "Help and feedback",
   "@settingsSectionSupport": {
-    "description": "Hub section header."
+    "description": "Section header on the Settings page above the help and feedback rows."
   },
   "settingsSectionAbout": "About",
   "@settingsSectionAbout": {
-    "description": "Hub section header."
+    "description": "Section header on the Settings page above the About row."
   },
   "settingsRemoteLayoutSubtitle": "Touchpad or D-pad, and the row of keys above it",
   "@settingsRemoteLayoutSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Remote layout row on the Settings page, saying what that page changes."
   },
   "settingsRemoteBehaviourSubtitle": "Vibration, Smooth Press, screen and keyboard",
   "@settingsRemoteBehaviourSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Remote behaviour row on the Settings page, listing what that page changes."
   },
   "settingsAppsSubtitle": "Choose and order your app shortcuts",
   "@settingsAppsSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Apps row on the Settings page, which opens Edit apps."
   },
   "settingsDevicesSubtitle": "Rename, remove, or turn on from your phone",
   "@settingsDevicesSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Your TVs row on the Settings page, listing what the user can do there."
   },
   "settingsAppearanceSubtitle": "Theme and language",
   "@settingsAppearanceSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Appearance row on the Settings page, listing what that page changes."
   },
   "settingsHelpSubtitle": "Common questions and troubleshooting",
   "@settingsHelpSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Help row on the Settings page."
   },
   "settingsFeedback": "Send feedback",
   "@settingsFeedback": {
@@ -1428,11 +1428,11 @@
   },
   "settingsFeedbackSubtitle": "Write to us by email",
   "@settingsFeedbackSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Send feedback row on the Settings page, which opens the email app."
   },
   "settingsAboutSubtitle": "Version and licences",
   "@settingsAboutSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the About row on the Settings page."
   },
   "settingsPrivacy": "Privacy policy",
   "@settingsPrivacy": {
@@ -1448,35 +1448,35 @@
   },
   "settingsLinkFailed": "Couldn't open the page. Check your internet connection and try again.",
   "@settingsLinkFailed": {
-    "description": "Link failed."
+    "description": "Snackbar shown in Settings when a web page, such as the privacy policy, can't be opened."
   },
   "appearanceTheme": "Theme",
   "@appearanceTheme": {
-    "description": "Group label."
+    "description": "Label of the light, dark or system theme choices on the Appearance page."
   },
   "appearanceThemeSystem": "Same as phone",
   "@appearanceThemeSystem": {
-    "description": "Theme choice."
+    "description": "Theme choice on the Appearance page that follows the phone's own light or dark setting."
   },
   "appearanceThemeLight": "Light",
   "@appearanceThemeLight": {
-    "description": "Theme choice."
+    "description": "Theme choice on the Appearance page for the light theme."
   },
   "appearanceThemeDark": "Dark",
   "@appearanceThemeDark": {
-    "description": "Theme choice."
+    "description": "Theme choice on the Appearance page for the dark theme."
   },
   "appearanceDynamicColour": "Colours from wallpaper",
   "@appearanceDynamicColour": {
-    "description": "Switch title."
+    "description": "Title of the Appearance page switch that takes the app's colours from the phone's wallpaper."
   },
   "appearanceDynamicColourSubtitle": "Use your phone's wallpaper colours in the app.",
   "@appearanceDynamicColourSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Appearance page switch that takes the app's colours from the wallpaper."
   },
   "appearanceLanguage": "Language",
   "@appearanceLanguage": {
-    "description": "Group label."
+    "description": "Label of the language choices on the Appearance page."
   },
   "appearanceLanguageSystem": "Same as phone",
   "@appearanceLanguageSystem": {
@@ -1492,7 +1492,7 @@
   },
   "layoutNavigation": "Navigation",
   "@layoutNavigation": {
-    "description": "Group label."
+    "description": "Label of the touchpad or D-pad choice on the Remote layout page."
   },
   "layoutTouchpadSubtitle": "Swipe to move, tap to select.",
   "@layoutTouchpadSubtitle": {
@@ -1504,15 +1504,15 @@
   },
   "layoutQuickAccess": "Row above the pad",
   "@layoutQuickAccess": {
-    "description": "Group label."
+    "description": "Label of the choices for the row shown above the touchpad or D-pad on the Remote layout page."
   },
   "layoutQuickApps": "App shortcuts",
   "@layoutQuickApps": {
-    "description": "Choice title."
+    "description": "Remote layout choice that shows the user's app shortcuts in the row above the pad."
   },
   "layoutQuickAppsSubtitle": "Open your TV apps with one tap.",
   "@layoutQuickAppsSubtitle": {
-    "description": "Choice subtitle."
+    "description": "Subtitle of the Remote layout choice that shows app shortcuts above the pad."
   },
   "layoutQuickColourSubtitle": "Red, green, yellow and blue keys.",
   "@layoutQuickColourSubtitle": {
@@ -1524,59 +1524,59 @@
   },
   "layoutQuickNone": "Nothing",
   "@layoutQuickNone": {
-    "description": "Choice title."
+    "description": "Remote layout choice that shows nothing in the row above the pad."
   },
   "layoutQuickNoneSubtitle": "More room for the touchpad or D-pad.",
   "@layoutQuickNoneSubtitle": {
-    "description": "Choice subtitle."
+    "description": "Subtitle of the Remote layout choice that shows nothing above the pad."
   },
   "behaviourHaptics": "Vibrate on key press",
   "@behaviourHaptics": {
-    "description": "Switch."
+    "description": "Title of the Remote behaviour switch that makes the phone vibrate on each key press."
   },
   "behaviourHapticsSubtitle": "A short vibration when a key reaches the TV.",
   "@behaviourHapticsSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Remote behaviour switch that makes the phone vibrate on each key press."
   },
   "behaviourSmoothPress": "Smooth Press",
   "@behaviourSmoothPress": {
-    "description": "Switch."
+    "description": "Title of the Remote behaviour switch for Smooth Press, the app's own name for held keys."
   },
   "behaviourSmoothPressSubtitle": "Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.",
   "@behaviourSmoothPressSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Remote behaviour switch for Smooth Press, explaining what holding a key does."
   },
   "behaviourKeepAwake": "Keep screen on",
   "@behaviourKeepAwake": {
-    "description": "Switch."
+    "description": "Title of the Remote behaviour switch that keeps the phone's screen on while the remote is open."
   },
   "behaviourKeepAwakeSubtitle": "Your phone's screen stays on while the remote is open.",
   "@behaviourKeepAwakeSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Remote behaviour switch that keeps the phone's screen on."
   },
   "behaviourTheater": "Theater mode",
   "@behaviourTheater": {
-    "description": "Switch."
+    "description": "Title of the Remote behaviour switch for Theater mode, which dims the phone while watching."
   },
   "behaviourTheaterSubtitle": "Dims your phone after 30 seconds without a touch. The first touch only brightens it.",
   "@behaviourTheaterSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Remote behaviour switch for Theater mode, explaining the dimming."
   },
   "behaviourAutoKeyboard": "Open keyboard automatically",
   "@behaviourAutoKeyboard": {
-    "description": "Switch."
+    "description": "Title of the Remote behaviour switch that opens the keyboard when the TV asks for text."
   },
   "behaviourAutoKeyboardSubtitle": "Opens the keyboard when the TV asks for text, like in a search box.",
   "@behaviourAutoKeyboardSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Remote behaviour switch that opens the keyboard automatically."
   },
   "helpCantConnectTitle": "Can't connect?",
   "@helpCantConnectTitle": {
-    "description": "Help card title."
+    "description": "Title of the card at the top of the Help page that opens the troubleshooting steps."
   },
   "helpCantConnectBody": "Go through the checks one at a time. Most problems come from the Wi-Fi network or the TV's remote service.",
   "@helpCantConnectBody": {
-    "description": "Help card text."
+    "description": "Text of the card at the top of the Help page that opens the troubleshooting steps."
   },
   "helpTroubleshootingAction": "Show troubleshooting steps",
   "@helpTroubleshootingAction": {
@@ -1584,7 +1584,7 @@
   },
   "helpFaqTitle": "Common questions",
   "@helpFaqTitle": {
-    "description": "FAQ header."
+    "description": "Header on the Help page above the frequently asked questions."
   },
   "helpStillStuck": "Still stuck?",
   "@helpStillStuck": {
@@ -1592,63 +1592,71 @@
   },
   "faqTvsQ": "Which TVs does this app work with?",
   "@faqTvsQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about which TVs the app works with."
   },
   "faqTvsA": "TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can't be controlled by this app.",
   "@faqTvsA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about which TVs the app works with."
   },
   "faqNotFoundQ": "My TV isn't in the list.",
   "@faqNotFoundQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about a TV that discovery doesn't find."
   },
   "faqNotFoundA": "Make sure the TV is on and connected to the same Wi-Fi as your phone, and that \"Android TV Remote Service\" is up to date on the TV. You can also add the TV by its IP address. The troubleshooting steps go through each check.",
   "@faqNotFoundA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about a TV that discovery doesn't find."
   },
   "faqCodeQ": "Why does the TV ask for a code again?",
   "@faqCodeQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about why the TV asks for a pairing code again."
   },
   "faqCodeA": "Pairing makes the TV and this phone trust each other. Clearing the app's data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.",
   "@faqCodeA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about why the TV asks for a pairing code again."
   },
   "faqPowerQ": "Why can't the app turn my TV on?",
   "@faqPowerQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about why the app can't turn the TV on."
   },
   "faqPowerA": "A TV that is fully off can't hear the app. The app can send a wake-up signal if you add the TV's MAC address under Settings → Your TVs, but some TVs ignore it in deep standby. On iPhone this isn't available yet.",
   "@faqPowerA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about why the app can't turn the TV on."
   },
   "faqTypingQ": "What I type doesn't show up on the TV.",
   "@faqTypingQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about typed text that doesn't reach the TV."
   },
   "faqTypingA": "Select a text field on the TV first, such as a search box. When the TV asks for text, the keyboard opens on your phone by itself.",
   "@faqTypingA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about typed text that doesn't reach the TV."
   },
   "faqAppQ": "An app shortcut doesn't open.",
   "@faqAppQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about an app shortcut that doesn't open on the TV."
   },
   "faqAppA": "The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.",
   "@faqAppA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about an app shortcut that doesn't open on the TV."
   },
   "faqPrivacyQ": "What does the app keep about my TV?",
   "@faqPrivacyQ": {
-    "description": "FAQ question."
+    "description": "Question in the Help page's FAQ about what the app keeps about the user's TV."
   },
   "faqPrivacyA": "Your TV's name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.",
   "@faqPrivacyA": {
-    "description": "FAQ answer."
+    "description": "Answer in the Help page's FAQ about what the app keeps about the user's TV."
+  },
+  "faqNewPhoneQ": "I moved to a new phone. Where are my TVs?",
+  "@faqNewPhoneQ": {
+    "description": "FAQ question after the privacy question: what happens to saved TVs on a new or restored phone."
+  },
+  "faqNewPhoneA": "Your TVs and their pairing stay on the phone you paired them with. They aren't copied by backups or when you move to a new phone, so pair each TV again on the new phone.",
+  "@faqNewPhoneA": {
+    "description": "FAQ answer. Backups and phone transfer never carry saved TVs, so keep the promise exact."
   },
   "aboutVersion": "Version {version} ({build})",
   "@aboutVersion": {
-    "description": "About page.",
+    "description": "Line on the About page with the app's {version} name and {build} number.",
     "placeholders": {
       "version": {
         "type": "String",
@@ -1670,19 +1678,19 @@
   },
   "aboutProtocol": "Talks to your TV over Wi-Fi with the Android TV Remote protocol. Its message formats come from the open-source androidtvremote2 project.",
   "@aboutProtocol": {
-    "description": "About page credit."
+    "description": "Credit on the About page saying how the app talks to the TV."
   },
   "aboutTrademark": "Android TV and Google TV are trademarks of Google LLC. This app isn't made or endorsed by Google.",
   "@aboutTrademark": {
-    "description": "About page disclaimer."
+    "description": "Trademark disclaimer at the bottom of the About page; keep the trademark names exact."
   },
   "feedbackTitle": "Send feedback?",
   "@feedbackTitle": {
-    "description": "Feedback dialog title."
+    "description": "Title of the dialog shown before the email app opens to send feedback."
   },
   "feedbackBody": "Your email app opens with a message to us. It includes the app version and your phone's system version, and nothing about your TV.",
   "@feedbackBody": {
-    "description": "Feedback dialog body."
+    "description": "Body of the dialog shown before the email app opens to send feedback, saying what the email includes."
   },
   "feedbackConfirm": "Write email",
   "@feedbackConfirm": {
@@ -1690,7 +1698,7 @@
   },
   "feedbackSubject": "Feedback on {appName} {version}",
   "@feedbackSubject": {
-    "description": "Email subject.",
+    "description": "Subject line of the feedback email, with the app's {appName} and {version}.",
     "placeholders": {
       "appName": {
         "type": "String",
@@ -1730,7 +1738,7 @@
   },
   "settingsPrivacyChoicesSubtitle": "Usage statistics, crash reports and ads",
   "@settingsPrivacyChoicesSubtitle": {
-    "description": "Hub row subtitle."
+    "description": "Subtitle of the Privacy choices row on the Settings page, listing what that page controls."
   },
   "aboutTestCrash": "Send a test crash report",
   "@aboutTestCrash": {
@@ -1742,27 +1750,27 @@
   },
   "privacyIntro": "Choose what the app may share. Your TV's name, network address and MAC address never leave this phone.",
   "@privacyIntro": {
-    "description": "Page intro."
+    "description": "Introduction at the top of the Privacy choices page; it promises that TV data stays on the phone."
   },
   "privacySectionImprove": "Help improve the app",
   "@privacySectionImprove": {
-    "description": "Section header."
+    "description": "Section header on the Privacy choices page above the usage and crash report switches."
   },
   "privacyUsageTitle": "Share usage statistics",
   "@privacyUsageTitle": {
-    "description": "Switch."
+    "description": "Title of the Privacy choices switch that shares anonymous usage statistics."
   },
   "privacyUsageSubtitle": "Anonymous counts of the screens and features you use. Never what you type or anything about your TV.",
   "@privacyUsageSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Privacy choices switch that shares anonymous usage statistics."
   },
   "privacyCrashTitle": "Share crash reports",
   "@privacyCrashTitle": {
-    "description": "Switch."
+    "description": "Title of the Privacy choices switch that shares crash reports."
   },
   "privacyCrashSubtitle": "Sent when something goes wrong, so it can be fixed. Names, addresses and codes are removed first.",
   "@privacyCrashSubtitle": {
-    "description": "Switch subtitle."
+    "description": "Subtitle of the Privacy choices switch that shares crash reports, saying what is left out of them."
   },
   "privacyServicesOff": "This build of the app doesn't send usage statistics or crash reports.",
   "@privacyServicesOff": {
@@ -1770,7 +1778,7 @@
   },
   "privacySectionAds": "Ads",
   "@privacySectionAds": {
-    "description": "Section header."
+    "description": "Section header on the Privacy choices page above the ad choices."
   },
   "privacyAdsInfo": "The free app shows a banner ad at the bottom of the Apps and Settings screens only.",
   "@privacyAdsInfo": {
@@ -1786,11 +1794,11 @@
   },
   "privacyAdChoicesSubtitle": "Choose how ads are picked for you.",
   "@privacyAdChoicesSubtitle": {
-    "description": "Row subtitle."
+    "description": "Subtitle of the Privacy choices row that opens the ad consent form."
   },
   "privacyAdChoicesFailed": "Couldn't open ad privacy choices. Check your internet connection and try again.",
   "@privacyAdChoicesFailed": {
-    "description": "Snackbar."
+    "description": "Snackbar on the Privacy choices page when the ad consent form can't be opened."
   },
   "privacyRemoveAds": "Remove ads with Premium",
   "@privacyRemoveAds": {
@@ -1798,23 +1806,23 @@
   },
   "privacyTrackingTitle": "Ad tracking",
   "@privacyTrackingTitle": {
-    "description": "IOS status row."
+    "description": "Title of the Privacy choices row, on iPhone only, that shows the ad tracking answer."
   },
   "privacyTrackingAllowed": "Allowed. You can change this in your iPhone's Settings.",
   "@privacyTrackingAllowed": {
-    "description": "Row subtitle."
+    "description": "Subtitle of the iPhone ad tracking row when the user allowed tracking."
   },
   "privacyTrackingDenied": "Not allowed. You can change this in your iPhone's Settings.",
   "@privacyTrackingDenied": {
-    "description": "Row subtitle."
+    "description": "Subtitle of the iPhone ad tracking row when the user did not allow tracking."
   },
   "privacyTrackingNotDetermined": "Not chosen yet. The app asks before it first shows an ad.",
   "@privacyTrackingNotDetermined": {
-    "description": "Row subtitle."
+    "description": "Subtitle of the iPhone ad tracking row when the user has not answered yet."
   },
   "privacyTrackingRestricted": "Turned off on this iPhone.",
   "@privacyTrackingRestricted": {
-    "description": "Row subtitle."
+    "description": "Subtitle of the iPhone ad tracking row when tracking is turned off for the whole device."
   },
   "privacyOpensSettings": "Opens your phone's Settings",
   "@privacyOpensSettings": {
@@ -1822,15 +1830,15 @@
   },
   "trackingPrepromptTitle": "About ads in this app",
   "@trackingPrepromptTitle": {
-    "description": "Dialog title."
+    "description": "Title of the dialog shown on iPhone before the system asks about ad tracking."
   },
   "trackingPrepromptBody": "The free app shows a small ad at the bottom of this screen. Next, your iPhone asks whether the app may use your activity in other apps to choose ads. You see the same number of ads whatever you choose, and the remote works the same.",
   "@trackingPrepromptBody": {
-    "description": "Dialog body."
+    "description": "Body of the dialog shown on iPhone before the system asks about ad tracking."
   },
   "trackingPrepromptContinue": "Continue",
   "@trackingPrepromptContinue": {
-    "description": "The only action."
+    "description": "The only button of the dialog shown on iPhone before the system asks about ad tracking."
   },
   "adLabel": "Advertisement",
   "@adLabel": {
@@ -1838,7 +1846,7 @@
   },
   "paywallHeadline": "Make the remote yours",
   "@paywallHeadline": {
-    "description": "Headline."
+    "description": "Headline at the top of the Premium page."
   },
   "paywallSubhead": "Premium removes ads, adds colour styles and supports the app's development.",
   "@paywallSubhead": {
@@ -1846,43 +1854,43 @@
   },
   "paywallBenefitNoAds": "No ads",
   "@paywallBenefitNoAds": {
-    "description": "Benefit title."
+    "description": "Title of the Premium page benefit that removes the ads."
   },
   "paywallBenefitNoAdsBody": "No banner on the Apps and Settings screens.",
   "@paywallBenefitNoAdsBody": {
-    "description": "Benefit text."
+    "description": "Text of the Premium page benefit that removes the ads, saying where ads show."
   },
   "paywallBenefitStyles": "Colour styles",
   "@paywallBenefitStyles": {
-    "description": "Benefit title."
+    "description": "Title of the Premium page benefit that unlocks the colour styles."
   },
   "paywallBenefitStylesBody": "Ocean, Ember and Midnight, in light and dark.",
   "@paywallBenefitStylesBody": {
-    "description": "Benefit text."
+    "description": "Text of the Premium page benefit that unlocks the colour styles; keep the style names."
   },
   "paywallFreeForever": "Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.",
   "@paywallFreeForever": {
-    "description": "Honest note."
+    "description": "Note on the Premium page that says what stays free without Premium."
   },
   "paywallChoosePlan": "Choose a plan",
   "@paywallChoosePlan": {
-    "description": "Radio group label."
+    "description": "Label of the plan choices on the Premium page, read out with the radio group."
   },
   "paywallPlanMonthly": "Monthly",
   "@paywallPlanMonthly": {
-    "description": "Plan title."
+    "description": "Title of the monthly subscription plan on the Premium page."
   },
   "paywallPlanYearly": "Yearly",
   "@paywallPlanYearly": {
-    "description": "Plan title."
+    "description": "Title of the yearly subscription plan on the Premium page."
   },
   "paywallPlanLifetime": "Lifetime",
   "@paywallPlanLifetime": {
-    "description": "Plan title."
+    "description": "Title of the one-payment lifetime plan on the Premium page."
   },
   "paywallPricePerMonth": "{price} per month",
   "@paywallPricePerMonth": {
-    "description": "Plan price.",
+    "description": "Price line of the monthly plan on the Premium page; {price} is the store's price.",
     "placeholders": {
       "price": {
         "type": "String",
@@ -1892,7 +1900,7 @@
   },
   "paywallPricePerYear": "{price} per year",
   "@paywallPricePerYear": {
-    "description": "Plan price.",
+    "description": "Price line of the yearly plan on the Premium page; {price} is the store's price.",
     "placeholders": {
       "price": {
         "type": "String",
@@ -1902,7 +1910,7 @@
   },
   "paywallPriceOnce": "{price}, one payment",
   "@paywallPriceOnce": {
-    "description": "Lifetime price.",
+    "description": "Price line of the lifetime plan on the Premium page; {price} is the store's price.",
     "placeholders": {
       "price": {
         "type": "String",
@@ -1912,19 +1920,19 @@
   },
   "paywallRenewsMonthly": "Renews every month until you cancel.",
   "@paywallRenewsMonthly": {
-    "description": "Monthly terms."
+    "description": "Terms under the monthly plan on the Premium page."
   },
   "paywallRenewsYearly": "Renews every year until you cancel.",
   "@paywallRenewsYearly": {
-    "description": "Yearly terms."
+    "description": "Terms under the yearly plan on the Premium page."
   },
   "paywallLifetimeTerms": "Pay once. No subscription.",
   "@paywallLifetimeTerms": {
-    "description": "Lifetime terms."
+    "description": "Terms under the lifetime plan on the Premium page."
   },
   "paywallBestValue": "Best value",
   "@paywallBestValue": {
-    "description": "Badge on yearly."
+    "description": "Badge on the yearly plan on the Premium page."
   },
   "paywallSavePercent": "Save {percent}%",
   "@paywallSavePercent": {
@@ -1938,27 +1946,27 @@
   },
   "paywallContinue": "Continue",
   "@paywallContinue": {
-    "description": "Purchase button."
+    "description": "Purchase button on the Premium page that buys the chosen plan."
   },
   "paywallRestore": "Restore purchases",
   "@paywallRestore": {
-    "description": "Restore button."
+    "description": "Button on the Premium page that restores earlier purchases."
   },
   "paywallTermsAndroid": "Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, and you keep Premium until the end of the period you paid for.",
   "@paywallTermsAndroid": {
-    "description": "Billing terms, Android."
+    "description": "Billing terms at the bottom of the Premium page on Android; keep Google Play exact."
   },
   "paywallTermsIos": "Payment is charged to your Apple ID. Subscriptions renew automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel them in your Apple ID settings.",
   "@paywallTermsIos": {
-    "description": "Billing terms, iOS."
+    "description": "Billing terms at the bottom of the Premium page on iPhone; keep Apple ID exact."
   },
   "paywallLoading": "Loading plans…",
   "@paywallLoading": {
-    "description": "Loading state."
+    "description": "Shown on the Premium page while the plans load from the store."
   },
   "paywallUnavailableTitle": "Premium isn't available right now",
   "@paywallUnavailableTitle": {
-    "description": "No offering."
+    "description": "Title on the Premium page when the store offers no plans right now."
   },
   "paywallUnavailableBody": "Check your internet connection and try again.",
   "@paywallUnavailableBody": {
@@ -1966,7 +1974,7 @@
   },
   "paywallPurchasing": "Confirming your purchase…",
   "@paywallPurchasing": {
-    "description": "In progress."
+    "description": "Shown on the Premium page while the store confirms a purchase."
   },
   "paywallRestoring": "Restoring your purchases…",
   "@paywallRestoring": {
@@ -1978,7 +1986,7 @@
   },
   "paywallPending": "Your purchase is waiting for approval. Premium starts as soon as it's complete.",
   "@paywallPending": {
-    "description": "Pending purchase."
+    "description": "Shown on the Premium page when a purchase waits for approval, such as by a parent."
   },
   "paywallFailed": "The purchase didn't go through. Try again.",
   "@paywallFailed": {
@@ -1986,39 +1994,39 @@
   },
   "paywallNetworkError": "Couldn't reach the store. Check your internet connection and try again.",
   "@paywallNetworkError": {
-    "description": "Network failure."
+    "description": "Shown on the Premium page when the store can't be reached."
   },
   "paywallNotAllowed": "Purchases aren't allowed on this phone.",
   "@paywallNotAllowed": {
-    "description": "Purchases disabled."
+    "description": "Shown on the Premium page when purchases are turned off on this phone."
   },
   "paywallAlreadyOwned": "You already own Premium. Tap Restore purchases to get it back.",
   "@paywallAlreadyOwned": {
-    "description": "Already owned."
+    "description": "Shown on the Premium page when the user tries to buy Premium they already own."
   },
   "paywallRestored": "Purchases restored. You have Premium.",
   "@paywallRestored": {
-    "description": "Restore success."
+    "description": "Shown on the Premium page after a restore found the user's Premium."
   },
   "paywallNothingToRestore": "No purchases found for this account.",
   "@paywallNothingToRestore": {
-    "description": "Restore found nothing."
+    "description": "Shown on the Premium page after a restore found no purchases."
   },
   "paywallRestoreFailed": "Couldn't restore purchases. Try again.",
   "@paywallRestoreFailed": {
-    "description": "Restore failed."
+    "description": "Shown on the Premium page when restoring purchases failed."
   },
   "paywallActiveTitle": "You have Premium",
   "@paywallActiveTitle": {
-    "description": "Already-Premium state."
+    "description": "Title of the Premium page when the user already has Premium."
   },
   "paywallActiveBody": "Thank you for supporting the app. There are no ads, and every colour style is yours.",
   "@paywallActiveBody": {
-    "description": "Already-Premium state."
+    "description": "Body of the Premium page when the user already has Premium."
   },
   "paywallActiveLifetime": "Lifetime Premium: it never expires.",
   "@paywallActiveLifetime": {
-    "description": "Already Premium, lifetime."
+    "description": "Line on the Premium page when the user owns lifetime Premium."
   },
   "paywallManageSubscription": "Manage subscription",
   "@paywallManageSubscription": {
@@ -2026,23 +2034,23 @@
   },
   "appearanceStyle": "Colour style",
   "@appearanceStyle": {
-    "description": "Group label."
+    "description": "Label of the colour style choices on the Appearance page."
   },
   "appearanceStyleStandard": "Standard",
   "@appearanceStyleStandard": {
-    "description": "Style name."
+    "description": "Name of the app's standard colour style on the Appearance page."
   },
   "appearanceStyleOcean": "Ocean",
   "@appearanceStyleOcean": {
-    "description": "Style name."
+    "description": "Name of the Ocean colour style on the Appearance page, a Premium style."
   },
   "appearanceStyleEmber": "Ember",
   "@appearanceStyleEmber": {
-    "description": "Style name."
+    "description": "Name of the Ember colour style on the Appearance page, a Premium style."
   },
   "appearanceStyleMidnight": "Midnight",
   "@appearanceStyleMidnight": {
-    "description": "Style name."
+    "description": "Name of the Midnight colour style on the Appearance page, a Premium style."
   },
   "appearanceStyleLocked": "Included with Premium",
   "@appearanceStyleLocked": {
@@ -2054,11 +2062,11 @@
   },
   "updateRequiredTitle": "Update required",
   "@updateRequiredTitle": {
-    "description": "Blocking screen title."
+    "description": "Title of the full-screen page that blocks the app until the user updates it."
   },
   "updateRequiredBody": "This version of the app is too old to keep working reliably. Update to the latest version to continue.",
   "@updateRequiredBody": {
-    "description": "Blocking screen text."
+    "description": "Text of the full-screen page that blocks the app until the user updates it."
   },
   "updateRequiredAction": "Update",
   "@updateRequiredAction": {
@@ -2067,5 +2075,31 @@
   "updateRequiredFailed": "Couldn't open the store. Update the app from your phone's app store.",
   "@updateRequiredFailed": {
     "description": "Snackbar when the link fails."
+  },
+  "loadingLabel": "Loading…",
+  "@loadingLabel": {
+    "description": "Spoken label of a progress spinner that has no other label."
+  },
+  "manageAppsMoreOptions": "More options",
+  "@manageAppsMoreOptions": {
+    "description": "Tooltip and spoken label of the Edit apps overflow menu button."
+  },
+  "manageAppsMoved": "{app} moved to position {position} of {count}",
+  "@manageAppsMoved": {
+    "description": "Announced to screen readers after an app is reordered in Edit apps (`app`: app name; `position`, `count`: `int`).",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Netflix"
+      },
+      "position": {
+        "type": "int",
+        "example": "2"
+      },
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
   }
 }

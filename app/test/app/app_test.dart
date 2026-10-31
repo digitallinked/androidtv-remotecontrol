@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -16,6 +17,7 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/bootstrap.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
@@ -25,6 +27,12 @@ import '../helpers/fake_consent_service.dart';
 import '../helpers/fake_tv_discovery.dart';
 import '../helpers/recording_crash_reporter.dart';
 import '../helpers/test_premium.dart';
+
+/// A Premium notifier whose state can't be read: its build throws.
+class _UnreadablePremium extends Premium {
+  @override
+  PremiumState build() => throw StateError('premium unreadable');
+}
 
 void _prefs([Map<String, Object> data = const {}]) {
   SharedPreferencesAsyncPlatform.instance =
@@ -36,9 +44,10 @@ Future<Widget> _root({
   void Function()? onOpenDatabase,
   FakeConsentService? consent,
   List<Override> extraOverrides = const [],
+  RecordingCrashReporter? crashes,
 }) => buildRootWidget(
   flavor: Flavor.dev,
-  crashReporter: RecordingCrashReporter(),
+  crashReporter: crashes ?? RecordingCrashReporter(),
   startupSteps: steps,
   overrides: [
     ...fakeAdsOverrides(consent: consent),
@@ -56,8 +65,6 @@ Future<Widget> _root({
 );
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   testWidgets('the_silent_consent_update_starts_with_the_app', (t) async {
     _prefs();
     final consent = FakeConsentService();
@@ -107,6 +114,73 @@ void main() {
 
     final context = t.element(find.text('Find your TV'));
     expect(Theme.of(context).colorScheme.primary, AppColors.light.accent);
+  });
+
+  testWidgets('app_uses_the_dynamic_scheme_when_the_setting_is_on', (
+    t,
+  ) async {
+    // The phone's wallpaper palette, as Android hands it to dynamic_color:
+    // five tonal palettes of 13 tones (0, 10, …, 100) each. Every tone is a
+    // distinct colour, so a match can only come from this palette.
+    final palette = [for (var i = 0; i < 65; i++) 0xFF000000 | (i * 0x030507)];
+    t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      DynamicColorPlugin.channel,
+      // Android's plugin answers with an IntArray.
+      (call) async => call.method == DynamicColorPlugin.methodName
+          ? Int32List.fromList(palette)
+          : null,
+    );
+    addTearDown(
+      () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        DynamicColorPlugin.channel,
+        null,
+      ),
+    );
+    _prefs({'settings.dynamic_color': true});
+    await t.pumpWidget(await _root());
+    await t.pumpAndSettle();
+
+    final app = t.widget<MaterialApp>(find.byType(MaterialApp));
+    // Primary is tone 40 of the first palette in light, tone 80 in dark.
+    expect(app.theme!.colorScheme.primary, Color(palette[4]));
+    expect(app.darkTheme!.colorScheme.primary, Color(palette[8]));
+    expect(app.theme!.extension<AppColors>()!.accent, Color(palette[4]));
+    expect(app.theme!.colorScheme.primary, isNot(AppColors.light.accent));
+  });
+
+  testWidgets('app_treats_unreadable_premium_as_free', (t) async {
+    _prefs({'settings.colour_style': ColourStyle.ember.name});
+    final crashes = RecordingCrashReporter();
+    await t.pumpWidget(
+      await _root(
+        crashes: crashes,
+        extraOverrides: [premiumProvider.overrideWith(_UnreadablePremium.new)],
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(t.takeException(), isNull);
+    expect(find.text('Find your TV'), findsOneWidget);
+    final app = t.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.theme!.extension<AppColors>(), AppColors.light);
+    expect(app.darkTheme!.extension<AppColors>(), AppColors.dark);
+
+    // Reported once, however often the app rebuilds, as a non-fatal error
+    // with nothing but the error itself: no TV data.
+    final container = ProviderScope.containerOf(t.element(find.byType(App)));
+    for (final mode in [ThemePreference.dark, ThemePreference.light]) {
+      await container
+          .read(settingsControllerProvider.notifier)
+          .update((s) => s.setThemePreference(mode));
+      await t.pumpAndSettle();
+    }
+    final premium = [
+      for (final e in crashes.errors)
+        if (e.reason == 'premium unreadable') e,
+    ];
+    expect(premium, hasLength(1));
+    expect(premium.single.fatal, isFalse);
+    expect(premium.single.error.toString(), contains('premium unreadable'));
   });
 
   testWidgets('app_title_is_the_flavor_display_name', (t) async {

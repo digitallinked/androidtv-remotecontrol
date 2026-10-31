@@ -51,7 +51,7 @@ final class DiscoveryControllerProvider
 }
 
 String _$discoveryControllerHash() =>
-    r'961ea0d42532e19fcce9929f7bc7ede00fac6b09';
+    r'ce7170a3f5c7c6ea1a681ccf9ce995e74ad7f800';
 
 /// Searches the network for TVs while the discovery screen is open.
 ///

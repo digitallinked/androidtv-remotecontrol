@@ -61,6 +61,9 @@ class MacAddressField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: l10n.wolMacLabel,
         hintText: l10n.wolMacHint,
+        // At 200% text on a 320 dp phone the example address takes up to
+        // 3 lines; one line would cut it.
+        hintMaxLines: 3,
         errorText: errorText,
         errorMaxLines: 4,
       ),

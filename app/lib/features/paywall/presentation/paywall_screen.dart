@@ -125,7 +125,7 @@ class _Loading extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
       child: Column(
         children: [
-          const CircularProgressIndicator(),
+          CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
           const SizedBox(height: AppSpacing.l),
           Text(
             l10n.paywallLoading,
@@ -253,9 +253,12 @@ class _Busy extends StatelessWidget {
         liveRegion: true,
         child: Row(
           children: [
-            const SizedBox.square(
+            SizedBox.square(
               dimension: 24,
-              child: CircularProgressIndicator(strokeWidth: 3),
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                semanticsLabel: l10n.loadingLabel,
+              ),
             ),
             const SizedBox(width: AppSpacing.m),
             Expanded(
