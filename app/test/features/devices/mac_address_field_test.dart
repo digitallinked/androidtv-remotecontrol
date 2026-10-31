@@ -41,7 +41,8 @@ void main() {
     expect(field.inputFormatters, anyOf(isNull, isEmpty));
     expect(field.decoration!.labelText, 'MAC address');
     expect(field.decoration!.hintText, 'AA:BB:CC:DD:EE:FF');
-    expect(field.decoration!.errorMaxLines, 4);
+    // At 200% text the example address takes several lines.
+    expect(field.decoration!.hintMaxLines, 6);
 
     // Nothing is dropped, whatever is pasted.
     const pasted = 'zq-aa:bb?  AA:BB:CC:DD:EE:FF:00';

@@ -280,8 +280,10 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
         child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
       );
     } else if (items == null || items.isEmpty) {
+      // Scrolls: at 200% text on a small phone the message is taller than
+      // the screen.
       body = Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
           child: Text(
             l10n.manageAppsEmpty,

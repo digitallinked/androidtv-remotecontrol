@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/features/pairing/domain/pairing_code.dart';
 
 /// Largest text scale the code itself is shown at.
@@ -127,10 +128,8 @@ class PairingCodeFieldState extends State<PairingCodeField> {
       ),
       decoration: InputDecoration(
         labelText: l10n.pairCodeLabel,
-        errorText: widget.errorText,
-        // At 200% text on a 320 dp phone the mismatch message takes up to
-        // 9 lines; never cut it.
-        errorMaxLines: 10,
+        floatingLabelBehavior: fieldLabelBehavior(context),
+        error: fieldError(widget.errorText, textAlign: TextAlign.center),
         border: const OutlineInputBorder(),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/features/keyboard/text_edit_planner.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
@@ -270,7 +271,10 @@ class _KeyboardSheetState extends ConsumerState<KeyboardSheet> {
           textInputAction: TextInputAction.send,
           decoration: InputDecoration(
             labelText: l10n.keyboardFieldLabel,
+            floatingLabelBehavior: fieldLabelBehavior(context),
             hintText: l10n.keyboardHint,
+            // One line would cut it at 200% text beside the clear button.
+            hintMaxLines: 3,
             suffixIcon: _controller.text.isEmpty
                 ? null
                 : IconButton(

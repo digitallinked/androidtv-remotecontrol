@@ -96,6 +96,7 @@ final Map<String, Future<void> Function(WidgetTester t, _Look look)> _screens =
         await _tap(t, find.text('Enter IP address'));
         await t.pumpAndSettle();
         await t.enterText(find.byType(TextField), '999.1.1.1');
+        await t.pump();
         await _tap(t, find.text('Continue'));
         await t.pump();
         _expectOn(find.text('Enter an address like 192.168.1.20'));

@@ -9,6 +9,7 @@ import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/mac_address.dart';
@@ -305,13 +306,14 @@ class _EditFormState extends ConsumerState<_EditForm> {
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   labelText: l10n.editDeviceNameLabel,
-                  helperText: l10n.editDeviceNameHelp(device.displayName),
-                  // It quotes the TV's own name: at 200% text on a 320 dp
-                  // phone it takes 7 lines with a short name, more with a
-                  // long one.
-                  helperMaxLines: 10,
-                  errorText: _nameError,
-                  errorMaxLines: 3,
+                  floatingLabelBehavior: fieldLabelBehavior(context),
+                  // It quotes the TV's own name, so it can be long; help and
+                  // errors wrap in full at any text size (Ruling P9-C6).
+                  helper: fieldHelper(
+                    context,
+                    l10n.editDeviceNameHelp(device.displayName),
+                  ),
+                  error: fieldError(_nameError),
                 ),
                 onChanged: (_) {
                   if (_nameError != null) setState(() => _nameError = null);

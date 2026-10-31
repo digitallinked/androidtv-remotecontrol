@@ -94,6 +94,11 @@ void main() {
     addTearDown(t.view.reset);
     await openSheet(t, textScale: 2);
     await t.enterText(find.byType(TextField), 'nope');
+    await t.pump();
+    // At 200% the label above the field and the hint push the button down:
+    // scroll to it, as a user would.
+    await t.ensureVisible(find.text('Continue'));
+    await t.pump();
     await t.tap(find.text('Continue'));
     await t.pump();
     expect(t.takeException(), isNull);

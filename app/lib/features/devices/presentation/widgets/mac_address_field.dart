@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/core/tv/mac_address.dart';
 
 /// What is wrong with the MAC address [text], or `null` when it is fine.
@@ -60,12 +61,12 @@ class MacAddressField extends StatelessWidget {
       textInputAction: textInputAction,
       decoration: InputDecoration(
         labelText: l10n.wolMacLabel,
+        floatingLabelBehavior: fieldLabelBehavior(context),
         hintText: l10n.wolMacHint,
         // At 200% text on a 320 dp phone the example address takes up to
-        // 3 lines; one line would cut it.
-        hintMaxLines: 3,
-        errorText: errorText,
-        errorMaxLines: 4,
+        // 3 lines, more in a longer language; one line would cut it.
+        hintMaxLines: 6,
+        error: fieldError(errorText),
       ),
       onChanged: onChanged,
       onSubmitted: onSubmitted,

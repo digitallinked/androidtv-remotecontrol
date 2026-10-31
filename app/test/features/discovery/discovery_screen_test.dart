@@ -15,6 +15,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
+import 'package:tv_remote/features/discovery/presentation/widgets/tv_list_tile.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
@@ -129,8 +130,8 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
     final titles = t
-        .widgetList<ListTile>(find.byType(ListTile))
-        .map((tile) => (tile.title! as Text).data)
+        .widgetList<TvListTile>(find.byType(TvListTile))
+        .map((tile) => tile.tv.displayName)
         .toList();
     expect(titles, ['Attic', 'bedroom', 'Den']);
     expect(find.text('192.168.0.20'), findsNWidgets(3));
@@ -140,7 +141,7 @@ void main() {
   testWidgets('tv_tiles_are_at_least_56dp_tall', (t) async {
     await pumpDiscover(t);
     await found(t, [tv('Den')]);
-    expect(t.getSize(find.byType(ListTile)).height, greaterThanOrEqualTo(56));
+    expect(t.getSize(find.byType(TvListTile)).height, greaterThanOrEqualTo(56));
   });
 
   testWidgets('legacy_tv_shows_update_service_help', (t) async {

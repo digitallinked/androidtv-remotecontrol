@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/app/widgets/not_connected_snack_bar.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
@@ -223,6 +224,7 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           labelText: l10n.appsSearchLabel,
+          floatingLabelBehavior: fieldLabelBehavior(context),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadii.card),
           ),

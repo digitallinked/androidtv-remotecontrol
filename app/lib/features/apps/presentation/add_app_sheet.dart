@@ -6,6 +6,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -248,6 +249,7 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             labelText: l10n.addAppSearchLabel,
+            floatingLabelBehavior: fieldLabelBehavior(context),
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _search.text.isEmpty
                 ? null
