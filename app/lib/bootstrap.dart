@@ -151,7 +151,10 @@ Future<Widget> buildRootWidget({
     // P8-C11), reports are logged only, never sent.
     List<SavedDevice>? saved;
     Future<List<SavedDevice>>? lateRead;
-    final read = container.read(deviceRepositoryProvider).all();
+    // A read that throws before it returns a future fails like any other.
+    final read = Future.sync(
+      () => container.read(deviceRepositoryProvider).all(),
+    );
     try {
       saved = await read.timeout(scrubSeedTimeout);
     } on TimeoutException {

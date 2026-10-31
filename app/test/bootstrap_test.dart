@@ -51,6 +51,12 @@ class _UnreadableDeviceRepository extends _SilentDeviceRepository {
   Future<List<SavedDevice>> all() async => throw StateError('db is gone');
 }
 
+/// A late repository whose one-shot read throws before it returns a future.
+class _ThrowingLateDeviceRepository extends _LateDeviceRepository {
+  @override
+  Future<List<SavedDevice>> all() => throw StateError('db is gone');
+}
+
 /// A repository whose one-shot read never answers.
 class _HangingDeviceRepository extends _SilentDeviceRepository {
   _HangingDeviceRepository() : super(const []);
@@ -917,6 +923,35 @@ void main() {
         await tester.pumpAndSettle();
       },
     );
+
+    testWidgets('a_seed_read_that_throws_at_once_holds_reports_and_starts', (
+      tester,
+    ) async {
+      final logging = RecordingCrashReporter();
+      final reporter = DelegatingCrashReporter(logging);
+      final sink = RecordingCrashlyticsSink();
+      final devices = _ThrowingLateDeviceRepository();
+      // A synchronous throw is a failed read like any other: the start goes
+      // on, and reports are held until the saved names are known.
+      await tester.pumpWidget(await rootWith(reporter, sink, devices));
+      await tester.pump();
+
+      expect(reporter.delegate, isNot(isA<CompositeCrashReporter>()));
+      await reporter.recordError(StateError('lost Bedroom TV'), null);
+      expect(sink.errors, isEmpty);
+      expect(logging.errors.map((e) => e.reason), isNot(contains('startup')));
+
+      devices.lists.add([savedTv(name: 'Bedroom TV')]);
+      await tester.pump();
+
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+      await reporter.recordError(StateError('lost Bedroom TV'), null);
+      expect(
+        sink.errors.single.error.toString(),
+        'StateError: Bad state: lost <tv>',
+      );
+      await tester.pumpAndSettle();
+    });
 
     testWidgets('a_saved_list_that_never_answers_starts_without_a_seed', (
       tester,
