@@ -172,6 +172,57 @@ void main() {
     skip: windowsOnly,
   );
 
+  test('sh_ios_build_resolves_analytics_without_the_ad_id', () async {
+    final bash = _bash();
+    if (!await _ready(bash)) return;
+    final root = await writeReleaseFixture();
+    // A fake `uname` that claims a Mac, and a fake `flutter` that reports
+    // what it was given and fails, so nothing is built (Ruling P9-C4).
+    final bin = Directory('${root.path}/fake_bin')..createSync();
+    File('${bin.path}/uname').writeAsStringSync('#!/bin/sh\necho Darwin\n');
+    File('${bin.path}/flutter').writeAsStringSync(
+      '#!/bin/sh\n'
+      r'echo "flutter $*"'
+      '\n'
+      r'v="${FIREBASE_ANALYTICS_WITHOUT_ADID:-unset}"'
+      '\n'
+      r'echo "FIREBASE_ANALYTICS_WITHOUT_ADID=$v"'
+      '\nexit 3\n',
+    );
+    if (!onWindows) {
+      Process.runSync('chmod', [
+        '+x',
+        '${bin.path}/uname',
+        '${bin.path}/flutter',
+      ]);
+    }
+    final separator = onWindows ? ';' : ':';
+    // Windows names it `Path`; reuse the parent's spelling so the child
+    // doesn't get two entries.
+    final pathKey = Platform.environment.keys.firstWhere(
+      (k) => k.toUpperCase() == 'PATH',
+      orElse: () => 'PATH',
+    );
+    // Git's bin\bash.exe is a launcher that puts /usr/bin first on PATH,
+    // which would hide the fakes; its usr\bin\bash.exe keeps PATH as given.
+    final shell = bash!.replaceFirst(
+      r'\Git\bin\bash.exe',
+      r'\Git\usr\bin\bash.exe',
+    );
+    final result = await runTool(
+      shell,
+      ['../tool/release.sh', '--platform', 'ios', '--root', _slashed(root)],
+      environment: {
+        pathKey: '${bin.path}$separator${Platform.environment[pathKey]}',
+      },
+    );
+    final out = '${result.stdout}${result.stderr}';
+    expect(out, contains('flutter build ipa --flavor prod'), reason: out);
+    expect(out, contains('FIREBASE_ANALYTICS_WITHOUT_ADID=true'), reason: out);
+    expect(out, contains('flutter build ipa failed (exit 3).'), reason: out);
+    expect(result.exitCode, 1);
+  });
+
   test('sh_exits_64_on_bad_arguments', () async {
     final bash = _bash();
     if (!await _ready(bash)) return;

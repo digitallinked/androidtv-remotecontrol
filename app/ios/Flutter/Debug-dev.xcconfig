@@ -3,5 +3,9 @@
 // still builds before pod install. Debug.xcconfig then brings
 // Generated.xcconfig, the AdMob test-id default and the optional
 // Secrets.xcconfig, which must stay last. (unverified, Mac; DM-106)
+// When CocoaPods is used, flutter_tools also adds an include of
+// Pods-Runner.debug.xcconfig to Debug.xcconfig, so the Pods settings
+// arrive twice. Both come from the same :debug build type with
+// $(CONFIGURATION)-relative paths, so that is harmless; commit the line.
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug-dev.xcconfig"
 #include "Debug.xcconfig"

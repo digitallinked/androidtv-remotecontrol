@@ -78,7 +78,14 @@ fi
 
 # 5. Build, then post-check.
 kind=appbundle
-if [ "$platform" = ios ]; then kind=ipa; fi
+if [ "$platform" = ios ]; then
+  kind=ipa
+  # Ruling P9-C4: under Swift Package Manager, firebase_analytics's
+  # Package.swift links Analytics without the advertising id only when this
+  # is set while packages resolve (the Podfile's
+  # $FirebaseAnalyticsWithoutAdIdSupport covers CocoaPods only). Decision #39.
+  export FIREBASE_ANALYTICS_WITHOUT_ADID=true
+fi
 code=0
 (cd "$root/app" && flutter build "$kind" --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json) || code=$?
 if [ "$code" -ne 0 ]; then

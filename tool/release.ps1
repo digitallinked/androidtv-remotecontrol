@@ -69,7 +69,13 @@ if ($Platform -eq 'android') {
 
 # 5. Build, then post-check.
 $kind = 'appbundle'
-if ($Platform -eq 'ios') { $kind = 'ipa' }
+if ($Platform -eq 'ios') {
+    $kind = 'ipa'
+    # Ruling P9-C4: under Swift Package Manager, firebase_analytics links
+    # Analytics without the advertising id only when this is set while
+    # packages resolve (the Podfile switch covers CocoaPods only).
+    $env:FIREBASE_ANALYTICS_WITHOUT_ADID = 'true'
+}
 Push-Location $appDir
 try {
     & flutter build $kind --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json

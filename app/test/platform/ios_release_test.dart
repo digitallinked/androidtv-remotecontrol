@@ -73,8 +73,8 @@ List<String> _inputPaths(String phase) {
 }
 
 /// A POSIX `sh`: Git's on Windows (the `bash` on PATH there is often WSL's),
-/// `sh` elsewhere. `null` when there is none.
-String? _sh() {
+/// otherwise the `sh` on PATH.
+String _sh() {
   if (!Platform.isWindows) return 'sh';
   final env = Platform.environment;
   for (final base in [
@@ -86,17 +86,14 @@ String? _sh() {
     final candidate = '$base\\Git\\bin\\sh.exe';
     if (File(candidate).existsSync()) return candidate;
   }
-  return null;
+  // Git installed elsewhere: whatever `sh` is on PATH.
+  return 'sh';
 }
 
 /// The `sh` to run the scripts with, or `null` after marking the test
-/// skipped.
+/// skipped (`sh is not on the PATH`).
 Future<String?> _requireSh() async {
   final sh = _sh();
-  if (sh == null) {
-    markTestSkipped('sh is not on the PATH');
-    return null;
-  }
   return await requireTool(sh, const ['-c', 'exit 0']) ? sh : null;
 }
 
@@ -156,14 +153,28 @@ void main() {
         r'shellScript = "/bin/sh \"$SRCROOT/scripts/upload_crashlytics_symbols.sh\"\n";',
       ),
     );
+    // P9-R5's input paths without the GoogleService-Info.plist (P9-C4): no
+    // phase declares it as an output, so Xcode would fail every build that
+    // lacks it. The script checks for the file itself.
     expect(_inputPaths(phase), [
       r'${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}',
       r'${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}',
       r'${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist',
-      r'$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist',
       r'$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)',
     ]);
     expect(File(_symbolsScript).existsSync(), isTrue);
+  });
+
+  test('every_configuration_builds_dsyms_for_the_upload_phase_inputs', () {
+    // The dSYM input paths must exist in Debug too, or Xcode fails the build
+    // before the script can skip it (P9-C4).
+    final pbx = _read(_project);
+    expect(pbx, isNot(contains('DEBUG_INFORMATION_FORMAT = dwarf;')));
+    expect(
+      'DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";'.allMatches(pbx),
+      hasLength(9),
+      reason: 'all nine project-level configurations',
+    );
   });
 
   test('every_shell_phase_is_defined_once_and_used_by_the_runner_target', () {
@@ -313,67 +324,101 @@ void main() {
     () async {
       final sh = await _requireSh();
       if (sh == null) return;
-      final root = _tempDir();
-      final products = Directory('${root.path}/products/Runner.app')
-        ..createSync(recursive: true);
-      final plist = File('${products.path}/GoogleService-Info.plist');
-      final pods = Directory('${root.path}/Pods/FirebaseCrashlytics')
-        ..createSync(recursive: true);
-      final stub = File('${pods.path}/run');
-      final args = File('${root.path}/args.txt');
-      void writeStub() {
-        stub.writeAsStringSync(
-          '#!/bin/sh\nprintf \'%s \' "\$@" > "\$STUB_OUT"\n',
-        );
-        if (!Platform.isWindows) {
-          Process.runSync('chmod', ['+x', stub.path]);
-        }
-      }
+      final t = _SymbolsFixture(sh, _tempDir())..writeStub(_SymbolsTool.pods);
 
-      Future<ProcessResult> run(String config) => runTool(
-        sh,
-        [_symbolsScript],
-        environment: {
-          'CONFIGURATION': config,
-          'BUILT_PRODUCTS_DIR': _slashed('${root.path}/products'),
-          'PRODUCT_NAME': 'Runner',
-          'PODS_ROOT': _slashed('${root.path}/Pods'),
-          'STUB_OUT': _slashed(args.path),
-        },
-      );
-
-      writeStub();
-      plist.writeAsStringSync('<plist/>');
-      var result = await run('Debug-prod');
-      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      t.plist.writeAsStringSync('<plist/>');
+      var result = await t.run('Debug-prod', podsRoot: true);
+      expect(result.exitCode, 0, reason: t.output(result));
       expect(result.stdout as String, contains('note:'));
-      expect(args.existsSync(), isFalse, reason: 'Debug never uploads');
+      expect(t.args.existsSync(), isFalse, reason: 'Debug never uploads');
 
-      plist.deleteSync();
-      result = await run('Release-prod');
-      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      t.plist.deleteSync();
+      result = await t.run('Release-prod', podsRoot: true);
+      expect(result.exitCode, 0, reason: t.output(result));
       expect(
         result.stdout as String,
         contains('note: no Firebase config; no symbols uploaded'),
       );
-      expect(args.existsSync(), isFalse, reason: 'no plist, no upload');
+      expect(t.args.existsSync(), isFalse, reason: 'no plist, no upload');
 
-      plist.writeAsStringSync('<plist/>');
-      result = await run('Release-prod');
-      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      t.plist.writeAsStringSync('<plist/>');
+      result = await t.run('Release-prod', podsRoot: true);
+      expect(result.exitCode, 0, reason: t.output(result));
+      expect(t.args.readAsStringSync().trim(), 'pods -gsp ${t.plistPath}');
       expect(
-        args.readAsStringSync().trim(),
-        '-gsp ${_slashed(plist.path)}',
+        result.stdout as String,
+        contains('note: uploading dSYMs with ${t.toolPath(_SymbolsTool.pods)}'),
       );
 
-      args.deleteSync();
-      stub.deleteSync();
-      result = await run('Release-prod');
-      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      t.args.deleteSync();
+      t.deleteStub(_SymbolsTool.pods);
+      result = await t.run('Release-prod', podsRoot: true);
+      expect(result.exitCode, 0, reason: t.output(result));
       expect(result.stdout as String, contains('warning:'));
-      expect(args.existsSync(), isFalse);
+      expect(result.stdout as String, isNot(contains('pod install')));
+      expect(t.args.existsSync(), isFalse);
     },
   );
+
+  test('crashlytics_script_finds_the_swift_package_tool_too', () async {
+    final sh = await _requireSh();
+    if (sh == null) return;
+    final t = _SymbolsFixture(sh, _tempDir());
+    t.plist.writeAsStringSync('<plist/>');
+
+    // An archive (flutter build ipa): BUILD_DIR is under DerivedData.
+    t.writeStub(_SymbolsTool.spm);
+    var result = await t.run('Release-prod', podsRoot: true, buildDir: true);
+    expect(result.exitCode, 0, reason: t.output(result));
+    expect(t.args.readAsStringSync().trim(), 'spm -gsp ${t.plistPath}');
+    expect(
+      result.stdout as String,
+      contains('note: uploading dSYMs with ${t.toolPath(_SymbolsTool.spm)}'),
+    );
+
+    // flutter build ios: BUILD_DIR is build/ios, so OBJROOT finds it.
+    t.args.deleteSync();
+    result = await t.run('Release-prod', objRoot: true, flutterBuildDir: true);
+    expect(result.exitCode, 0, reason: t.output(result));
+    expect(t.args.readAsStringSync().trim(), 'spm -gsp ${t.plistPath}');
+
+    // Both: the Pods copy wins.
+    t
+      ..args.deleteSync()
+      ..writeStub(_SymbolsTool.pods);
+    result = await t.run(
+      'Release-prod',
+      podsRoot: true,
+      buildDir: true,
+      objRoot: true,
+    );
+    expect(result.exitCode, 0, reason: t.output(result));
+    expect(t.args.readAsStringSync().trim(), 'pods -gsp ${t.plistPath}');
+
+    // Neither: a warning, and the build goes on.
+    t
+      ..args.deleteSync()
+      ..deleteStub(_SymbolsTool.pods)
+      ..deleteStub(_SymbolsTool.spm);
+    result = await t.run(
+      'Release-prod',
+      podsRoot: true,
+      buildDir: true,
+      objRoot: true,
+    );
+    expect(result.exitCode, 0, reason: t.output(result));
+    expect(result.stdout as String, contains('warning:'));
+    expect(t.args.existsSync(), isFalse);
+
+    // PODS_ROOT, BUILD_DIR and OBJROOT unset: still safe under set -u, and
+    // an empty PODS_ROOT never becomes /FirebaseCrashlytics/run.
+    t.writeStub(_SymbolsTool.spm);
+    result = await t.run('Release-prod');
+    expect(result.exitCode, 0, reason: t.output(result));
+    expect(t.output(result), isNot(contains('unbound')));
+    expect(result.stdout as String, contains('warning:'));
+    expect(t.args.existsSync(), isFalse);
+  });
 
   test(
     // The brief's test name, verbatim.
@@ -503,4 +548,87 @@ void main() {
       );
     }
   });
+}
+
+/// Where a fake FirebaseCrashlytics `run` lives.
+enum _SymbolsTool {
+  /// `$PODS_ROOT/FirebaseCrashlytics/run`.
+  pods('Pods/FirebaseCrashlytics/run'),
+
+  /// The Swift package checkout under DerivedData.
+  spm('dd/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run');
+
+  const _SymbolsTool(this.path);
+
+  /// The path under the fixture root.
+  final String path;
+}
+
+/// A temp tree for `upload_crashlytics_symbols.sh`: a built app bundle, and
+/// stub `run` tools that write `<tool> <args>` to [args].
+class _SymbolsFixture {
+  _SymbolsFixture(this.sh, this.root) {
+    Directory('${root.path}/products/Runner.app').createSync(recursive: true);
+  }
+
+  /// The shell that runs the script.
+  final String sh;
+
+  /// The fixture root.
+  final Directory root;
+
+  /// The Firebase config inside the built app.
+  File get plist => File(
+    '${root.path}/products/Runner.app/'
+    'GoogleService-Info.plist',
+  );
+
+  /// [plist] as the script sees it.
+  String get plistPath => _slashed(plist.path);
+
+  /// Where the stubs write their arguments.
+  File get args => File('${root.path}/args.txt');
+
+  /// [tool]'s path as the script sees it.
+  String toolPath(_SymbolsTool tool) => _slashed('${root.path}/${tool.path}');
+
+  /// Writes the stub for [tool].
+  void writeStub(_SymbolsTool tool) {
+    final file = File('${root.path}/${tool.path}')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(
+        '#!/bin/sh\nprintf \'%s \' ${tool.name} "\$@" > "\$STUB_OUT"\n',
+      );
+    if (!Platform.isWindows) Process.runSync('chmod', ['+x', file.path]);
+  }
+
+  /// Deletes the stub for [tool].
+  void deleteStub(_SymbolsTool tool) =>
+      File('${root.path}/${tool.path}').deleteSync();
+
+  /// Runs the script for [config], setting only the variables asked for.
+  Future<ProcessResult> run(
+    String config, {
+    bool podsRoot = false,
+    bool buildDir = false,
+    bool objRoot = false,
+    bool flutterBuildDir = false,
+  }) => runTool(
+    sh,
+    [_symbolsScript],
+    environment: {
+      'CONFIGURATION': config,
+      'BUILT_PRODUCTS_DIR': _slashed('${root.path}/products'),
+      'PRODUCT_NAME': 'Runner',
+      'STUB_OUT': _slashed(args.path),
+      if (podsRoot) 'PODS_ROOT': _slashed('${root.path}/Pods'),
+      if (buildDir) 'BUILD_DIR': _slashed('${root.path}/dd/Build/Products'),
+      if (flutterBuildDir) 'BUILD_DIR': _slashed('${root.path}/app/build/ios'),
+      if (objRoot)
+        'OBJROOT': _slashed('${root.path}/dd/Build/Intermediates.noindex'),
+    },
+  );
+
+  /// stdout and stderr together, for failure messages.
+  String output(ProcessResult result) => '${result.stdout}${result.stderr}';
 }

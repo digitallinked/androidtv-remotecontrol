@@ -49,6 +49,11 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 - [ ] App Privacy labels match the SDKs (Identifiers, Usage Data, Diagnostics, Purchases, **Coarse Location**, **Performance Data**; tracking = yes).
 - [ ] The purpose strings `NSUserTrackingUsageDescription` and `NSLocalNetworkUsageDescription` name "Remotely"; update them when the app name is final.
 - [ ] iOS deployment target 15.0 (Firebase iOS SDK 13). Podfile at 15.0. Upload Crashlytics dSYMs. On a Mac, add an `ADMOB_APP_ID` Run Script check (Phase 9).
+- [ ] **Analytics without the ad id under Swift Package Manager** (P9-C4): `firebase_analytics` drops the advertising id only when `FIREBASE_ANALYTICS_WITHOUT_ADID=true` is set while Swift packages resolve. The Podfile's `$FirebaseAnalyticsWithoutAdIdSupport` covers only CocoaPods.
+  - `tool/release.sh --platform ios` exports the variable for you.
+  - An archive from the Xcode GUI (Product → Archive) doesn't see your shell's variables. Run `launchctl setenv FIREBASE_ANALYTICS_WITHOUT_ADID true` first, then quit and restart Xcode.
+  - SwiftPM caches the resolved manifest. After setting or changing the variable, use File → Packages → Reset Package Caches (or delete the DerivedData `SourcePackages`) before building.
+  - Check: `GoogleAppMeasurementIdentitySupport` is absent from the archive's build log.
 - [ ] Paywall: price, period, auto-renew terms, Restore button, Terms (EULA) + Privacy links (Guideline 3.1.2).
 - [ ] **Review notes:** the reviewer has no Android TV. Attach a demo video link showing discovery → pairing → control on a real TV, explain that the app requires an Android TV / Google TV on the same Wi-Fi, and provide the in-app **demo mode** (simulated TV) path for testing.
 - [ ] Guideline 4.2/4.3: enough native value (widgets, Siri Shortcuts / App Intents later) to avoid "minimum functionality".

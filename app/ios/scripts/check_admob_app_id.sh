@@ -51,6 +51,8 @@ if [ "$valid" != yes ]; then
   exit 1
 fi
 
+# A prefix match, where tool/release_check.dart uses "contains": after the
+# format check above the publisher can only sit at the start, so the two agree.
 case "$id" in
   ca-app-pub-3940256099942544~*)
     if [ "$action" = install ]; then
