@@ -1,6 +1,10 @@
 # Regenerates packages/atv_remote/lib/src/proto from packages/atv_remote/proto/*.proto.
-# Needs protoc (tool/bin/bin/protoc.exe or on PATH) and protoc-gen-dart on PATH:
-#   dart pub global activate protoc_plugin 25.1.0
+# Needs protoc (tool/bin/bin/protoc.exe or on PATH) and protoc-gen-dart on PATH.
+#
+# protoc 36.2: https://github.com/protocolbuffers/protobuf/releases/tag/v36.2
+#   download protoc-36.2-win64.zip and unzip it into tool/bin/ (git-ignored),
+#   which gives tool/bin/bin/protoc.exe.
+# protoc_plugin 25.1.0: dart pub global activate protoc_plugin 25.1.0
 $ErrorActionPreference = 'Stop'
 
 $root = Join-Path $PSScriptRoot '..'
@@ -9,6 +13,13 @@ try {
     $protoc = 'protoc'
     $local = Join-Path $root 'tool/bin/bin/protoc.exe'
     if (Test-Path $local) { $protoc = $local }
+
+    # Warn (don't fail) when protoc isn't the release the checked-in code came from.
+    $expected = 'libprotoc 36.2'
+    $version = ((& $protoc --version) | Out-String).Trim()
+    if ($version -ne $expected) {
+        Write-Warning "protoc is $version; the generated code was made with libprotoc 36.2"
+    }
 
     # Make sure the pub-global executables (protoc-gen-dart) are reachable.
     $env:PATH = "$env:PATH;$env:LOCALAPPDATA\Pub\Cache\bin;$env:USERPROFILE\.pub-cache\bin"
