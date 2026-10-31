@@ -4,21 +4,10 @@ import 'package:tv_remote/app/router.dart';
 
 import '../helpers/ink_features.dart';
 import '../helpers/pump_router_app.dart';
+import '../helpers/toggle_position.dart';
 
 /// One 60 Hz frame.
 const _frame = Duration(milliseconds: 16);
-
-/// How far the toggle (switch thumb or radio dot) inside [f] has moved
-/// towards "on": 0 is off, 1 is on.
-double _togglePosition(WidgetTester t, Finder f) => find
-    .descendant(of: f, matching: find.byWidgetPredicate((_) => true))
-    .evaluate()
-    .whereType<StatefulElement>()
-    .map((e) => e.state)
-    .whereType<ToggleableStateMixin>()
-    .single
-    .position
-    .value;
 
 /// Taps [f] and draws the frame that handles the tap. A transition starts in
 /// that frame and is drawn at its start, so the test can then check what the
@@ -54,35 +43,37 @@ void main() {
 
   Future<void> pumpRemoteBehaviour(WidgetTester t) async {
     await pumpRouterApp(t, initialLocation: AppRoutes.settingsRemoteBehaviour);
-    expect(_togglePosition(t, haptics), 1, reason: 'haptics start on');
+    expect(togglePosition(t, haptics), 1, reason: 'haptics start on');
   }
 
   testWidgets('switch_settles_within_one_frame', (t) async {
     reduceMotionFromThePlatform(t);
     await pumpRemoteBehaviour(t);
     await _tapAndDrawTheStartFrame(t, haptics);
-    expect(_togglePosition(t, haptics), 1, reason: 'drawn at its start');
+    expect(togglePosition(t, haptics), 1, reason: 'drawn at its start');
     await frameDone(t, 'the switch');
-    expect(_togglePosition(t, haptics), 0, reason: 'the thumb is at off');
+    expect(togglePosition(t, haptics), 0, reason: 'the thumb is at off');
   });
+
+  final dark = find.ancestor(
+    of: find.text('Dark'),
+    matching: find.byWidgetPredicate((w) => w is RadioListTile),
+  );
 
   testWidgets('radio_settles_within_one_frame', (t) async {
     reduceMotionFromThePlatform(t);
     await pumpRouterApp(t, initialLocation: AppRoutes.settingsAppearance);
-    final dark = find.ancestor(
-      of: find.text('Dark'),
-      matching: find.byWidgetPredicate((w) => w is RadioListTile),
-    );
-    expect(_togglePosition(t, dark), 0, reason: 'Dark starts unchosen');
+    expect(togglePosition(t, dark), 0, reason: 'Dark starts unchosen');
     await _tapAndDrawTheStartFrame(t, dark);
-    expect(_togglePosition(t, dark), 0, reason: 'drawn at its start');
+    expect(togglePosition(t, dark), 0, reason: 'drawn at its start');
     await frameDone(t, 'the radio');
-    expect(_togglePosition(t, dark), 1, reason: 'the dot is in');
+    expect(togglePosition(t, dark), 1, reason: 'the dot is in');
   });
 
   testWidgets('text_field_focus_settles_within_one_frame', (t) async {
     reduceMotionFromThePlatform(t);
     await pumpRouterApp(t, initialLocation: AppRoutes.apps);
+    final resting = _labelTop(t);
     await _tapAndDrawTheStartFrame(t, find.byType(TextField));
     expect(
       t.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
@@ -91,6 +82,12 @@ void main() {
     // The label floats up and the border thickens.
     expect(t.hasRunningAnimations, isTrue, reason: 'the focus transition');
     await frameDone(t, 'the search field');
+    // And it ended where focus puts it: the label floated up to the border,
+    // exactly where it rests once everything has settled.
+    final floated = _labelTop(t);
+    expect(floated, lessThan(resting - 8));
+    await t.pumpAndSettle();
+    expect(_labelTop(t), floated);
   });
 
   testWidgets('with_motion_the_switch_animates', (t) async {
@@ -99,6 +96,31 @@ void main() {
     await t.pump(_frame);
     // The thumb is still on its way: these tests can see motion.
     expect(t.hasRunningAnimations, isTrue);
-    expect(_togglePosition(t, haptics), inExclusiveRange(0, 1));
+    expect(togglePosition(t, haptics), inExclusiveRange(0, 1));
+  });
+
+  testWidgets('with_motion_the_radio_animates', (t) async {
+    await pumpRouterApp(t, initialLocation: AppRoutes.settingsAppearance);
+    await _tapAndDrawTheStartFrame(t, dark);
+    await t.pump(_frame);
+    expect(t.hasRunningAnimations, isTrue);
+    expect(togglePosition(t, dark), inExclusiveRange(0, 1));
+  });
+
+  testWidgets('with_motion_the_text_field_focus_animates', (t) async {
+    await pumpRouterApp(t, initialLocation: AppRoutes.apps);
+    final resting = _labelTop(t);
+    await _tapAndDrawTheStartFrame(t, find.byType(TextField));
+    await t.pump(_frame);
+    // The decorator's 167 ms transition is still on its way: the label is
+    // between where it rests and where it floats.
+    expect(t.hasRunningAnimations, isTrue);
+    final moving = _labelTop(t);
+    await t.pumpAndSettle();
+    expect(moving, lessThan(resting));
+    expect(moving, greaterThan(_labelTop(t)));
   });
 }
+
+/// The top of the Apps search field's label, which floats up on focus.
+double _labelTop(WidgetTester t) => t.getRect(find.text('Search apps')).top;

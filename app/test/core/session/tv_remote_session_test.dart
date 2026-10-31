@@ -1,5 +1,4 @@
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
@@ -30,7 +29,6 @@ void main() {
   late FakeRemoteClients clients;
   final sessions = <RemoteSession>[];
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);

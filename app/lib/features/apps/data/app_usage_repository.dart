@@ -45,6 +45,10 @@ abstract interface class AppUsageRepository {
   /// Counts one sighting of [package] at [at]: inserts it with a count of 1,
   /// or adds 1 and stamps [at]. Then forgets every package outside the
   /// [kUsageKeep] most recently seen, in the same transaction.
+  ///
+  /// The prune goes by recency only: a sighting whose [at] is older than
+  /// the [kUsageKeep]th newest (the clock went backwards) is forgotten at
+  /// once, in the same call.
   Future<void> recordSeen(String package, DateTime at);
 
   /// Emits the most used apps (highest count first, then most recent), at

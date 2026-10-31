@@ -1,5 +1,4 @@
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +13,7 @@ import 'package:tv_remote/features/devices/presentation/edit_device_screen.dart'
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 
+import '../../helpers/disk_exception.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
@@ -21,17 +21,10 @@ import '../../helpers/test_devices.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
 
-/// What drift's `SqliteException` is to Riverpod: an [Exception], which its
-/// default retry would re-run for ~38 s behind a spinner.
-class _DiskException implements Exception {
-  const _DiskException();
-}
-
 void main() {
   late InMemoryDeviceRepository repo;
   late FakeRemoteSession session;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     // "Lounge" is the TV in use and has a nickname; "Bedroom TV" was never
     // paired (no key).
@@ -73,6 +66,8 @@ void main() {
       brightness: brightness,
       overrides: [
         deviceRepositoryProvider.overrideWithValue(repo),
+        // The body of savedDevicesProvider (lib/core/storage/
+        // storage_providers.dart), copied: keep the two in step.
         savedDevicesProvider.overrideWith(
           (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
         ),
@@ -150,7 +145,7 @@ void main() {
   });
 
   testWidgets('saved_devices_error_shows_without_retrying', (t) async {
-    repo.watchError = const _DiskException();
+    repo.watchError = const DiskException();
     t.view
       ..physicalSize = const Size(390, 844)
       ..devicePixelRatio = 1;
@@ -161,7 +156,9 @@ void main() {
       settle: false,
       overrides: [
         deviceRepositoryProvider.overrideWithValue(repo),
-        // The production provider's body; an override keeps its retry policy.
+        // A copy of the production body (lib/core/storage/
+        // storage_providers.dart): an override keeps its retry policy, but
+        // keep the body in step with the provider by hand.
         savedDevicesProvider.overrideWith(
           (ref) => ref.watch(deviceRepositoryProvider).watchAll(),
         ),

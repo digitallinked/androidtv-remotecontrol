@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
-import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/app/widgets/not_connected_snack_bar.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
 import 'package:tv_remote/core/session/not_connected_notices.dart';
@@ -38,52 +38,13 @@ class AppsScreen extends ConsumerStatefulWidget {
 class _AppsScreenState extends ConsumerState<AppsScreen> {
   final TextEditingController _search = TextEditingController();
 
-  /// The "Not connected" snackbar on screen, if any: one is enough.
-  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _notConnectedBar;
+  /// The "Not connected" snackbar: one at a time.
+  final NotConnectedSnackBar _notConnected = NotConnectedSnackBar();
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
-  }
-
-  /// The status the strip shows: the socket's state, never the saved one.
-  ConnectionStatus _statusOf(
-    AsyncValue<RemoteSession?> session,
-    AsyncValue<TvConnectionState> connection,
-  ) {
-    if (session.isLoading || connection.isLoading) {
-      return ConnectionStatus.connecting;
-    }
-    return connection.value?.status ?? ConnectionStatus.disconnected;
-  }
-
-  void _showNotConnected(RemoteSession? session, ConnectionStatus status) {
-    if (!mounted ||
-        _notConnectedBar != null ||
-        !(ModalRoute.isCurrentOf(context) ?? false)) {
-      return;
-    }
-    final l10n = AppLocalizations.of(context);
-    final bar = ScaffoldMessenger.of(context).showAppSnackBar(
-      SnackBar(
-        content: Text(l10n.remoteNotConnected),
-        // Offline and needs-pairing have an action in the status strip; a
-        // closed connection has none, so offer it here.
-        action: session != null && status == ConnectionStatus.disconnected
-            ? SnackBarAction(
-                label: l10n.statusReconnectAction,
-                onPressed: session.reconnect,
-              )
-            : null,
-      ),
-    );
-    _notConnectedBar = bar;
-    unawaited(
-      bar.closed.then((_) {
-        if (identical(_notConnectedBar, bar)) _notConnectedBar = null;
-      }),
-    );
   }
 
   void _pairAgain(RemoteSession session) {
@@ -123,10 +84,10 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
     final sessionState = ref.watch(remoteSessionProvider);
     final connection = ref.watch(connectionStateProvider);
     final session = sessionState.value;
-    final status = _statusOf(sessionState, connection);
+    final status = shownConnectionStatus(sessionState, connection);
     ref.listen(
       notConnectedNoticesProvider,
-      (_, _) => _showNotConnected(session, status),
+      (_, _) => _notConnected.show(context, session: session, status: status),
     );
     final connected = status == ConnectionStatus.connected;
     final currentApp = connected ? ref.watch(currentAppProvider).value : null;

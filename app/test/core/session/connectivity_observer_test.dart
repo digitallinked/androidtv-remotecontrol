@@ -94,4 +94,29 @@ void main() {
     await pumpEventQueue();
     expect(events, isEmpty);
   });
+
+  // The platform-backed subscriptions (this one, PlatformSessionSignals'
+  // foreground stream, Premium's entitlements) cancel unawaited on dispose:
+  // a platform whose cancel fails must not leave an unhandled error.
+  test('a_source_whose_cancel_fails_disposes_cleanly', () async {
+    final uncaught = <Object>[];
+    var cancelled = false;
+    await runZonedGuarded(() async {
+      final failing = StreamController<List<ConnectivityResult>>(
+        onCancel: () {
+          cancelled = true;
+          throw StateError('the platform channel is gone');
+        },
+      );
+      final o = ConnectivityObserver(failing.stream);
+      var closed = false;
+      o.changes.listen((_) {}, onDone: () => closed = true);
+      await pumpEventQueue();
+      o.dispose();
+      await pumpEventQueue();
+      expect(closed, isTrue, reason: 'changes still closes');
+    }, (error, _) => uncaught.add(error));
+    expect(cancelled, isTrue);
+    expect(uncaught, isEmpty);
+  });
 }

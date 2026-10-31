@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -72,7 +71,6 @@ class _SlowOpener extends RecordingLinkOpener {
 
 void main() {
   // Some tests pump the app several times.
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   final androidListing = Uri.parse(
     'https://play.google.com/store/apps/details'

@@ -418,19 +418,19 @@ abstract class AppLocalizations {
   /// **'Can\'t find your TV?'**
   String get troubleshootTitle;
 
-  /// Troubleshooting step 1.
+  /// First step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help.
   ///
   /// In en, this message translates to:
   /// **'Connect your phone and TV to the same Wi-Fi network (not a guest network).'**
   String get troubleshootSameWifi;
 
-  /// Troubleshooting step 2.
+  /// Second step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help.
   ///
   /// In en, this message translates to:
   /// **'Turn the TV on. Some TVs can\'t be found while in standby.'**
   String get troubleshootTvOn;
 
-  /// Troubleshooting step 3.
+  /// Third step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help.
   ///
   /// In en, this message translates to:
   /// **'On the TV, make sure \"Android TV Remote Service\" is installed and up to date in the Play Store.'**
@@ -442,13 +442,13 @@ abstract class AppLocalizations {
   /// **'On iPhone, allow Local Network access for this app in Settings → Privacy & Security → Local Network.'**
   String get troubleshootLocalNetwork;
 
-  /// Troubleshooting step.
+  /// Fourth step of the troubleshooting checklist, shown in the Can't connect sheet from discovery and Help.
   ///
   /// In en, this message translates to:
   /// **'Still nothing? Restart the TV and your router, then scan again.'**
   String get troubleshootRestart;
 
-  /// Last troubleshooting step.
+  /// Last step of the troubleshooting checklist, shown in the Can't connect sheet; it points to entering the TV's IP address.
   ///
   /// In en, this message translates to:
   /// **'You can also enter the TV\'s IP address. Find it on the TV under Settings → Network & Internet.'**
@@ -1330,7 +1330,7 @@ abstract class AppLocalizations {
   /// **'No apps match \"{query}\".'**
   String appsNoMatches(String query);
 
-  /// Empty Apps screen.
+  /// Title of the Apps screen when the user has no app shortcuts yet.
   ///
   /// In en, this message translates to:
   /// **'No apps yet'**
@@ -1342,7 +1342,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your apps.'**
   String get appsLoadFailed;
 
-  /// Empty Apps screen.
+  /// Body text of the Apps screen when the user has no app shortcuts yet, above the Add apps button.
   ///
   /// In en, this message translates to:
   /// **'Add the apps you use on your TV to open them with one tap.'**
@@ -1360,25 +1360,25 @@ abstract class AppLocalizations {
   /// **'Add app'**
   String get manageAppsAdd;
 
-  /// Overflow menu item.
+  /// Item in the Edit apps overflow menu that puts back the suggested apps for the phone's region.
   ///
   /// In en, this message translates to:
   /// **'Reset to suggested apps'**
   String get manageAppsReset;
 
-  /// Reset confirmation title.
+  /// Title of the dialog that asks the user to confirm resetting their app list on Edit apps.
   ///
   /// In en, this message translates to:
   /// **'Reset your apps?'**
   String get manageAppsResetTitle;
 
-  /// Reset confirmation body.
+  /// Body of the dialog that asks the user to confirm resetting their app list on Edit apps.
   ///
   /// In en, this message translates to:
   /// **'Your list goes back to the suggested apps for your region. Shortcuts you added or changed are removed.'**
   String get manageAppsResetBody;
 
-  /// Destructive reset action.
+  /// Destructive button of the reset dialog on Edit apps; it replaces the list with the suggested apps.
   ///
   /// In en, this message translates to:
   /// **'Reset'**
@@ -1426,7 +1426,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save your apps. Try again.'**
   String get manageAppsSaveFailed;
 
-  /// Add sheet title.
+  /// Title of the sheet that adds an app shortcut, opened from Edit apps.
   ///
   /// In en, this message translates to:
   /// **'Add an app'**
@@ -1444,13 +1444,13 @@ abstract class AppLocalizations {
   /// **'Create a custom shortcut'**
   String get addAppCustom;
 
-  /// Section header.
+  /// Section header in the Add an app sheet for apps recently seen open on the TV.
   ///
   /// In en, this message translates to:
   /// **'Recently used on your TV'**
   String get addAppRecentTitle;
 
-  /// Empty recent section.
+  /// Text in the Add an app sheet's recent section when no app has been seen open on the TV yet.
   ///
   /// In en, this message translates to:
   /// **'Apps you open on your TV show up here.'**
@@ -1474,7 +1474,7 @@ abstract class AppLocalizations {
   /// **'Add app ID \"{package}\"'**
   String addAppById(String package);
 
-  /// Snackbar after adding.
+  /// Snackbar shown after the user adds the app {app} to their shortcuts from the Add an app sheet.
   ///
   /// In en, this message translates to:
   /// **'{app} added'**
@@ -1486,61 +1486,61 @@ abstract class AppLocalizations {
   /// **'Already on your list'**
   String get addAppAlreadyAdded;
 
-  /// Editor title (create).
+  /// Title of the shortcut editor sheet when the user creates a new custom shortcut.
   ///
   /// In en, this message translates to:
   /// **'New shortcut'**
   String get shortcutNewTitle;
 
-  /// Editor title (edit).
+  /// Title of the shortcut editor sheet when the user edits an existing shortcut.
   ///
   /// In en, this message translates to:
   /// **'Edit shortcut'**
   String get shortcutEditTitle;
 
-  /// Editor field.
+  /// Label of the name field in the shortcut editor sheet.
   ///
   /// In en, this message translates to:
   /// **'Name'**
   String get shortcutNameLabel;
 
-  /// Editor validation.
+  /// Error under the shortcut editor's name field when the name is empty or too long.
   ///
   /// In en, this message translates to:
   /// **'Enter a name of up to 30 characters.'**
   String get shortcutNameError;
 
-  /// Editor field.
+  /// Label of the app ID (Android package name) field in the shortcut editor sheet.
   ///
   /// In en, this message translates to:
   /// **'App ID'**
   String get shortcutPackageLabel;
 
-  /// Editor field hint.
+  /// Example value shown inside the empty app ID field of the shortcut editor; keep it as a package name.
   ///
   /// In en, this message translates to:
   /// **'com.example.app'**
   String get shortcutPackageHint;
 
-  /// Editor helper text.
+  /// Helper text under the shortcut editor's app ID field that says where to find an app's ID.
   ///
   /// In en, this message translates to:
   /// **'The app\'s ID on the TV. It\'s in the app\'s Play Store web address, after \"id=\".'**
   String get shortcutPackageHelp;
 
-  /// Editor validation.
+  /// Error under the shortcut editor's app ID field when the text is not a valid package name.
   ///
   /// In en, this message translates to:
   /// **'Enter an app ID like com.example.app.'**
   String get shortcutPackageError;
 
-  /// Editor validation.
+  /// Error under the shortcut editor's app ID field when that app is already on the user's list.
   ///
   /// In en, this message translates to:
   /// **'This app is already on your list.'**
   String get shortcutPackageTaken;
 
-  /// Editor group label.
+  /// Label of the tile colour choices in the shortcut editor sheet.
   ///
   /// In en, this message translates to:
   /// **'Tile colour'**
@@ -1600,67 +1600,67 @@ abstract class AppLocalizations {
   /// **'Purple'**
   String get shortcutColourPurple;
 
-  /// Editor group label.
+  /// Label of the icon choices in the shortcut editor sheet.
   ///
   /// In en, this message translates to:
   /// **'Icon'**
   String get shortcutIconLabel;
 
-  /// Icon choice: monogram.
+  /// Icon choice in the shortcut editor that shows the first letter of the shortcut's name on the tile.
   ///
   /// In en, this message translates to:
   /// **'First letter'**
   String get shortcutIconLetter;
 
-  /// Generic icon name.
+  /// Spoken name of the generic app icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'App'**
   String get shortcutIconApp;
 
-  /// Icon name.
+  /// Spoken name of the movies icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Movies'**
   String get shortcutIconMovies;
 
-  /// Icon name.
+  /// Spoken name of the live TV icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Live TV'**
   String get shortcutIconLive;
 
-  /// Icon name.
+  /// Spoken name of the sports icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Sports'**
   String get shortcutIconSports;
 
-  /// Icon name.
+  /// Spoken name of the music icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Music'**
   String get shortcutIconMusic;
 
-  /// Icon name.
+  /// Spoken name of the kids icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Kids'**
   String get shortcutIconKids;
 
-  /// Icon name.
+  /// Spoken name of the news icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'News'**
   String get shortcutIconNews;
 
-  /// Icon name.
+  /// Spoken name of the games icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Games'**
   String get shortcutIconGames;
 
-  /// Icon name.
+  /// Spoken name of the learning icon choice in the shortcut editor.
   ///
   /// In en, this message translates to:
   /// **'Learning'**
@@ -1672,13 +1672,13 @@ abstract class AppLocalizations {
   /// **'Preview'**
   String get shortcutPreview;
 
-  /// Snackbar after editing.
+  /// Snackbar shown on Edit apps after the user saves changes to a shortcut.
   ///
   /// In en, this message translates to:
   /// **'Shortcut saved'**
   String get shortcutSaved;
 
-  /// Empty Your TVs.
+  /// Title of the Your TVs page when no TV is saved on this phone.
   ///
   /// In en, this message translates to:
   /// **'No TVs yet'**
@@ -1690,7 +1690,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your TVs.'**
   String get devicesLoadFailed;
 
-  /// Empty Your TVs.
+  /// Body text of the Your TVs page when no TV is saved, above the button that finds a TV.
   ///
   /// In en, this message translates to:
   /// **'Pair a TV to control it from this phone.'**
@@ -1708,31 +1708,31 @@ abstract class AppLocalizations {
   /// **'Edit {tvName}'**
   String devicesEditTv(String tvName);
 
-  /// Nickname field.
+  /// Label of the nickname field on the Edit TV page.
   ///
   /// In en, this message translates to:
   /// **'Name on this phone'**
   String get editDeviceNameLabel;
 
-  /// Nickname helper.
+  /// Helper text under the Edit TV nickname field; {tvName} is the name the TV gives itself.
   ///
   /// In en, this message translates to:
   /// **'Leave empty to use the TV\'s own name, {tvName}.'**
   String editDeviceNameHelp(String tvName);
 
-  /// Nickname validation.
+  /// Error under the Edit TV nickname field when the nickname is longer than 40 characters.
   ///
   /// In en, this message translates to:
   /// **'Use 40 characters or fewer.'**
   String get editDeviceNameError;
 
-  /// MAC section header.
+  /// Header of the Edit TV section where the user enters the MAC address used to wake the TV.
   ///
   /// In en, this message translates to:
   /// **'Turn on from your phone'**
   String get editDeviceWolTitle;
 
-  /// MAC section text.
+  /// Text of the Edit TV section that explains why to enter the TV's MAC address.
   ///
   /// In en, this message translates to:
   /// **'Add the TV\'s MAC address so the power key can wake it from standby.'**
@@ -1768,7 +1768,7 @@ abstract class AppLocalizations {
   /// **'Last address: {host}'**
   String editDeviceLastAddress(String host);
 
-  /// Snackbar after saving.
+  /// Snackbar shown on the Edit TV page after the user's changes are saved.
   ///
   /// In en, this message translates to:
   /// **'Saved'**
@@ -1780,7 +1780,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save. Try again.'**
   String get editDeviceSaveFailed;
 
-  /// Destructive button.
+  /// Destructive button at the bottom of the Edit TV page that removes the TV from this phone.
   ///
   /// In en, this message translates to:
   /// **'Remove TV'**
@@ -1792,25 +1792,25 @@ abstract class AppLocalizations {
   /// **'Couldn\'t remove this TV. Try again.'**
   String get editDeviceRemoveFailed;
 
-  /// Confirmation title.
+  /// Title of the dialog that asks the user to confirm removing the TV {tvName}.
   ///
   /// In en, this message translates to:
   /// **'Remove {tvName}?'**
   String editDeviceRemoveTitle(String tvName);
 
-  /// Confirmation body.
+  /// Body of the dialog that asks the user to confirm removing a TV from this phone.
   ///
   /// In en, this message translates to:
   /// **'This phone forgets the TV and its settings. To use it again, pair it with a new code. The TV may still list this phone.'**
   String get editDeviceRemoveBody;
 
-  /// Destructive confirm action.
+  /// Destructive button of the remove-TV dialog that removes the TV from this phone.
   ///
   /// In en, this message translates to:
   /// **'Remove'**
   String get editDeviceRemoveConfirm;
 
-  /// Snackbar after removing.
+  /// Snackbar shown on Your TVs after the TV {tvName} was removed from this phone.
   ///
   /// In en, this message translates to:
   /// **'{tvName} removed'**
@@ -1834,61 +1834,61 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open this TV. Try again.'**
   String get discoverOpenFailed;
 
-  /// Hub section header.
+  /// Section header on the Settings page above the remote layout and behaviour rows.
   ///
   /// In en, this message translates to:
   /// **'Remote'**
   String get settingsSectionRemote;
 
-  /// Hub section header.
+  /// Section header on the Settings page above the app-wide rows such as appearance and privacy.
   ///
   /// In en, this message translates to:
   /// **'App'**
   String get settingsSectionApp;
 
-  /// Hub section header.
+  /// Section header on the Settings page above the help and feedback rows.
   ///
   /// In en, this message translates to:
   /// **'Help and feedback'**
   String get settingsSectionSupport;
 
-  /// Hub section header.
+  /// Section header on the Settings page above the About row.
   ///
   /// In en, this message translates to:
   /// **'About'**
   String get settingsSectionAbout;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Remote layout row on the Settings page, saying what that page changes.
   ///
   /// In en, this message translates to:
   /// **'Touchpad or D-pad, and the row of keys above it'**
   String get settingsRemoteLayoutSubtitle;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Remote behaviour row on the Settings page, listing what that page changes.
   ///
   /// In en, this message translates to:
   /// **'Vibration, Smooth Press, screen and keyboard'**
   String get settingsRemoteBehaviourSubtitle;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Apps row on the Settings page, which opens Edit apps.
   ///
   /// In en, this message translates to:
   /// **'Choose and order your app shortcuts'**
   String get settingsAppsSubtitle;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Your TVs row on the Settings page, listing what the user can do there.
   ///
   /// In en, this message translates to:
   /// **'Rename, remove, or turn on from your phone'**
   String get settingsDevicesSubtitle;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Appearance row on the Settings page, listing what that page changes.
   ///
   /// In en, this message translates to:
   /// **'Theme and language'**
   String get settingsAppearanceSubtitle;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Help row on the Settings page.
   ///
   /// In en, this message translates to:
   /// **'Common questions and troubleshooting'**
@@ -1900,13 +1900,13 @@ abstract class AppLocalizations {
   /// **'Send feedback'**
   String get settingsFeedback;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Send feedback row on the Settings page, which opens the email app.
   ///
   /// In en, this message translates to:
   /// **'Write to us by email'**
   String get settingsFeedbackSubtitle;
 
-  /// Hub row subtitle.
+  /// Subtitle of the About row on the Settings page.
   ///
   /// In en, this message translates to:
   /// **'Version and licences'**
@@ -1930,49 +1930,49 @@ abstract class AppLocalizations {
   /// **'Opens in your browser'**
   String get settingsOpensInBrowser;
 
-  /// Link failed.
+  /// Snackbar shown in Settings when a web page, such as the privacy policy, can't be opened.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t open the page. Check your internet connection and try again.'**
   String get settingsLinkFailed;
 
-  /// Group label.
+  /// Label of the light, dark or system theme choices on the Appearance page.
   ///
   /// In en, this message translates to:
   /// **'Theme'**
   String get appearanceTheme;
 
-  /// Theme choice.
+  /// Theme choice on the Appearance page that follows the phone's own light or dark setting.
   ///
   /// In en, this message translates to:
   /// **'Same as phone'**
   String get appearanceThemeSystem;
 
-  /// Theme choice.
+  /// Theme choice on the Appearance page for the light theme.
   ///
   /// In en, this message translates to:
   /// **'Light'**
   String get appearanceThemeLight;
 
-  /// Theme choice.
+  /// Theme choice on the Appearance page for the dark theme.
   ///
   /// In en, this message translates to:
   /// **'Dark'**
   String get appearanceThemeDark;
 
-  /// Switch title.
+  /// Title of the Appearance page switch that takes the app's colours from the phone's wallpaper.
   ///
   /// In en, this message translates to:
   /// **'Colours from wallpaper'**
   String get appearanceDynamicColour;
 
-  /// Switch subtitle.
+  /// Subtitle of the Appearance page switch that takes the app's colours from the wallpaper.
   ///
   /// In en, this message translates to:
   /// **'Use your phone\'s wallpaper colours in the app.'**
   String get appearanceDynamicColourSubtitle;
 
-  /// Group label.
+  /// Label of the language choices on the Appearance page.
   ///
   /// In en, this message translates to:
   /// **'Language'**
@@ -1996,7 +1996,7 @@ abstract class AppLocalizations {
   /// **'Preview of the remote with these choices'**
   String get layoutPreviewSemantics;
 
-  /// Group label.
+  /// Label of the touchpad or D-pad choice on the Remote layout page.
   ///
   /// In en, this message translates to:
   /// **'Navigation'**
@@ -2014,19 +2014,19 @@ abstract class AppLocalizations {
   /// **'Arrow keys around an OK button, like a TV remote.'**
   String get layoutDpadSubtitle;
 
-  /// Group label.
+  /// Label of the choices for the row shown above the touchpad or D-pad on the Remote layout page.
   ///
   /// In en, this message translates to:
   /// **'Row above the pad'**
   String get layoutQuickAccess;
 
-  /// Choice title.
+  /// Remote layout choice that shows the user's app shortcuts in the row above the pad.
   ///
   /// In en, this message translates to:
   /// **'App shortcuts'**
   String get layoutQuickApps;
 
-  /// Choice subtitle.
+  /// Subtitle of the Remote layout choice that shows app shortcuts above the pad.
   ///
   /// In en, this message translates to:
   /// **'Open your TV apps with one tap.'**
@@ -2044,85 +2044,85 @@ abstract class AppLocalizations {
   /// **'Previous, rewind, play or pause, fast-forward and next.'**
   String get layoutQuickMediaSubtitle;
 
-  /// Choice title.
+  /// Remote layout choice that shows nothing in the row above the pad.
   ///
   /// In en, this message translates to:
   /// **'Nothing'**
   String get layoutQuickNone;
 
-  /// Choice subtitle.
+  /// Subtitle of the Remote layout choice that shows nothing above the pad.
   ///
   /// In en, this message translates to:
   /// **'More room for the touchpad or D-pad.'**
   String get layoutQuickNoneSubtitle;
 
-  /// Switch.
+  /// Title of the Remote behaviour switch that makes the phone vibrate on each key press.
   ///
   /// In en, this message translates to:
   /// **'Vibrate on key press'**
   String get behaviourHaptics;
 
-  /// Switch subtitle.
+  /// Subtitle of the Remote behaviour switch that makes the phone vibrate on each key press.
   ///
   /// In en, this message translates to:
   /// **'A short vibration when a key reaches the TV.'**
   String get behaviourHapticsSubtitle;
 
-  /// Switch.
+  /// Title of the Remote behaviour switch for Smooth Press, the app's own name for held keys.
   ///
   /// In en, this message translates to:
   /// **'Smooth Press'**
   String get behaviourSmoothPress;
 
-  /// Switch subtitle.
+  /// Subtitle of the Remote behaviour switch for Smooth Press, explaining what holding a key does.
   ///
   /// In en, this message translates to:
   /// **'Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.'**
   String get behaviourSmoothPressSubtitle;
 
-  /// Switch.
+  /// Title of the Remote behaviour switch that keeps the phone's screen on while the remote is open.
   ///
   /// In en, this message translates to:
   /// **'Keep screen on'**
   String get behaviourKeepAwake;
 
-  /// Switch subtitle.
+  /// Subtitle of the Remote behaviour switch that keeps the phone's screen on.
   ///
   /// In en, this message translates to:
   /// **'Your phone\'s screen stays on while the remote is open.'**
   String get behaviourKeepAwakeSubtitle;
 
-  /// Switch.
+  /// Title of the Remote behaviour switch for Theater mode, which dims the phone while watching.
   ///
   /// In en, this message translates to:
   /// **'Theater mode'**
   String get behaviourTheater;
 
-  /// Switch subtitle.
+  /// Subtitle of the Remote behaviour switch for Theater mode, explaining the dimming.
   ///
   /// In en, this message translates to:
   /// **'Dims your phone after 30 seconds without a touch. The first touch only brightens it.'**
   String get behaviourTheaterSubtitle;
 
-  /// Switch.
+  /// Title of the Remote behaviour switch that opens the keyboard when the TV asks for text.
   ///
   /// In en, this message translates to:
   /// **'Open keyboard automatically'**
   String get behaviourAutoKeyboard;
 
-  /// Switch subtitle.
+  /// Subtitle of the Remote behaviour switch that opens the keyboard automatically.
   ///
   /// In en, this message translates to:
   /// **'Opens the keyboard when the TV asks for text, like in a search box.'**
   String get behaviourAutoKeyboardSubtitle;
 
-  /// Help card title.
+  /// Title of the card at the top of the Help page that opens the troubleshooting steps.
   ///
   /// In en, this message translates to:
   /// **'Can\'t connect?'**
   String get helpCantConnectTitle;
 
-  /// Help card text.
+  /// Text of the card at the top of the Help page that opens the troubleshooting steps.
   ///
   /// In en, this message translates to:
   /// **'Go through the checks one at a time. Most problems come from the Wi-Fi network or the TV\'s remote service.'**
@@ -2134,7 +2134,7 @@ abstract class AppLocalizations {
   /// **'Show troubleshooting steps'**
   String get helpTroubleshootingAction;
 
-  /// FAQ header.
+  /// Header on the Help page above the frequently asked questions.
   ///
   /// In en, this message translates to:
   /// **'Common questions'**
@@ -2146,85 +2146,85 @@ abstract class AppLocalizations {
   /// **'Still stuck?'**
   String get helpStillStuck;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about which TVs the app works with.
   ///
   /// In en, this message translates to:
   /// **'Which TVs does this app work with?'**
   String get faqTvsQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about which TVs the app works with.
   ///
   /// In en, this message translates to:
   /// **'TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can\'t be controlled by this app.'**
   String get faqTvsA;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about a TV that discovery doesn't find.
   ///
   /// In en, this message translates to:
   /// **'My TV isn\'t in the list.'**
   String get faqNotFoundQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about a TV that discovery doesn't find.
   ///
   /// In en, this message translates to:
   /// **'Make sure the TV is on and connected to the same Wi-Fi as your phone, and that \"Android TV Remote Service\" is up to date on the TV. You can also add the TV by its IP address. The troubleshooting steps go through each check.'**
   String get faqNotFoundA;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about why the TV asks for a pairing code again.
   ///
   /// In en, this message translates to:
   /// **'Why does the TV ask for a code again?'**
   String get faqCodeQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about why the TV asks for a pairing code again.
   ///
   /// In en, this message translates to:
   /// **'Pairing makes the TV and this phone trust each other. Clearing the app\'s data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.'**
   String get faqCodeA;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about why the app can't turn the TV on.
   ///
   /// In en, this message translates to:
   /// **'Why can\'t the app turn my TV on?'**
   String get faqPowerQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about why the app can't turn the TV on.
   ///
   /// In en, this message translates to:
   /// **'A TV that is fully off can\'t hear the app. The app can send a wake-up signal if you add the TV\'s MAC address under Settings → Your TVs, but some TVs ignore it in deep standby. On iPhone this isn\'t available yet.'**
   String get faqPowerA;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about typed text that doesn't reach the TV.
   ///
   /// In en, this message translates to:
   /// **'What I type doesn\'t show up on the TV.'**
   String get faqTypingQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about typed text that doesn't reach the TV.
   ///
   /// In en, this message translates to:
   /// **'Select a text field on the TV first, such as a search box. When the TV asks for text, the keyboard opens on your phone by itself.'**
   String get faqTypingA;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about an app shortcut that doesn't open on the TV.
   ///
   /// In en, this message translates to:
   /// **'An app shortcut doesn\'t open.'**
   String get faqAppQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about an app shortcut that doesn't open on the TV.
   ///
   /// In en, this message translates to:
   /// **'The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.'**
   String get faqAppA;
 
-  /// FAQ question.
+  /// Question in the Help page's FAQ about what the app keeps about the user's TV.
   ///
   /// In en, this message translates to:
   /// **'What does the app keep about my TV?'**
   String get faqPrivacyQ;
 
-  /// FAQ answer.
+  /// Answer in the Help page's FAQ about what the app keeps about the user's TV.
   ///
   /// In en, this message translates to:
   /// **'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.'**
@@ -2242,7 +2242,7 @@ abstract class AppLocalizations {
   /// **'Your TVs and their pairing stay on the phone you paired them with. They aren\'t copied by backups or when you move to a new phone, so pair each TV again on the new phone.'**
   String get faqNewPhoneA;
 
-  /// About page.
+  /// Line on the About page with the app's {version} name and {build} number.
   ///
   /// In en, this message translates to:
   /// **'Version {version} ({build})'**
@@ -2260,25 +2260,25 @@ abstract class AppLocalizations {
   /// **'Open-source licences'**
   String get aboutLicences;
 
-  /// About page credit.
+  /// Credit on the About page saying how the app talks to the TV.
   ///
   /// In en, this message translates to:
   /// **'Talks to your TV over Wi-Fi with the Android TV Remote protocol. Its message formats come from the open-source androidtvremote2 project.'**
   String get aboutProtocol;
 
-  /// About page disclaimer.
+  /// Trademark disclaimer at the bottom of the About page; keep the trademark names exact.
   ///
   /// In en, this message translates to:
   /// **'Android TV and Google TV are trademarks of Google LLC. This app isn\'t made or endorsed by Google.'**
   String get aboutTrademark;
 
-  /// Feedback dialog title.
+  /// Title of the dialog shown before the email app opens to send feedback.
   ///
   /// In en, this message translates to:
   /// **'Send feedback?'**
   String get feedbackTitle;
 
-  /// Feedback dialog body.
+  /// Body of the dialog shown before the email app opens to send feedback, saying what the email includes.
   ///
   /// In en, this message translates to:
   /// **'Your email app opens with a message to us. It includes the app version and your phone\'s system version, and nothing about your TV.'**
@@ -2290,7 +2290,7 @@ abstract class AppLocalizations {
   /// **'Write email'**
   String get feedbackConfirm;
 
-  /// Email subject.
+  /// Subject line of the feedback email, with the app's {appName} and {version}.
   ///
   /// In en, this message translates to:
   /// **'Feedback on {appName} {version}'**
@@ -2326,7 +2326,7 @@ abstract class AppLocalizations {
   /// **'Privacy choices'**
   String get pageTitlePrivacyChoices;
 
-  /// Hub row subtitle.
+  /// Subtitle of the Privacy choices row on the Settings page, listing what that page controls.
   ///
   /// In en, this message translates to:
   /// **'Usage statistics, crash reports and ads'**
@@ -2344,37 +2344,37 @@ abstract class AppLocalizations {
   /// **'Test crash report sent. It shows in Crashlytics within a few minutes.'**
   String get aboutTestCrashSent;
 
-  /// Page intro.
+  /// Introduction at the top of the Privacy choices page; it promises that TV data stays on the phone.
   ///
   /// In en, this message translates to:
   /// **'Choose what the app may share. Your TV\'s name, network address and MAC address never leave this phone.'**
   String get privacyIntro;
 
-  /// Section header.
+  /// Section header on the Privacy choices page above the usage and crash report switches.
   ///
   /// In en, this message translates to:
   /// **'Help improve the app'**
   String get privacySectionImprove;
 
-  /// Switch.
+  /// Title of the Privacy choices switch that shares anonymous usage statistics.
   ///
   /// In en, this message translates to:
   /// **'Share usage statistics'**
   String get privacyUsageTitle;
 
-  /// Switch subtitle.
+  /// Subtitle of the Privacy choices switch that shares anonymous usage statistics.
   ///
   /// In en, this message translates to:
   /// **'Anonymous counts of the screens and features you use. Never what you type or anything about your TV.'**
   String get privacyUsageSubtitle;
 
-  /// Switch.
+  /// Title of the Privacy choices switch that shares crash reports.
   ///
   /// In en, this message translates to:
   /// **'Share crash reports'**
   String get privacyCrashTitle;
 
-  /// Switch subtitle.
+  /// Subtitle of the Privacy choices switch that shares crash reports, saying what is left out of them.
   ///
   /// In en, this message translates to:
   /// **'Sent when something goes wrong, so it can be fixed. Names, addresses and codes are removed first.'**
@@ -2386,7 +2386,7 @@ abstract class AppLocalizations {
   /// **'This build of the app doesn\'t send usage statistics or crash reports.'**
   String get privacyServicesOff;
 
-  /// Section header.
+  /// Section header on the Privacy choices page above the ad choices.
   ///
   /// In en, this message translates to:
   /// **'Ads'**
@@ -2410,13 +2410,13 @@ abstract class AppLocalizations {
   /// **'Ad privacy choices'**
   String get privacyAdChoices;
 
-  /// Row subtitle.
+  /// Subtitle of the Privacy choices row that opens the ad consent form.
   ///
   /// In en, this message translates to:
   /// **'Choose how ads are picked for you.'**
   String get privacyAdChoicesSubtitle;
 
-  /// Snackbar.
+  /// Snackbar on the Privacy choices page when the ad consent form can't be opened.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t open ad privacy choices. Check your internet connection and try again.'**
@@ -2428,31 +2428,31 @@ abstract class AppLocalizations {
   /// **'Remove ads with Premium'**
   String get privacyRemoveAds;
 
-  /// IOS status row.
+  /// Title of the Privacy choices row, on iPhone only, that shows the ad tracking answer.
   ///
   /// In en, this message translates to:
   /// **'Ad tracking'**
   String get privacyTrackingTitle;
 
-  /// Row subtitle.
+  /// Subtitle of the iPhone ad tracking row when the user allowed tracking.
   ///
   /// In en, this message translates to:
   /// **'Allowed. You can change this in your iPhone\'s Settings.'**
   String get privacyTrackingAllowed;
 
-  /// Row subtitle.
+  /// Subtitle of the iPhone ad tracking row when the user did not allow tracking.
   ///
   /// In en, this message translates to:
   /// **'Not allowed. You can change this in your iPhone\'s Settings.'**
   String get privacyTrackingDenied;
 
-  /// Row subtitle.
+  /// Subtitle of the iPhone ad tracking row when the user has not answered yet.
   ///
   /// In en, this message translates to:
   /// **'Not chosen yet. The app asks before it first shows an ad.'**
   String get privacyTrackingNotDetermined;
 
-  /// Row subtitle.
+  /// Subtitle of the iPhone ad tracking row when tracking is turned off for the whole device.
   ///
   /// In en, this message translates to:
   /// **'Turned off on this iPhone.'**
@@ -2464,19 +2464,19 @@ abstract class AppLocalizations {
   /// **'Opens your phone\'s Settings'**
   String get privacyOpensSettings;
 
-  /// Dialog title.
+  /// Title of the dialog shown on iPhone before the system asks about ad tracking.
   ///
   /// In en, this message translates to:
   /// **'About ads in this app'**
   String get trackingPrepromptTitle;
 
-  /// Dialog body.
+  /// Body of the dialog shown on iPhone before the system asks about ad tracking.
   ///
   /// In en, this message translates to:
   /// **'The free app shows a small ad at the bottom of this screen. Next, your iPhone asks whether the app may use your activity in other apps to choose ads. You see the same number of ads whatever you choose, and the remote works the same.'**
   String get trackingPrepromptBody;
 
-  /// The only action.
+  /// The only button of the dialog shown on iPhone before the system asks about ad tracking.
   ///
   /// In en, this message translates to:
   /// **'Continue'**
@@ -2488,7 +2488,7 @@ abstract class AppLocalizations {
   /// **'Advertisement'**
   String get adLabel;
 
-  /// Headline.
+  /// Headline at the top of the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Make the remote yours'**
@@ -2500,97 +2500,97 @@ abstract class AppLocalizations {
   /// **'Premium removes ads, adds colour styles and supports the app\'s development.'**
   String get paywallSubhead;
 
-  /// Benefit title.
+  /// Title of the Premium page benefit that removes the ads.
   ///
   /// In en, this message translates to:
   /// **'No ads'**
   String get paywallBenefitNoAds;
 
-  /// Benefit text.
+  /// Text of the Premium page benefit that removes the ads, saying where ads show.
   ///
   /// In en, this message translates to:
   /// **'No banner on the Apps and Settings screens.'**
   String get paywallBenefitNoAdsBody;
 
-  /// Benefit title.
+  /// Title of the Premium page benefit that unlocks the colour styles.
   ///
   /// In en, this message translates to:
   /// **'Colour styles'**
   String get paywallBenefitStyles;
 
-  /// Benefit text.
+  /// Text of the Premium page benefit that unlocks the colour styles; keep the style names.
   ///
   /// In en, this message translates to:
   /// **'Ocean, Ember and Midnight, in light and dark.'**
   String get paywallBenefitStylesBody;
 
-  /// Honest note.
+  /// Note on the Premium page that says what stays free without Premium.
   ///
   /// In en, this message translates to:
   /// **'Everything else stays free: every TV, every remote control, app shortcuts, the keyboard and turning your TV on.'**
   String get paywallFreeForever;
 
-  /// Radio group label.
+  /// Label of the plan choices on the Premium page, read out with the radio group.
   ///
   /// In en, this message translates to:
   /// **'Choose a plan'**
   String get paywallChoosePlan;
 
-  /// Plan title.
+  /// Title of the monthly subscription plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Monthly'**
   String get paywallPlanMonthly;
 
-  /// Plan title.
+  /// Title of the yearly subscription plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Yearly'**
   String get paywallPlanYearly;
 
-  /// Plan title.
+  /// Title of the one-payment lifetime plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Lifetime'**
   String get paywallPlanLifetime;
 
-  /// Plan price.
+  /// Price line of the monthly plan on the Premium page; {price} is the store's price.
   ///
   /// In en, this message translates to:
   /// **'{price} per month'**
   String paywallPricePerMonth(String price);
 
-  /// Plan price.
+  /// Price line of the yearly plan on the Premium page; {price} is the store's price.
   ///
   /// In en, this message translates to:
   /// **'{price} per year'**
   String paywallPricePerYear(String price);
 
-  /// Lifetime price.
+  /// Price line of the lifetime plan on the Premium page; {price} is the store's price.
   ///
   /// In en, this message translates to:
   /// **'{price}, one payment'**
   String paywallPriceOnce(String price);
 
-  /// Monthly terms.
+  /// Terms under the monthly plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Renews every month until you cancel.'**
   String get paywallRenewsMonthly;
 
-  /// Yearly terms.
+  /// Terms under the yearly plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Renews every year until you cancel.'**
   String get paywallRenewsYearly;
 
-  /// Lifetime terms.
+  /// Terms under the lifetime plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Pay once. No subscription.'**
   String get paywallLifetimeTerms;
 
-  /// Badge on yearly.
+  /// Badge on the yearly plan on the Premium page.
   ///
   /// In en, this message translates to:
   /// **'Best value'**
@@ -2602,37 +2602,37 @@ abstract class AppLocalizations {
   /// **'Save {percent}%'**
   String paywallSavePercent(int percent);
 
-  /// Purchase button.
+  /// Purchase button on the Premium page that buys the chosen plan.
   ///
   /// In en, this message translates to:
   /// **'Continue'**
   String get paywallContinue;
 
-  /// Restore button.
+  /// Button on the Premium page that restores earlier purchases.
   ///
   /// In en, this message translates to:
   /// **'Restore purchases'**
   String get paywallRestore;
 
-  /// Billing terms, Android.
+  /// Billing terms at the bottom of the Premium page on Android; keep Google Play exact.
   ///
   /// In en, this message translates to:
   /// **'Payment is charged to your Google Play account. Subscriptions renew automatically until you cancel them in Google Play, and you keep Premium until the end of the period you paid for.'**
   String get paywallTermsAndroid;
 
-  /// Billing terms, iOS.
+  /// Billing terms at the bottom of the Premium page on iPhone; keep Apple ID exact.
   ///
   /// In en, this message translates to:
   /// **'Payment is charged to your Apple ID. Subscriptions renew automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel them in your Apple ID settings.'**
   String get paywallTermsIos;
 
-  /// Loading state.
+  /// Shown on the Premium page while the plans load from the store.
   ///
   /// In en, this message translates to:
   /// **'Loading plans…'**
   String get paywallLoading;
 
-  /// No offering.
+  /// Title on the Premium page when the store offers no plans right now.
   ///
   /// In en, this message translates to:
   /// **'Premium isn\'t available right now'**
@@ -2644,7 +2644,7 @@ abstract class AppLocalizations {
   /// **'Check your internet connection and try again.'**
   String get paywallUnavailableBody;
 
-  /// In progress.
+  /// Shown on the Premium page while the store confirms a purchase.
   ///
   /// In en, this message translates to:
   /// **'Confirming your purchase…'**
@@ -2662,7 +2662,7 @@ abstract class AppLocalizations {
   /// **'Welcome to Premium. Thank you!'**
   String get paywallWelcome;
 
-  /// Pending purchase.
+  /// Shown on the Premium page when a purchase waits for approval, such as by a parent.
   ///
   /// In en, this message translates to:
   /// **'Your purchase is waiting for approval. Premium starts as soon as it\'s complete.'**
@@ -2674,55 +2674,55 @@ abstract class AppLocalizations {
   /// **'The purchase didn\'t go through. Try again.'**
   String get paywallFailed;
 
-  /// Network failure.
+  /// Shown on the Premium page when the store can't be reached.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t reach the store. Check your internet connection and try again.'**
   String get paywallNetworkError;
 
-  /// Purchases disabled.
+  /// Shown on the Premium page when purchases are turned off on this phone.
   ///
   /// In en, this message translates to:
   /// **'Purchases aren\'t allowed on this phone.'**
   String get paywallNotAllowed;
 
-  /// Already owned.
+  /// Shown on the Premium page when the user tries to buy Premium they already own.
   ///
   /// In en, this message translates to:
   /// **'You already own Premium. Tap Restore purchases to get it back.'**
   String get paywallAlreadyOwned;
 
-  /// Restore success.
+  /// Shown on the Premium page after a restore found the user's Premium.
   ///
   /// In en, this message translates to:
   /// **'Purchases restored. You have Premium.'**
   String get paywallRestored;
 
-  /// Restore found nothing.
+  /// Shown on the Premium page after a restore found no purchases.
   ///
   /// In en, this message translates to:
   /// **'No purchases found for this account.'**
   String get paywallNothingToRestore;
 
-  /// Restore failed.
+  /// Shown on the Premium page when restoring purchases failed.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t restore purchases. Try again.'**
   String get paywallRestoreFailed;
 
-  /// Already-Premium state.
+  /// Title of the Premium page when the user already has Premium.
   ///
   /// In en, this message translates to:
   /// **'You have Premium'**
   String get paywallActiveTitle;
 
-  /// Already-Premium state.
+  /// Body of the Premium page when the user already has Premium.
   ///
   /// In en, this message translates to:
   /// **'Thank you for supporting the app. There are no ads, and every colour style is yours.'**
   String get paywallActiveBody;
 
-  /// Already Premium, lifetime.
+  /// Line on the Premium page when the user owns lifetime Premium.
   ///
   /// In en, this message translates to:
   /// **'Lifetime Premium: it never expires.'**
@@ -2734,31 +2734,31 @@ abstract class AppLocalizations {
   /// **'Manage subscription'**
   String get paywallManageSubscription;
 
-  /// Group label.
+  /// Label of the colour style choices on the Appearance page.
   ///
   /// In en, this message translates to:
   /// **'Colour style'**
   String get appearanceStyle;
 
-  /// Style name.
+  /// Name of the app's standard colour style on the Appearance page.
   ///
   /// In en, this message translates to:
   /// **'Standard'**
   String get appearanceStyleStandard;
 
-  /// Style name.
+  /// Name of the Ocean colour style on the Appearance page, a Premium style.
   ///
   /// In en, this message translates to:
   /// **'Ocean'**
   String get appearanceStyleOcean;
 
-  /// Style name.
+  /// Name of the Ember colour style on the Appearance page, a Premium style.
   ///
   /// In en, this message translates to:
   /// **'Ember'**
   String get appearanceStyleEmber;
 
-  /// Style name.
+  /// Name of the Midnight colour style on the Appearance page, a Premium style.
   ///
   /// In en, this message translates to:
   /// **'Midnight'**
@@ -2776,13 +2776,13 @@ abstract class AppLocalizations {
   /// **'Colours from wallpaper are on, so colour styles don\'t show.'**
   String get appearanceStyleWallpaperOn;
 
-  /// Blocking screen title.
+  /// Title of the full-screen page that blocks the app until the user updates it.
   ///
   /// In en, this message translates to:
   /// **'Update required'**
   String get updateRequiredTitle;
 
-  /// Blocking screen text.
+  /// Text of the full-screen page that blocks the app until the user updates it.
   ///
   /// In en, this message translates to:
   /// **'This version of the app is too old to keep working reliably. Update to the latest version to continue.'**

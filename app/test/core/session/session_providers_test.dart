@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
@@ -41,7 +40,6 @@ void main() {
   late FakeRemoteClients clients;
   late ManualSessionSignals signals;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);
@@ -74,19 +72,25 @@ void main() {
 
   /// A container for a `fakeAsync` test: the TVs live in an in-memory
   /// repository, because drift's database runs on real time. Create it inside
-  /// the `fakeAsync` callback.
+  /// the `fakeAsync` callback. It is disposed when the test ends, also when
+  /// an `expect` inside `fakeAsync` failed first; disposing it again earlier
+  /// is fine.
   ProviderContainer fakeTimeContainer(
     List<SavedDevice> devices, {
     IdentityStore? identityStore,
     SessionTiming timing = const SessionTiming(),
-  }) => ProviderContainer(
-    overrides: [
-      ...overrides(identityStore: identityStore, timing: timing),
-      deviceRepositoryProvider.overrideWithValue(
-        InMemoryDeviceRepository(devices),
-      ),
-    ],
-  );
+  }) {
+    final container = ProviderContainer(
+      overrides: [
+        ...overrides(identityStore: identityStore, timing: timing),
+        deviceRepositoryProvider.overrideWithValue(
+          InMemoryDeviceRepository(devices),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    return container;
+  }
 
   Future<void> saveTwo() async {
     await repo.upsert(
@@ -605,7 +609,6 @@ void main() {
     test(
       'a_session_built_in_the_background_starts_its_grace_at_provider_level',
       () async {
-        late ProviderContainer container;
         fakeAsync((async) {
           signals = ManualSessionSignals(initial: AppVisibility.background);
           final c = fakeTimeContainer([savedTv(name: 'a')])
@@ -623,13 +626,13 @@ void main() {
             ..flushMicrotasks();
           expect(session.current.status, ConnectionStatus.disconnected);
           expect(clients.created, hasLength(1));
-          container = c;
         });
         // The client's close continues on a root-zone future, which runs on
-        // the real microtask queue, outside fake time.
+        // the real microtask queue, outside fake time. So this only proves
+        // the grace closed the client at some point; the 59 s and 60 s
+        // status checks above carry the timing.
         await pumpEventQueue();
         expect(clients.created.single.closed, isTrue);
-        container.dispose();
       },
     );
   });

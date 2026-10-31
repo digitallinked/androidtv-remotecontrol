@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -126,7 +125,6 @@ void main() {
   });
 
   group('StartupGate', () {
-    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
       SharedPreferencesAsyncPlatform.instance =
           InMemorySharedPreferencesAsync.empty();
@@ -249,7 +247,6 @@ void main() {
     });
   });
   group('Firebase startup', () {
-    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
       SharedPreferencesAsyncPlatform.instance =
           InMemorySharedPreferencesAsync.empty();
@@ -469,7 +466,6 @@ void main() {
   });
 
   group('Remote Config startup', () {
-    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
       SharedPreferencesAsyncPlatform.instance =
           InMemorySharedPreferencesAsync.empty();
@@ -630,7 +626,6 @@ void main() {
   });
 
   group('Launch count', () {
-    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
       SharedPreferencesAsyncPlatform.instance =
           InMemorySharedPreferencesAsync.empty();
@@ -749,7 +744,6 @@ void main() {
   });
 
   group('Crashlytics reporter', () {
-    setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
     setUp(() {
       SharedPreferencesAsyncPlatform.instance =
           InMemorySharedPreferencesAsync.empty();

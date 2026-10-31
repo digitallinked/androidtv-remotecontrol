@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -493,8 +492,6 @@ class _AppearanceScope extends StatelessWidget {
 }
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   for (final b in Brightness.values) {
     for (final name in _screens.keys) {
       final description = '${name}_meets_the_guidelines_${b.name}';

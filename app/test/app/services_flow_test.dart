@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show InternetAddress, SocketException;
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +69,6 @@ void main() {
   late RecordingAnalyticsSink sink;
   late RecordingCrashlyticsSink crashSink;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     _reached.clear();
     devices = InMemoryDeviceRepository();

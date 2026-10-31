@@ -9,9 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/router.dart';
-import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -21,6 +19,7 @@ import 'package:tv_remote/features/remote/application/remote_actions.dart';
 import '../helpers/in_memory_device_repository.dart';
 import '../helpers/paired_fake_tv.dart';
 import '../helpers/pump_router_app.dart';
+import '../helpers/real_remote_client.dart';
 import '../helpers/wait_for.dart';
 
 /// Ruling P8-R5: key-press-to-send stays under 30 ms at the 95th
@@ -85,15 +84,7 @@ void main() {
               InMemoryDeviceRepository([device]),
             ),
             // The app's real client, as production builds it.
-            remoteClientFactoryProvider.overrideWithValue(
-              ({required host, required port, required identity}) =>
-                  RemoteClient(
-                    host: host,
-                    port: port,
-                    identity: identity,
-                    deviceInfo: deviceInfoFor(Flavor.dev),
-                  ),
-            ),
+            realRemoteClients(),
           ],
         ),
       );

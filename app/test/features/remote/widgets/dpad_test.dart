@@ -276,11 +276,13 @@ void main() {
         matching: find.byType(CustomPaint),
       ),
     );
-    // The painter is private; `pressed` is what it tints.
-    return (paint.painter! as dynamic).pressed as DpadRegion?;
+    return dpadTintedRegion(paint.painter);
   }
 
   testWidgets('hold_starts_on_the_region_the_finger_went_down_on', (t) async {
+    // A pin against a "where the finger is now" design; it passes without
+    // the _downRegion fix too. The regression test for that fix is
+    // a_hold_keeps_its_down_region_when_the_pad_resizes, below.
     await pumpPad(t);
     // 8 dp outside the 54 dp OK disc of a 300 dp pad: Up.
     final g = await t.startGesture(centre(t) + const Offset(0, -62));
@@ -325,7 +327,13 @@ void main() {
     ]);
   });
 
-  testWidgets('dpad_clamps_to_100x100', (t) async {
+  // RemoteBody never gives the pad less than 160 dp; this is the floor the
+  // pad itself clamps to. At 100 dp the OK disc keeps 56 dp and each wedge is
+  // at least 48 dp across its middle, but only about 22 dp deep: below
+  // 160 dp the wedges are not full 48 dp touch targets.
+  testWidgets('dpad_clamps_to_100x100_with_wide_but_shallow_wedges', (
+    t,
+  ) async {
     await pumpPad(t, side: 100);
     expect(t.takeException(), isNull);
     final size = t.getSize(
@@ -337,10 +345,12 @@ void main() {
     expect(size, const Size(100, 100));
 
     // The OK disc keeps its 56 dp; each wedge is at least 48 dp across its
-    // middle, where its tap lands.
+    // middle, where its tap lands (measured along that chord only).
     const radius = 50.0;
     final okRadius = dpadCenterRadius(100);
     expect(okRadius * 2, greaterThanOrEqualTo(56));
+    // The depth from the OK disc to the edge: what the name calls shallow.
+    expect(radius - okRadius, 22);
     final mid = (okRadius + radius) / 2;
     for (final (region, along, across) in const [
       (DpadRegion.up, Offset(0, -1), Offset(1, 0)),

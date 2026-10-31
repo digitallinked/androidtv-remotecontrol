@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/session/no_retry.dart';
 
 part 'app_info.g.dart';
 
@@ -76,7 +77,7 @@ Future<({String os, String version})> _readOsVersion() async {
 /// longer than [osVersionTimeout], gives the platform strings. Package info
 /// that can't be read does fail it. Callers show "unavailable" and carry on;
 /// a retry would not help, so there isn't one.
-@Riverpod(keepAlive: true, retry: _noRetry)
+@Riverpod(keepAlive: true, retry: noRetry)
 Future<AppInfo> appInfo(Ref ref) async {
   final readOsVersion = ref.watch(osVersionReaderProvider);
   final package = await PackageInfo.fromPlatform();
@@ -99,5 +100,3 @@ Future<({String os, String version})> _osVersionOrFallback(
     return _platformOsVersion();
   }
 }
-
-Duration? _noRetry(int retryCount, Object error) => null;

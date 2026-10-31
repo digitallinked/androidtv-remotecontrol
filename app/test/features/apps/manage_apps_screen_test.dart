@@ -1,6 +1,5 @@
 import 'dart:ui' show Tristate;
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -15,6 +14,7 @@ import 'package:tv_remote/features/apps/presentation/manage_apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
 import '../../helpers/in_memory_shortcut_repository.dart';
+import '../../helpers/ink_features.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/test_catalogue.dart';
@@ -38,7 +38,6 @@ const _star = [
 void main() {
   // Some tests pump the screen twice, each time on a fresh in-memory
   // database: two databases at once are intended here.
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   late InMemoryShortcutRepository repo;
 
@@ -521,6 +520,55 @@ void main() {
     }
   });
 
+  testWidgets('a_stacked_edit_apps_row_drags_by_its_handle', (t) async {
+    t.view
+      // Tall enough that both rows are built: the list is lazy.
+      ..physicalSize = const Size(320, 1400)
+      ..devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await pumpManage(t, textScale: 2);
+    final before = stored();
+    final first = before[0];
+    final second = before[1];
+    final r = rowOf(t, first);
+    expect(r.controls[0].top, greaterThan(r.name.bottom), reason: 'stacked');
+
+    // Down to the second row's handle: into the second row's place.
+    final from = t.getCenter(find.bySemanticsLabel('Reorder $first'));
+    final to = t.getCenter(find.bySemanticsLabel('Reorder $second'));
+    await drag(t, first, Offset(0, to.dy - from.dy));
+
+    final after = [second, first, ...before.skip(2)];
+    expect(stored(), after);
+    expect(shown(t), after);
+  });
+
+  // The real row button, not a copy of its style (the Task 7.6 review): held
+  // under reduce motion it shows no pressed highlight, and on release it
+  // removes the app with Undo.
+  testWidgets('holding_the_real_remove_button_removes_with_undo', (t) async {
+    await pumpManage(t, disableAnimations: true);
+    final before = stored();
+    expect(before, contains('Netflix'));
+
+    final press = await t.startGesture(
+      t.getCenter(find.byTooltip('Remove Netflix')),
+    );
+    // Past the press timeout (the list scrolls, so tap-down waits for it)
+    // but short of a long press, which would show the tooltip instead.
+    await t.pump(kPressTimeout + const Duration(milliseconds: 1));
+    expectNoVisibleInk(t, 'remove pressed');
+    expect(stored(), before, reason: 'nothing happens until release');
+    await press.up();
+    await t.pumpAndSettle();
+
+    expect(stored(), isNot(contains('Netflix')));
+    expect(find.text('Netflix removed'), findsOneWidget);
+    await t.tap(find.widgetWithText(SnackBarAction, 'Undo'));
+    await t.pumpAndSettle();
+    expect(stored(), before);
+  });
+
   testWidgets('edit_apps_rows_stack_under_a_non_linear_text_scaler', (
     t,
   ) async {
@@ -706,6 +754,16 @@ void main() {
     await t.pump(const Duration(milliseconds: 16));
     expect(t.hasRunningAnimations, isFalse);
     // The list reports the move when the row lands.
+    expect(stored().first, 'Prime Video');
+  });
+
+  testWidgets('with_motion_the_reorder_drop_animates', (t) async {
+    // The control for the test above: the same drag and pumps, no flag.
+    await pumpManage(t);
+    await drag(t, 'Prime Video', const Offset(0, -140), settle: false);
+    await t.pump(const Duration(milliseconds: 16));
+    expect(t.hasRunningAnimations, isTrue);
+    await t.pumpAndSettle();
     expect(stored().first, 'Prime Video');
   });
 

@@ -18,6 +18,7 @@ import 'package:tv_remote/features/apps/presentation/apps_screen.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/remote_body.dart';
 
+import '../../helpers/disk_exception.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
@@ -45,12 +46,6 @@ class _FlakyShortcuts extends InMemoryShortcutRepository {
       broken ? Stream.error(StateError('disk')) : super.watchAll();
 }
 
-/// What drift's `SqliteException` is to Riverpod: an [Exception], which its
-/// default retry would re-run for ~38 s behind a spinner.
-class _DiskException implements Exception {
-  const _DiskException();
-}
-
 /// A shortcut store whose stream always fails with an [Exception], counting
 /// how often it is asked for.
 class _BrokenShortcuts extends InMemoryShortcutRepository {
@@ -59,7 +54,7 @@ class _BrokenShortcuts extends InMemoryShortcutRepository {
   @override
   Stream<List<AppEntry>> watchAll() {
     subscriptions++;
-    return Stream.error(const _DiskException());
+    return Stream.error(const DiskException());
   }
 }
 
@@ -425,6 +420,30 @@ void main() {
       ], expected);
     });
   }
+
+  // The name rank comes before the region: 'hotstar' starts a word of
+  // "Disney+ Hotstar" but is inside "JioHotstar", so even in India, where
+  // only JioHotstar is listed, Disney+ Hotstar comes first (Ruling P7-R10).
+  testWidgets('hotstar_in_india_lists_disney_plus_hotstar_first', (t) async {
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.apps,
+      prepareSettings: (store) => store.setShortcutsSeeded(true),
+      overrides: [
+        remoteSessionProvider.overrideWith((ref) async => fake),
+        shortcutRepositoryProvider.overrideWithValue(
+          InMemoryShortcutRepository(),
+        ),
+        deviceRegionProvider.overrideWithValue('IN'),
+      ],
+    );
+    await search(t, 'hotstar');
+    final names = [
+      for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
+        tile.app.name,
+    ];
+    expect(names, containsAllInOrder(['Disney+ Hotstar', 'JioHotstar']));
+  });
 
   testWidgets('your_apps_filter_ranks_prefix_first', (t) async {
     await pumpRouterApp(

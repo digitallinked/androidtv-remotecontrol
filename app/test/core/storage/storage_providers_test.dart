@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,8 +9,6 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
 
   test('ios_app_database_opens_in_the_backup_excluded_directory', () async {
     final messenger =

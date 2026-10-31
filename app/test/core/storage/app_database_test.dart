@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -6,7 +5,6 @@ import 'package:tv_remote/core/storage/app_database.dart';
 void main() {
   late AppDatabase db;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
   tearDown(() => db.close());
 

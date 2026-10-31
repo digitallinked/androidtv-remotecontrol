@@ -8,6 +8,7 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/app/widgets/settings_button.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -94,9 +95,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
         actions: [
           // Settings before pairing (Ruling P7-R7): help, privacy and
           // feedback without a TV, and no interstitial on the way back.
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: l10n.pageTitleSettings,
+          SettingsButton(
             onPressed: () =>
                 unawaited(context.push(AppRoutes.settingsFromSetup)),
           ),

@@ -1,5 +1,4 @@
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -33,7 +32,6 @@ void main() {
   late RecordingHaptics haptics;
   late int refused;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);

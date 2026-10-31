@@ -261,8 +261,9 @@ void main() {
       expect(pinned, hasLength(32));
 
       final client = _client(tv);
-      // Read synchronously in the listener: TvConnection checks the pin as
-      // soon as the client is ready, before anything else can run.
+      // TvConnection checks the pin right after `connect()` returns
+      // (tv_connection.dart). The key is also there in the RemoteReady
+      // listener, read synchronously, so no later event can be what set it.
       List<int>? atReady;
       var readyEvents = 0;
       final subscription = client.events.listen((event) {
@@ -274,10 +275,12 @@ void main() {
       addTearDown(subscription.cancel);
 
       await client.connect().timeout(_setup);
+      // The moment TvConnection reads it.
+      expect(client.serverPublicKeySha256, orderedEquals(pinned!));
 
       expect(readyEvents, 1);
       expect(atReady, isNotNull);
-      expect(atReady, orderedEquals(pinned!));
+      expect(atReady, orderedEquals(pinned));
     });
 
     test('certificate_rejected_for_unpaired_identity', () async {

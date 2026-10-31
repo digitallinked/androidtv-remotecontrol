@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -54,9 +53,13 @@ final Map<String, String> _routes = {
   AppRoutes.settingsAbout: 'settings_about',
 };
 
-void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
+/// App bars whose buttons touch (0 dp between 48 dp hit boxes; the visible
+/// 40 dp shapes are 8 dp apart). Edit apps puts Add and More options side
+/// by side; spacing them re-baselines its goldens, which Task 8.11 may not
+/// do, so it awaits a controller ruling. They must still never overlap.
+const Set<String> _appBarGapAwaitingRuling = {'apps_manage'};
 
+void main() {
   Future<void> pump(
     WidgetTester t,
     String route, {
@@ -230,6 +233,45 @@ void main() {
     expect(find.text('Send feedback?'), findsOneWidget);
     await check('feedback_dialog');
   }
+
+  // Touch targets at least 8 dp apart (global constraints): the hit boxes
+  // of every app-bar button, the leading one included, never touch.
+  testWidgets('app_bar_actions_keep_8dp_apart_at_320dp', (t) async {
+    var checked = 0;
+    for (final e in _routes.entries) {
+      for (final scale in [1.0, 2.0]) {
+        await pump(t, e.key, size: const Size(320, 640), textScale: scale);
+        // A Material 3 IconButton is built on a ButtonStyleButton: one hit
+        // box is found twice, so the set keeps it once.
+        final boxes = {
+          for (final element
+              in find
+                  .descendant(
+                    of: find.byType(AppBar),
+                    matching: find.byWidgetPredicate(
+                      (w) => w is IconButton || w is ButtonStyleButton,
+                    ),
+                  )
+                  .evaluate())
+            (element.renderObject! as RenderBox).paintBounds.shift(
+              (element.renderObject! as RenderBox).localToGlobal(Offset.zero),
+            ),
+        }.toList()..sort((a, b) => a.left.compareTo(b.left));
+        final minGap = _appBarGapAwaitingRuling.contains(e.value) ? 0 : 8;
+        for (var i = 1; i < boxes.length; i++) {
+          final gap = boxes[i].left - boxes[i - 1].right;
+          expect(
+            gap,
+            greaterThanOrEqualTo(minGap),
+            reason: '${e.value} at ${scale}x: ${boxes[i - 1]} and ${boxes[i]}',
+          );
+          checked++;
+        }
+      }
+    }
+    // Some app bars have more than one button, so the gaps were measured.
+    expect(checked, greaterThan(0));
+  });
 
   testWidgets('every_new_screen_fits_320dp_at_200_percent_text', (t) async {
     for (final b in Brightness.values) {

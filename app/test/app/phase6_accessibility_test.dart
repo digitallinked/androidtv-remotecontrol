@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -140,8 +139,6 @@ final Map<String, _Screen> _screens = {
 };
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   /// Opens [name] as a user would meet it. The banner screens gather consent
   /// first, as the remote does; the pre-prompt then opens over the hub.
   Future<void> open(

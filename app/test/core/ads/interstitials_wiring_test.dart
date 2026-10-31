@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,8 +25,6 @@ import '../../helpers/gather_consent.dart';
 import '../../helpers/recording_crash_reporter.dart';
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   /// Pumps the real app with one loaded interstitial and every rule met, drops
   /// the connection if [trouble], and asks whether the ad shows.
   Future<({bool? shown, FakeAdsSdk sdk})> run(

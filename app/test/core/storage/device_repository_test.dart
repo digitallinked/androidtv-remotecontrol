@@ -29,7 +29,6 @@ void main() {
   late AppDatabase db;
   late DriftDeviceRepository repo;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     repo = DriftDeviceRepository(db);

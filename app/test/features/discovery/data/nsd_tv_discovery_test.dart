@@ -239,7 +239,11 @@ void main() {
     expect(stopCalls, 2);
   });
 
-  test('a_failing_stop_is_not_an_unhandled_error', () async {
+  // `_stopQuietly` already swallows a failing stop, so this pins the cancel
+  // path: an unawaited cancel (as DiscoveryController makes) still stops
+  // both browses and leaves nothing unhandled. DiscoveryController's own
+  // test is the proof for its `catchError` on the cancel.
+  test('an_unawaited_cancel_stops_both_browses_even_when_stop_fails', () async {
     final uncaught = <Object>[];
     var stopCalls = 0;
     await runZonedGuarded(() async {

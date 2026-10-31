@@ -39,7 +39,13 @@ void main() {
       ).allMatches(source))
         m.group(1)!: int.parse(m.group(2)!),
     };
-    expect(constants, hasLength(greaterThan(30)), reason: 'the scan works');
+    // Every `static const` but the `named` list must be matched: a constant
+    // the pattern misses (a hex literal, a trailing comment) fails here.
+    final declared = RegExp(
+      r'^\s*static const ',
+      multiLine: true,
+    ).allMatches(source).length;
+    expect(constants, hasLength(declared - 1), reason: 'the scan sees all');
     expect(
       KeyCodes.named,
       unorderedEquals(constants.values),

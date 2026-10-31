@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
@@ -26,8 +25,6 @@ ScrollPosition _list(WidgetTester t) {
 }
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   testWidgets('banner_has_48dp_clearance_from_nav_controls', (t) async {
     var checks = 0;
     for (final size in const [

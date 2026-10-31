@@ -1,6 +1,5 @@
 import 'package:atv_remote/atv_remote.dart'
     show ConnectionStatus, TvConnectionState;
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,8 +72,6 @@ Future<void> _go(WidgetTester t, String location) async {
 }
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   // P6-C10: accent-coloured text must reach 4.5:1 wherever it is drawn, in
   // every colour style, on Premium (where the styles apply).
   for (final style in ColourStyle.values) {

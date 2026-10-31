@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show kPressTimeout;
 import 'package:flutter/material.dart';
@@ -63,7 +62,6 @@ void main() {
   late FakeTvDiscoveries discoveries;
   late FakeAdsSdk ads;
 
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
   setUp(() {
     sink = RecordingAnalyticsSink();
     crashes = RecordingCrashReporter();

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -37,8 +36,6 @@ Finder _slot(AdPlacement placement) =>
     find.byKey(ValueKey('banner_slot_${placement.name}'));
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   Future<void> pumpAt(
     WidgetTester t,
     String location, {

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:clock/clock.dart';
-import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,8 +74,6 @@ class _FailingStore extends SettingsStore {
 }
 
 void main() {
-  setUpAll(() => driftRuntimeOptions.dontWarnAboutMultipleDatabases = true);
-
   late SettingsStore store;
 
   setUp(() async {

@@ -3,13 +3,12 @@ import 'package:atv_remote/testing.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tv_remote/app/flavor.dart';
-import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 
 import 'fake_tv_discovery.dart';
 import 'pump_until.dart';
+import 'real_remote_client.dart';
 import 'test_identity.dart';
 
 /// The protocol library's fake TV, wired into the app the way a real TV is:
@@ -67,14 +66,7 @@ class FakeTvHarness {
       ({required host, required identity}) =>
           PairingClient(host: host, port: tv.pairingPort, identity: identity),
     ),
-    remoteClientFactoryProvider.overrideWithValue(
-      ({required host, required port, required identity}) => RemoteClient(
-        host: host,
-        port: port,
-        identity: identity,
-        deviceInfo: deviceInfoFor(Flavor.dev),
-      ),
-    ),
+    realRemoteClients(),
   ];
 
   /// Unmounts the app and waits until the TV sees its connection end.

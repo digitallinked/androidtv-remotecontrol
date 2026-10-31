@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/foundation.dart' show mapEquals, visibleForTesting;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -221,6 +221,13 @@ class _DpadState extends State<Dpad> {
 }
 
 /// Paints the pad and describes its five buttons to screen readers.
+/// The region [painter], a D-pad's painter, tints as pressed; `null` for no
+/// region or another painter. Lets tests read the tint without depending on
+/// the private painter's fields.
+@visibleForTesting
+DpadRegion? dpadTintedRegion(CustomPainter? painter) =>
+    painter is _DpadPainter ? painter.pressed : null;
+
 class _DpadPainter extends CustomPainter {
   _DpadPainter({
     required this.colors,

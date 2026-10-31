@@ -91,7 +91,7 @@ final class AppInfoProvider
     : super(
         from: null,
         argument: null,
-        retry: _noRetry,
+        retry: noRetry,
         name: r'appInfoProvider',
         isAutoDispose: false,
         dependencies: null,
@@ -112,4 +112,4 @@ final class AppInfoProvider
   }
 }
 
-String _$appInfoHash() => r'08b794a9ad925de98b1a79d274b4bf4badf14e46';
+String _$appInfoHash() => r'db7197124d0739527c95459a05f3f52af907edd2';
