@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
@@ -15,6 +12,7 @@ import 'package:tv_remote/core/tv/saved_device_x.dart';
 import '../helpers/fake_remote_session.dart';
 import '../helpers/in_memory_device_repository.dart';
 import '../helpers/pump_router_app.dart';
+import '../helpers/real_fonts.dart';
 import '../helpers/test_devices.dart';
 
 /// The pad tabs and the colour keys in Malay, drawn in the real Roboto
@@ -23,9 +21,10 @@ import '../helpers/test_devices.dart';
 /// a colour key about 50 dp, and `FittedLabel` never shrinks at 100%: a
 /// Malay label that is too long ends in an ellipsis (Task 8.5 addendum).
 ///
-/// Roboto stays loaded for the rest of the file, so it is its own file.
+/// The real fonts stay loaded for the rest of the file, so it is its own
+/// file.
 void main() {
-  setUpAll(_loadRoboto);
+  setUpAll(loadRealFonts);
 
   for (final (name, locale) in [
     ('english', const Locale('en')),
@@ -86,36 +85,4 @@ void main() {
       }
     });
   }
-}
-
-/// Loads the Roboto that ships with the Flutter SDK under its own name, so
-/// the Material text theme draws with it.
-Future<void> _loadRoboto() async {
-  final dir = _materialFonts();
-  final loader = FontLoader('Roboto');
-  for (final weight in ['regular', 'medium', 'bold']) {
-    final file = File('${dir.path}/roboto-$weight.ttf');
-    expect(file.existsSync(), isTrue, reason: '${file.path} exists');
-    loader.addFont(
-      Future.value(ByteData.sublistView(file.readAsBytesSync())),
-    );
-  }
-  await loader.load();
-}
-
-/// `bin/cache/artifacts/material_fonts` of the Flutter SDK that runs the
-/// test: from `FLUTTER_ROOT`, or found above the test runner's executable.
-Directory _materialFonts() {
-  final root = Platform.environment['FLUTTER_ROOT'];
-  if (root != null) {
-    final dir = Directory('$root/bin/cache/artifacts/material_fonts');
-    if (dir.existsSync()) return dir;
-  }
-  var dir = File(Platform.resolvedExecutable).parent;
-  while (dir.parent.path != dir.path) {
-    final fonts = Directory('${dir.path}/artifacts/material_fonts');
-    if (fonts.existsSync()) return fonts;
-    dir = dir.parent;
-  }
-  fail('the Flutter SDK material fonts were not found');
 }
