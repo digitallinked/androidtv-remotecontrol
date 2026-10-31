@@ -15,9 +15,9 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 
 part 'crash_collection.g.dart';
 
-/// How many names of TVs found but not saved the scrubber remembers (Ruling
-/// P8-R11). The oldest goes first.
-const int maxDiscoveredScrubTerms = 64;
+/// How many TVs found but not saved the scrubber remembers the names of
+/// (Ruling P8-R11). The oldest goes first, but never one of the latest list.
+const int maxDiscoveredScrubTvs = 64;
 
 /// Where crash reports go. Tests override it with a recording fake.
 @Riverpod(keepAlive: true)
@@ -47,9 +47,10 @@ class CrashCollection extends _$CrashCollection {
   /// The saved TVs' names: the seed, then each saved list.
   final Set<String> _saved = {};
 
-  /// The names of TVs found by discovery, oldest first (a set literal keeps
-  /// insertion order). Never cleared by a saved-list change.
-  final Set<String> _discovered = {};
+  /// The display and service names of TVs found by discovery, by service
+  /// name, oldest first (a map literal keeps insertion order). Never cleared
+  /// by a saved-list change.
+  final Map<String, List<String>> _discovered = {};
   bool? _collecting;
 
   /// The scrubber, loaded with the saved and discovered TVs' names.
@@ -68,7 +69,12 @@ class CrashCollection extends _$CrashCollection {
     // The saved names are not cleared on a rebuild: the list stream replaces
     // them, and until then over-scrubbing is the safe side.
     _collecting = null;
-    scrubber = CrashScrubber(knownTerms: () => [..._saved, ..._discovered]);
+    scrubber = CrashScrubber(
+      knownTerms: () => [
+        ..._saved,
+        for (final names in _discovered.values) ...names,
+      ],
+    );
     reporter = ScrubbingCrashReporter(
       sink: sink,
       scrubber: scrubber,
@@ -98,20 +104,29 @@ class CrashCollection extends _$CrashCollection {
   void seedTerms(Iterable<SavedDevice> devices) =>
       _saved.addAll(_namesOf(devices));
 
-  /// Adds the display and service names of [tvs], TVs seen by discovery, to
-  /// the scrubber (Ruling P8-R11). They stay until more than
-  /// [maxDiscoveredScrubTerms] names have been seen since, oldest first; a
-  /// name seen again counts as new. They live in memory only.
+  /// Adds the display and service names of [tvs], one list of TVs seen by
+  /// discovery, to the scrubber (Ruling P8-R11). Beyond
+  /// [maxDiscoveredScrubTvs] TVs the oldest go first; a TV seen again counts
+  /// as new, and the TVs of this list are never dropped, however long it is,
+  /// so the one being paired on a busy network keeps its names. They live in
+  /// memory only.
   void addDiscoveredTerms(Iterable<DiscoveredTv> tvs) {
+    final latest = <String>{};
     for (final tv in tvs) {
-      for (final name in [tv.displayName, tv.serviceName]) {
-        _discovered
-          ..remove(name)
-          ..add(name);
-      }
+      latest.add(tv.serviceName);
+      _discovered
+        ..remove(tv.serviceName)
+        ..[tv.serviceName] = [tv.displayName, tv.serviceName];
     }
-    while (_discovered.length > maxDiscoveredScrubTerms) {
-      _discovered.remove(_discovered.first);
+    final older = [
+      for (final key in _discovered.keys)
+        if (!latest.contains(key)) key,
+    ];
+    var excess = _discovered.length - maxDiscoveredScrubTvs;
+    for (final key in older) {
+      if (excess <= 0) break;
+      _discovered.remove(key);
+      excess--;
     }
   }
 

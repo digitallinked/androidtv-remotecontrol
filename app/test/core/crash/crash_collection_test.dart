@@ -315,37 +315,62 @@ void main() {
     expect(collection.scrubber.scrub('Kitchen TV'), '<tv>');
     expect(collection.scrubber.scrub('Den'), 'Den');
 
-    // 64 more terms (32 TVs, each a display and a service name): the oldest,
-    // Kitchen TV, is dropped first.
-    collection.addDiscoveredTerms([
-      for (var i = 0; i < 32; i++)
-        DiscoveredTv(
-          serviceName: 'Service $i',
-          displayName: 'Shown $i',
-          host: '192.168.0.40',
-          port: 6466,
-          isLegacyService: false,
-        ),
-    ]);
-    expect(collection.scrubber.scrub('Kitchen TV'), 'Kitchen TV');
+    DiscoveredTv numbered(int i) => DiscoveredTv(
+      serviceName: 'Service $i',
+      displayName: 'Shown $i',
+      host: '192.168.0.40',
+      port: 6466,
+      isLegacyService: false,
+    );
+
+    // 63 more TVs make 64: every one is kept, both of its names.
+    collection.addDiscoveredTerms([for (var i = 0; i < 63; i++) numbered(i)]);
+    expect(collection.scrubber.scrub('Kitchen TV'), '<tv>');
     expect(collection.scrubber.scrub('Shown 0'), '<tv>');
-    expect(collection.scrubber.scrub('Service 31'), '<tv>');
+    expect(collection.scrubber.scrub('Service 0'), '<tv>');
+
+    // A 65th TV, in a later list: the oldest TV, Kitchen TV, goes.
+    collection.addDiscoveredTerms([tv('Porch')]);
+    expect(collection.scrubber.scrub('Kitchen TV'), 'Kitchen TV');
+    expect(collection.scrubber.scrub('Porch'), '<tv>');
 
     // Seeing a TV again makes it the newest, so it outlives older ones.
     collection
-      ..addDiscoveredTerms([
-        const DiscoveredTv(
-          serviceName: 'Service 0',
-          displayName: 'Shown 0',
-          host: '192.168.0.40',
-          port: 6466,
-          isLegacyService: false,
-        ),
-      ])
-      ..addDiscoveredTerms([tv('Porch'), tv('Garage')]);
+      ..addDiscoveredTerms([numbered(0)])
+      ..addDiscoveredTerms([tv('Garage')]);
     expect(collection.scrubber.scrub('Shown 0'), '<tv>');
+    expect(collection.scrubber.scrub('Service 0'), '<tv>');
     expect(collection.scrubber.scrub('Shown 1'), 'Shown 1');
-    expect(collection.scrubber.scrub('Porch'), '<tv>');
+    expect(collection.scrubber.scrub('Service 1'), 'Service 1');
+  });
+
+  test('a_busy_network_never_evicts_the_tvs_of_the_latest_list', () async {
+    final container = await containerFor();
+    final collection = start(container);
+    await flush(container);
+
+    DiscoveredTv numbered(int i) => DiscoveredTv(
+      serviceName: 'Service $i',
+      displayName: 'Shown $i',
+      host: '192.168.0.40',
+      port: 6466,
+      isLegacyService: false,
+    );
+
+    // A hotel network: 100 TVs in one list, the one being paired first.
+    collection.addDiscoveredTerms([
+      tv('Room 101 TV'),
+      for (var i = 0; i < 99; i++) numbered(i),
+    ]);
+    expect(collection.scrubber.scrub('Room 101 TV'), '<tv>');
+    expect(collection.scrubber.scrub('Shown 98'), '<tv>');
+
+    // The next list still holds it: it stays, while older TVs not in the
+    // list make room.
+    collection.addDiscoveredTerms([tv('Room 101 TV')]);
+    expect(collection.scrubber.scrub('Room 101 TV'), '<tv>');
+    expect(collection.scrubber.scrub('Shown 0'), 'Shown 0');
+    expect(collection.scrubber.scrub('Shown 98'), '<tv>');
   });
 
   test('a_failing_device_list_is_ignored', () async {

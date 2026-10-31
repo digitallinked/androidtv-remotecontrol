@@ -169,7 +169,44 @@ void main() {
     });
   });
 
-  test('staying_in_trouble_keeps_the_time_it_started', () {
+  test('trouble_lasts_until_it_ends', () {
+    timed((async) {
+      final r = rig(async);
+      r.session.emit(
+        const TvConnectionState(
+          status: ConnectionStatus.reconnecting,
+          attempt: 1,
+        ),
+      );
+      _settle(async);
+
+      // Still reconnecting after 89 s: the trouble is still going on.
+      async.elapse(const Duration(seconds: 89));
+      expect(within(r.container), isTrue, reason: 'still reconnecting');
+
+      // The app closes it at 90 s (the background grace) and later opens a
+      // clean session.
+      async.elapse(const Duration(seconds: 1));
+      r.session.emit(
+        const TvConnectionState(status: ConnectionStatus.disconnected),
+      );
+      _settle(async);
+      async.elapse(const Duration(seconds: 5));
+      r.session.emit(
+        const TvConnectionState(status: ConnectionStatus.connecting),
+      );
+      _settle(async);
+      r.session.emit(_connected);
+      _settle(async);
+
+      expect(lastTrouble(r.container), start.add(const Duration(seconds: 90)));
+      expect(within(r.container), isTrue, reason: 'ended 5 s ago');
+      async.elapse(const Duration(seconds: 55));
+      expect(within(r.container), isFalse, reason: 'ended 60 s ago');
+    });
+  });
+
+  test('every_troubled_emission_refreshes_the_time', () {
     timed((async) {
       final r = rig(async);
       r.session.emit(
@@ -180,7 +217,6 @@ void main() {
       );
       _settle(async);
       async.elapse(const Duration(seconds: 3));
-      // Another attempt: the same status, so not a new trouble.
       r.session.emit(
         const TvConnectionState(
           status: ConnectionStatus.reconnecting,
@@ -188,13 +224,67 @@ void main() {
         ),
       );
       _settle(async);
-      expect(lastTrouble(r.container), start);
+      expect(lastTrouble(r.container), start.add(const Duration(seconds: 3)));
 
-      // Giving up is a new status: noted again.
       async.elapse(const Duration(seconds: 4));
       r.session.emit(const TvConnectionState(status: ConnectionStatus.offline));
       _settle(async);
       expect(lastTrouble(r.container), start.add(const Duration(seconds: 7)));
+    });
+  });
+
+  test('a_session_switch_while_reconnecting_ends_the_trouble', () {
+    timed((async) {
+      var session = FakeRemoteSession(
+        initial: const TvConnectionState(
+          status: ConnectionStatus.reconnecting,
+          attempt: 1,
+        ),
+      );
+      final container = ProviderContainer.test(
+        overrides: [remoteSessionProvider.overrideWith((ref) async => session)],
+      )..listen(connectionTroubleProvider, (_, _) {});
+      _settle(async);
+      async.elapse(const Duration(seconds: 120));
+
+      // Another TV, already connected: the old session's trouble ends now.
+      session = FakeRemoteSession(tvName: 'Den', initial: _connected);
+      container.invalidate(remoteSessionProvider);
+      _settle(async);
+
+      expect(
+        container.read(connectionTroubleProvider),
+        start.add(const Duration(seconds: 120)),
+      );
+      async.elapse(const Duration(seconds: 60));
+      expect(
+        container
+            .read(connectionTroubleProvider.notifier)
+            .troubleWithin(_window),
+        isFalse,
+      );
+    });
+  });
+
+  test('a_status_already_troubled_when_built_is_noted', () {
+    timed((async) {
+      final session = FakeRemoteSession(
+        initial: const TvConnectionState(status: ConnectionStatus.offline),
+      );
+      final container = ProviderContainer.test(
+        overrides: [remoteSessionProvider.overrideWith((ref) async => session)],
+      )..listen(connectionStateProvider, (_, _) {});
+      _settle(async);
+      async.elapse(const Duration(seconds: 4));
+
+      // Built only now, with the connection already offline.
+      container.listen(connectionTroubleProvider, (_, _) {});
+      _settle(async);
+
+      expect(
+        container.read(connectionTroubleProvider),
+        start.add(const Duration(seconds: 4)),
+      );
     });
   });
 }

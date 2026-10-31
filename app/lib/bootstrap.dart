@@ -19,6 +19,10 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
+/// How long startup waits for the saved TVs that seed the crash scrubber
+/// (Ruling P8-R11) before it starts without them.
+const Duration scrubSeedTimeout = Duration(milliseconds: 500);
+
 /// One piece of work to finish before the first frame, such as a service
 /// initialisation.
 typedef StartupStep = Future<void> Function();
@@ -141,10 +145,15 @@ Future<Widget> buildRootWidget({
       crashReporter is DelegatingCrashReporter) {
     // Read once, before the first frame, so an early error is scrubbed of
     // saved names before the saved-list stream's first event (Ruling
-    // P8-R11). A failed read seeds nothing; the stream still follows.
+    // P8-R11). The database was just read, so this is quick; the bound
+    // keeps a stuck read from holding the first frame (decision #38). A
+    // failed or late read seeds nothing; the stream still follows.
     var saved = const <SavedDevice>[];
     try {
-      saved = await container.read(deviceRepositoryProvider).all();
+      saved = await container
+          .read(deviceRepositoryProvider)
+          .all()
+          .timeout(scrubSeedTimeout);
     } on Object {
       // Nothing to seed.
     }

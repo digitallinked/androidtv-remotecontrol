@@ -52,6 +52,14 @@ class _UnreadableDeviceRepository extends _SilentDeviceRepository {
   Future<List<SavedDevice>> all() async => throw StateError('db is gone');
 }
 
+/// A repository whose one-shot read never answers.
+class _HangingDeviceRepository extends _SilentDeviceRepository {
+  _HangingDeviceRepository() : super(const []);
+
+  @override
+  Future<List<SavedDevice>> all() => Completer<List<SavedDevice>>().future;
+}
+
 void main() {
   testWidgets('failing_step_is_reported_and_later_steps_run', (tester) async {
     final recorder = RecordingCrashReporter();
@@ -854,6 +862,30 @@ void main() {
 
       expect(reporter.delegate, isA<CompositeCrashReporter>());
       expect(sink.collectionHistory, [true]);
+    });
+
+    testWidgets('a_saved_list_that_never_answers_starts_without_a_seed', (
+      tester,
+    ) async {
+      final reporter = DelegatingCrashReporter(RecordingCrashReporter());
+      final sink = RecordingCrashlyticsSink();
+      Widget? app;
+      unawaited(
+        rootWith(
+          reporter,
+          sink,
+          _HangingDeviceRepository(),
+        ).then((w) => app = w),
+      );
+
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(app, isNull, reason: 'still within the bound');
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(app, isNotNull, reason: 'the read is bounded at 500 ms');
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+
+      await tester.pumpWidget(app!);
+      await tester.pumpAndSettle();
     });
 
     testWidgets('a_plain_reporter_is_left_alone_even_when_firebase_is_ready', (
