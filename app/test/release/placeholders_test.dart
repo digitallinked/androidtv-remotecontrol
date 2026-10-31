@@ -30,7 +30,10 @@ List<File> releaseDocs() =>
         .toList()
       ..sort((a, b) => a.path.compareTo(b.path));
 
-/// Everything written as `{{...}}`, trimmed, so a malformed token is caught.
+/// Everything written as `{{...}}`, untrimmed, so a malformed token such as
+/// `{{ A }}` or `{{a}}` is caught. This is deliberately stricter than the
+/// fill script, which trims and would accept `{{ A }}`: documents use the
+/// exact `{{TOKEN}}` form only (Ruling P9-R11). Don't add a trim here.
 final RegExp anyToken = RegExp(r'\{\{([^{}]*)\}\}');
 
 /// Tokens a later task's documents use (Task 9.11: the review notes and the
@@ -222,6 +225,29 @@ void main() {
       );
     });
 
+    test(
+      'fill_only_empties_a_directory_below_build_or_outside_the_repo',
+      () async {
+        writeFixture({'A': 'x', 'B': 'y'});
+        // A directory with other work in it, inside the repo but not in build/.
+        final app = Directory('${root.path}/app')..createSync();
+        File('${app.path}/keep.dart').writeAsStringSync('keep');
+        for (final refused in [app, Directory('${root.path}/build')]) {
+          await expectLater(
+            fillReleaseDocs(root: root, out: refused),
+            throwsArgumentError,
+            reason: refused.path,
+          );
+        }
+        expect(File('${app.path}/keep.dart').readAsStringSync(), 'keep');
+
+        final outside = Directory.systemTemp.createTempSync('release_fixture_');
+        addTearDown(() => outside.deleteSync(recursive: true));
+        final result = await fillReleaseDocs(root: root, out: outside);
+        expect(result.written.single.readAsStringSync(), 'x y');
+      },
+    );
+
     test('fill_treats_values_the_release_check_refuses_as_missing', () async {
       writeFixture(
         {
@@ -293,7 +319,12 @@ void main() {
         root.path,
       ]);
       expect(refused.exitCode, 1, reason: '${refused.stdout}${refused.stderr}');
-      expect(refused.stdout, contains('A'));
+      // The token is listed on its own line; the "Wrote ... to <path>" line
+      // can't satisfy this, whatever the temp path holds.
+      expect(
+        const LineSplitter().convert(refused.stdout as String),
+        contains('  A'),
+      );
 
       final allowed = await runTool('dart', [
         'tool/fill_release_docs.dart',

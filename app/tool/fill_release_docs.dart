@@ -39,21 +39,29 @@ bool isPlaceholderValue(String value) =>
 /// relative paths, with the values of `docs/release/placeholders.json`.
 ///
 /// [out] is emptied first, so running twice gives the same tree and a
-/// document that was removed leaves no stale copy. Throws an
-/// [ArgumentError] when [out] is [root], contains it, or lies inside
-/// `<root>/docs`.
+/// document that was removed leaves no stale copy. Because [out] is deleted,
+/// it must be a directory below `<root>/build/` (git-ignored) or lie
+/// outside [root] altogether; anything else, including [root] itself, a
+/// directory that contains it, `<root>/build` itself and anything in
+/// `<root>/docs`, throws an [ArgumentError].
 Future<FillResult> fillReleaseDocs({
   required Directory root,
   required Directory out,
 }) async {
   final rootUri = _dirUri(root);
   final docsUri = rootUri.resolve('docs/');
+  final buildUri = rootUri.resolve('build/');
   final outUri = _dirUri(out);
   if (_within(rootUri, outUri)) {
     throw ArgumentError.value(out.path, 'out', 'must not contain the repo');
   }
-  if (_within(outUri, docsUri)) {
-    throw ArgumentError.value(out.path, 'out', 'must not be inside docs/');
+  final belowBuild = _within(outUri, buildUri) && !_within(buildUri, outUri);
+  if (_within(outUri, rootUri) && !belowBuild) {
+    throw ArgumentError.value(
+      out.path,
+      'out',
+      'must be below build/ or outside the repo',
+    );
   }
 
   final releaseUri = docsUri.resolve('release/');

@@ -61,6 +61,26 @@ void main() {
     }
   });
 
+  test('privacy_policy_discloses_full_screen_ads_and_the_kept_certificate', () {
+    // Ruling P9-C8: Remote Config can turn interstitials on, and the iOS
+    // keychain can outlive the app.
+    expect(
+      privacy,
+      contains('occasional full-screen ad when you leave Settings'),
+    );
+    expect(privacy, contains('switch features on or off'));
+    expect(
+      privacy,
+      contains(
+        "On iPhone, iOS may keep the app's pairing certificate in the "
+        'keychain after you delete the app; the app replaces it with a new '
+        'one when you install it again.',
+      ),
+    );
+    expect(privacy, isNot(contains('to delete everything it keeps')));
+    expect(privacy, isNot(contains('Settings screens only')));
+  });
+
   test('privacy_policy_matches_the_in_app_controls', () {
     for (final key in const [
       'pageTitlePrivacyChoices',
