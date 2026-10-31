@@ -78,6 +78,8 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
 - Blocking app start on a Remote Config fetch.
 - Logging the TV name, IP or MAC as an analytics parameter, or logging a route path (`/pair/<name>`, `/devices/<name>`).
 - Forwarding a Flutter error's `informationCollector` text to Crashlytics unscrubbed.
+- Sending a crash report before the saved TV names are known: while the seed read hasn't answered, reports are logged only (decision #50).
+- Keeping a private "recent trouble" timer: read `connectionTroubleProvider.troubleWithin` and `ref.listen` it in `build` (decision #50: `reconnecting` lasts until it ends).
 - One `try` around both the consent call and the collection switch (a consent failure then skips the switch).
 - Marking an ATT question as answered before iOS answered it.
 - Reading an `InterstitialAd` before `onAdLoaded` (`load` returns first).

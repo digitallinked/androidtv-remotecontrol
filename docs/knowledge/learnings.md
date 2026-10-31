@@ -4,6 +4,36 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 8 gotchas (quality and hardening)
+- **Real sockets in widget tests:**
+  - dart:io TLS uses zero-length timers: under the test binding, drive real I/O with `pump(Duration.zero)` inside a `runAsync` loop (`pumpUntil`), not a bare `pump()`.
+  - A live `RemoteClient` leaves its 15 s idle timer pending: unmount the app and wait for 0 open connections before the test ends (`FakeTvHarness.cleanUpAfter`).
+  - `Ticker.start` during a frame takes that frame's timestamp, so `tap → pump() → pump(16 ms)` is exactly one frame elapsed.
+- **flutter_test and Riverpod:**
+  - `addTearDown(handle.dispose)` is too late for a `SemanticsHandle` in `testWidgets` (handles are checked before tear-downs): dispose it in a `finally`.
+  - A `ProviderContainer` rejects two overrides of one provider: combine with `mergeOverrides(testAppOverrides(...), [...])`.
+  - Riverpod 3.3.2 **keeps** a Notifier instance across rebuilds (`classListenable.result ??=`); the 3.0 changelog line saying otherwise is stale.
+  - The riverpod_generator hash is `sha1(node.toSource())`, so whitespace, line endings and comments never change it. A `.g.dart` diff of line endings only comes from `core.autocrlf`: revert it.
+  - `_statusOf` treats any loading state as `connecting`, so stale `AsyncLoading` values (volume, current app) never reach the remote UI.
+  - `Matrix4.getMaxScaleOnAxis()` includes z (always 1), so it can't detect a 2D down-scale: read `storage[0]`/`storage[1]`.
+  - `expectNoClipping` catches only thrown overflow, not ellipsized text: check `didExceedMaxLines` too.
+  - Drift's multiple-database warning is silenced once in `test/flutter_test_config.dart`.
+- **Flutter 3.44.1 framework quirks:**
+  - A Theme swap gives a Theme-dependent `Scrollable` a new `ScrollPosition`; for one frame its semantics lack `hasImplicitScrolling` (healed by the next, self-scheduled frame).
+  - A `GestureDetector` inside `Semantics(onTap)` makes a second unlabelled node unless `excludeFromSemantics: true`.
+  - `LongPressStartDetails.localPosition` is already the down origin.
+  - `TextButton.styleFrom(foregroundColor:)`-style derived overlays: see Phase 7.
+- **Privacy and backup:**
+  - With P8-R1, iOS preferences survive a backup or Quick Start but the database doesn't: any preference that stands for database state (like `shortcuts_seeded`) must be ignored when the database is created fresh.
+- **Localisation:**
+  - gen-l10n falls back to English for keys missing from `app_ms.arb` (it only warns).
+  - iOS in Malay calls the Settings app "Seting"; Android uses "Tetapan". Menu paths must follow each OS.
+  - At 320 dp and 100 % (Roboto 14 sp) the pad tabs have about 72 dp and the colour keys about 50 dp: keep those labels short.
+- **Tooling:**
+  - adb isn't on PATH on the Windows dev PC: `%LOCALAPPDATA%\Android\Sdk\platform-tools` (the measure scripts find it).
+  - Battery discharge only accumulates unplugged: plug back in only when the measure script's countdown ends.
+- Source: Phase 8 SDD (`.superpowers/sdd/2026-10-30-phase-8-hardening/`).
+
 ### Phase 7 gotchas (polish)
 - **Navigation:**
   - go_router 18.1.1 checks for material_ui's `MaterialApp`, not Flutter 3.44.1's, so plain `builder:` routes become `NoTransitionPage`. Recheck on every go_router bump; we use `pageBuilder` via `appPage`.

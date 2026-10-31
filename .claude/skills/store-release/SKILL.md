@@ -16,7 +16,8 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 
 ## Google Play checklist
 - [ ] **New personal developer account:** closed test with ≥ 12 testers opted in for 14 continuous days before production access.
-- [ ] **Release blocker:** Auto Backup must exclude the drift DB and prefs (`allowBackup` / data-extraction rules, Phase 8). The Privacy page's "never leave this phone" and the FAQ answer depend on it.
+- [ ] **Backup rules (closed in code, decision #49):** `allowBackup="false"`, `fullBackupContent="false"` and `data_extraction_rules.xml` exclude everything. Before upload, grep the **prodRelease** merged manifest for all three; the Privacy page's "never leave this phone" and the FAQ answers depend on them. Run device-matrix rows DM-056/057 (Android) and DM-060/061 (iOS restore and Quick Start; DM-061 is a release issue if the DB travels).
+- [ ] **Malay:** the owner (or a native reviewer) signs off every `app_ms.arb` string (DM-068) before Malay store copy; the iOS `ms.lproj` resources build on a Mac (DM-066).
 - [ ] Data safety. Collected:
   - device or other IDs: advertising ID, Firebase Installation ID, app set ID;
   - **approximate location**, which AdMob and Analytics derive from the IP;
@@ -52,6 +53,7 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 - [ ] **Review notes:** the reviewer has no Android TV. Attach a demo video link showing discovery → pairing → control on a real TV, explain that the app requires an Android TV / Google TV on the same Wi-Fi, and provide the in-app **demo mode** (simulated TV) path for testing.
 - [ ] Guideline 4.2/4.3: enough native value (widgets, Siri Shortcuts / App Intents later) to avoid "minimum functionality".
 - [ ] TestFlight internal → external beta before release.
+- [ ] The iOS storage channel (`AppDelegate.swift`, backup-excluded DB directory) compiles and the DB lands in `Application Support/Database` (DM-058/059). There is no fallback: if the channel fails, the database doesn't open.
 
 ## Common rejections → fix
 | Rejection | Fix |

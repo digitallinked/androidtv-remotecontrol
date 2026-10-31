@@ -4,6 +4,30 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #50 — 2026-10-31 — Phase 8 controller rulings (P8-C1–C15)
+- **iOS storage channel (C1):** one minimal Swift method, no fallback to Documents; compiled and checked on a Mac before release (device matrix DM-058).
+- **Test helpers (C2, C3):** `pumpUntil` pumps `Duration.zero` inside a `runAsync` loop; `FakeTvServer.acceptedRemoteConnections` counts paired sockets; dispose a `SemanticsHandle` in a `finally`, not `addTearDown`.
+- **Disconnected remote (C4):** controls fade to `AppOpacity.unavailable` 0.85 (amends #21's 0.4) so text keeps 4.5:1; the state is carried by the live-region status pill and the refusal snackbar.
+- **Labels (C6, C13, C14):** `FittedLabel` never shrinks below 100 % text, then ellipsizes; with real fonts nothing is cut at 100 % on 320–390 dp. User-entered TV names and the scaled layout preview may ellipsize with the full text in semantics; "Smooth Press" and the style names stay English.
+- **Reduce motion (C7):** "within one frame" = settled one 16 ms frame after the frame that starts the ticker, under the platform flag. The MediaQuery-only flag is never set alone in production.
+- **Connection trouble (C8–C10):** one `connectionTroubleProvider` (amends P8-R12 "behaviour unchanged"). `reconnecting` counts as trouble until it ends; `offline`/`needsPairing` are noted per emission and expire after the window. `analyticsHooks` never read trouble.
+- **Crash scrubbing (C11):** while the saved TV names are unknown (seed read timed out, failed or threw), crash reports are logged only, never sent; a late read or the first `watchAll` event installs the scrubbing reporter.
+- **Spacing (C11, C12):** app-bar actions keep ≥ 8 dp gaps; goldens re-baselined for it.
+- **Accepted (C15):** the Edit TV helper may cut a 60+ character TV name after 10 lines.
+
+### #49 — 2026-10-31 — Phase 8 quality and hardening (P8-R1–R13)
+- **Backup (R1, release blocker closed in code):** Android `allowBackup="false"`, `fullBackupContent="false"` and `data_extraction_rules.xml` excluding every domain from cloud backup and device transfer. iOS: the drift DB lives in `Application Support/Database`, marked `isExcludedFromBackup`, path from `MethodChannel('com.digitallinked.atvremote/storage')`; keychain `first_unlock_this_device`; preferences hold no TV data (pinned by a test). Supersedes the caveat in #30. A fresh DB re-seeds the Apps row even if the restored preference says it was seeded.
+- **Strings (R2):** all Phase 8 English copy landed in Task 8.1 (new-phone FAQ, `loadingLabel`, `manageAppsMoreOptions`, `manageAppsMoved`).
+- **Fake TV (R3, amends #13):** `package:atv_remote/testing.dart` exports `FakeTvServer` (with `keyCodes`, `openRemoteConnections`, `acceptedRemoteConnections`); `app/lib` may never import it (scan test).
+- **Integration flows (R4):** one flow script runs on the host inside `flutter test` (tag `integration`) and on a device via `IntegrationTestWidgetsFlutterBinding`.
+- **Performance (R5):** key-press-to-send p95 < 30 ms over loopback TLS (host figure, 2–8 ms on the dev PC); `no_leak_after_50_resume_cycles`; cold start and battery only from `tool/measure_android.{ps1,sh}` on a device. No number is recorded until measured.
+- **Accessibility (R6):** automated sweep of every screen (four guidelines, light/dark, 320 dp / 200 %, non-linear scaler) plus the scripted TalkBack/VoiceOver rows in `device-matrix.md`.
+- **Reduce motion (R7):** Radio, Switch and the InputDecorator settle within one frame under the platform flag — closes #47's deferral.
+- **Malay (R8, R9):** complete `app_ms.arb` (454 keys, strict parity), Malaysian Malay with "anda" and a glossary; iOS Settings paths say "Seting", Android/TV paths "Tetapan"; `ms.lproj/InfoPlist.strings`. Every string needs the owner's review before store copy. The pseudo-locale is test-only.
+- **Storage (R10):** `noRetry` on every provider whose error the UI shows; the MAC is cleared with a distrusted pin; usage filtered before the limit and pruned to 200; merges move the session.
+- **Scrubbing and trouble (R11, R12):** saved names seeded at bootstrap, discovered names kept in memory (64 TVs); see #50 for the trouble and hold rules.
+- **Deferred (R13):** theater `ExcludeSemantics` (device check), Apps banner collapse (AdMob), the predictive-back private class (next Flutter bump), Android 13 `localeConfig` (Phase 9).
+
 ### #48 — 2026-10-30 — Phase 7 pins and branding pipeline
 - flutter_launcher_icons 0.14.4 and flutter_native_splash 2.4.8 (dev dependencies, exact). The icon is our own painter mark (ring, centre dot, four triangles on #3D5AFE); `test/branding/` renders every master and `brand_icon.svg`.
 - `tool/brand.ps1` / `brand.sh`: step 1 is `flutter test --update-goldens test/branding` with **no tag filter** (amends P7-R6), so the svg regenerates; then the two generators. `adaptive_icon_foreground_inset: 0`; the mark radius 26.07 of 33 units keeps clear of every launcher mask.
@@ -15,7 +39,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - `ReduceMotionTheme` sets `NoSplash`, a transparent `highlightColor`, and transparent pressed overlays with `animationDuration: Duration.zero` on filled, text, outlined, elevated, icon and segmented button themes. Hover and focus overlays stay.
 - Widget-level colours must not derive their own overlay: use `foregroundOnly(c)` instead of `styleFrom(foregroundColor:)`, and no `IconButton(color:)`.
 - An invisible (transparent) ink ticker is accepted. iOS swipe-back under reduce motion is a static Cupertino paint that doesn't track the finger (P7-C2), accepted.
-- **Deferred to Phase 8:** Radio and Switch animations; the InputDecorator focus transition (167 ms; about 8 ms under the platform flag).
+- **Phase 8 closed the deferral (#49, P8-R7):** Radio, Switch and the InputDecorator settle within one frame under the platform flag.
 - **Revisit:** if a Flutter release honours `disableAnimations` in ink or the decorator.
 
 ### #46 — 2026-10-30 — Phase 7 product rulings (P7-R1–R12, P7-C2–C4)
@@ -125,7 +149,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - The **All apps** tile is the main way into `/apps`; it is pinned at the end of the quick row outside the scroller (always visible) and shown in the layout preview.
 
 ### #30 — 2026-10-27 — Usage tracking privacy (P5-R6)
-- The current app reported by the TV is counted on the phone only (package, count, last seen) — never for the demo TV, never logged or sent; system packages are filtered when read. Recommendations exclude system apps and existing shortcuts. Caveat: Android Auto Backup is on by default and copies the DB off the phone — decide `allowBackup` in Phase 8.
+- The current app reported by the TV is counted on the phone only (package, count, last seen) — never for the demo TV, never logged or sent; system packages are filtered when read. Recommendations exclude system apps and existing shortcuts. Caveat: Android Auto Backup is on by default and copies the DB off the phone — decide `allowBackup` in Phase 8. (The backup caveat is closed by #49: TV data no longer leaves the phone through backup or transfer.)
 
 ### #29 — 2026-10-27 — Shortcuts (P5-R5, P5-R8)
 - Global, one per package, dense positions. Seeded once from the region's default row (`seedIfEmpty` + a stored flag; emptying the list never re-seeds). Region = first phone locale with a country code, read at seeding and on Reset (Reset asks first and replaces the whole list).
@@ -154,6 +178,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - Keep screen awake: held while the remote is the top **page** route (`RouteObserver<PageRoute>` on GoRouter; sheets/dialogs don't count) and the app is in the foreground.
 - Theater mode: dims to 5 % app brightness with `AppColors.theater` after 30 s idle; the first pointer sequence while dimmed only wakes; it never dims with a screen reader on or with a sheet/dialog over the remote (an identity dialog or keyboard auto-open therefore wakes it).
 - Touchpad: steps at 24 dp then every 40 dp; "moved" means the largest displacement from the touch-down point (tremor can't cancel a tap; a wiggle past 18 dp is a dead swipe).
+- **Wake cover (Phase 8, Task 8.10):** one labelled tap node (`excludeFromSemantics` on its GestureDetector); Switch Access / Voice Access users, for whom the dim still applies, wake the screen through it.
 
 ### #23 — 2026-10-27 — Keyboard (P4-R12)
 - `kImeTextMode = replaceField` (unverified): each debounced change (150 ms) sends the whole field; `appendOnly` (grapheme-cluster deletes) is the fallback behind one constant.
@@ -170,7 +195,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 ### #21 — 2026-10-27 — Remote layout (P4-R7/R8)
 - Pad area is a pager with always-visible tabs: Touchpad / D-pad / Numbers. Only Touchpad and D-pad persist as `navigationStyle`; with a screen reader on it opens on the D-pad without persisting. Pages switch on the settled page, not mid-drag.
 - 64 dp app bar (TV switcher + Power), 48 dp status strip under it. Portrait, or split when width ≥ 600 dp or landscape: right column `clamp(0.4 × width, 280, 400)` + 16 dp end gutter. Pad ≥ 160 dp; quick row dropped when the pad would get < 200 dp; scroll fallback. Bottom cluster 280 dp.
-- While not connected the controls fade to 0.4 (tabs never fade). One "Not connected" snackbar at a time and none when the remote isn't the top route. The previous remote stays visible while a TV switch reloads.
+- While not connected the controls fade (0.4 originally; now `AppOpacity.unavailable` 0.85, see #50) (tabs never fade). One "Not connected" snackbar at a time and none when the remote isn't the top route. The previous remote stays visible while a TV switch reloads.
 
 ### #20 — 2026-10-27 — Input path and holds (P4-R2..R6, R17)
 - Widgets take `KeyInput`/`RemoteInput`; `RemoteActions` (autoDispose; the screen watches it) is the only send path. A press with no session, a loading/errored session or a non-connected status is refused: nothing sent, no haptic, one not-connected notice. Unsupported key codes throw `ArgumentError` even when offline.
@@ -213,7 +238,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 ### #13 — 2026-10-26 — Phase 3 session architecture
 - The UI talks only to `RemoteSession`. `TvRemoteSession` wraps the library's `TvConnection`; `DemoRemoteSession` implements the same interface and opens no sockets. Widgets check `isDemo` only for the demo badge, the TV preview card and the "Demo TV" name.
 - `ActiveTarget` holds `DeviceTarget(serviceName)` or `DemoTarget` (never persisted). `remoteSessionProvider` builds the session and its `SessionSupervisor`; providers whose errors the UI must show use `retry: noRetry`.
-- App tests use `implements`-fakes (`FakeRemoteClient`, `FakePairingClient`, `FakeTvDiscovery`); the library's `FakeTvServer` stays unexported.
+- App tests use `implements`-fakes (`FakeRemoteClient`, `FakePairingClient`, `FakeTvDiscovery`); the library's `FakeTvServer` stays unexported (amended by #49: exported from `package:atv_remote/testing.dart`, test-only).
 - **Revisit:** if more session kinds appear (core/session currently imports features/demo).
 
 ### #12 — 2026-10-25 — Phase 2 app-shell choices

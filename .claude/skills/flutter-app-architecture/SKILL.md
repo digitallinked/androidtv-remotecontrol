@@ -42,7 +42,7 @@ packages/atv_remote/lib/   discovery, pairing, remote_client, certs, keycodes, w
 | UI | `flutter_svg`, `cached_network_image` (`home_widget` only in v1.1, not now) |
 | Device | `wakelock_plus`, `screen_brightness`, Flutter's built-in `HapticFeedback` (no extra package) |
 | Services | see the `app-services` skill |
-| Tests | `flutter_test`, `mocktail`, `integration_test`, a fake TV server in `packages/atv_remote/test/fake_tv/` |
+| Tests | `flutter_test`, `mocktail`, `integration_test`, the fake TV `package:atv_remote/testing.dart` (test-only; never imported from `app/lib`) |
 
 ## Platform floors
 Android minSdk 24, targetSdk ≥ 35; iOS 13.0. The Flutter version is pinned in `decisions.md`. The app catalogue is a bundled asset (`app/assets/catalogue/apps_v1.json`); the `catalogue_version` Remote Config key is reserved for a future remote catalogue.
@@ -53,7 +53,7 @@ Android minSdk 24, targetSdk ≥ 35; iOS 13.0. The Flutter version is pinned in 
 - Every tap on a remote control goes through `RemoteActions` (adds haptics, analytics, Smooth Press repeat logic) and never calls the client directly.
 - Strings go in ARB files (`app/lib/app/l10n/`), English first; no hard-coded UI text.
 - Lints: `very_good_analysis`. `flutter analyze` must be clean.
-- Tests: TDD for `atv_remote` and controllers (`superpowers:test-driven-development`); golden tests for key widgets (remote pad, dpad, paywall) in light + dark; one integration test per critical flow (discover → pair → press key) against the fake TV.
+- Tests: TDD for `atv_remote` and controllers (`superpowers:test-driven-development`); golden tests for key widgets (remote pad, dpad, paywall) in light + dark; one integration test per critical flow (discover → pair → press key) against the fake TV: the flow lives in `app/integration_test/flows/` and runs on the host in `test/integration/` (tag `integration`, `pumpUntil`) and on a device. Perf and leak tests are plain `test()`s using `startPairedFakeTv()` and `waitFor()`. Dispose a `SemanticsHandle` in a `finally`. Every new string needs both `app_en.arb` and `app_ms.arb` (strict parity test); every new route joins `AppRouteNames.all` and the l10n sweep.
 - Flavors: `dev` (test ad IDs, debug Firebase project) and `prod`. Run with `--flavor dev -t lib/main_dev.dart`.
 
 ## Common mistakes
