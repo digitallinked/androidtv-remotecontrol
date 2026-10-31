@@ -5,25 +5,26 @@ import 'package:tv_remote/app/flavor.dart';
 abstract final class AppLinks {
   /// The privacy policy page.
   ///
-  /// PLACEHOLDER until the owner provides the real address (Phase 9 replaces
-  /// it).
+  /// Value from `docs/release/placeholders.json` → `PRIVACY_POLICY_URL`;
+  /// the release check refuses the placeholder.
   static final Uri privacyPolicy = Uri.parse('https://example.com/privacy');
 
   /// The terms of use page.
   ///
-  /// PLACEHOLDER until the owner provides the real address (Phase 9 replaces
-  /// it).
+  /// Value from `docs/release/placeholders.json` → `TERMS_URL`; the release
+  /// check refuses the placeholder.
   static final Uri terms = Uri.parse('https://example.com/terms');
 
   /// The address feedback emails go to.
   ///
-  /// PLACEHOLDER until the owner provides the real address (Phase 9 replaces
-  /// it).
+  /// Value from `docs/release/placeholders.json` → `SUPPORT_EMAIL`; the
+  /// release check refuses the placeholder.
   static const String supportEmail = 'support@example.com';
 
   /// The App Store page of the app.
   ///
-  /// PLACEHOLDER until the App Store record exists (Phase 9).
+  /// Value from `docs/release/placeholders.json` → `APP_STORE_ID` (the
+  /// digits after `id`); the release check refuses the placeholder.
   static final Uri appStoreListing = Uri.parse(
     'https://apps.apple.com/app/id0000000000',
   );
