@@ -6,6 +6,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Warnings use logger.quiet: `flutter build` runs Gradle with -q, which hides logger.warn.
+
 // Firebase config is git-ignored: app/android/app/src/<flavor>/google-services.json.
 // Without it the plugins aren't applied and the app runs on no-op services (Ruling P6-R2).
 val firebaseFlavorNames = listOf("dev", "prod")
@@ -27,15 +29,52 @@ if (firebaseFlavors.isNotEmpty()) {
             enabled = false
         }
     }
-} else {
-    // The Google Services plugin also finds a file in these places, but this script only
-    // looks in src/<flavor>/, so say so instead of silently running without Firebase.
-    val unsupportedLocations = listOf("", "src/debug/", "src/release/", "src/profile/") +
-        firebaseFlavorNames.flatMap { f -> listOf("Debug", "Release", "Profile").map { "src/$f$it/" } }
-    unsupportedLocations.filter { file(it + "google-services.json").exists() }.forEach {
-        logger.warn("WARNING: ignoring app/android/app/${it}google-services.json; move it to src/<flavor>/ (dev or prod) to enable Firebase.")
-    }
 }
+// The Google Services plugin also finds a file in these places, but this script only
+// looks in src/<flavor>/, so say so instead of silently running without Firebase. The scan
+// runs whatever the flavors have: a stray file next to dev's own is just as misplaced.
+val unsupportedLocations = listOf("", "src/debug/", "src/release/", "src/profile/") +
+    firebaseFlavorNames.flatMap { f -> listOf("Debug", "Release", "Profile").map { "src/$f$it/" } }
+unsupportedLocations.filter { file(it + "google-services.json").exists() }.forEach {
+    logger.quiet("WARNING: ignoring app/android/app/${it}google-services.json; move it to src/<flavor>/ (dev or prod) to enable Firebase.")
+}
+
+// Upload-key signing (Ruling P9-R3). Git-ignored android/key.properties names the upload
+// keystore, which lives outside the repo; see android/key.properties.example.
+val keyPropertiesFile = rootProject.file("key.properties")
+val keyProperties = Properties().apply {
+    if (keyPropertiesFile.exists()) keyPropertiesFile.inputStream().use { load(it) }
+}
+val signingKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+// A blank value counts as missing, as in the release checker (app/tool/release_check.dart).
+fun keyProperty(name: String): String? = keyProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+val missingSigningKeys = signingKeys.filter { keyProperty(it) == null }
+// storeFile may be absolute or start with ~/ (the home directory); anything else is
+// relative to android/.
+val releaseStoreFile: File? = keyProperty("storeFile")?.trim()?.let { path ->
+    if (path.startsWith("~/")) File(System.getProperty("user.home"), path.removePrefix("~/"))
+    else rootProject.file(path)
+}
+// Null when key.properties is usable, or absent (the bundle rule below handles that).
+val releaseSigningProblem: String? = when {
+    !keyPropertiesFile.exists() -> null
+    missingSigningKeys.isNotEmpty() ->
+        "android/key.properties is incomplete: ${missingSigningKeys.joinToString(", ")} missing. See android/key.properties.example."
+    releaseStoreFile?.isFile != true ->
+        "android/key.properties points at ${releaseStoreFile?.path}, which doesn't exist. Restore the upload keystore from your backup, or fix storeFile."
+    else -> null
+}
+val releaseSigningUsable = keyPropertiesFile.exists() && releaseSigningProblem == null
+// Flutter passes Gradle one task per build, such as assembleProdRelease or bundleDevRelease.
+val releaseRequested = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+val uploadBundleRequested = gradle.startParameter.taskNames.any { Regex("(?i)bundle\\w*prod\\w*release").containsMatchIn(it) }
+if (releaseRequested && releaseSigningProblem != null) throw GradleException(releaseSigningProblem)
+// Only the prod bundle goes to Google Play, so only it must have the upload key. Release
+// APKs (flutter run --release, the prodRelease manifest check) and dev bundles still build.
+if (!keyPropertiesFile.exists() && uploadBundleRequested)
+    throw GradleException("A prod app bundle is the file you upload to Google Play, so it must be signed with the upload key: copy android/key.properties.example to android/key.properties and fill it in (store-release skill). Release APKs and dev bundles still build, signed with the debug key.")
+if (!keyPropertiesFile.exists() && releaseRequested)
+    logger.quiet("release build signed with the debug key (no android/key.properties); don't upload it.")
 
 // AdMob app ids (Ruling P6-R9). The dev flavor always uses Google's test id. The prod
 // flavor reads its own from git-ignored android/secrets.properties (admobAppIdProd) and
@@ -52,13 +91,17 @@ val admobAppIdProd = secrets.getProperty("admobAppIdProd")?.trim()
 // Only a prod build needs the warning; dev always uses the test id on purpose.
 val prodRequested = gradle.startParameter.taskNames.any { it.contains("prod", ignoreCase = true) }
 if (admobAppIdProd == null && prodRequested) {
-    logger.warn("prod uses Google's test AdMob app id; set admobAppIdProd in android/secrets.properties")
+    logger.quiet("prod uses Google's test AdMob app id; set admobAppIdProd in android/secrets.properties")
 }
 // A value that isn't an app id (an ad unit id, say) makes the Mobile Ads provider throw at
 // launch, so a prod build stops here instead.
 val admobAppIdPattern = Regex("""^ca-app-pub-\d{16}~\d{10}$""")
 if (prodRequested && admobAppIdProd != null && !admobAppIdPattern.matches(admobAppIdProd))
     throw GradleException("admobAppIdProd in android/secrets.properties must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not an ad unit id; a malformed id stops the app at launch.")
+// The upload bundle never ships the test app id (Ruling P9-R4); other prod builds keep the
+// fallback above, so a clean clone still builds and runs.
+if (uploadBundleRequested && admobAppIdProd == null)
+    throw GradleException("A prod app bundle needs the real AdMob app id: set admobAppIdProd in android/secrets.properties.")
 
 android {
     namespace = "com.digitallinked.atvremote"
@@ -95,11 +138,23 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseSigningUsable) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = keyProperty("storePassword")
+                keyAlias = keyProperty("keyAlias")?.trim()
+                keyPassword = keyProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Both flavors sign with the upload key when key.properties is usable. Without
+            // it, release builds use the debug key, so `flutter run --release` and the
+            // prodRelease APK still work; the prod bundle is refused above.
+            signingConfig = if (releaseSigningUsable) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
 }
