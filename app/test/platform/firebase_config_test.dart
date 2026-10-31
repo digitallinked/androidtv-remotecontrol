@@ -173,9 +173,11 @@ void main() {
 
     // It sits in Runner's buildPhases, after Resources.
     final runner = RegExp(
-      r'buildPhases = \(\n(\t+9740EEB61CF901F6004384FC.*?)\);',
+      r'/\* Runner \*/ = \{\n\t\t\tisa = PBXNativeTarget;.*?'
+      r'buildPhases = \((.*?)\);',
       dotAll: true,
     ).firstMatch(pbx)!.group(1)!;
+    expect(runner, contains('9740EEB61CF901F6004384FC /* Run Script */'));
     final lines = runner.split('\n').map((l) => l.trim()).toList();
     final resources = lines.indexWhere((l) => l.contains('/* Resources */'));
     final copy = lines.indexWhere((l) => l.contains('Copy Firebase config'));

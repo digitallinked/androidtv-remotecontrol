@@ -1,0 +1,7 @@
+// Base configuration of the Runner target's Profile-prod configuration (Ruling P9-R5).
+// The Pods settings come first; the include is optional, so the project
+// still builds before pod install. Release.xcconfig then brings
+// Generated.xcconfig, the AdMob test-id default and the optional
+// Secrets.xcconfig, which must stay last. (unverified, Mac; DM-106)
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.profile-prod.xcconfig"
+#include "Release.xcconfig"
