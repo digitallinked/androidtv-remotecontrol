@@ -258,6 +258,9 @@ void main() {
     // its teardown. Only the number is held here, so this file does not match
     // the pattern it scans for.
     const competitorPublisher = '5506461561907650';
+    // The obviously fake publisher of the release-check fixtures and their
+    // ruling (P9-R2): a format-valid id that no AdMob account has.
+    const fixturePublisher = '1234567890123456';
     const competitorDocs = 'docs/competitor-analysis/';
     final admob = RegExp(r'ca-app-pub-\d{16}');
     final revenueCat = RegExp('(^|[^a-z])(goog|appl|test)_[A-Za-z0-9]{20,}');
@@ -277,10 +280,13 @@ void main() {
       for (final m in admob.allMatches(text)) {
         final id = m.group(0)!;
         final isTestId = id == 'ca-app-pub-3940256099942544';
+        final isFixture = id == 'ca-app-pub-$fixturePublisher';
         final isCompetitor =
             id == 'ca-app-pub-$competitorPublisher' &&
             path.startsWith(competitorDocs);
-        if (!isTestId && !isCompetitor) offenders.add('$path: $id');
+        if (!isTestId && !isFixture && !isCompetitor) {
+          offenders.add('$path: $id');
+        }
       }
       if (revenueCat.hasMatch(text)) offenders.add('$path: RevenueCat key');
       if (firebaseKey.hasMatch(text)) offenders.add('$path: Firebase key');
