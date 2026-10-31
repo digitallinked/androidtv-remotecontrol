@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +85,11 @@ import 'test_identity.dart';
 /// go idle: a screen with a running progress indicator never goes idle, and
 /// `pumpAndSettle` would then run the fake clock forward until the screen
 /// changes.
+///
+/// The language follows the stored setting as `App` does; [locale] replaces
+/// it. [localizationsDelegates] replaces the app's strings delegate (for
+/// example with a pseudo-locale's) and keeps the Material, Cupertino and
+/// Widgets delegates.
 Future<SettingsStore> pumpRouterApp(
   WidgetTester tester, {
   required String initialLocation,
@@ -98,6 +104,8 @@ Future<SettingsStore> pumpRouterApp(
   bool disableAnimations = false,
   ColorScheme? dynamicScheme,
   TextDirection? textDirection,
+  Locale? locale,
+  List<LocalizationsDelegate<Object?>>? localizationsDelegates,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
@@ -127,7 +135,17 @@ Future<SettingsStore> pumpRouterApp(
                 ? dynamicScheme
                 : null,
           ),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale:
+              locale ??
+              localeFromCode(ref.watch(settingsControllerProvider).localeCode),
+          localizationsDelegates: localizationsDelegates == null
+              ? AppLocalizations.localizationsDelegates
+              : [
+                  ...localizationsDelegates,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                ],
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, app) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
