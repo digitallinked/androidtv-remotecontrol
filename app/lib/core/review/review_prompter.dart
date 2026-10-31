@@ -49,14 +49,6 @@ const int reviewFirstLaunch = 2;
 /// when the app goes to the background).
 const int reviewPressSaveInterval = 10;
 
-/// The statuses that mean the connection is in trouble: lost, refused or
-/// unreachable.
-const Set<ConnectionStatus> _troubled = {
-  ConnectionStatus.reconnecting,
-  ConnectionStatus.needsPairing,
-  ConnectionStatus.offline,
-};
-
 /// Asks the store for its review prompt once the remote has proven itself
 /// (Ruling P6-R13).
 ///
@@ -119,7 +111,7 @@ class ReviewPrompter extends _$ReviewPrompter {
         _last = status;
         if (status == ConnectionStatus.connected &&
             was != ConnectionStatus.connected &&
-            !_troubled.contains(was)) {
+            !troubledStatuses.contains(was)) {
           unawaited(_maybePrompt());
         }
       })

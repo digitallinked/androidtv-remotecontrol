@@ -8,7 +8,7 @@ part 'connection_trouble.g.dart';
 
 /// The statuses that mean the connection is in trouble: lost, refused or
 /// unreachable.
-const Set<ConnectionStatus> _troubled = {
+const Set<ConnectionStatus> troubledStatuses = {
   ConnectionStatus.reconnecting,
   ConnectionStatus.needsPairing,
   ConnectionStatus.offline,
@@ -75,7 +75,7 @@ class ConnectionTrouble extends _$ConnectionTrouble {
   void _move(ConnectionStatus? status) {
     final wasOngoing = _ongoing;
     _last = status;
-    if (_troubled.contains(status) || (wasOngoing && !_ongoing)) note();
+    if (troubledStatuses.contains(status) || (wasOngoing && !_ongoing)) note();
   }
 
   /// Records trouble now.
