@@ -63,7 +63,7 @@ abstract final class AppRoutes {
   /// Settings: touchpad or D-pad, and the row above it.
   static const settingsRemoteLayout = '/settings/remote-layout';
 
-  /// Settings: haptics, Smooth Press, screen and keyboard.
+  /// Settings: haptics, Natural hold, screen and keyboard.
   static const settingsRemoteBehaviour = '/settings/remote-behaviour';
 
   /// Settings: troubleshooting and common questions.
@@ -127,7 +127,7 @@ abstract final class AppRouteNames {
   /// Settings: touchpad or D-pad, and the row above it.
   static const settingsRemoteLayout = 'settings_remote_layout';
 
-  /// Settings: haptics, Smooth Press, screen and keyboard.
+  /// Settings: haptics, Natural hold, screen and keyboard.
   static const settingsRemoteBehaviour = 'settings_remote_behaviour';
 
   /// Settings: troubleshooting and common questions.

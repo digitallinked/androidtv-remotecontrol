@@ -7,7 +7,7 @@ import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
 
-/// Settings page for the remote's behaviour: vibration, Smooth Press, screen
+/// Settings page for the remote's behaviour: vibration, Natural hold, screen
 /// and keyboard.
 class RemoteBehaviourPage extends ConsumerWidget {
   /// Creates the screen.
