@@ -102,9 +102,8 @@ void main() {
       expect(
         gradle,
         contains(
-          'val prodUsesTestAdmobId = '
-          '(admobAppIdProd ?: admobTestAppId).startsWith('
-          'admobTestPublisherPrefix)',
+          'val prodUsesTestAdmobId = (admobAppIdProd ?: '
+          'admobTestAppId).startsWith(admobTestPublisherPrefix)',
         ),
       );
       expect(gradle, contains('if (prodUsesTestAdmobId && prodRequested)'));
