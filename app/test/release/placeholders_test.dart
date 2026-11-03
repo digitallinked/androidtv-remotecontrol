@@ -36,11 +36,6 @@ List<File> releaseDocs() =>
 /// exact `{{TOKEN}}` form only (Ruling P9-R11). Don't add a trim here.
 final RegExp anyToken = RegExp(r'\{\{([^{}]*)\}\}');
 
-/// Tokens a later task's documents use (Task 9.11: the review notes and the
-/// app-ads.txt template). Task 9.11 empties this set:
-/// `pending_tokens_are_not_used_yet` fails once a document uses one.
-const Set<String> pendingTokens = {'DEMO_VIDEO_URL', 'ADMOB_PUBLISHER_ID'};
-
 void main() {
   test('placeholders_file_has_the_p9_r11_tokens_and_shape', () {
     final placeholders = loadPlaceholders();
@@ -94,23 +89,9 @@ void main() {
     };
     final unused = [
       for (final MapEntry(:key, :value) in loadPlaceholders().entries)
-        if (!used.contains(key) &&
-            value['code'] == null &&
-            !pendingTokens.contains(key))
-          key,
+        if (!used.contains(key) && value['code'] == null) key,
     ];
     expect(unused, isEmpty);
-  });
-
-  test('pending_tokens_are_not_used_yet', () {
-    final text = releaseDocs().map((f) => f.readAsStringSync()).join('\n');
-    for (final token in pendingTokens) {
-      expect(
-        text,
-        isNot(contains('{{$token}}')),
-        reason: '$token is used now: remove it from pendingTokens',
-      );
-    }
   });
 
   test('app_links_match_the_placeholder_values', () {
