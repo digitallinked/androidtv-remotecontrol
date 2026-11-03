@@ -34,22 +34,22 @@ Each set comes in `en` and `ms`. The Malay captions are **UNREVIEWED** (DM-068).
 
 ### Shots
 
-| Id | Screen | Caption (en) |
+| Id | Screen | Caption key |
 |---|---|---|
 | **Phone** (`playPhone`, `iphone69`) | | |
-| `01_touchpad` | The remote, Touchpad | `shot.phone.01`: Swipe to move, tap to select |
-| `02_dpad` | The remote, D-pad | `shot.phone.02`: A D-pad that's easy to hit |
-| `03_apps` | Apps | `shot.phone.03`: Open your TV apps in one tap |
-| `04_keyboard` | The keyboard sheet, "Hello" typed | `shot.phone.04`: Type with your phone's keyboard |
-| `05_discovery` | Discovery, two TVs found | `shot.phone.05`: Finds the TVs on your network |
-| `06_pairing` | The pairing code page | `shot.phone.06`: Pair once with the code on your TV |
-| `07_styles` | Appearance, Ocean chosen, dark (Premium) | `shot.phone.07`: Dark mode and Premium colour styles |
-| `08_tvs` | Your TVs, three TVs | `shot.phone.08`: Switch between all your TVs |
+| `01_touchpad` | The remote, Touchpad | `shot.phone.01` |
+| `02_dpad` | The remote, D-pad | `shot.phone.02` |
+| `03_apps` | Apps | `shot.phone.03` |
+| `04_keyboard` | The keyboard sheet, "Hello" typed | `shot.phone.04` |
+| `05_discovery` | Discovery, two TVs found | `shot.phone.05` |
+| `06_pairing` | The pairing code page | `shot.phone.06` |
+| `07_styles` | Appearance, Ocean chosen, dark (Premium) | `shot.phone.07` |
+| `08_tvs` | Your TVs, three TVs | `shot.phone.08` |
 | **Tablet** (`playTablet`, `ipad13`) | | |
-| `01_split` | The remote, split layout | `shot.tablet.01`: Touchpad and keys side by side |
-| `02_apps` | Apps | `shot.tablet.02`: All your TV apps, one tap away |
+| `01_split` | The remote, split layout | `shot.tablet.01` |
+| `02_apps` | Apps | `shot.tablet.02` |
 
-The captions come from `docs/release/store-listing/<locale>.md`, so a copy change shows up the next time you generate.
+The caption text isn't repeated here: each key's text is in `docs/release/store-listing/en.md` (and `ms.md`), which the generator reads, so a copy change shows up the next time you generate.
 
 ### Data
 

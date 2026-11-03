@@ -28,9 +28,12 @@ const List<String> draftNames = [
   'review/demo-video-script.md',
 ];
 
-/// The text of `docs/release/<name>`.
-String releaseDoc(String name) =>
-    File('${repoRoot.path}/docs/release/$name').readAsStringSync();
+/// The text of `docs/release/<name>`, with LF line endings: a Windows
+/// checkout with `core.autocrlf` has CRLF, and the block patterns below
+/// match LF only.
+String releaseDoc(String name) => File(
+  '${repoRoot.path}/docs/release/$name',
+).readAsStringSync().replaceAll('\r\n', '\n');
 
 /// The text of [path], relative to the repo root, decoded leniently so a
 /// binary file can be scanned too.
@@ -194,6 +197,46 @@ void main() {
       }
     },
   );
+
+  // Ruling P9-C12: Apple asks per data type, so a type AdMob collects is
+  // linked even when a first-party SDK collects it too.
+  test('apple_privacy_marks_every_type_admob_collects_as_linked', () {
+    final rows = releaseDoc(
+      'forms/apple-app-privacy.md',
+    ).split('\n').where((l) => l.startsWith('| ') && l.contains('→')).toList();
+    expect(rows, hasLength(greaterThanOrEqualTo(8)), reason: 'non-vacuous');
+    for (final row in rows) {
+      final cells = row.split('|').map((c) => c.trim()).toList();
+      // ['', type, collected by, purposes, linked, tracking, '']
+      final collectedBy = cells[2];
+      final linked = cells[4];
+      if (collectedBy.contains('AdMob')) {
+        expect(linked, startsWith('**Yes**'), reason: cells[1]);
+      }
+    }
+  });
+
+  test('apple_privacy_not_collected_list_is_one_paragraph', () {
+    final doc = releaseDoc('forms/apple-app-privacy.md');
+    final paragraph = doc
+        .split(RegExp(r'\n\s*\n'))
+        .singleWhere((p) => p.startsWith('**Not collected**'));
+    for (final category in const [
+      'Contact Info',
+      'Browsing History',
+      'Search History',
+      'Other Data',
+    ]) {
+      expect(paragraph, contains(category));
+    }
+    expect(paragraph, isNot(contains('Feedback e-mail')));
+  });
+
+  test('content_rating_cites_the_ads_guideline_not_the_kids_category', () {
+    final doc = releaseDoc('forms/content-rating.md');
+    expect(doc, isNot(contains('Guidelines 1.3')));
+    expect(doc, contains('2.5.18'));
+  });
 
   test('rename_checklist_names_every_file_that_holds_the_name_or_id', () {
     // Case-insensitive, so the database file name `remotely` counts too.

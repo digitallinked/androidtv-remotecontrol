@@ -35,7 +35,7 @@ Both stores require ads to be appropriate for the app's rating. Without a cap, A
 - **[owner]** AdMob console → Blocking controls → All apps (or this app) → **Maximum ad content rating = G** ("General audiences"). Do this before the first release that shows ads.
 - **Code (Task 9.13):** the app also sets `RequestConfiguration(maxAdContentRating: MaxAdContentRating.g)` before `MobileAds.initialize`, with a test, so the cap holds even if the console setting changes.
 
-**Sources:** AdMob Help, "Set a maximum ad content rating": https://support.google.com/admob/answer/7562142; App Review Guidelines 1.3 / ads appropriate to the age rating: https://developer.apple.com/app-store/review/guidelines/.
+**Sources:** AdMob Help, "Set a maximum ad content rating": https://support.google.com/admob/answer/7562142; App Review Guidelines 2.5.18 ("Ads displayed in an app must be appropriate for the app's age rating"; checked 2026-11-03): https://developer.apple.com/app-store/review/guidelines/.
 
 ## App Store: age rating
 
