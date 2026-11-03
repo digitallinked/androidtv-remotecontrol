@@ -11,7 +11,7 @@ App Store Connect → the app → the version → App Review Information. The `s
 | Sign-in required | **No** (the app has no accounts) |
 | Contact information | **[owner]** your name, phone and `{{SUPPORT_EMAIL}}` |
 | Attachment | Optional: the demo video file itself, if you'd rather not use a link **[owner]** |
-| Notes | The block below (Apple's limit is 4,000 characters; the block is about 3,700 before the tokens are filled, so keep additions short) |
+| Notes | The block below (Apple's limit is 4,000 characters; the block is about 3,750 before the tokens are filled; `store_forms_test.dart` keeps the filled block at 4,000 or fewer, so keep additions short) |
 
 ## Notes (paste this block)
 
@@ -27,7 +27,7 @@ TRY IT WITHOUT A TV: DEMO MODE
 1. Install and open the app. The first screen shows three introduction cards.
 2. Tap "Try demo" at the bottom of the cards. (If the introduction was already finished, the app opens on "Choose your TV"; tap "Try demo" at the bottom of that screen.)
 3. The remote opens on "Demo TV" with a "Demo mode" strip at the top. Try the touchpad (swipe and tap), the D-pad, volume, the keys row, the app shortcuts and the Keyboard key. A card under the status line shows what the simulated TV just did. Nothing is sent over the network in demo mode.
-4. Tap the Settings button (top left of the remote) to reach Settings, Premium and Privacy choices. Tap "Leave" in the demo strip to leave demo mode.
+4. Tap the Settings button (top left of the remote) to reach Settings, Premium and Privacy choices. To leave demo mode, tap "Leave" in the demo strip, then confirm with "Leave demo" (or "Stay" to keep going).
 
 LOCAL NETWORK PERMISSION
 The app asks for Local Network access only to find and control the user's TV on their own Wi-Fi (Bonjour services _androidtvremote2._tcp and _androidtvremote._tcp; the TV's remote service on ports 6466 and 6467 over TLS). Before iOS asks, the app explains why ("Allow local network access"); this happens when the user taps "Get started" or "Skip" on the introduction. Demo mode never browses the network, so "Try demo" shows no Local Network prompt.

@@ -25,20 +25,14 @@ Play Console → Policy and programs → App content. Ruling P9-R15. Data safety
 
 ## App access: instructions for the reviewer
 
-Choose "All or some functionality is restricted", add one set of instructions, and paste:
+Choose "All or some functionality is restricted" and add one set of instructions. Name it `Demo mode (no TV needed)`; leave username and password empty. Paste the block below into the instructions field (`store_forms_test.dart` keeps it at 500 characters or fewer after filling; **[owner]** confirm the field's current limit in the console and shorten further if needed):
 
 ```text
-Name: Demo mode (no TV needed)
-
-Every feature controls an Android TV or Google TV on the same Wi-Fi network, so the app can't be fully used without one. It needs no account, username or password.
-
-To try the app without a TV, use demo mode, which shows a simulated TV:
-1. Open the app. On the first screen (the introduction cards), tap "Try demo" at the bottom.
-   (If the introduction was already finished: on "Choose your TV", tap "Try demo" at the bottom.)
-2. The remote opens on "Demo TV" with a "Demo mode" strip at the top. Use the touchpad, D-pad, volume and the other keys, the app shortcuts and the keyboard: a card under the status line shows what the simulated TV just did. Nothing is sent over the network.
-3. Tap the Settings button (top left) for Settings, Premium and Privacy choices. Tap "Leave" in the demo strip to leave demo mode.
-
-A video of the app controlling a real TV (discovery, pairing with the code on the TV, and control): {{DEMO_VIDEO_URL}}
+No account needed. Every feature controls an Android TV or Google TV on the same Wi-Fi, so please use demo mode (a simulated TV):
+1. Open the app and tap "Try demo" at the bottom of the intro cards (or of "Choose your TV").
+2. Use the remote on "Demo TV"; a card shows what the TV did.
+3. Settings: top-left button. To exit: "Leave" in the Demo mode strip, then confirm "Leave demo".
+Real-TV video: {{DEMO_VIDEO_URL}}
 ```
 
 ## Owner to confirm

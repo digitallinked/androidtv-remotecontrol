@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'store_copy.dart' show fillTokens, placeholderValues;
+
 /// The first line of every store-form and review draft (Task 9.11).
 const String draftLine =
     '> DRAFT for the owner to paste. Confirm every answer against the '
@@ -52,7 +54,8 @@ List<File> filesUnder(String dir, {bool recursive = true}) {
 
 /// The files that may hold the app's name or bundle id: the Android
 /// sources and Gradle files, the iOS Runner, xcconfigs and project, and
-/// `app/lib` without generated code.
+/// `app/lib` without generated code, and the protocol package's `lib` and
+/// `bin` (its client constants).
 List<String> nameBearingFiles() {
   final android = [
     for (final f in filesUnder('app/android'))
@@ -79,7 +82,12 @@ List<String> nameBearingFiles() {
               ).hasMatch(path))
         path,
   ];
-  return [...android, ...ios, ...lib]..sort();
+  final protocol = [
+    for (final dir in ['packages/atv_remote/lib', 'packages/atv_remote/bin'])
+      for (final f in filesUnder(dir))
+        if (relative(f) case final path when !path.endsWith('.pb.dart')) path,
+  ];
+  return [...android, ...ios, ...lib, ...protocol]..sort();
 }
 
 void main() {
@@ -188,18 +196,29 @@ void main() {
   );
 
   test('rename_checklist_names_every_file_that_holds_the_name_or_id', () {
-    const needles = [
-      'com.digitallinked.atvremote',
-      'Remotely for Android TV',
-      'Remotely Dev',
-      'Remotely',
+    // Case-insensitive, so the database file name `remotely` counts too.
+    final needles = [
+      RegExp(r'com\.digitallinked\.atvremote', caseSensitive: false),
+      RegExp('remotely for android tv', caseSensitive: false),
+      RegExp('remotely dev', caseSensitive: false),
+      RegExp('remotely', caseSensitive: false),
+      // The protocol's client constants: the short id as a string literal.
+      RegExp('[\'"]atvremote[\'"]'),
     ];
     final hits = [
       for (final path in nameBearingFiles())
         if (needles.any(repoText(path).contains)) path,
     ];
-    // Non-vacuous: flavor.dart holds both names and ids today.
-    expect(hits, contains('app/lib/app/flavor.dart'));
+    // Non-vacuous: flavor.dart holds both names and ids today, the database
+    // file name is lower-case, and the pairing service name is a constant.
+    expect(
+      hits,
+      containsAll([
+        'app/lib/app/flavor.dart',
+        'app/lib/core/storage/app_database.dart',
+        'packages/atv_remote/lib/src/pairing_client.dart',
+      ]),
+    );
     final checklist = releaseDoc('rename-checklist.md');
     final missing = [
       for (final path in hits)
@@ -213,6 +232,40 @@ void main() {
       contains('docs/release/store-assets/feature_graphic.png'),
     );
     expect(checklist.toLowerCase(), contains('permanent'));
+  });
+
+  test('review_notes_fit_apple_limit_after_filling', () {
+    // App Review notes take 4,000 characters. Tokens are filled from
+    // placeholders.json; unfilled ones count as their {{TOKEN}} text, and a
+    // long video link is allowed for (P9-R13 counting).
+    final doc = releaseDoc('review/apple-review-notes.md');
+    final block = RegExp(
+      r'## Notes \(paste this block\)\s*```text\n(.*?)```',
+      dotAll: true,
+    ).firstMatch(doc);
+    expect(block, isNotNull);
+    final values = {
+      ...placeholderValues(),
+      'DEMO_VIDEO_URL': 'https://www.youtube.com/watch?v=${'x' * 60}',
+    };
+    final filled = fillTokens(block![1]!, values).trimRight();
+    expect(filled.length, lessThanOrEqualTo(4000));
+  });
+
+  test('play_app_access_instructions_fit_the_field', () {
+    // Play Console's App access instructions field (owner to confirm the
+    // limit in the console; 500 characters is the conservative figure).
+    final doc = releaseDoc('forms/play-declarations.md');
+    final block = RegExp(
+      r'## App access: instructions for the reviewer.*?```text\n(.*?)```',
+      dotAll: true,
+    ).firstMatch(doc);
+    expect(block, isNotNull);
+    final filled = fillTokens(block![1]!, {
+      ...placeholderValues(),
+      'DEMO_VIDEO_URL': 'https://www.youtube.com/watch?v=${'x' * 11}',
+    }).trimRight();
+    expect(filled.length, lessThanOrEqualTo(500));
   });
 
   test('review_notes_give_the_demo_path_and_the_video_token', () {

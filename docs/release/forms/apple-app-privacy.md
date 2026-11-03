@@ -22,24 +22,28 @@ App Store Connect → the app → App Privacy → Get Started / Edit. Ruling P9-
 
 For each type below, App Store Connect asks three things: the purposes, whether it is linked to the user's identity, and whether it is used for tracking.
 
-- **Linked to the user: No** for every type (Ruling P9-R15). The app has no accounts, no name or e-mail, and every identifier is random per installation. **[owner]** confirm: Apple counts data as linked if *any* partner links it; read AdMob's page below.
+- **Linked to the user: Yes** for every type AdMob collects (Ruling P9-C12, amending P9-R15). Apple's definition of "linked" includes linking through the **device** (an identifier such as the IDFA), and "tracking" means linking this app's data with other companies' data. A type declared as used to track you therefore can't honestly be "not linked". So every AdMob row below says **Yes**, apart from the two first-party rows that follow. **[owner]** decide (owner list).
+- **Linked: No** only where the data stays first-party with random per-installation ids: **Crash Data** (Crashlytics; AdMob's own SDK crash data is covered by the AdMob rows, and its page shows whether it is linked) and **Purchase History** (RevenueCat, plus Firebase Analytics' `purchase_success`). Firebase and RevenueCat never get a name, e-mail or account.
 - **Tracking: Yes** where marked (the IDFA after the user allows tracking, and what AdMob uses with it).
 
 | Category → data type | Collected by | Purposes | Linked | Used for tracking |
 |---|---|---|---|---|
-| Identifiers → **Device ID** | AdMob (the IDFA, only if tracking is allowed); Firebase Analytics (app instance ID); Firebase Installations (Firebase Installation ID, for Remote Config); Crashlytics (installation ID); RevenueCat (anonymous app user ID) | Third-Party Advertising; Analytics; App Functionality | No | **Yes** (the IDFA, by AdMob) |
-| Usage Data → **Product Interaction** | Firebase Analytics (the event catalogue: screens, onboarding, pairing and connection outcomes, sampled key names, app launches by catalogue package or "custom", layout changes, paywall and purchase events, the review prompt); AdMob (ad views and taps) | Analytics; Third-Party Advertising | No | **Yes** (AdMob) **[owner]** confirm |
-| Usage Data → **Advertising Data** | AdMob (the ads shown and how they performed) | Third-Party Advertising | No | **Yes** |
-| Diagnostics → **Crash Data** | Crashlytics (scrubbed of TV names, addresses and codes); AdMob (SDK crashes) | App Functionality; Analytics | No | No |
-| Diagnostics → **Performance Data** | AdMob (ad SDK performance, such as load times); Crashlytics (device state with a crash, such as free memory) | App Functionality; Analytics; Third-Party Advertising | No | No **[owner]** confirm on AdMob's page |
+| Identifiers → **Device ID** | AdMob (the IDFA, only if tracking is allowed; the IDFV, the identifier for vendors, whatever the ATT answer **[owner]** confirm on AdMob's page); Firebase Analytics (app instance ID; its own IDFV collection is off); Firebase Installations (Firebase Installation ID, for Remote Config); Crashlytics (installation ID); RevenueCat (anonymous app user ID) | Third-Party Advertising; Analytics; App Functionality | **Yes** | **Yes** (the IDFA, by AdMob) |
+| Usage Data → **Product Interaction** | Firebase Analytics (the event catalogue: screens, onboarding, pairing and connection outcomes, sampled key names, app launches by catalogue package or "custom", layout changes, paywall and purchase events, the review prompt); AdMob (ad views and taps) | Analytics; Third-Party Advertising | **Yes** | **Yes** (AdMob) **[owner]** confirm |
+| Usage Data → **Advertising Data** | AdMob (the ads shown and how they performed) | Third-Party Advertising | **Yes** | **Yes** |
+| Diagnostics → **Crash Data** | Crashlytics (scrubbed of TV names, addresses and codes); AdMob (SDK crashes) | App Functionality; Analytics | No (first-party, Crashlytics) **[owner]** set Yes if AdMob's page marks its crash data as linked | No |
+| Diagnostics → **Other Diagnostic Data** | AdMob (SDK diagnostics, as its iOS disclosure lists) | App Functionality; Third-Party Advertising | **Yes** (AdMob) | No **[owner]** confirm on AdMob's page |
+| Diagnostics → **Performance Data** | AdMob (ad SDK performance, such as load times); Crashlytics (device state with a crash, such as free memory) | App Functionality; Analytics; Third-Party Advertising | **Yes** (AdMob) | No **[owner]** confirm on AdMob's page |
 | Purchases → **Purchase History** | RevenueCat (this app's App Store transactions: product, date, transaction id); Firebase Analytics (`purchase_success` with the product id, only while usage statistics are on) | App Functionality; Analytics | No | No |
-| Location → **Coarse Location** | AdMob (from the IP address); Firebase Analytics (city/region/country from the IP address) | Third-Party Advertising; Analytics | No | **Yes** (AdMob) **[owner]** confirm |
+| Location → **Coarse Location** | AdMob (from the IP address); Firebase Analytics (city/region/country from the IP address) | Third-Party Advertising; Analytics | **Yes** | **Yes** (AdMob) **[owner]** confirm |
 
 **Tracking: Yes.** The app shows the App Tracking Transparency question (after its own explanation) before the ads SDK starts, and AdMob receives the IDFA only if the user allows tracking. Declare "Used to track you" for the data types marked **Yes** above. Without tracking permission the app still shows ads, which are less tailored.
 
-**Possibly also declare** (AdMob's page lists it for some SDK versions): Diagnostics → **Other Diagnostic Data**. **[owner]** add it if Google's page for the linked SDK version lists it.
+**Other Diagnostic Data is declared by default** (AdMob's iOS page lists it). Over-declaring doesn't cause a rejection; under-declaring can.
 
-**Not collected** (leave unchecked): Contact Info, Health and Fitness, Financial Info, Precise Location, Sensitive Info, Contacts, User Content (typed text goes only to the user's own TV; feedback is sent by the user's own Mail app, outside the app), Browsing History, Search History, Other Data. TV names, IP addresses, MAC addresses and the pairing certificate stay on the iPhone and are excluded from backups (decision #49).
+**In-app review prompt (`in_app_review`, Apple's `SKStoreReviewController`):** collects nothing for us. iOS decides whether the prompt appears and handles any rating; the app never learns the outcome. Nothing to declare.
+
+**Not collected** (leave unchecked): Contact Info, Health and Fitness, Financial Info, Precise Location, Sensitive Info, Contacts, User Content (typed text goes only to the user's own TV). **Feedback e-mail** isn't declared: it is sent by the user's own Mail app, outside the app, and meets every criterion of Apple's "Optional disclosure" (https://developer.apple.com/app-store/app-privacy-details/): it isn't used for tracking or advertising, it is collected infrequently, it is optional and started by the user each time, and the user's name or e-mail address is prominently shown as the sender of the message. **[owner]** confirm, Browsing History, Search History, Other Data. TV names, IP addresses, MAC addresses and the pairing certificate stay on the iPhone and are excluded from backups (decision #49).
 
 ## Privacy policy URL
 
@@ -58,8 +62,8 @@ Apple also reads each SDK's `PrivacyInfo.xcprivacy` (required-reason APIs and de
 
 ## Owner to confirm
 
-- [ ] "Linked: No" for every type, against AdMob's and RevenueCat's pages. **[owner]**
+- [ ] **Decide "Linked" (Ruling P9-C12):** Yes for the AdMob types (Device ID, Product Interaction, Advertising Data, Performance Data, Other Diagnostic Data, Coarse Location), No for Crash Data (Crashlytics) and Purchase History (RevenueCat), checked against AdMob's and RevenueCat's pages. **[owner]**
+- [ ] AdMob's use of the IDFV whatever the ATT answer, and the matching sentence in the privacy policy (section 3, AdMob). **[owner]**
 - [ ] The "used for tracking" marks against AdMob's page. **[owner]**
-- [ ] Whether to add Other Diagnostic Data. **[owner]**
 - [ ] The Xcode privacy report agrees with this table. **(unverified, Mac)** **[owner]**
 - [ ] The answers agree with the hosted privacy policy, including the occasional full-screen ad when you leave Settings (policy owner item 10). **[owner]**

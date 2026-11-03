@@ -26,7 +26,16 @@ Play Console → Policy and programs → App content → Content rating → Star
 
 **Source:** Play Console Help, "Content ratings": https://support.google.com/googleplay/android-developer/answer/9898843.
 
-**Target audience is separate.** The content rating says the content suits everyone; the target audience (18+ only, `play-declarations.md`) says whom the app is for. Both are deliberate: an 18+ audience keeps the app out of the Families policy.
+**Target audience is separate, and the two don't conflict** (Ruling P9-C12). The content rating (IARC on Play, the age rating on the App Store) describes the app's *content*, and this app's content is a TV remote: Everyone / 4+. The target audience (18+ only on Play, `play-declarations.md`) describes *whom the app is for*, and keeps the app out of the Families policy. A utility can have all-ages content and an adult audience; keep both.
+
+## Ads must suit the rating: cap AdMob at G
+
+Both stores require ads to be appropriate for the app's rating. Without a cap, AdMob serves its default range, which goes above G.
+
+- **[owner]** AdMob console → Blocking controls → All apps (or this app) → **Maximum ad content rating = G** ("General audiences"). Do this before the first release that shows ads.
+- **Code (Task 9.13):** the app also sets `RequestConfiguration(maxAdContentRating: MaxAdContentRating.g)` before `MobileAds.initialize`, with a test, so the cap holds even if the console setting changes.
+
+**Sources:** AdMob Help, "Set a maximum ad content rating": https://support.google.com/admob/answer/7562142; App Review Guidelines 1.3 / ads appropriate to the age rating: https://developer.apple.com/app-store/review/guidelines/.
 
 ## App Store: age rating
 
@@ -50,4 +59,5 @@ App Store Connect → the app → App Information → Age Rating → Edit. Apple
 
 - [ ] The questionnaire answers against the console's current questions. **[owner]**
 - [ ] The resulting Play rating is Everyone / PEGI 3 and the App Store rating is 4+; if not, record which answer changed it. **[owner]**
-- [ ] You're comfortable with a 4+ App Store rating next to an 18+ Play target audience (the privacy policy says the app is meant for adults; owner item 9 there). **[owner]**
+- [ ] AdMob's maximum ad content rating is set to G (Blocking controls). **[owner]**
+- [ ] Keep 4+ / Everyone (content) with the 18+ Play audience (who it is for); the privacy policy's owner item 9 says the same. **[owner]**
