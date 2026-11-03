@@ -22,6 +22,11 @@ jobs:
           channel: stable
           flutter-version: 3.44.1
           cache: true
+      # Writes android/gradlew and local.properties without building, so
+      # the `gradle`-tagged dry runs of the signing and AdMob refusals run
+      # here instead of skipping. Needs no secrets.
+      - run: flutter build apk --config-only --flavor dev -t lib/main_dev.dart
+        working-directory: app
       - run: tool/check.sh
 
   goldens:
