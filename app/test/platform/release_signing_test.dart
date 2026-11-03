@@ -203,11 +203,21 @@ void main() {
       ),
     );
     expect(
-      uploadBundleProblems(script),
+      script,
       contains(
-        'if ((admobAppIdProd ?: '
-        'admobTestAppId).startsWith(admobTestPublisherPrefix))',
+        'val prodUsesTestAdmobId = (admobAppIdProd ?: '
+        'admobTestAppId).startsWith(admobTestPublisherPrefix)',
       ),
+    );
+    expect(uploadBundleProblems(script), contains('if (prodUsesTestAdmobId)'));
+  });
+
+  test('the_upload_bundle_refuses_a_malformed_admob_id_on_every_path', () {
+    // Task 9.13: in the list, so the task-graph backstop (`gradlew bundle`)
+    // refuses it with the same message as the early check.
+    expect(
+      uploadBundleProblems(gradle()),
+      contains('if (admobAppIdMalformed) admobAppIdMalformedMessage else null'),
     );
   });
 
@@ -228,8 +238,9 @@ void main() {
   });
 
   test('aggregate_and_abbreviated_tasks_hit_the_same_refusals', () {
-    // P9-C2 (c): `gradlew bundle`, `gradlew build` and `:app:bundleProdRel`
-    // name no release task, so the task graph is checked too.
+    // P9-C2 (c): `gradlew bundle` and `:app:bundleProdRel` name no prod
+    // release bundle task, so the task graph is checked too. (`gradlew build`
+    // and `assemble` never make a bundle.)
     final script = gradle();
     expect(
       script,

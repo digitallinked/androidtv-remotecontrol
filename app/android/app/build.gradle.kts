@@ -73,7 +73,8 @@ val releaseSigningProblem: String? = when {
 val releaseSigningUsable = keyPropertiesFile.exists() && releaseSigningProblem == null
 // Flutter passes Gradle one task per build, such as assembleProdRelease or bundleDevRelease.
 // These name checks stop a Flutter build early; the task-graph check below also catches
-// aggregate and abbreviated tasks (gradlew bundle, gradlew build, :app:bundleProdRel).
+// aggregate and abbreviated bundle tasks (gradlew bundle, :app:bundleProdRel). gradlew build
+// and assemble never make a bundle, so the bundle rules don't apply to them.
 val releaseRequested = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
 val uploadBundleRequested = gradle.startParameter.taskNames.any { Regex("(?i)bundle\\w*prod\\w*release").containsMatchIn(it) }
 
@@ -89,27 +90,32 @@ val secrets = Properties().apply {
 // "not set": an empty or malformed app id makes the Mobile Ads provider throw at launch.
 val admobAppIdProd = secrets.getProperty("admobAppIdProd")?.trim()
     ?.takeIf { it.isNotBlank() && !it.contains("XXXXXXXX") }
+// Google's test publisher: the fallback, or a test id someone set in secrets.properties.
+val admobTestPublisherPrefix = "ca-app-pub-3940256099942544~"
+val prodUsesTestAdmobId = (admobAppIdProd ?: admobTestAppId).startsWith(admobTestPublisherPrefix)
 // Only a prod build needs the warning; dev always uses the test id on purpose.
 val prodRequested = gradle.startParameter.taskNames.any { it.contains("prod", ignoreCase = true) }
-if (admobAppIdProd == null && prodRequested) {
+if (prodUsesTestAdmobId && prodRequested) {
     logger.quiet("prod uses Google's test AdMob app id; set admobAppIdProd in android/secrets.properties")
 }
 // A value that isn't an app id (an ad unit id, say) makes the Mobile Ads provider throw at
-// launch, so a prod build stops here instead.
+// launch, so a prod build stops here instead (and the upload bundle below, on every path).
 val admobAppIdPattern = Regex("""^ca-app-pub-\d{16}~\d{10}$""")
-if (prodRequested && admobAppIdProd != null && !admobAppIdPattern.matches(admobAppIdProd))
-    throw GradleException("admobAppIdProd in android/secrets.properties must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not an ad unit id; a malformed id stops the app at launch.")
+val admobAppIdMalformed = admobAppIdProd != null && !admobAppIdPattern.matches(admobAppIdProd)
+val admobAppIdMalformedMessage = "admobAppIdProd in android/secrets.properties must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not an ad unit id; a malformed id stops the app at launch."
+if (prodRequested && admobAppIdMalformed) throw GradleException(admobAppIdMalformedMessage)
 
 // What stops the prod upload bundle, reported together (Rulings P9-R3, P9-R4, P9-C2). Only
 // it goes to Google Play, so only it must have the upload key and the real AdMob app id:
 // release APKs (flutter run --release, the prodRelease manifest check) and dev bundles still
 // build, with the debug key and, for prod, the test app id. Google's test publisher is
-// refused whether it is the fallback or was set in secrets.properties.
-val admobTestPublisherPrefix = "ca-app-pub-3940256099942544~"
+// refused whether it is the fallback or was set in secrets.properties, and a malformed id is
+// refused here too, so `gradlew bundle` (no prod task name) hits it in the backstop.
 val uploadBundleProblems: List<String> = listOfNotNull(
     releaseSigningProblem
         ?: if (!keyPropertiesFile.exists()) "A prod app bundle is the file you upload to Google Play, so it must be signed with the upload key: copy android/key.properties.example to android/key.properties and fill it in (store-release skill). Release APKs and dev bundles still build, signed with the debug key." else null,
-    if ((admobAppIdProd ?: admobTestAppId).startsWith(admobTestPublisherPrefix)) "A prod app bundle needs the real AdMob app id: set admobAppIdProd in android/secrets.properties." else null,
+    if (prodUsesTestAdmobId) "A prod app bundle needs the real AdMob app id: set admobAppIdProd in android/secrets.properties." else null,
+    if (admobAppIdMalformed) admobAppIdMalformedMessage else null,
 )
 // A broken key.properties stops every release task; a missing one only the upload bundle.
 fun refuseReleaseTasks(release: Boolean, uploadBundle: Boolean) {

@@ -98,7 +98,16 @@ void main() {
           'it.contains("prod", ignoreCase = true) }',
         ),
       );
-      expect(gradle, contains('if (admobAppIdProd == null && prodRequested)'));
+      // Task 9.13: the fallback and an explicit Google test id both warn.
+      expect(
+        gradle,
+        contains(
+          'val prodUsesTestAdmobId = '
+          '(admobAppIdProd ?: admobTestAppId).startsWith('
+          'admobTestPublisherPrefix)',
+        ),
+      );
+      expect(gradle, contains('if (prodUsesTestAdmobId && prodRequested)'));
       // A malformed prod app id (an ad unit id, say) fails a prod build
       // instead of stopping the app at launch.
       final pattern = RegExp(
@@ -112,16 +121,24 @@ void main() {
       expect(
         gradle,
         contains(
-          'if (prodRequested && admobAppIdProd != null && '
-          '!admobAppIdPattern.matches(admobAppIdProd))',
+          'val admobAppIdMalformed = admobAppIdProd != null && '
+          '!admobAppIdPattern.matches(admobAppIdProd)',
         ),
       );
       expect(
         gradle,
         contains(
-          'throw GradleException("admobAppIdProd in android/secrets.properties '
-          'must be an AdMob app id (ca-app-pub-<16 digits>~<10 digits>), not '
-          'an ad unit id; a malformed id stops the app at launch.")',
+          'val admobAppIdMalformedMessage = "admobAppIdProd in '
+          'android/secrets.properties must be an AdMob app id '
+          '(ca-app-pub-<16 digits>~<10 digits>), not an ad unit id; a '
+          'malformed id stops the app at launch."',
+        ),
+      );
+      expect(
+        gradle,
+        contains(
+          'if (prodRequested && admobAppIdMalformed) '
+          'throw GradleException(admobAppIdMalformedMessage)',
         ),
       );
       // Each placeholder sits in its own flavor.
