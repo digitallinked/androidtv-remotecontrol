@@ -153,7 +153,8 @@ void main() {
       async.elapse(const Duration(milliseconds: 2900));
       expect(info, isNull);
       async.elapse(const Duration(milliseconds: 200));
-      expect(info?.os, fallbackOsVersion(defaultTargetPlatform).os);
+      // flutter test runs as Android unless a test overrides the platform.
+      expect(info?.os, 'Android');
       expect(info?.osVersion, '?');
     });
   });

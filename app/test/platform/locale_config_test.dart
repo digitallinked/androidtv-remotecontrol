@@ -52,8 +52,12 @@ void main() {
       reason: '$_configPath holds a tag other than <locale android:name>',
     );
 
-    final arb = _arbLocales();
-    expect(arb, {'en', 'ms'});
+    // ARB files name regional locales with `_` (`app_pt_BR.arb`), Android
+    // and BCP 47 with `-` (`pt-BR`).
+    final arb = {for (final code in _arbLocales()) code.replaceAll('_', '-')};
+    // A pin of today's set, so a new translation is a visible change here
+    // too: update it with the new ARB file.
+    expect(arb, {'en', 'ms'}, reason: 'pinned: the languages shipped in v1');
     expect(names, hasLength(names.toSet().length), reason: 'a duplicate');
     expect(names.toSet(), arb, reason: '$_configPath vs $_arbDir/app_*.arb');
     expect(

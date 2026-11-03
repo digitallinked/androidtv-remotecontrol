@@ -183,6 +183,11 @@ void main() {
       markTestSkipped('git is not on the PATH');
       return;
     }
+    // 128: not a work tree (an exported source tree), so nothing to check.
+    if (result.exitCode == 128) {
+      markTestSkipped('not a git work tree: ${result.stderr}');
+      return;
+    }
     expect(result.exitCode, 0, reason: 'git check-ignore: ${result.stderr}');
   });
 }

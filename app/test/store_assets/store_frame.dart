@@ -582,6 +582,9 @@ class FeatureGraphic extends StatelessWidget {
   );
 }
 
+/// The testers whose view reset is already registered.
+final Expando<bool> _viewResetRegistered = Expando<bool>('view reset');
+
 /// Pumps the real app as [shot] in [locale] on its set's device, with the
 /// store data (Ruling P9-R14), checks that nothing on screen breaks the
 /// store rules, and captures the screen at the device's pixel ratio.
@@ -599,7 +602,11 @@ Future<ui.Image> captureScreen(
   t.view
     ..physicalSize = set.appSize * set.pixelRatio
     ..devicePixelRatio = set.pixelRatio;
-  addTearDown(t.view.reset);
+  // Once per test, however many shots it captures.
+  if (_viewResetRegistered[t] == null) {
+    _viewResetRegistered[t] = true;
+    addTearDown(t.view.reset);
+  }
   final previous = debugDefaultTargetPlatformOverride;
   debugDefaultTargetPlatformOverride = set.platform;
   try {
