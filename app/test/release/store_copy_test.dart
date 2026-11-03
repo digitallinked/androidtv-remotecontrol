@@ -41,7 +41,8 @@ bool isTrademarkFree(String id) =>
 /// Third-party trademarks the trademark-free fields never carry.
 final RegExp trademarks = RegExp(
   'google|android|netflix|youtube|disney|prime video|spotify|apple tv|hbo|'
-  'viu|iqiyi|chromecast|roku|fire tv|samsung',
+  'viu|iqiyi|chromecast|roku|fire tv|samsung|'
+  r'\b(?:apple|iphone|ipad|lg|sony|tcl|xiaomi|shield)\b',
   caseSensitive: false,
 );
 
@@ -135,6 +136,8 @@ void main() {
           'remote atv',
           'simha',
           'remote for android tv',
+          // Its name for held keys; ours is "Natural hold" (P9-C10).
+          'smooth press',
         ]) {
           expect(lower, isNot(contains(banned)), reason: '$locale: $banned');
         }
@@ -167,7 +170,7 @@ void main() {
       'en': (
         mentionsAds: r'\bads?\b',
         banned: ['banner ads only', 'only banner ads', 'ads only'],
-        disclosure: ['full-screen ad', 'leave settings', 'pair'],
+        disclosure: ['full-screen ad', 'leave settings', 'while you pair'],
       ),
       'ms': (
         mentionsAds: r'\biklan\b',
@@ -203,6 +206,54 @@ void main() {
   test('malay_copy_is_marked_unreviewed', () {
     final ms = File('../docs/release/store-listing/ms.md').readAsStringSync();
     expect(const LineSplitter().convert(ms).first, malayStatusLine);
+  });
+
+  test('in_app_ads_text_matches_the_privacy_policy', () {
+    // Ruling P9-C10: privacyAdsInfo tells the same story as the policy and
+    // the store copy, not "banners only".
+    const expected = {
+      'en': [
+        'banner ads',
+        'full-screen ad',
+        'leave settings',
+        'while you pair',
+      ],
+      'ms': [
+        'iklan sepanduk',
+        'iklan skrin penuh',
+        'keluar dari tetapan',
+        'menggandingkan',
+      ],
+    };
+    for (final locale in locales) {
+      final arb =
+          jsonDecode(File('lib/app/l10n/app_$locale.arb').readAsStringSync())
+              as Map<String, Object?>;
+      final text = (arb['privacyAdsInfo']! as String).toLowerCase();
+      expect(text, isNot(matches(RegExp(r'\bonly\b|\bsahaja\b'))));
+      for (final phrase in expected[locale]!) {
+        expect(text, contains(phrase), reason: '$locale: $text');
+      }
+    }
+  });
+
+  test('trademark_check_matches_whole_words_only', () {
+    for (final hit in ['Apple', 'on an iPad', 'LG TVs', 'Sony', 'Shield']) {
+      expect(trademarks.hasMatch(hit), isTrue, reason: hit);
+    }
+    for (final miss in ['pineapple', 'iPads2go', 'algorithm', 'shielded']) {
+      expect(trademarks.hasMatch(miss), isFalse, reason: miss);
+    }
+  });
+
+  test('malay_terms_link_label_matches_the_app', () {
+    final ms =
+        jsonDecode(File('lib/app/l10n/app_ms.arb').readAsStringSync())
+            as Map<String, Object?>;
+    expect(
+      loadStoreCopy('ms')['appstore.description']!.text,
+      contains('${ms['settingsTerms']}: {{TERMS_URL}}'),
+    );
   });
 
   test('the_parser_rejects_a_heading_without_a_block', () {

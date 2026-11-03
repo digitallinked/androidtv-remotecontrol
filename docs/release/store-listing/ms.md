@@ -34,7 +34,7 @@ KAWALAN
 • Pad sentuh: leret untuk bergerak, ketik untuk memilih.
 • D-pad: kekunci anak panah di sekeliling butang OK, seperti alat kawalan jauh TV.
 • Pad nombor untuk saluran dan kod.
-• Kekunci kelantangan, senyap, saluran, kembali, laman utama, menu dan kuasa. Dengan Smooth Press, menahan kekunci sama seperti menahan kekunci pada alat kawalan jauh TV.
+• Kekunci kelantangan, senyap, saluran, kembali, laman utama, menu dan kuasa. Tahan kekunci kelantangan, saluran atau anak panah dan TV akan bertindak balas seperti anda menahan alat kawalan jauhnya sendiri.
 • Pilih baris di atas pad: pintasan apl, kekunci warna, kekunci media atau tiada apa-apa.
 • Taip dengan papan kekunci telefon anda. Papan kekunci terbuka dengan sendirinya apabila TV meminta teks, seperti dalam kotak carian.
 • Hidupkan TV melalui telefon anda: tambah alamat MAC TV sekali sahaja dan kekunci kuasa akan menghidupkannya melalui rangkaian (Wake-on-LAN, jika TV anda menyokongnya).
@@ -107,7 +107,7 @@ KAWALAN
 • Pad sentuh: leret untuk bergerak, ketik untuk memilih.
 • D-pad: kekunci anak panah di sekeliling butang OK, seperti alat kawalan jauh TV.
 • Pad nombor untuk saluran dan kod.
-• Kekunci kelantangan, senyap, saluran, kembali, laman utama, menu dan kuasa. Dengan Smooth Press, menahan kekunci sama seperti menahan kekunci pada alat kawalan jauh TV.
+• Kekunci kelantangan, senyap, saluran, kembali, laman utama, menu dan kuasa. Tahan kekunci kelantangan, saluran atau anak panah dan TV akan bertindak balas seperti anda menahan alat kawalan jauhnya sendiri.
 • Pilih baris di atas pad: pintasan apl, kekunci warna, kekunci media atau tiada apa-apa.
 • Taip dengan papan kekunci iPhone anda. Papan kekunci terbuka dengan sendirinya apabila TV meminta teks, seperti dalam kotak carian.
 
@@ -143,7 +143,7 @@ APA YANG ANDA PERLUKAN
 • iPhone atau iPad dan TV anda pada rangkaian Wi-Fi yang sama. Apabila iOS bertanya, benarkan apl ini mencari peranti pada rangkaian setempat anda.
 • TV dengan sistem lain tidak disokong.
 
-Syarat penggunaan: {{TERMS_URL}}
+Terma penggunaan: {{TERMS_URL}}
 Dasar privasi: {{PRIVACY_POLICY_URL}}
 Ada soalan atau cadangan? Tulis kepada {{SUPPORT_EMAIL}}.
 

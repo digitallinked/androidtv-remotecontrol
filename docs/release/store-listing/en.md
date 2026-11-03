@@ -33,7 +33,7 @@ CONTROL
 • Touchpad: swipe to move, tap to select.
 • D-pad: arrow keys around an OK button, like a TV remote.
 • Number pad for channels and codes.
-• Volume, mute, channel, Back, Home, Menu and power keys. With Smooth Press, holding a key acts like holding it on a TV remote.
+• Volume, mute, channel, Back, Home, Menu and power keys. Hold volume, channel or arrow keys and the TV responds as if you held its own remote.
 • Choose the row above the pad: app shortcuts, colour keys, media keys or nothing at all.
 • Type with your phone's keyboard. It opens by itself when the TV asks for text, like in a search box.
 • Turn the TV on from your phone: add the TV's MAC address once and the power key wakes it over the network (Wake-on-LAN, if your TV supports it).
@@ -106,7 +106,7 @@ CONTROL
 • Touchpad: swipe to move, tap to select.
 • D-pad: arrow keys around an OK button, like a TV remote.
 • Number pad for channels and codes.
-• Volume, mute, channel, Back, Home, Menu and power keys. With Smooth Press, holding a key acts like holding it on a TV remote.
+• Volume, mute, channel, Back, Home, Menu and power keys. Hold volume, channel or arrow keys and the TV responds as if you held its own remote.
 • Choose the row above the pad: app shortcuts, colour keys, media keys or nothing at all.
 • Type with your iPhone's keyboard. It opens by itself when the TV asks for text, like in a search box.
 
