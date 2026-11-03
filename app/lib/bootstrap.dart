@@ -68,8 +68,9 @@ Future<void> runStartupSteps(
 /// Config leaves the defaults in place.
 ///
 /// The database is opened before the first screen is resolved. When this run
-/// created it, the preferences that describe the old phone are reset
-/// (Ruling P9-R6, [forgetPhoneStateIfDatabaseIsNew]).
+/// created it, the preferences that describe the old phone are reset and the
+/// stored client identity is deleted (Rulings P9-R6 and P9-C8,
+/// [forgetPhoneStateIfDatabaseIsNew]).
 ///
 /// Each successful start adds one to the stored launch count; a count that
 /// can't be written is reported and doesn't stop the start.
@@ -125,6 +126,8 @@ Future<Widget> buildRootWidget({
     await forgetPhoneStateIfDatabaseIsNew(
       settings: settings,
       databaseIsNew: () => container.read(appDatabaseProvider).createdThisRun(),
+      // Before anything can pair or connect (Ruling P9-C8).
+      forgetIdentity: () => container.read(identityStoreProvider).forget(),
       onError: (error, stack) => unawaited(
         safeRecordError(
           crashReporter,

@@ -61,6 +61,27 @@ class IdentityStore {
   /// identity could not be saved; an unsaved identity is never returned.
   Future<ClientIdentity> loadOrCreate() => _pending ??= _loadOrCreate();
 
+  /// Deletes the stored identity, so the next [loadOrCreate] makes a new one.
+  ///
+  /// Called when this run created the database (Ruling P9-C8): on iOS the
+  /// keychain keeps the identity after the app is deleted, and a reinstall
+  /// must not present the old phone's certificate. Both keys are tried even
+  /// when one delete fails; the first failure is then rethrown.
+  Future<void> forget() async {
+    _pending = null;
+    Object? failure;
+    StackTrace? failureStack;
+    for (final key in const [certificateKey, privateKeyKey]) {
+      try {
+        await _storage.delete(key);
+      } on Object catch (error, stack) {
+        failure ??= error;
+        failureStack ??= stack;
+      }
+    }
+    if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
+  }
+
   Future<ClientIdentity> _loadOrCreate() async {
     try {
       final stored = await _loadStored();

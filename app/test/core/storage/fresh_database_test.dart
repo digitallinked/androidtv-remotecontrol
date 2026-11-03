@@ -10,6 +10,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/fresh_database.dart';
+import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
@@ -18,6 +19,7 @@ import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/data/shortcut_repository.dart';
 
 import '../../helpers/failing_preferences.dart';
+import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/test_catalogue.dart';
 
 /// What an iPhone restore or Quick Start brings back: the old phone's
@@ -55,6 +57,15 @@ final Map<String, Object> _keptValues = {
   'review.launch_count': 7,
   'review.prompt_shown': true,
 };
+
+/// A secure store holding the old install's client identity. The values are
+/// stand-ins: only their presence matters here.
+InMemorySecureKeyValueStore _storedIdentity() =>
+    InMemorySecureKeyValueStore()
+      ..values.addAll({
+        IdentityStore.certificateKey: 'old certificate',
+        IdentityStore.privateKeyKey: 'old key',
+      });
 
 /// Every stored preference, read afresh from the platform.
 Future<Map<String, Object?>> _storedPreferences() async {
@@ -236,6 +247,94 @@ void main() {
     },
   );
 
+  // Ruling P9-C8: the iOS keychain outlives the app, so a reinstall on the
+  // same iPhone would reuse the old certificate. A fresh database forgets it
+  // before anything can use it.
+  test('a_fresh_database_deletes_the_stored_client_identity', () async {
+    final settings = await SettingsStore.open();
+    final secure = _storedIdentity();
+
+    await forgetPhoneStateIfDatabaseIsNew(
+      settings: settings,
+      databaseIsNew: () async => true,
+      forgetIdentity: IdentityStore(secure).forget,
+    );
+
+    expect(secure.values, isEmpty);
+  });
+
+  test('an_existing_database_keeps_the_client_identity', () async {
+    final settings = await SettingsStore.open();
+    final secure = _storedIdentity();
+
+    await forgetPhoneStateIfDatabaseIsNew(
+      settings: settings,
+      databaseIsNew: () async => false,
+      forgetIdentity: IdentityStore(secure).forget,
+    );
+
+    expect(secure.deleted, isEmpty);
+    expect(secure.values.keys, hasLength(2));
+  });
+
+  test('a_database_that_cannot_open_keeps_the_client_identity', () async {
+    final settings = await SettingsStore.open();
+    final secure = _storedIdentity();
+
+    await forgetPhoneStateIfDatabaseIsNew(
+      settings: settings,
+      databaseIsNew: () async => throw StateError('database is locked'),
+      forgetIdentity: IdentityStore(secure).forget,
+      onError: (_, _) {},
+    );
+
+    expect(secure.deleted, isEmpty);
+  });
+
+  test(
+    'a_failing_identity_delete_is_reported_and_the_preferences_still_reset',
+    () async {
+      final settings = await SettingsStore.open();
+      final secure = _storedIdentity()..throwOnDelete = StateError('keychain');
+      final errors = <Object>[];
+
+      final reset = await forgetPhoneStateIfDatabaseIsNew(
+        settings: settings,
+        databaseIsNew: () async => true,
+        forgetIdentity: IdentityStore(secure).forget,
+        onError: (error, _) => errors.add(error),
+      );
+
+      expect(reset, isTrue, reason: 'the preferences were reset');
+      expect(errors, [isA<StateError>()]);
+      expect(settings.onboardingComplete, isFalse);
+    },
+  );
+
+  test('an_identity_delete_that_hangs_does_not_hold_the_start', () async {
+    final settings = await SettingsStore.open();
+    final secure = _storedIdentity()..deleteGate = Completer<void>().future;
+
+    fakeAsync((async) {
+      final errors = <Object>[];
+      bool? reset;
+      unawaited(
+        forgetPhoneStateIfDatabaseIsNew(
+          settings: settings,
+          databaseIsNew: () async => true,
+          forgetIdentity: IdentityStore(secure).forget,
+          onError: (error, _) => errors.add(error),
+        ).then((value) => reset = value),
+      );
+      async.elapse(freshDatabaseWriteTimeout - const Duration(milliseconds: 1));
+      expect(reset, isNull, reason: 'the delete is given its time');
+
+      async.elapse(const Duration(milliseconds: 1));
+      expect(reset, isTrue);
+      expect(errors.single, isA<TimeoutException>());
+    });
+  });
+
   test(
     'try_again_after_a_failed_first_start_still_seeds_the_apps_row',
     () async {
@@ -243,21 +342,30 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final file = File('${dir.path}/remotely.sqlite');
 
+      final secure = _storedIdentity();
+
       // Run 1 creates the database under restored preferences, resets them,
-      // and then fails before anything reads the shortcuts.
-      final settings = await SettingsStore.open();
+      // forgets the old identity, and then fails before anything reads the
+      // shortcuts.
       final first = AppDatabase(NativeDatabase(file));
       expect(
         await forgetPhoneStateIfDatabaseIsNew(
-          settings: settings,
+          settings: await SettingsStore.open(),
           databaseIsNew: first.createdThisRun,
+          forgetIdentity: IdentityStore(secure).forget,
         ),
         isTrue,
       );
       await first.close();
+      expect(secure.values, isEmpty);
+      // The identity made on first use after the failed start.
+      secure.values[IdentityStore.certificateKey] = 'new certificate';
+      secure.values[IdentityStore.privateKeyKey] = 'new key';
 
-      // Try again builds a new database instance on the file run 1 created:
-      // it isn't new to this instance, but the reset flag was persisted.
+      // Try again builds a new database instance on the file run 1 created,
+      // and opens the preferences again, as `buildRootWidget` does: it isn't
+      // new to this instance, but the reset flag was persisted.
+      final settings = await SettingsStore.open();
       final second = AppDatabase(NativeDatabase(file));
       addTearDown(second.close);
       expect(await second.createdThisRun(), isFalse);
@@ -265,9 +373,11 @@ void main() {
         await forgetPhoneStateIfDatabaseIsNew(
           settings: settings,
           databaseIsNew: second.createdThisRun,
+          forgetIdentity: IdentityStore(secure).forget,
         ),
         isFalse,
       );
+      expect(secure.values[IdentityStore.certificateKey], 'new certificate');
       final container = ProviderContainer.test(
         overrides: [
           settingsStoreProvider.overrideWithValue(settings),

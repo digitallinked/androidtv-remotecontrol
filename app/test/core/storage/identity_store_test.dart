@@ -147,6 +147,58 @@ void main() {
     expect((await s.loadOrCreate()).certificatePem, fixture.certificatePem);
   });
 
+  // Ruling P9-C8: a fresh database forgets the identity, so a reinstall on
+  // the same iPhone (whose keychain outlives the app) gets a new one.
+  test(
+    'forget_deletes_both_halves_and_the_next_load_makes_a_new_identity',
+    () async {
+      final storage = InMemorySecureKeyValueStore();
+      var n = 0;
+      final store = IdentityStore(
+        storage,
+        generate: () async => n++ == 0 ? fixture : fixture2,
+      );
+      expect(
+        (await store.loadOrCreate()).certificatePem,
+        fixture.certificatePem,
+      );
+
+      await store.forget();
+
+      expect(storage.values, isEmpty);
+      // The same instance doesn't hand back the forgotten identity.
+      expect(
+        (await store.loadOrCreate()).certificatePem,
+        fixture2.certificatePem,
+      );
+      expect(
+        storage.values[IdentityStore.certificateKey],
+        fixture2.certificatePem,
+      );
+    },
+  );
+
+  test('forget_tries_both_keys_and_rethrows_a_failed_delete', () async {
+    final storage = InMemorySecureKeyValueStore()
+      ..values.addAll({
+        IdentityStore.certificateKey: fixture.certificatePem,
+        IdentityStore.privateKeyKey: fixture.privateKeyPem,
+      })
+      ..throwOnDelete = PlatformException(code: 'x');
+
+    await expectLater(
+      IdentityStore(storage).forget(),
+      throwsA(isA<PlatformException>()),
+    );
+    expect(
+      storage.deleted,
+      unorderedEquals([
+        IdentityStore.certificateKey,
+        IdentityStore.privateKeyKey,
+      ]),
+    );
+  });
+
   test('ios_keychain_item_never_leaves_this_device', () {
     final options = FlutterSecureKeyValueStore.defaultStorage.iOptions;
     expect(

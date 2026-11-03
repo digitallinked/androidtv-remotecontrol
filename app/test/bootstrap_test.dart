@@ -20,6 +20,7 @@ import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
+import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 
@@ -27,6 +28,7 @@ import 'helpers/existing_database.dart';
 import 'helpers/fake_ads_overrides.dart';
 import 'helpers/fake_config_source.dart';
 import 'helpers/in_memory_device_repository.dart';
+import 'helpers/in_memory_secure_store.dart';
 import 'helpers/platform_override.dart';
 import 'helpers/recording_crash_reporter.dart';
 import 'helpers/recording_crashlytics_sink.dart';
@@ -1146,6 +1148,18 @@ void main() {
         )
         .container;
 
+    /// The old install's client identity, which the iOS keychain keeps
+    /// after the app is deleted (Ruling P9-C8). Stand-in values.
+    late InMemorySecureKeyValueStore secure;
+
+    setUp(() {
+      secure = InMemorySecureKeyValueStore()
+        ..values.addAll({
+          IdentityStore.certificateKey: 'old certificate',
+          IdentityStore.privateKeyKey: 'old key',
+        });
+    });
+
     Future<void> start(
       WidgetTester tester,
       AppDatabase Function() openDatabase,
@@ -1157,6 +1171,7 @@ void main() {
           openDatabase: openDatabase,
           overrides: [
             ...fakeAdsOverrides(),
+            identityStoreProvider.overrideWithValue(IdentityStore(secure)),
             // The database's own stream leaves a timer behind when it is
             // disposed.
             savedDevicesProvider.overrideWith(
@@ -1179,13 +1194,25 @@ void main() {
         final settings = container.read(settingsStoreProvider);
         expect(settings.onboardingComplete, isFalse);
         expect(settings.trackingPrepromptShown, isFalse);
+        expect(settings.shortcutsSeeded, isFalse);
         expect(settings.themePreference, ThemePreference.dark);
         expect(settings.shareUsageStats, isFalse);
         expect(settings.launchCount, 8);
         final stored = await SettingsStore.open();
         expect(stored.trackingPrepromptShown, isFalse);
         expect(stored.onboardingComplete, isFalse);
+        expect(stored.shortcutsSeeded, isFalse);
         expect(stored.launchCount, 8);
+      },
+    );
+
+    testWidgetsOn(
+      TargetPlatform.iOS,
+      'a_reinstalled_iphone_forgets_the_client_identity_before_first_use',
+      (tester) async {
+        await start(tester, () => AppDatabase(NativeDatabase.memory()));
+
+        expect(secure.values, isEmpty);
       },
     );
 
@@ -1202,6 +1229,8 @@ void main() {
       expect(settings.trackingPrepromptShown, isTrue);
       expect(settings.shortcutsSeeded, isTrue);
       expect(settings.launchCount, 8);
+      expect(secure.deleted, isEmpty, reason: 'a relaunch keeps its identity');
+      expect(secure.values[IdentityStore.certificateKey], 'old certificate');
     });
 
     testWidgets('an_upgrade_keeps_its_database_and_its_preferences', (
