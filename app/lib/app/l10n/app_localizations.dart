@@ -1871,7 +1871,7 @@ abstract class AppLocalizations {
   /// Subtitle of the Remote behaviour row on the Settings page, listing what that page changes.
   ///
   /// In en, this message translates to:
-  /// **'Vibration, Smooth Press, screen and keyboard'**
+  /// **'Vibration, natural hold, screen and keyboard'**
   String get settingsRemoteBehaviourSubtitle;
 
   /// Subtitle of the Apps row on the Settings page, which opens Edit apps.
@@ -2072,13 +2072,13 @@ abstract class AppLocalizations {
   /// **'A short vibration when a key reaches the TV.'**
   String get behaviourHapticsSubtitle;
 
-  /// Title of the Remote behaviour switch for Smooth Press, the app's own name for held keys.
+  /// Title of the Remote behaviour switch for natural hold, the app's own name for keys that act like keys held on a TV remote.
   ///
   /// In en, this message translates to:
-  /// **'Smooth Press'**
+  /// **'Natural hold'**
   String get behaviourSmoothPress;
 
-  /// Subtitle of the Remote behaviour switch for Smooth Press, explaining what holding a key does.
+  /// Subtitle of the Remote behaviour switch for natural hold, explaining what holding a key does.
   ///
   /// In en, this message translates to:
   /// **'Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.'**
@@ -2399,7 +2399,7 @@ abstract class AppLocalizations {
   /// Ads section text, free user.
   ///
   /// In en, this message translates to:
-  /// **'The free app shows a banner ad at the bottom of the Apps and Settings screens only.'**
+  /// **'The free app shows banner ads at the bottom of the Apps and Settings screens. An occasional full-screen ad may also appear when you leave Settings, but never while you pair a TV.'**
   String get privacyAdsInfo;
 
   /// Ads section text, Premium user.

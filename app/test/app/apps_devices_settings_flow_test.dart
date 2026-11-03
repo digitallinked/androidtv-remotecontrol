@@ -519,7 +519,7 @@ void main() {
     client.sentKeys.clear();
 
     await openFromSettings(t, 'Remote behaviour');
-    await tapAndSettle(t, find.text('Smooth Press'));
+    await tapAndSettle(t, find.text('Natural hold'));
     await back(t, 2);
     expect(find.byType(RemoteScreen), findsOneWidget);
 

@@ -39,7 +39,7 @@ Also support **Material You dynamic colour** on Android 12+ as an option in Sett
 ## Screens (v1)
 Onboarding (3 cards + permission explainers) → Discovery (scan list, manual IP entry, troubleshooting link) → Pairing (6-char code entry with paste, auto-advance, live validation) → **Remote** (status pill + device switcher, quick-access row, pad area [Touchpad | D-pad | Numpad, swipe between], bottom cluster [Back, Home, Mute, Keyboard, Vol rocker, Ch rocker, Power long-press]) → Keyboard sheet → Apps (grid, search, reorder, add custom, recommendations with real names/icons) → Devices → Settings → Paywall. **Demo mode** (reachable from onboarding and the empty Discovery state): the same remote UI driven by a simulated TV, a persistent "Demo" badge, and a small "TV preview" card showing the last action. App Store reviewers rely on it.
 
-**Smooth Press:** holding volume, channel or a D-pad key sends one long press (`START_LONG` … `END_LONG`) like a physical remote. When the setting is off, holding repeats short presses every 120 ms.
+**Natural hold** (setting `smoothPressEnabled`)**:** holding volume, channel or a D-pad key sends one long press (`START_LONG` … `END_LONG`) like a physical remote. When the setting is off, holding repeats short presses every 120 ms.
 
 Layouts: phone portrait (primary), phone landscape (pad left, controls right), tablet (two panes). **Accessibility:** every control has a semantic label ("Volume up"); D-pad works with TalkBack/VoiceOver; colour is never the only signal.
 

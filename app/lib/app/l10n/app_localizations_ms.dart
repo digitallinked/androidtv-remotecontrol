@@ -1012,7 +1012,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsRemoteBehaviourSubtitle =>
-      'Getaran, Smooth Press, skrin dan papan kekunci';
+      'Getaran, tahan semula jadi, skrin dan papan kekunci';
 
   @override
   String get settingsAppsSubtitle => 'Pilih dan susun pintasan apl anda';
@@ -1124,7 +1124,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Getaran pendek apabila kekunci sampai ke TV.';
 
   @override
-  String get behaviourSmoothPress => 'Smooth Press';
+  String get behaviourSmoothPress => 'Tahan semula jadi';
 
   @override
   String get behaviourSmoothPressSubtitle =>
@@ -1321,7 +1321,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacyAdsInfo =>
-      'Versi percuma apl ini memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan sahaja.';
+      'Versi percuma apl ini memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan. Iklan skrin penuh sekali-sekala mungkin juga dipaparkan apabila anda keluar dari Tetapan, tetapi tidak semasa anda menggandingkan TV.';
 
   @override
   String get privacyAdsPremium =>

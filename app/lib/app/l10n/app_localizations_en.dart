@@ -1006,7 +1006,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsRemoteBehaviourSubtitle =>
-      'Vibration, Smooth Press, screen and keyboard';
+      'Vibration, natural hold, screen and keyboard';
 
   @override
   String get settingsAppsSubtitle => 'Choose and order your app shortcuts';
@@ -1115,7 +1115,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'A short vibration when a key reaches the TV.';
 
   @override
-  String get behaviourSmoothPress => 'Smooth Press';
+  String get behaviourSmoothPress => 'Natural hold';
 
   @override
   String get behaviourSmoothPressSubtitle =>
@@ -1306,7 +1306,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyAdsInfo =>
-      'The free app shows a banner ad at the bottom of the Apps and Settings screens only.';
+      'The free app shows banner ads at the bottom of the Apps and Settings screens. An occasional full-screen ad may also appear when you leave Settings, but never while you pair a TV.';
 
   @override
   String get privacyAdsPremium => 'You have Premium, so the app shows no ads.';

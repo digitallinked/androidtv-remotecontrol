@@ -22,10 +22,8 @@ const Set<String> _sameInBothLanguages = {
   'keyMenu',
   // Only the volume number.
   'remoteVolumeValue',
-  // Product names: Premium, the Smooth Press feature and the Premium
-  // colour styles.
+  // Product names: Premium and the Premium colour styles.
   'pageTitlePaywall',
-  'behaviourSmoothPress',
   'appearanceStyleOcean',
   'appearanceStyleEmber',
   'appearanceStyleMidnight',
@@ -73,6 +71,18 @@ void main() {
         if (ms[key] is! String || (ms[key] as String).trim().isEmpty) key,
     ];
     expect(empty, isEmpty, reason: 'empty ms values: ${empty.join(', ')}');
+  });
+
+  test('no_arb_value_uses_the_competitors_feature_name', () {
+    // Ruling P9-C10: the hold setting is "Natural hold"; "Smooth Press" is
+    // another app's name for it (CLAUDE.md: never copy competitor text).
+    for (final (name, arb) in [('en', en), ('ms', ms)]) {
+      final offenders = [
+        for (final MapEntry(:key, :value) in arb.entries)
+          if (jsonEncode(value).toLowerCase().contains('smooth press')) key,
+      ];
+      expect(offenders, isEmpty, reason: name);
+    }
   });
 
   test('ms_has_no_english_copies', () {

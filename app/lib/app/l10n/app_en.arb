@@ -1402,7 +1402,7 @@
   "@settingsRemoteLayoutSubtitle": {
     "description": "Subtitle of the Remote layout row on the Settings page, saying what that page changes."
   },
-  "settingsRemoteBehaviourSubtitle": "Vibration, Smooth Press, screen and keyboard",
+  "settingsRemoteBehaviourSubtitle": "Vibration, natural hold, screen and keyboard",
   "@settingsRemoteBehaviourSubtitle": {
     "description": "Subtitle of the Remote behaviour row on the Settings page, listing what that page changes."
   },
@@ -1538,13 +1538,13 @@
   "@behaviourHapticsSubtitle": {
     "description": "Subtitle of the Remote behaviour switch that makes the phone vibrate on each key press."
   },
-  "behaviourSmoothPress": "Smooth Press",
+  "behaviourSmoothPress": "Natural hold",
   "@behaviourSmoothPress": {
-    "description": "Title of the Remote behaviour switch for Smooth Press, the app's own name for held keys."
+    "description": "Title of the Remote behaviour switch for natural hold, the app's own name for keys that act like keys held on a TV remote."
   },
   "behaviourSmoothPressSubtitle": "Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.",
   "@behaviourSmoothPressSubtitle": {
-    "description": "Subtitle of the Remote behaviour switch for Smooth Press, explaining what holding a key does."
+    "description": "Subtitle of the Remote behaviour switch for natural hold, explaining what holding a key does."
   },
   "behaviourKeepAwake": "Keep screen on",
   "@behaviourKeepAwake": {
@@ -1780,7 +1780,7 @@
   "@privacySectionAds": {
     "description": "Section header on the Privacy choices page above the ad choices."
   },
-  "privacyAdsInfo": "The free app shows a banner ad at the bottom of the Apps and Settings screens only.",
+  "privacyAdsInfo": "The free app shows banner ads at the bottom of the Apps and Settings screens. An occasional full-screen ad may also appear when you leave Settings, but never while you pair a TV.",
   "@privacyAdsInfo": {
     "description": "Ads section text, free user."
   },

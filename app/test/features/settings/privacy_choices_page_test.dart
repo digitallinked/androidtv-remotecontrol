@@ -150,10 +150,14 @@ void main() {
 
   testWidgets('ad_privacy_row_only_when_required', (t) async {
     await pumpPage(t);
+    // Scroll to the end so the row would be built if it were there.
+    await t.drag(find.byType(Scrollable).first, const Offset(0, -3000));
+    await t.pumpAndSettle();
     expect(find.text('Ad privacy choices'), findsNothing);
 
     consent.optionsRequired = true;
     await pumpPage(t);
+    await scrollTo(t, find.text('Ad privacy choices'));
     expect(find.text('Ad privacy choices'), findsOneWidget);
     expect(find.text('Choose how ads are picked for you.'), findsOneWidget);
 
@@ -177,7 +181,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Remove ads with Premium'), findsNothing);
-    expect(find.textContaining('shows a banner ad'), findsNothing);
+    expect(find.textContaining('shows banner ads'), findsNothing);
   });
 
   testWidgets('premium_users_can_still_open_ad_privacy_choices', (t) async {
@@ -221,7 +225,7 @@ void main() {
   testWidgets('free_users_see_the_ad_note_and_the_premium_row', (t) async {
     await pumpPage(t);
     expect(find.text('Ads'), findsOneWidget);
-    expect(find.textContaining('shows a banner ad'), findsOneWidget);
+    expect(find.textContaining('shows banner ads'), findsOneWidget);
     expect(find.text('Remove ads with Premium'), findsOneWidget);
   });
 
@@ -343,7 +347,7 @@ void main() {
       y('Share usage statistics'),
       y('Share crash reports'),
       y(_servicesOff),
-      y('shows a banner ad'),
+      y('shows banner ads'),
       y('Remove ads with Premium'),
       y('Ad privacy choices'),
     ];
@@ -563,6 +567,7 @@ void main() {
       ..optionsRequired = true
       ..holdShowPrivacyOptions = hold;
     await pumpPage(t);
+    await scrollTo(t, find.text('Ad privacy choices'));
 
     await t.tap(find.text('Ad privacy choices'));
     await t.pump();
