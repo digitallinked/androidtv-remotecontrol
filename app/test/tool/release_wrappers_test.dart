@@ -209,11 +209,21 @@ void main() {
       r'\Git\bin\bash.exe',
       r'\Git\usr\bin\bash.exe',
     );
+    // The child's PATH is built here, not inherited as is: the fakes first,
+    // then the coreutils next to that bash (dirname, rm, ls), then the
+    // parent's PATH for dart. A PowerShell parent has no Git usr\bin on its
+    // PATH, so without the middle entry the script can't find `dirname`.
     final result = await runTool(
       shell,
       ['../tool/release.sh', '--platform', 'ios', '--root', _slashed(root)],
       environment: {
-        pathKey: '${bin.path}$separator${Platform.environment[pathKey]}',
+        pathKey: [
+          bin.path,
+          if (onWindows) File(shell).parent.path,
+          Platform.environment[pathKey] ?? '',
+        ].join(separator),
+        // So the fake shows the script's own export, not one inherited.
+        'FIREBASE_ANALYTICS_WITHOUT_ADID': '',
       },
     );
     final out = '${result.stdout}${result.stderr}';
