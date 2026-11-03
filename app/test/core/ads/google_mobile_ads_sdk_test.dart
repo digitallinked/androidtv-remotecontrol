@@ -40,6 +40,11 @@ class _Platform {
   Error? interstitialStartError;
   InterstitialAdLoadCallback? interstitialCallback;
 
+  /// The SDK calls `initialize` makes, in order: `configure(<rating>)` and
+  /// `start`.
+  final List<String> sdkCalls = [];
+  Error? configureError;
+
   GoogleAdsPlatform get platform => GoogleAdsPlatform(
     lookupSize: (orientation, width) async {
       lookups.add((orientation, width));
@@ -56,6 +61,13 @@ class _Platform {
     },
     releaseAd: (ad) async {
       released.add(ad);
+    },
+    configureRequests: (configuration) async {
+      sdkCalls.add('configure(${configuration.maxAdContentRating})');
+      if (configureError != null) throw configureError!;
+    },
+    startSdk: () async {
+      sdkCalls.add('start');
     },
   );
 }
@@ -373,6 +385,48 @@ void main() {
         );
         async.flushMicrotasks();
         expect(result, isNull);
+      });
+    });
+  });
+
+  // Ruling P9-C12: the app is rated 4+ / Everyone, so its ads are capped at
+  // G in code too, before the SDK starts, whatever the console says.
+  group('the ad content rating', () {
+    test('initialize_caps_ads_at_g_before_the_sdk_starts', () async {
+      final p = _Platform();
+
+      await GoogleMobileAdsSdk(platform: p.platform).initialize();
+
+      expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})', 'start']);
+      expect(MaxAdContentRating.g, 'G');
+    });
+
+    test('without_the_cap_the_sdk_never_starts_and_nothing_loads', () {
+      timed((async) {
+        final p = _Platform(size: _adaptive())
+          ..configureError = StateError('x');
+        final sdk = GoogleMobileAdsSdk(platform: p.platform);
+        AdBannerSize? size;
+        Object? banner = 'unset';
+        Object? interstitial = 'unset';
+
+        unawaited(sdk.initialize());
+        async.flushMicrotasks();
+        unawaited(
+          sdk.bannerSize(Orientation.portrait, 360).then((v) => size = v),
+        );
+        async.flushMicrotasks();
+        unawaited(sdk.loadBanner('unit', size!).then((v) => banner = v));
+        unawaited(
+          sdk.loadInterstitial('unit').then((v) => interstitial = v),
+        );
+        async.flushMicrotasks();
+
+        expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})']);
+        expect(banner, isNull);
+        expect(interstitial, isNull);
+        expect(p.started, isEmpty, reason: 'no banner request was made');
+        expect(p.interstitialCallback, isNull);
       });
     });
   });

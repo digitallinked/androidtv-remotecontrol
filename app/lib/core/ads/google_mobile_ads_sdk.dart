@@ -114,6 +114,8 @@ class GoogleAdsPlatform {
     this.startBanner = _startBanner,
     this.startInterstitial = _startInterstitial,
     this.releaseAd = _releaseAd,
+    this.configureRequests = _configureRequests,
+    this.startSdk = _startSdk,
   });
 
   /// `AdSize.getLargeAnchoredAdaptiveBannerAdSizeWithOrientation`.
@@ -132,6 +134,13 @@ class GoogleAdsPlatform {
 
   /// `Ad.dispose`.
   final Future<void> Function(Ad ad) releaseAd;
+
+  /// `MobileAds.instance.updateRequestConfiguration`.
+  final Future<void> Function(RequestConfiguration configuration)
+  configureRequests;
+
+  /// `MobileAds.instance.initialize`.
+  final Future<void> Function() startSdk;
 
   static Future<AnchoredAdaptiveBannerAdSize?> _lookupSize(
     Orientation orientation,
@@ -153,7 +162,21 @@ class GoogleAdsPlatform {
   );
 
   static Future<void> _releaseAd(Ad ad) => ad.dispose();
+
+  static Future<void> _configureRequests(RequestConfiguration configuration) =>
+      MobileAds.instance.updateRequestConfiguration(configuration);
+
+  static Future<void> _startSdk() => MobileAds.instance.initialize();
 }
+
+/// The request settings every ad is loaded with: the content is capped at G
+/// ("general audiences"), because the app is rated 4+ / Everyone and both
+/// stores want its ads to suit that rating (Ruling P9-C12). The AdMob
+/// console has the same cap; this keeps it if the console setting changes.
+@visibleForTesting
+final RequestConfiguration adRequestConfiguration = RequestConfiguration(
+  maxAdContentRating: MaxAdContentRating.g,
+);
 
 /// [AdsSdk] backed by `google_mobile_ads`.
 ///
@@ -175,10 +198,23 @@ class GoogleMobileAdsSdk implements AdsSdk {
   /// size, and the orientation and "large" of the adaptive size are lost.
   final Map<AdBannerSize, AnchoredAdaptiveBannerAdSize> _sizes = {};
 
+  /// Whether [initialize] could not set [adRequestConfiguration]. Then no ad
+  /// is loaded at all: an ad without the G cap could exceed the app's rating.
+  bool _uncapped = false;
+
+  /// Sets [adRequestConfiguration], then starts the SDK. It runs after the
+  /// consent and tracking steps (decision #41), which the caller orders.
   @override
   Future<void> initialize() async {
     try {
-      await MobileAds.instance.initialize();
+      await platform.configureRequests(adRequestConfiguration);
+    } on Object catch (error) {
+      _log('ad content rating could not be set; no ads', error);
+      _uncapped = true;
+      return;
+    }
+    try {
+      await platform.startSdk();
     } on Object catch (error) {
       _log('ads initialisation failed', error);
     }
@@ -200,6 +236,7 @@ class GoogleMobileAdsSdk implements AdsSdk {
 
   @override
   Future<LoadedBanner?> loadBanner(String unitId, AdBannerSize size) async {
+    if (_uncapped) return null;
     final vendorSize = _sizes[size];
     if (vendorSize == null) {
       _log('banner size was not picked by the SDK', size);
@@ -234,21 +271,23 @@ class GoogleMobileAdsSdk implements AdsSdk {
   }
 
   @override
-  Future<LoadedInterstitial?> loadInterstitial(String unitId) =>
-      loadThroughGate<InterstitialAd, LoadedInterstitial>(
-        start: (onLoaded, onFailed) => platform.startInterstitial(
-          unitId,
-          InterstitialAdLoadCallback(
-            onAdLoaded: onLoaded,
-            onAdFailedToLoad: (error) {
-              _log('interstitial failed to load', error.message);
-              onFailed();
-            },
-          ),
+  Future<LoadedInterstitial?> loadInterstitial(String unitId) async {
+    if (_uncapped) return null;
+    return loadThroughGate<InterstitialAd, LoadedInterstitial>(
+      start: (onLoaded, onFailed) => platform.startInterstitial(
+        unitId,
+        InterstitialAdLoadCallback(
+          onAdLoaded: onLoaded,
+          onAdFailedToLoad: (error) {
+            _log('interstitial failed to load', error.message);
+            onFailed();
+          },
         ),
-        wrap: (ad) => _Interstitial(ad, platform.releaseAd),
-        discard: (ad) => _release(platform.releaseAd, ad, 'interstitial'),
-      );
+      ),
+      wrap: (ad) => _Interstitial(ad, platform.releaseAd),
+      discard: (ad) => _release(platform.releaseAd, ad, 'interstitial'),
+    );
+  }
 }
 
 void _log(String what, Object? error) =>
