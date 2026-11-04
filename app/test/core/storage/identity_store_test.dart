@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -177,6 +180,62 @@ void main() {
       );
     },
   );
+
+  // Re-review Minor A: a keychain delete that never finishes must not leave
+  // pairing waiting forever. The load fails like an unreadable store, so
+  // pairing shows "identity unavailable" with Try again, and it never makes
+  // an identity the late delete could remove.
+  test('a_forget_that_never_finishes_fails_the_load_after_its_bound', () {
+    fakeAsync((async) {
+      final keychain = Completer<void>();
+      final storage = InMemorySecureKeyValueStore()
+        ..values.addAll({
+          IdentityStore.certificateKey: fixture.certificatePem,
+          IdentityStore.privateKeyKey: fixture.privateKeyPem,
+        })
+        ..deleteGate = keychain.future;
+      var generated = 0;
+      final store = IdentityStore(
+        storage,
+        generate: () async {
+          generated++;
+          return fixture2;
+        },
+      );
+      unawaited(store.forget().then<void>((_) {}, onError: (_) {}));
+
+      Object? failure;
+      ClientIdentity? loaded;
+      unawaited(
+        store.loadOrCreate().then(
+          (id) => loaded = id,
+          onError: (Object e) => failure = e,
+        ),
+      );
+      async.elapse(
+        IdentityStore.forgetWaitTimeout - const Duration(milliseconds: 1),
+      );
+      expect(failure, isNull, reason: 'the delete is given its time');
+      expect(loaded, isNull);
+
+      async.elapse(const Duration(milliseconds: 1));
+      expect(failure, isA<IdentityStoreException>());
+      expect(loaded, isNull);
+      expect(generated, 0, reason: 'no identity the late delete could remove');
+
+      // Try again once the keychain answers: the delete finishes, and the
+      // load makes a new identity that stays.
+      keychain.complete();
+      async.flushMicrotasks();
+      unawaited(store.loadOrCreate().then((id) => loaded = id));
+      async.flushMicrotasks();
+      expect(loaded?.certificatePem, fixture2.certificatePem);
+      expect(
+        storage.values[IdentityStore.certificateKey],
+        fixture2.certificatePem,
+      );
+    });
+  });
 
   test('forget_tries_both_keys_and_rethrows_a_failed_delete', () async {
     final storage = InMemorySecureKeyValueStore()

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:isolate';
 
 import 'package:atv_remote/atv_remote.dart';
@@ -39,6 +40,10 @@ class IdentityStore {
     this._readRetryDelay = const Duration(milliseconds: 200),
   }) : _storage = storage,
        _generate = generate ?? _generateOffUiIsolate;
+
+  /// How long [loadOrCreate] waits for an earlier [forget] to finish before
+  /// it fails with [IdentityStoreException] (pairing then offers Try again).
+  static const forgetWaitTimeout = Duration(seconds: 5);
 
   /// Storage key of the PEM encoded certificate.
   static const certificateKey = 'client_identity.certificate_pem';
@@ -94,11 +99,7 @@ class IdentityStore {
 
   Future<ClientIdentity> _loadOrCreate() async {
     try {
-      await _forgetting;
-    } on Object {
-      // Reported by forget's caller; the load below copes with what's left.
-    }
-    try {
+      await _awaitForget();
       final stored = await _loadStored();
       if (stored != null) return stored;
       await _clear();
@@ -108,6 +109,24 @@ class IdentityStore {
     } on Object {
       _pending = null;
       rethrow;
+    }
+  }
+
+  /// Waits up to [forgetWaitTimeout] for an earlier [forget]. A forget that
+  /// failed was reported by its caller, and the load copes with what's left.
+  /// One that is still running fails this load instead: going on could make
+  /// an identity that the late delete then removes.
+  Future<void> _awaitForget() async {
+    final forgetting = _forgetting;
+    if (forgetting == null) return;
+    try {
+      await forgetting.timeout(forgetWaitTimeout);
+    } on TimeoutException {
+      throw const IdentityStoreException(
+        'The previous client identity is still being deleted',
+      );
+    } on Object {
+      // Reported by forget's caller.
     }
   }
 
