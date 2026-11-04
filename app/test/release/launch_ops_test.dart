@@ -144,6 +144,10 @@ void main() {
       'kill-switch-checklist.md',
       'review-response-plan.md',
       'rename-checklist.md',
+      // Ruling P9-C12's owner actions (the 9.11 fix round).
+      'P9-C12',
+      'Maximum ad content rating = G',
+      'France',
     ]) {
       expect(runbook, contains(item), reason: item);
     }
@@ -193,6 +197,15 @@ void main() {
     final coverage = section(doc, '### Phase 9 tasks').join('\n');
     for (final id in phase9RowIds) {
       expect(coverage, contains(id), reason: 'coverage of $id');
+    }
+
+    // DM-107 proves the symbol uploads themselves, not only a readable
+    // Dart non-fatal (which needs no symbols in v1).
+    final dm107 = doc
+        .split(RegExp(r'\r?\n'))
+        .singleWhere((l) => l.startsWith('| DM-107 |'));
+    for (final proof in const ['dwarfdump --uuid', 'mapping.txt', 'R8']) {
+      expect(dm107, contains(proof), reason: 'DM-107: $proof');
     }
 
     // DM-060/061 keep their ids and now expect the P9-R6 behaviour.

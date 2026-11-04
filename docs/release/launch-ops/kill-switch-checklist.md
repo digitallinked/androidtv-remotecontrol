@@ -28,7 +28,7 @@ What the app uses until a configuration is activated, by key:
 | `min_supported_version` | String | `1.0.0` | Versions below it get the "Update required" screen. |
 | `catalogue_version` | Number | `1` | The app catalogue version the config asks for. |
 
-Verbatim from `app/lib/core/config/app_config.dart` (a test keeps this block equal to the code):
+An excerpt of `app/lib/core/config/app_config.dart`: the key constants, then `defaultsMap` (a test keeps the `defaultsMap` block equal to the code; the constants are copied for reading):
 
 ```dart
   static const _adsBanner = 'ads_banner_enabled';

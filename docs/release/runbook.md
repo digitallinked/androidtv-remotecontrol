@@ -73,9 +73,10 @@ The ordered path from accounts to a staged production rollout on Google Play and
    - banner units → `ADMOB_BANNER_ANDROID`, `ADMOB_BANNER_IOS` in `app/env/prod.json`.
 3. **UMP:** AdMob → **Privacy & messaging** → create and **publish the GDPR message** (EEA, UK, Switzerland) for both apps **before** you set `FIREBASE_ENABLED` to `true` in `prod.json`. Without it, UMP reports consent as not required and analytics would default on in the EEA. **Don't** create the IDFA explainer message: the app's own pre-prompt owns the iOS tracking question (decision #41). Then set `"FIREBASE_ENABLED": true` in `prod.json`.
 4. **app-ads.txt:** your AdMob publisher id (`pub-…`, AdMob → Settings → Account) is `ADMOB_PUBLISHER_ID`. Host the file at the root of the developer website named in both store listings, exactly as [the app-ads.txt draft](forms/app-ads-txt.md) shows.
-5. Decide whether to keep the AdServices permissions ([the AdServices draft](forms/adservices-permissions.md); the default is keep).
+5. **Cap ad content at G:** AdMob → **Blocking controls** → All apps (or each app) → **Maximum ad content rating = G** ("General audiences"), before the first release that shows ads. The app's content rating is Everyone / 4+, and both stores require ads to suit it ([content-rating.md](forms/content-rating.md), Ruling P9-C12). Task 9.13 also sets the same cap in code, so the console setting is a second guard, not the only one.
+6. Decide whether to keep the AdServices permissions ([the AdServices draft](forms/adservices-permissions.md); the default is keep).
 
-**Verify:** **DM-040** (the UMP form with `UMP_DEBUG_GEOGRAPHY=eea` in `dev.json`), **DM-038** (test banners only on Apps and the Settings hub), **DM-046** (iOS, on the Mac); AdMob → Apps → app-ads.txt shows the file as found. The release check in step 10 refuses a test, placeholder or malformed id (`admob-app-android`, `admob-app-ios`, `banner-android`, `banner-ios`) and any UMP debug value left in `prod.json` (`ump-debug`).
+**Verify:** **DM-040** (the UMP form with `UMP_DEBUG_GEOGRAPHY=eea` in `dev.json`), **DM-038** (test banners only on Apps and the Settings hub), **DM-046** (iOS, on the Mac); AdMob → Apps → app-ads.txt shows the file as found; AdMob → Blocking controls shows **Maximum ad content rating: G** for both apps (take a screenshot for your records). The release check in step 10 refuses a test, placeholder or malformed id (`admob-app-android`, `admob-app-ios`, `banner-android`, `banner-ios`) and any UMP debug value left in `prod.json` (`ump-debug`).
 
 ## Step 5. RevenueCat, store products and sandbox testers
 
@@ -136,7 +137,8 @@ Run the matrix with Claude ([the device matrix](../knowledge/device-matrix.md), 
 | The first Play upload itself | **DM-105** (real build, signing, Play accepts it) |
 | Promoting to closed testing | **DM-109** (kill switches), **DM-110** (crash alert), **DM-107** (Android half: mapping and a readable test crash), **DM-111** (screenshots), and the real-device run DM-001…DM-102 as far as the owner's devices allow (`status.md` "Next up" item 1) |
 | The first TestFlight upload | **DM-058** and **DM-059** (Swift storage channel, database location), **DM-066** (Malay `ms.lproj`), **DM-106** (iOS build plumbing), **DM-112** (Swift packages: no ad-id Analytics, the dSYM tool) |
-| App Store submission | **DM-107** (iOS half: dSYMs), **DM-060** and **DM-061** (iOS restore and Quick Start: **if the TVs travel with Quick Start, that's a release issue: stop**), **DM-108** (upgrade, reinstall and restore on a TestFlight build) |
+| TestFlight external (a public beta) | **DM-060** and **DM-061** (iOS restore and Quick Start: **if the TVs travel with Quick Start, that's a release issue: stop**). The plan gates these before "any upload"; they gate the first build outside your own team instead, because a Play upload can't reveal an iOS backup problem and TestFlight internal reaches only you. |
+| App Store submission | **DM-107** (iOS half: the dSYM UUIDs in Crashlytics), **DM-108** (upgrade, reinstall and restore on a TestFlight build) |
 | Any Malay listing | **DM-068** and **DM-113** (step 8) |
 
 ## Step 10. The Android release build
@@ -204,7 +206,7 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
 
    It runs the iOS pre-checks, exports `FIREBASE_ANALYTICS_WITHOUT_ADID=true` so Analytics resolves without the advertising id, builds the archive with `flutter build ipa --flavor prod`, and prints the `.ipa` path and its SHA-256. The archive's first build phase refuses a missing, placeholder or test AdMob app id. **If you ever archive from Xcode instead** (Product → Archive), first run `launchctl setenv FIREBASE_ANALYTICS_WITHOUT_ADID true`, quit and reopen Xcode, and reset the package caches (store-release skill).
 6. **Upload:** drag the `.ipa` from `app/build/ios/ipa/` into Apple's **Transporter** app, or open `app/build/ios/archive/Runner.xcarchive` in Xcode's Organizer and **Distribute App**.
-7. **TestFlight internal** (your own team) → test on an iPhone: **DM-107** (iOS half), **DM-108**. Then **TestFlight external** (needs Beta App Review): a small group for a few days, with the gates in `crashlytics-alerts.md`.
+7. **TestFlight internal** (your own team) → test on an iPhone: **DM-107** (iOS half), **DM-108**. Then, once **DM-060** and **DM-061** have passed, **TestFlight external** (needs Beta App Review): a small group for a few days, with the gates in `crashlytics-alerts.md`.
 8. **App Store submission**, from the filled copies:
    - the listing from [en.md](store-listing/en.md) (`appstore.*` fields) and the iPhone 6.9″ and iPad 13″ screenshots;
    - **App Privacy** from [apple-app-privacy.md](forms/apple-app-privacy.md); the **age rating** from [content-rating.md](forms/content-rating.md); **export compliance** from [export-compliance.md](forms/export-compliance.md);
@@ -212,7 +214,7 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
    - attach the three in-app purchases to the version; then **Submit for Review**.
 9. The first App Store version goes to everyone when you release it (choose a manual release so you can pick the moment). For later versions use **Phased Release for automatic updates** (`crashlytics-alerts.md`).
 
-**Verify:** **DM-058**, **DM-059**, **DM-066**, **DM-106**, **DM-112** before the first upload; **DM-107**, **DM-060**, **DM-061**, **DM-108** before submission; App Store Connect shows the build as processed with no missing-compliance warning.
+**Verify:** **DM-058**, **DM-059**, **DM-066**, **DM-106**, **DM-112** before the first upload; **DM-060**, **DM-061** before TestFlight external; **DM-107**, **DM-108** before submission; App Store Connect shows the build as processed with no missing-compliance warning.
 
 ## Step 13. Launch week
 
@@ -222,14 +224,14 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
 
 ## Owner decisions and open points
 
-Collected from the Phase 9 task reviews and controller rulings (P9-C1…C11). Each has a default; the bracket says where it lives.
+Collected from the Phase 9 task reviews and controller rulings (P9-C1…C12). Each has a default; the bracket says where it lives. **Each form draft's own "Owner to confirm" checklist is part of this list:** [play-data-safety.md](forms/play-data-safety.md), [apple-app-privacy.md](forms/apple-app-privacy.md), [content-rating.md](forms/content-rating.md), [play-declarations.md](forms/play-declarations.md), [permissions.md](forms/permissions.md), [export-compliance.md](forms/export-compliance.md), [skadnetwork.md](forms/skadnetwork.md), [adservices-permissions.md](forms/adservices-permissions.md), [app-ads-txt.md](forms/app-ads-txt.md), [apple-review-notes.md](review/apple-review-notes.md), and the privacy policy's items 1–16 ([privacy-policy.md](legal/privacy-policy.md)).
 
 **Questions with a default (the Phase 9 plan's list):**
 
 1. A restored iPhone shows onboarding and our ATT pre-prompt again (P9-R6). [yes; DM-060/061/108]
 2. A restored iPhone keeps the launch count. [yes]
 3. Ship only Google's SKAdNetwork id until there is mediation. [yes; [skadnetwork.md](forms/skadnetwork.md), backlog V11-15]
-4. Declare `ITSAppUsesNonExemptEncryption = NO`. [yes after your confirmation; Info.plist is unchanged until then; [export-compliance.md](forms/export-compliance.md)]
+4. Declare `ITSAppUsesNonExemptEncryption = NO`. [yes after your confirmation; Info.plist is unchanged until then; [export-compliance.md](forms/export-compliance.md)] The algorithm answer is **"standard encryption algorithms instead of, or in addition to, the operating system's"**: the app bundles BoringSSL (Flutter's TLS) and `pointycastle`, so it doesn't rely on Apple's crypto alone (P9-C12). That answer makes App Store Connect ask about **France**: file the declaration Apple's current guidance asks for, or exclude France from availability until it is filed. [owner decision]
 5. Play target audience 18+ only. [yes]
 6. Store screenshots without third-party app names. [yes]
 7. No code obfuscation in v1. [yes]
@@ -241,7 +243,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C11). Ea
 
 11. **App Store name risk:** "Remotely for Android TV" puts "Android" in App Store metadata (Guideline 2.3.10). Consider a name without it (step 1).
 12. **Play short description** names Android TV and Google TV as a compatibility statement. Allowed (P9-R13); trademark-free is the cautious choice.
-13. **Age rating: App Store 4+ versus Play 18+.** Both follow P9-R15, but the privacy policy's owner item 9 says the App Store rating "matches" the Play audience. Decide whether to keep 4+ (the content is harmless) or raise the App Store rating, and make the policy say the same.
+13. **Content rating versus target audience: not a conflict** (P9-C12). The content rating (Everyone / PEGI 3 on Play, 4+ on the App Store) describes the app's content, a TV remote; Play's **18+ target audience** says whom the app is for and keeps it out of the Families policy. Keep both, as [content-rating.md](forms/content-rating.md) and the privacy policy's owner item 9 say. What the 4+ rating does require is the **AdMob maximum ad content rating of G** (step 4, item 22).
 14. **Malay keywords** include the English "tv remote"; keep or drop (DM-113).
 
 **Malay review points** (DM-068, DM-113): "diendors" (`aboutTrademark`), "memaparkan iklan" (iOS tracking string), `paywallFreeForever`; "Tahan semula jadi" for Natural hold (or "Tekan lama semula jadi", "Tahanan semula jadi"); `privacyAdsInfo` "tetapi tidak semasa" versus "tidak sekali-kali"; and the Task 9.9 list in DM-113. Decide also whether the app's Malay UI ships in the first production build if DM-068 isn't finished by then.
@@ -255,8 +257,13 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C11). Ea
 17. **California (CCPA/CPRA):** whether personalised AdMob ads count as "sharing" and need a "Do not sell or share" statement.
 18. **Malaysia (PDPA):** if it applies, the notice must be in Malay and English.
 19. **The iPhone pairing certificate:** host the policy only once Task 9.13's change (a reinstall gets a new certificate) has shipped.
-20. **Store forms:** the vendor disclosure links in the form drafts weren't checked online, AdMob's "shared" and Apple's tracking marks per data type are our reading of Google's pages, and Apple's "Linked to the user: No" follows P9-R15 although Apple counts linking by partners. Confirm each in the console's current wording.
+20. **Store forms** (P9-C12; confirm each in the console's current wording, and the vendor disclosure links, which weren't checked online):
+    - **Apple App Privacy, "Linked to the user":** answer **per [apple-app-privacy.md](forms/apple-app-privacy.md)**. Today that is **Yes** for every type AdMob collects (Device ID, Product Interaction, Advertising Data, Crash Data, Performance Data, Other Diagnostic Data, Coarse Location), because a type used for tracking can't honestly be "not linked" and AdMob collects crash data too, and **No** only for Purchase History, the one purely first-party row. **Performance Data** and **Other Diagnostic Data** are Linked: Yes (AdMob). The tracking marks per type are our reading of AdMob's page.
+    - **Play Data safety, Crash logs:** collected by Crashlytics **and AdMob**, **Required** (AdMob collects it in the free version) and **Shared** (AdMob); copy AdMob's exact purposes from its page ([play-data-safety.md](forms/play-data-safety.md)). The "Shared" marks for the other AdMob types are our reading of Google's page too.
+    - **Play App access:** the reviewer instructions are kept at 500 characters or fewer by a test; confirm the field's current limit in the console and shorten if needed ([play-declarations.md](forms/play-declarations.md)).
 21. **Review notes length:** about 3,700 of App Store Connect's 4,000 characters before filling; the filled URLs make it longer. Trim if the console refuses it.
+22. **AdMob maximum ad content rating = G** in the AdMob console before the first release with ads (step 4; [content-rating.md](forms/content-rating.md)). [do it]
+23. **Staged rollout on the first production release:** confirm in the Play Console that a brand-new app's first production release can use a rollout percentage. If it can't, the closed test is the last gate before 100 %: extend it (more testers, more days) rather than skip a gate (step 11). [owner to confirm]
 
 **Android 13+ per-app language** (DM-103): the in-app language wins over Android's per-app setting, and the two screens can disagree (the accepted P9-R7 residual). A one-way sync is backlog V11-14.
 

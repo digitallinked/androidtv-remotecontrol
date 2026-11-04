@@ -33,7 +33,7 @@ In the [Firebase console](https://console.firebase.google.com/), prod project â†
 
 **Halt** (and don't advance) when any of these is true at any stage:
 
-- **crash-free users below 99.5 %** in Crashlytics (prod project, the new version only, last 24 hours or since the stage began, whichever is shorter);
+- **crash-free users below 99.5 %** in Crashlytics (prod project, the new version only, last 24 hours or since the stage began, whichever is shorter), **counted only once at least 200 users are on the new version**. Below that, one crash already drops the figure under 99.5 %, so judge each crash issue by issue: halt for any crash that more than one user hits or that is in discover, pair or connect;
 - **a new fatal issue in discover, pair or connect**, even one user;
 - a report that shows TV data (a name, address, MAC or code) despite the scrubber;
 - Play's **user-perceived crash rate above 1.09 %** or **user-perceived ANR rate above 0.47 %** (Android vitals). These are Google's bad-behaviour thresholds as this page was written; the owner checks the current numbers in **Android vitals â†’ Overview** before the first rollout and updates this line;
