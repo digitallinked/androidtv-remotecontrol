@@ -84,8 +84,8 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 - **Under heavy machine load:** `discover_pair_press_key_flow` (a 20 s wait) and the atv_remote latency p95 (30 ms) can fail. Both pass alone. Run the final full check on a quiet machine, and keep the thresholds.
 - **Fresh-database residuals:**
   - A preference reset that fails or times out leaves the old values for that launch.
-  - An identity delete that fails or times out keeps the old pairing certificate until the next reinstall.
-  - Both failures are reported to Crashlytics.
+  - An identity delete that **fails** keeps the old pairing certificate until the next reinstall. One that only times out usually completes later, and `loadOrCreate` waits up to 5 s for it.
+  - Both failures go to the crash reporter. It is still in its hold phase then, so they are only logged on the device and never reach Crashlytics (decision #50).
 
 ## Blocked / needs the owner
 
