@@ -12,7 +12,7 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 - `pubspec.yaml` `version: X.Y.Z+build`; the build number always increases.
 - **Android:** upload keystore stored outside the repo (`~/keys/atvremote-upload.jks`), referenced by a git-ignored `android/key.properties`. Play App Signing on. Ship an AAB. targetSdk = latest required by Play (35+ in 2026).
 - **iOS:** automatic signing, team in Xcode, bundle id fixed once chosen. Archive via `flutter build ipa --flavor prod`.
-- CI later (GitHub Actions + fastlane); for v1, scripted local builds in `tool/release.ps1`.
+- CI later (GitHub Actions + fastlane); for v1, scripted local builds in `tool/release.ps1`. The CI `check` job runs `flutter build apk --config-only` before `tool/check.sh`, so the Gradle dry-run tests have a `gradlew`.
 
 ## Google Play checklist
 - [ ] **New personal developer account:** closed test with ≥ 12 testers opted in for 14 continuous days before production access.
@@ -35,20 +35,23 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 - [ ] AdMob/UMP console:
   - Publish the GDPR (EEA/UK/CH) message **before** enabling Firebase in prod. Without it, UMP may report `notRequired` and analytics would default on. Verify with `UMP_DEBUG_GEOGRAPHY=eea`.
   - **Don't** create the IDFA explainer message: our own pre-prompt owns the ATT flow (decision #41).
-- [ ] Release script (`tool/release.ps1`, Phase 9) refuses a prod build unless:
-  - `env/prod.json` has `FIREBASE_ENABLED: true`, both RevenueCat keys and both banner ids;
-  - the prod `google-services.json` and `GoogleService-Info.plist` exist;
-  - the AdMob app ids are set.
+- [ ] Build only with `tool/release.ps1 -Platform android` (or `release.sh`). It runs `app/tool/release_check.dart` and refuses, listing every problem at once, unless:
+  - `env/prod.json` has `FIREBASE_ENABLED: true`, real RevenueCat keys and banner ids, and no UMP debug values;
+  - the prod Firebase config files exist;
+  - the AdMob app ids are real;
+  - `key.properties` is complete and no secrets are tracked;
+  - the links are real.
 
-  Otherwise prod silently ships with no analytics, no Premium and test ads.
+  After the build, it checks the merged manifest and the signature. Otherwise prod would silently ship with no analytics, no Premium and test ads. `-DryRun` runs the checks only. The full step order is in `docs/release/runbook.md`.
+- [ ] **AdMob content cap G** in the AdMob console, matching the code (decision #52). Apple 2.5.18 requires ads to fit the age rating (4+).
 - [ ] Listing: name without "Google"; "for Android TV" in descriptive text only; 8 phone screenshots, 2 tablet, feature graphic 1024×500, icon 512.
 - [ ] Privacy policy URL live; in-app link in Settings → Legal.
 
 ## Apple App Store checklist
 - [ ] `Info.plist`: `NSLocalNetworkUsageDescription`, `NSBonjourServices`, `NSUserTrackingUsageDescription`, `NSMicrophoneUsageDescription` (only when voice ships), `GADApplicationIdentifier`, `SKAdNetworkItems`.
-- [ ] App Privacy labels match the SDKs (Identifiers, Usage Data, Diagnostics, Purchases, **Coarse Location**, **Performance Data**; tracking = yes).
+- [ ] App Privacy labels match the SDKs (Identifiers, Usage Data, Diagnostics, Purchases, **Coarse Location**, **Performance Data**; tracking = yes). Every type AdMob collects is **Linked: Yes**; Purchase History is the only "No" (decision #52; draft in `docs/release/forms/apple-app-privacy.md`).
 - [ ] The purpose strings `NSUserTrackingUsageDescription` and `NSLocalNetworkUsageDescription` name "Remotely"; update them when the app name is final.
-- [ ] iOS deployment target 15.0 (Firebase iOS SDK 13). Podfile at 15.0. Upload Crashlytics dSYMs. On a Mac, add an `ADMOB_APP_ID` Run Script check (Phase 9).
+- [ ] iOS deployment target 15.0 (Firebase iOS SDK 13). Podfile at 15.0. The Crashlytics dSYM upload and the "Check AdMob app id" build phase are in place (Phase 9, decisions #51/#52); verify both on a Mac (DM-106, DM-107).
 - [ ] **Analytics without the ad id under Swift Package Manager** (P9-C4): `firebase_analytics` drops the advertising id only when `FIREBASE_ANALYTICS_WITHOUT_ADID=true` is set while Swift packages resolve. The Podfile's `$FirebaseAnalyticsWithoutAdIdSupport` covers only CocoaPods.
   - `tool/release.sh --platform ios` exports the variable for you.
   - An archive from the Xcode GUI (Product → Archive) doesn't see your shell's variables. Run `launchctl setenv FIREBASE_ANALYTICS_WITHOUT_ADID true` first, then quit and restart Xcode.

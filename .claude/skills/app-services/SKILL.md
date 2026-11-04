@@ -45,6 +45,7 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
   - **Premium and test IDs:**
     - No ads for Premium users, including offline (cached entitlement).
     - Use Google **test ad unit IDs** in the `dev` flavor.
+    - Ad content is capped at **G** (`maxAdContentRating`) before the SDK starts. If the cap can't be set, the SDK isn't started (it fails closed, with one non-fatal; decision #52). The owner sets the same cap in the AdMob console.
   - **ATT (iOS):**
     - The pre-prompt is shown at most once.
     - If iOS never showed its question, iOS is asked again on the next banner visit, with no second pre-prompt.

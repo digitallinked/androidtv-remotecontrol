@@ -4,6 +4,38 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Phase 9 gotchas (release prep)
+- **Gradle and Android:**
+  - `flutter build` runs Gradle with `-q`, so `logger.warn` and `logger.lifecycle` are hidden. Use `logger.quiet` for build warnings the user must see.
+  - `gradlew build` and `assemble` never run the `bundle*` tasks. Refusals that must cover aggregate tasks need a `taskGraph.whenReady` backstop.
+  - `flutter build apk --config-only` writes `gradlew`, `gradlew.bat` and `local.properties` without building. CI needs it before any Gradle dry run (`-m`).
+  - Java Properties treats `\` as an escape: use forward slashes in `key.properties` paths.
+  - Don't run `flutter build` while `flutter test` runs ("Unable to determine engine version").
+- **iOS (from docs; Mac checks pending):**
+  - `FIREBASE_ANALYTICS_WITHOUT_ADID` is the SPM switch for Ad-ID-free Analytics; the Podfile global works for CocoaPods only.
+  - With a Podfile present, Flutter still runs `pod install` under SPM, and podhelper skips plugins that have a `Package.swift`.
+  - `flutter build ipa` keeps `BUILD_DIR`, while `flutter build ios` sets `build/ios`.
+  - A script phase whose `inputPaths` no task produces fails the build.
+- **Store facts:**
+  - dart:io TLS is Flutter's bundled BoringSSL, not the OS crypto. This changes the App Store export answer.
+  - App Review Guideline 1.3 is the Kids Category. Ads matching the age rating is **2.5.18**.
+  - Apple's App Privacy asks "Linked" per data type, so any type AdMob collects is Linked: Yes.
+- **Tests and tooling on Windows:**
+  - Parallel `flutter test` runs collide on the `sqlite3.dll` native asset: run one at a time.
+  - Git's `usr\bin\bash.exe` keeps PATH as given. Launched from PowerShell it lacks `dirname` and `rm`, so a test that spawns bash must build the child's PATH itself.
+  - A fresh worktree with `core.autocrlf=true` checks the docs out with CRLF. Doc-parsing tests normalise CRLF to LF (`releaseDoc()`).
+  - `flutter_secure_storage`'s method channel never answers in a test, and an awaited call outside a pump hangs `flutter_tester` for good. `test/flutter_test_config.dart` installs `FlutterSecureStorage.setMockInitialValues({})`. A hung tester holds `build/native_assets/windows/sqlite3.dll`, so every later run in that tree fails with `PathAccessException: Deletion failed`.
+  - Stopping a backgrounded `flutter test` shell leaves `flutter_tester.exe` running: check for orphans before rerunning.
+  - A git worktree has its own `build/` and so sidesteps a locked `sqlite3.dll`. Keep its path short: under the long scratchpad path, the SwiftPM plugin generation fails with `PathNotFoundException` (MAX_PATH).
+  - Under heavy machine load, the atv_remote latency p95 can pass 30 ms, and `discover_pair_press_key_flow` (a 20 s wait) can time out. Both pass alone at 2–5 ms. Run the final full check on a quiet machine, and don't change the thresholds.
+- **Flutter widgets:**
+  - `ListTile` → `InkWell` drops `Semantics(button, enabled)`: add it back explicitly.
+  - A `LayoutBuilder` that adds a scroll view only below a size threshold rebuilds the subtree and resets its state. Keep the child under a `GlobalKey` (`ScrollWhenShort`).
+  - `testWidgets` makes one `WidgetTester` per declaration and shares it across `variant` runs. An `Expando` keyed on the tester registers once per declaration.
+- **Codegen:**
+  - The riverpod_generator hash uses `toSource()`, which drops comments. Doc comments edited by hand in `*.g.dart` keep the hash valid, but must match the source text.
+- Source: Phase 9 SDD (`.superpowers/sdd/2026-10-31-phase-9-release-prep/`).
+
 ### Phase 8 gotchas (quality and hardening)
 - **Real sockets in widget tests:**
   - dart:io TLS uses zero-length timers: under the test binding, drive real I/O with `pump(Duration.zero)` inside a `runAsync` loop (`pumpUntil`), not a bare `pump()`.

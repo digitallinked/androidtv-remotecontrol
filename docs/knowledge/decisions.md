@@ -4,11 +4,72 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #52 — 2026-11-04 — Phase 9 controller rulings (P9-C1–C13)
+- **Release checker (C1):** one documented fake publisher id is allowed in fixtures; never a real one. The unsigned-bundle refusal stays.
+- **Android bundle (C2):** the prod bundle refuses Google's test publisher whether it comes from the fallback or is set explicitly. A `taskGraph.whenReady` backstop gives aggregate tasks (`bundle`, `build`, `:app:bundleProdRel`) the same signing and AdMob refusals, all reported in one exception. A malformed id is refused on every path; an explicit test id on a non-bundle build warns. Build-script warnings use `logger.quiet` (`flutter build` passes `-q`), and `logger.warn|lifecycle|info|debug` are banned by a test.
+- **iOS symbols and the ad id (C3, C4):** the dSYM phase tries Pods, then the SPM checkouts under `BUILD_DIR` and then `OBJROOT`, and warns if it finds neither. Debug configs use `dwarf-with-dsym`; there is no plist input path. SPM stays (Flutter's default). `tool/release.sh --platform ios` exports `FIREBASE_ANALYTICS_WITHOUT_ADID=true`, which is the SPM switch (the Podfile global is CocoaPods-only). Mac checks: DM-106/107/112.
+- **Fresh database (C5, C8):** the preference reset is bounded at 2 s (the first-frame budget, #38) and reported through the scrubbing path. A database created this run also deletes the stored client identity (keychain or keystore), bounded at 2 s and reported separately. A reinstalled iPhone therefore gets a new certificate, and the TV asks for a code again (device check: owner item 11).
+- **Text (C6, C7):** P9-R9's ellipsis exemptions are matched by widget or role, and each keeps the full text in semantics:
+  - the floated field label;
+  - colour-key labels;
+  - app names and package ids;
+  - the touchpad hint, only when the same text is in semantics.
+
+  The discovery row grows to fit its text, and real overflows are fixed. At enlarged text, field labels always float.
+- **Store copy and policy (C8, C9):** interstitials are disclosed: off by default, and remotely switchable to one when leaving Settings. Nothing says "banner ads only". The policy says iOS may keep the pairing certificate after the app is deleted, and that the app replaces it on reinstall.
+- **Competitor name (C10):** "Smooth Press" was Remote ATV's own setting name, so the user-visible label is now "Natural hold" / "Tahan semula jadi" everywhere. Internal identifiers (`smoothPress*`, the prefs key) stay, because renaming them would need a migration. A test bans the phrase from ARB values and store copy. This outranked the Phase 9 ARB freeze.
+- **Screenshots (C11):** the frame corner radius is 4 % of the shortest side, and capture uses the root layer.
+- **Store forms (C12, amends P9-R15):**
+  - **Play:** crash logs are collected by Crashlytics and AdMob.
+  - **Apple:** Linked: Yes for every type AdMob collects; Purchase History is the only "No".
+  - **Export:** the answers name bundled BoringSSL (dart:io) and pointycastle, so the recommended answer is "standard algorithms instead of, or in addition to, the OS". France is the owner's decision.
+  - **Ratings:** a 4+/Everyone content rating and an 18+ Play audience don't conflict.
+  - **The G cap:** ads are capped at G in the AdMob console (an owner step) and in code (`maxAdContentRating: G` before `MobileAds.initialize`).
+- **G cap fails closed (C13):** if the cap can't be set, the ads SDK never starts and no ad loads. One non-fatal goes to the crash reporter. The reason: an ad above the age rating is a 2.5.18 risk, and the remote never depends on ads.
+- **Accepted:**
+  - a first-launch keystore delete on Android, a no-op there;
+  - the Gradle dry-run test writing a git-ignored `android/secrets.properties` with public test ids (skipped if one exists, deleted in tear-down), an exception to P9-R2's temp-dir rule.
+- **Revisit:** if the first Linux CI run times out the Gradle dry runs, warm Gradle in the CI step; never loosen the test.
+
+### #51 — 2026-11-04 — Phase 9 release prep (P9-R1–R16)
+- **Scope (R1):** prepare everything and sign or submit nothing. Accounts, the keystore, real ids and config, hosting, uploads, test tracks, review, device and Mac runs, the Malay sign-off and the final name and bundle id are all the owner's (`docs/release/runbook.md`). No task creates any keystore, not even a throwaway one.
+- **One release checker (R2):** `app/tool/release_check.dart`, wrapped by `tool/release.{ps1,sh}`.
+  - **Stages:** pre, manifest and post. One run lists every problem as `REFUSED [code]`, then exits 0, 1 or 64.
+  - **What it refuses:** test or Test Store keys, test ad units, UMP debug settings, missing Firebase config, the test or placeholder AdMob app id, incomplete signing, tracked secrets, placeholder links, missing backup attributes in the manifest, `targetSdk` below 35, and a debug-signed AAB.
+  - **No Dart `--obfuscate` in v1.** Android R8 is on, and its mapping goes to Crashlytics.
+- **Android signing (R3):** from `android/key.properties`. An incomplete file or a missing store file fails with the file named. Without the file, the prod bundle is refused; other release builds use debug signing with a warning.
+- **The AdMob app id at upload time (R4):** the Android prod bundle and the iOS archive (`check_admob_app_id.sh`, the first Runner phase) refuse Google's test app id. Other prod builds warn.
+- **iOS plumbing (R5):**
+  - the Podfile at iOS 15.0, with nine configurations;
+  - per-flavor xcconfigs with optional Pods includes;
+  - the Crashlytics dSYM upload as the last build phase (see #52 C3/C4).
+- **Fresh database (R6):** a database created this run resets `onboarding_complete`, `att_preprompt_shown` and `shortcuts_seeded` before the first route. The review counters, privacy choices, theme and Premium cache are kept. Residual: a failed or timed-out write; a same-process Try again may read the old values.
+- **Per-app language (R7):** `locales_config.xml` lists the ARB locales. The in-app language wins; the Android 13 system choice applies only on "System default", so the two screens can disagree. Post-launch candidate: a one-way sync via `LocaleManager.setApplicationLocales`.
+- **No `dart:io` Platform (R8):** `app/lib` uses `defaultTargetPlatform`. A scan bans any `Platform.` member and any `show` import of `Platform`, single-line or multi-line.
+- **Text is never cut (R9):** the Malay/pseudo sweep checks every paragraph on every screen and every error state, with the exemptions in #52 C6.
+- **CLI (R10):** an atomic identity write (tmp, then rename); `holdKey` releases on Ctrl+C (exit 130) and reports a dropped connection (exit 1).
+- **Placeholders (R11):** `docs/release/placeholders.json` is the one values file. `fill_release_docs.dart` renders into `build/release-docs/`, and `AppLinks` stays the code source.
+- **Drafts (R12, R13):**
+  - **Legal:** the privacy policy and terms are DRAFTs written from our own facts.
+  - **Store copy:** `store-listing/en.md` and `ms.md` (Malay UNREVIEWED), with length limits counted after filling. No third-party trademarks in names, keywords, captions or the feature graphic.
+- **Store images (R14):** the feature graphic is a golden. Screenshots come from a two-pass generator into `build/store-screenshots/` and are never committed.
+- **Store forms (R15):** drafts in `docs/release/forms/`. Defaults: contains ads, an 18+ Play audience, 4+ / Everyone, Google's SKAdNetwork id only, and AdServices permissions kept. The export-compliance answer is the owner's (Info.plist unchanged). Corrected by #52 C12.
+- **Deferred (R16):**
+  - device and Mac work;
+  - theater `ExcludeSemantics`;
+  - Apps banner collapse;
+  - the predictive-back class;
+  - the D-pad wedge;
+  - real app icons;
+  - the Malaysian app ids;
+  - iOS Wake-on-LAN (needs the multicast entitlement);
+  - CI and fastlane uploads (v1.1).
+
 ### #50 — 2026-10-31 — Phase 8 controller rulings (P8-C1–C15)
 - **iOS storage channel (C1):** one minimal Swift method, no fallback to Documents; compiled and checked on a Mac before release (device matrix DM-058).
 - **Test helpers (C2, C3):** `pumpUntil` pumps `Duration.zero` inside a `runAsync` loop; `FakeTvServer.acceptedRemoteConnections` counts paired sockets; dispose a `SemanticsHandle` in a `finally`, not `addTearDown`.
 - **Disconnected remote (C4):** controls fade to `AppOpacity.unavailable` 0.85 (amends #21's 0.4) so text keeps 4.5:1; the state is carried by the live-region status pill and the refusal snackbar.
-- **Labels (C6, C13, C14):** `FittedLabel` never shrinks below 100 % text, then ellipsizes; with real fonts nothing is cut at 100 % on 320–390 dp. User-entered TV names and the scaled layout preview may ellipsize with the full text in semantics; "Smooth Press" and the style names stay English.
+- **Labels (C6, C13, C14):** `FittedLabel` never shrinks below 100 % text, then ellipsizes; with real fonts nothing is cut at 100 % on 320–390 dp. User-entered TV names and the scaled layout preview may ellipsize with the full text in semantics; the hold-setting label (now "Natural hold", #52) and the style names stay English.
 - **Reduce motion (C7):** "within one frame" = settled one 16 ms frame after the frame that starts the ticker, under the platform flag. The MediaQuery-only flag is never set alone in production.
 - **Connection trouble (C8–C10):** one `connectionTroubleProvider` (amends P8-R12 "behaviour unchanged"). `reconnecting` counts as trouble until it ends; `offline`/`needsPairing` are noted per emission and expire after the window. `analyticsHooks` never read trouble.
 - **Crash scrubbing (C11):** while the saved TV names are unknown (seed read timed out, failed or threw), crash reports are logged only, never sent; a late read or the first `watchAll` event installs the scrubbing reporter.
@@ -199,7 +260,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ### #20 — 2026-10-27 — Input path and holds (P4-R2..R6, R17)
 - Widgets take `KeyInput`/`RemoteInput`; `RemoteActions` (autoDispose; the screen watches it) is the only send path. A press with no session, a loading/errored session or a non-connected status is refused: nothing sent, no haptic, one not-connected notice. Unsupported key codes throw `ArgumentError` even when offline.
-- Hold threshold 300 ms (touchpad hold 500 ms). Smooth Press on → `startLong`/`endLong`; off → short repeats every 120 ms (centre never repeats). One hold at a time; auto-release after 15 s; dispose releases. Guard timers are armed before haptics/listeners; listener errors are swallowed.
+- Hold threshold 300 ms (touchpad hold 500 ms). Natural hold (the label was renamed by #52 / P9-C10; the setting key is still `smoothPress`) on → `startLong`/`endLong`; off → short repeats every 120 ms (centre never repeats). One hold at a time; auto-release after 15 s; dispose releases. Guard timers are armed before haptics/listeners; listener errors are swallowed.
 - Haptics: light (tap, step, launch, Enter), medium (hold start), heavy (power, once). The action listener gets the first send of a hold only and text length only — never text.
 
 ### #19 — 2026-10-26 — Phase 3 package pins
