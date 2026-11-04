@@ -16,6 +16,13 @@ part of 'shortcuts.dart';
 /// later (flag set) is never refilled. Errors (a corrupt catalogue, storage
 /// that won't open) are swallowed: the flag stays unset and the next launch
 /// tries again.
+///
+/// The flag lives in the preferences, which an iPhone restore or Quick Start
+/// brings back without the database (Ruling P8-R1). Bootstrap clears it when
+/// a run creates the database (Ruling P9-R6), so a first start that fails
+/// and is retried with a new database instance still seeds. A store created
+/// in this run is also seeded whatever the flag says (`isNewStore()`, the
+/// second guard).
 
 @ProviderFor(shortcutsSeed)
 final shortcutsSeedProvider = ShortcutsSeedProvider._();
@@ -28,6 +35,13 @@ final shortcutsSeedProvider = ShortcutsSeedProvider._();
 /// later (flag set) is never refilled. Errors (a corrupt catalogue, storage
 /// that won't open) are swallowed: the flag stays unset and the next launch
 /// tries again.
+///
+/// The flag lives in the preferences, which an iPhone restore or Quick Start
+/// brings back without the database (Ruling P8-R1). Bootstrap clears it when
+/// a run creates the database (Ruling P9-R6), so a first start that fails
+/// and is retried with a new database instance still seeds. A store created
+/// in this run is also seeded whatever the flag says (`isNewStore()`, the
+/// second guard).
 
 final class ShortcutsSeedProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
@@ -40,6 +54,13 @@ final class ShortcutsSeedProvider
   /// later (flag set) is never refilled. Errors (a corrupt catalogue, storage
   /// that won't open) are swallowed: the flag stays unset and the next launch
   /// tries again.
+  ///
+  /// The flag lives in the preferences, which an iPhone restore or Quick Start
+  /// brings back without the database (Ruling P8-R1). Bootstrap clears it when
+  /// a run creates the database (Ruling P9-R6), so a first start that fails
+  /// and is retried with a new database instance still seeds. A store created
+  /// in this run is also seeded whatever the flag says (`isNewStore()`, the
+  /// second guard).
   ShortcutsSeedProvider._()
     : super(
         from: null,
@@ -65,7 +86,7 @@ final class ShortcutsSeedProvider
   }
 }
 
-String _$shortcutsSeedHash() => r'9217a8770e36bbc323d84e0b3c3ce2abd1d4f963';
+String _$shortcutsSeedHash() => r'94cac245432dabcf7698ed1eaded84536e262615';
 
 /// The user's shortcuts by position, once the first-run seeding is done.
 ///
