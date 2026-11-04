@@ -346,9 +346,16 @@ void main() {
 }
 
 /// A POSIX shell: Git Bash's launcher on Windows (it puts its own `grep`
-/// on PATH), `sh` elsewhere. `null` when there is none.
+/// on PATH), `sh` elsewhere if it runs. `null` when there is none, and the
+/// caller skips with `markTestSkipped('sh is not on the PATH')`.
 String? _posixShell() {
-  if (!Platform.isWindows) return 'sh';
+  if (!Platform.isWindows) {
+    try {
+      Process.runSync('sh', const ['-c', 'exit 0']);
+      return 'sh';
+    } on ProcessException {
+      return null;
+    }
   }
   final env = Platform.environment;
   for (final base in [
