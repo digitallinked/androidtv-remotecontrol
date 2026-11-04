@@ -4,6 +4,8 @@ import 'dart:developer' as developer;
 import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 
 /// How long a banner or an interstitial may take to load before it counts as
 /// failed and is released.
@@ -178,6 +180,9 @@ final RequestConfiguration adRequestConfiguration = RequestConfiguration(
   maxAdContentRating: MaxAdContentRating.g,
 );
 
+/// The crash-report reason when the G content cap can't be set.
+const String adsContentCapReason = 'ads content cap';
+
 /// [AdsSdk] backed by `google_mobile_ads`.
 ///
 /// This is one of the two files that import it. Every call catches
@@ -186,7 +191,30 @@ final RequestConfiguration adRequestConfiguration = RequestConfiguration(
 class GoogleMobileAdsSdk implements AdsSdk {
   /// Creates the adapter. It touches the platform only when a method is
   /// called.
-  GoogleMobileAdsSdk({this.platform = const GoogleAdsPlatform()});
+  GoogleMobileAdsSdk({
+    this.platform = const GoogleAdsPlatform(),
+    this.onContentCapFailure,
+  });
+
+  /// The adapter the app uses: a failure to set the G cap reaches [reporter]
+  /// as one non-fatal with the reason [adsContentCapReason] (Ruling P9-C13).
+  factory GoogleMobileAdsSdk.reportingTo(
+    CrashReporter reporter, {
+    GoogleAdsPlatform platform = const GoogleAdsPlatform(),
+  }) => GoogleMobileAdsSdk(
+    platform: platform,
+    onContentCapFailure: (error, stack) => safeRecordError(
+      reporter,
+      error,
+      stack,
+      reason: adsContentCapReason,
+    ),
+  );
+
+  /// Called once when [initialize] can't set [adRequestConfiguration], so
+  /// the SDK stays off and no ad loads. It must not throw.
+  final Future<void> Function(Object error, StackTrace stack)?
+  onContentCapFailure;
 
   /// The vendor calls; only a test replaces them.
   @visibleForTesting
@@ -208,9 +236,12 @@ class GoogleMobileAdsSdk implements AdsSdk {
   Future<void> initialize() async {
     try {
       await platform.configureRequests(adRequestConfiguration);
-    } on Object catch (error) {
+    } on Object catch (error, stack) {
       _log('ad content rating could not be set; no ads', error);
       _uncapped = true;
+      // Never silent (Ruling P9-C13): a whole session without ads is worth
+      // one non-fatal report.
+      await onContentCapFailure?.call(error, stack);
       return;
     }
     try {

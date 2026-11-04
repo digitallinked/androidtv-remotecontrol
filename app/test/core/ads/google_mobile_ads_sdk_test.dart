@@ -2,10 +2,14 @@ import 'dart:async';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/google_mobile_ads_sdk.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+
+import '../../helpers/recording_crash_reporter.dart';
 
 /// The adaptive size the SDK would answer for a 360 dp wide portrait screen.
 AnchoredAdaptiveBannerAdSize _adaptive({
@@ -399,6 +403,52 @@ void main() {
 
       expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})', 'start']);
       expect(MaxAdContentRating.g, 'G');
+    });
+
+    // Ruling P9-C13: failing closed must not be silent. A session with no
+    // ads because the cap couldn't be set is one non-fatal report.
+    test('a_cap_that_cannot_be_set_is_reported_once_as_a_non_fatal', () async {
+      final reporter = RecordingCrashReporter();
+      final p = _Platform()..configureError = StateError('no request config');
+      final sdk = GoogleMobileAdsSdk.reportingTo(
+        reporter,
+        platform: p.platform,
+      );
+
+      await sdk.initialize();
+      await sdk.loadInterstitial('unit');
+
+      expect(reporter.errors, hasLength(1));
+      final report = reporter.errors.single;
+      expect(report.reason, adsContentCapReason);
+      expect(report.fatal, isFalse);
+      expect(report.error, isA<StateError>());
+      expect(adsContentCapReason, 'ads content cap');
+    });
+
+    test('the_app_s_ads_sdk_reports_a_cap_failure_to_its_crash_reporter', () {
+      final reporter = RecordingCrashReporter();
+      final container = ProviderContainer.test(
+        overrides: [crashReporterProvider.overrideWithValue(reporter)],
+      );
+
+      final sdk = container.read(adsSdkProvider);
+
+      expect(sdk, isA<GoogleMobileAdsSdk>());
+      expect((sdk as GoogleMobileAdsSdk).onContentCapFailure, isNotNull);
+    });
+
+    test('a_cap_that_is_set_reports_nothing', () async {
+      final reporter = RecordingCrashReporter();
+      final p = _Platform();
+
+      await GoogleMobileAdsSdk.reportingTo(
+        reporter,
+        platform: p.platform,
+      ).initialize();
+
+      expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})', 'start']);
+      expect(reporter.errors, isEmpty);
     });
 
     test('without_the_cap_the_sdk_never_starts_and_nothing_loads', () {

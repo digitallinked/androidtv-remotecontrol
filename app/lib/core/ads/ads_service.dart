@@ -14,6 +14,7 @@ import 'package:tv_remote/core/ads/google_mobile_ads_sdk.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
 import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 
 part 'ads_service.g.dart';
@@ -79,9 +80,11 @@ abstract interface class AdsSdk {
   Future<LoadedInterstitial?> loadInterstitial(String unitId);
 }
 
-/// The app's [AdsSdk]: Google Mobile Ads.
+/// The app's [AdsSdk]: Google Mobile Ads, reporting a G-cap failure to the
+/// crash reporter (Ruling P9-C13).
 @Riverpod(keepAlive: true)
-AdsSdk adsSdk(Ref ref) => GoogleMobileAdsSdk();
+AdsSdk adsSdk(Ref ref) =>
+    GoogleMobileAdsSdk.reportingTo(ref.watch(crashReporterProvider));
 
 /// The ad unit ids of this build, flavor and platform.
 @Riverpod(keepAlive: true)
