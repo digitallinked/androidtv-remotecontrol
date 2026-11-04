@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/app/flavor.dart';
+import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/bootstrap.dart';
@@ -129,7 +130,16 @@ void main() {
       }
       await t.tap(find.text('Get started'));
       await t.pumpAndSettle();
-      expect(find.byType(AppDialog<void>), findsOneWidget);
+      // The Local Network explainer by its own title, not any dialog.
+      final strings = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.descendant(
+          of: find.byType(AppDialog<void>),
+          matching: find.text(strings.onboardingLocalNetworkTitle),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(strings.onboardingLocalNetworkBody), findsOneWidget);
       await t.tap(find.text('Continue'));
       await t.pumpAndSettle();
       expect(find.byType(DiscoveryScreen), findsOneWidget);
@@ -339,6 +349,7 @@ void main() {
 /// on PATH), `sh` elsewhere. `null` when there is none.
 String? _posixShell() {
   if (!Platform.isWindows) return 'sh';
+  }
   final env = Platform.environment;
   for (final base in [
     env['ProgramFiles'],
