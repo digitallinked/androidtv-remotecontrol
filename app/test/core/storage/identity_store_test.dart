@@ -237,6 +237,24 @@ void main() {
     });
   });
 
+  // Re-review Minor B: a forget that fails doesn't stop a later load.
+  test('a_failed_forget_still_lets_the_next_load_complete', () async {
+    final storage = InMemorySecureKeyValueStore()
+      ..throwOnDelete = PlatformException(code: 'keychain');
+    final store = IdentityStore(storage, generate: () async => fixture);
+
+    await expectLater(store.forget(), throwsA(isA<PlatformException>()));
+    storage.throwOnDelete = null;
+
+    final id = await store.loadOrCreate();
+
+    expect(id.certificatePem, fixture.certificatePem);
+    expect(
+      storage.values[IdentityStore.certificateKey],
+      fixture.certificatePem,
+    );
+  });
+
   test('forget_tries_both_keys_and_rethrows_a_failed_delete', () async {
     final storage = InMemorySecureKeyValueStore()
       ..values.addAll({
