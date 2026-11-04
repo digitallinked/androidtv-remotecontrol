@@ -438,6 +438,20 @@ void main() {
       expect((sdk as GoogleMobileAdsSdk).onContentCapFailure, isNotNull);
     });
 
+    // Re-review Minor C: a report hook that throws can't break fail-closed
+    // or the AdsSdk "no method throws" contract.
+    test('a_throwing_cap_report_still_fails_closed', () async {
+      final p = _Platform()..configureError = StateError('no request config');
+      final sdk = GoogleMobileAdsSdk(
+        platform: p.platform,
+        onContentCapFailure: (_, _) async => throw StateError('reporter'),
+      );
+
+      await expectLater(sdk.initialize(), completes);
+      expect(await sdk.loadInterstitial('unit'), isNull);
+      expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})']);
+    });
+
     test('a_cap_that_is_set_reports_nothing', () async {
       final reporter = RecordingCrashReporter();
       final p = _Platform();

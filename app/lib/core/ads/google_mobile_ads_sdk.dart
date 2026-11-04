@@ -212,7 +212,8 @@ class GoogleMobileAdsSdk implements AdsSdk {
   );
 
   /// Called once when [initialize] can't set [adRequestConfiguration], so
-  /// the SDK stays off and no ad loads. It must not throw.
+  /// the SDK stays off and no ad loads. If it throws, the error is logged
+  /// and the adapter still fails closed.
   final Future<void> Function(Object error, StackTrace stack)?
   onContentCapFailure;
 
@@ -241,7 +242,12 @@ class GoogleMobileAdsSdk implements AdsSdk {
       _uncapped = true;
       // Never silent (Ruling P9-C13): a whole session without ads is worth
       // one non-fatal report.
-      await onContentCapFailure?.call(error, stack);
+      try {
+        await onContentCapFailure?.call(error, stack);
+      } on Object catch (reportError) {
+        // A failing report must not undo failing closed.
+        _log('ad content rating failure could not be reported', reportError);
+      }
       return;
     }
     try {
