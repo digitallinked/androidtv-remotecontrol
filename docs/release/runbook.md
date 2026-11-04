@@ -9,7 +9,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
 - Commands run from the repo root unless the step says "from `app/`". Windows commands are for Windows PowerShell 5.1; Mac commands are for Terminal.
 - Console menus move. Where a menu name below doesn't match, search the console for the page's title.
 - **Never commit a secret.** The never-commit list is in the [store-release skill](../../.claude/skills/store-release/SKILL.md): keystores, `key.properties`, `google-services.json`, `GoogleService-Info.plist`, `app/env/*.json` (except `example.json`), `secrets.properties`, `Secrets.xcconfig`, RevenueCat keys. All of them are git-ignored; the release check refuses a tree that tracks one (`secrets-tracked`).
-- After any change to code, docs or config examples, `powershell -File tool/check.ps1` must end with `All checks passed.` (run it from Git Bash until Task 9.13's wrapper-test fix lands; see "Known issues" at the end).
+- After any change to code, docs or config examples, `powershell -File tool/check.ps1` must end with `All checks passed.`. Run the final full check on a quiet machine. Under heavy load, `discover_pair_press_key_flow` and the latency p95 can fail; both pass alone. Don't change the thresholds. (See "Known issues" at the end.)
 
 ## Lead times: start these first
 
@@ -99,13 +99,13 @@ The ordered path from accounts to a staged production rollout on Google Play and
    ```
 
    It writes every `docs/release/**/*.md` with the values filled in to the git-ignored `build/release-docs/`. If a value is still missing, it lists the tokens and exits 1; fix them and run it again. Use the filled copies for everything you paste or host.
-5. **Host** the filled privacy policy and terms at the two URLs (and the support page). **Only after Task 9.13's certificate change has shipped** (privacy-policy owner item 11: the iPhone keychain wording depends on it).
+5. **Host** the filled privacy policy and terms at the two URLs (and the support page). **Only after DM-108 (3) has passed on a TestFlight build** (a reinstall makes the TV ask for a new code): the policy's iPhone keychain sentence depends on it (privacy-policy owner item 11).
 
 **Verify:** `cd app; flutter test test/release` passes (`app_links_match_the_placeholder_values`); `dart tool/fill_release_docs.dart` exits 0; both URLs open on a phone (**DM-035**); the release check no longer lists `placeholder-links` or `app-store-id` (step 10).
 
 ## Step 7. The upload keystore, key.properties and Play App Signing
 
-1. Create the upload keystore **once, outside the repository**, with the JDK's `keytool` (Android Studio ships one in its `jbr\bin` folder). On Windows PowerShell (PowerShell doesn't expand `~` for other programs, so use `$HOME`):
+1. Create the upload keystore **once, outside the repository**, with the JDK's `keytool` (Android Studio ships one in its `jbr\bin` folder). `keytool` comes from `JAVA_HOME\bin` or the PATH, and the release check's post-stage looks in the same two places. If it isn't found, set `$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'` (or your JDK) and run `& "$env:JAVA_HOME\bin\keytool.exe"`. On Windows PowerShell (PowerShell doesn't expand `~` for other programs, so use `$HOME`):
 
    ```powershell
    New-Item -ItemType Directory -Force "$HOME\keys"
@@ -135,7 +135,7 @@ Run the matrix with Claude ([the device matrix](../knowledge/device-matrix.md), 
 |---|---|
 | The first Play upload (internal testing) | **DM-104** (dry run), **DM-056** and **DM-057** (Android backup and device transfer bring no TV data), **DM-103** (per-app language) |
 | The first Play upload itself | **DM-105** (real build, signing, Play accepts it) |
-| Promoting to closed testing | **DM-109** (kill switches), **DM-110** (crash alert), **DM-107** (Android half: mapping and a readable test crash), **DM-111** (screenshots), and the real-device run DM-001…DM-102 as far as the owner's devices allow (`status.md` "Next up" item 1) |
+| Promoting to closed testing | **DM-109** (kill switches), **DM-110** (crash alert), **DM-107** (Android half: the prod version's mapping listed in Crashlytics), **DM-111** (screenshots), and the real-device run DM-001…DM-102 as far as the owner's devices allow (`status.md` "Next up" item 1) |
 | The first TestFlight upload | **DM-058** and **DM-059** (Swift storage channel, database location), **DM-066** (Malay `ms.lproj`), **DM-106** (iOS build plumbing), **DM-112** (Swift packages: no ad-id Analytics, the dSYM tool) |
 | TestFlight external (a public beta) | **DM-060** and **DM-061** (iOS restore and Quick Start: **if the TVs travel with Quick Start, that's a release issue: stop**). The plan gates these before "any upload"; they gate the first build outside your own team instead, because a Play upload can't reveal an iOS backup problem and TestFlight internal reaches only you. |
 | App Store submission | **DM-107** (iOS half: the dSYM UUIDs in Crashlytics), **DM-108** (upgrade, reinstall and restore on a TestFlight build) |
@@ -177,12 +177,14 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
 | `secrets-tracked` | A never-commit file is tracked by git: `git rm --cached <path>`, commit, and if it held a real secret, rotate that secret. |
 | `placeholder-links`, `app-store-id` | Real links and the App Store id in `AppLinks` (step 6). |
 | `manifest-missing`, `manifest-backup`, `manifest-target-sdk`, `manifest-admob-id` | Post-checks of the merged manifest: don't upload; tell Claude the line. |
-| `artifact-missing`, `debug-signed` | The build didn't produce a store-signed bundle: don't upload; check step 7. |
+| `artifact-missing` | The build didn't produce a bundle: don't upload; rebuild (step 10). |
+| `debug-signed`, "the signature … couldn't be read (is keytool in JAVA_HOME/bin or on the PATH?)" | The signature is unreadable (keytool missing?): set `JAVA_HOME` to a JDK (for example Android Studio's `jbr`) or put `keytool` on the PATH, then run the post-check again. Not a keystore problem. |
+| `debug-signed`, "signed with the debug key" | The bundle is debug-signed: don't upload; check step 7 (`key.properties`). |
 
 ## Step 11. Play tracks: internal → closed test → staged production
 
 1. **Store listing and App content** (Play Console → **Grow users → Store presence → Main store listing**, and **Policy and programs → App content**), from the filled copies (step 6):
-   - texts from [en.md](store-listing/en.md); the icon (512 px, from `tool/brand.ps1`), [the feature graphic](store-assets/feature_graphic.png) and the screenshots (`powershell -File tool/store_screenshots.ps1`, reviewed in **DM-111**, per [the screenshot plan](store-assets/screenshot-plan.md));
+   - texts from [en.md](store-listing/en.md); the icon (512 px: [`app/assets/branding/play_store_icon_512.png`](../../app/assets/branding/play_store_icon_512.png)), [the feature graphic](store-assets/feature_graphic.png) and the screenshots (`powershell -File tool/store_screenshots.ps1`, reviewed in **DM-111**, per [the screenshot plan](store-assets/screenshot-plan.md));
    - **Data safety** from [play-data-safety.md](forms/play-data-safety.md); **ads** = yes, **target audience 18+ only**, **app access**, **advertising ID** and the rest from [play-declarations.md](forms/play-declarations.md); **content rating** from [content-rating.md](forms/content-rating.md); permissions as explained in [permissions.md](forms/permissions.md);
    - the privacy policy URL; countries.
 2. **Internal testing:** install from the Play link on your own phone; play with it for a day; check Crashlytics (**DM-107**, Android half).
@@ -224,7 +226,7 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
 
 ## Owner decisions and open points
 
-Collected from the Phase 9 task reviews and controller rulings (P9-C1…C12). Each has a default; the bracket says where it lives. **Each form draft's own "Owner to confirm" checklist is part of this list:** [play-data-safety.md](forms/play-data-safety.md), [apple-app-privacy.md](forms/apple-app-privacy.md), [content-rating.md](forms/content-rating.md), [play-declarations.md](forms/play-declarations.md), [permissions.md](forms/permissions.md), [export-compliance.md](forms/export-compliance.md), [skadnetwork.md](forms/skadnetwork.md), [adservices-permissions.md](forms/adservices-permissions.md), [app-ads-txt.md](forms/app-ads-txt.md), [apple-review-notes.md](review/apple-review-notes.md), and the privacy policy's items 1–16 ([privacy-policy.md](legal/privacy-policy.md)).
+Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Each has a default; the bracket says where it lives. **Each form draft's own "Owner to confirm" checklist is part of this list:** [play-data-safety.md](forms/play-data-safety.md), [apple-app-privacy.md](forms/apple-app-privacy.md), [content-rating.md](forms/content-rating.md), [play-declarations.md](forms/play-declarations.md), [permissions.md](forms/permissions.md), [export-compliance.md](forms/export-compliance.md), [skadnetwork.md](forms/skadnetwork.md), [adservices-permissions.md](forms/adservices-permissions.md), [app-ads-txt.md](forms/app-ads-txt.md), [apple-review-notes.md](review/apple-review-notes.md), and the privacy policy's items 1–16 ([privacy-policy.md](legal/privacy-policy.md)).
 
 **Questions with a default (the Phase 9 plan's list):**
 
@@ -256,7 +258,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C12). Ea
 16. **"Anonymous" in the app:** the Privacy choices page says "Anonymous counts…", but the app instance id makes the data pseudonymous. The strings are frozen for v1; fix after v1 (backlog V11-17) or accept the wording.
 17. **California (CCPA/CPRA):** whether personalised AdMob ads count as "sharing" and need a "Do not sell or share" statement.
 18. **Malaysia (PDPA):** if it applies, the notice must be in Malay and English.
-19. **The iPhone pairing certificate:** host the policy only once Task 9.13's change (a reinstall gets a new certificate) has shipped.
+19. **The iPhone pairing certificate:** host the policy only after DM-108 (3) has passed on a TestFlight build (a reinstall makes the TV ask for a new code); the policy's keychain sentence depends on it.
 20. **Store forms** (P9-C12; confirm each in the console's current wording, and the vendor disclosure links, which weren't checked online):
     - **Apple App Privacy, "Linked to the user":** answer **per [apple-app-privacy.md](forms/apple-app-privacy.md)**. Today that is **Yes** for every type AdMob collects (Device ID, Product Interaction, Advertising Data, Crash Data, Performance Data, Other Diagnostic Data, Coarse Location), because a type used for tracking can't honestly be "not linked" and AdMob collects crash data too, and **No** only for Purchase History, the one purely first-party row. **Performance Data** and **Other Diagnostic Data** are Linked: Yes (AdMob). The tracking marks per type are our reading of AdMob's page.
     - **Play Data safety, Crash logs:** collected by Crashlytics **and AdMob**, **Required** (AdMob collects it in the free version) and **Shared** (AdMob); copy AdMob's exact purposes from its page ([play-data-safety.md](forms/play-data-safety.md)). The "Shared" marks for the other AdMob types are our reading of Google's page too.
@@ -264,10 +266,14 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C12). Ea
 21. **Review notes length:** about 3,700 of App Store Connect's 4,000 characters before filling; the filled URLs make it longer. Trim if the console refuses it.
 22. **AdMob maximum ad content rating = G** in the AdMob console before the first release with ads (step 4; [content-rating.md](forms/content-rating.md)). [do it]
 23. **Staged rollout on the first production release:** confirm in the Play Console that a brand-new app's first production release can use a rollout percentage. If it can't, the closed test is the last gate before 100 %: extend it (more testers, more days) rather than skip a gate (step 11). [owner to confirm]
+24. **No ads in a session where the G cap can't be set** (P9-C13): if the app can't set the maximum ad content rating, it shows no ads that session and sends one non-fatal `ads content cap` to Crashlytics. Accepted; watch for it in Crashlytics after launch. [accepted]
+25. **Launch-ops numbers to confirm in the consoles:** the Play reply limit of 350 characters ([review-response-plan.md](launch-ops/review-response-plan.md)), the Android vitals bad-behaviour thresholds ([crashlytics-alerts.md](launch-ops/crashlytics-alerts.md)), and the console and menu names both docs use. [owner to confirm]
+26. **The real Malaysian app ids** (Astro GO, sooka, Tonton): find them with DM-033 during the device run; they go into the catalogue as backlog V11-12, so the MY default row opens the real apps. [device run]
+27. **Conditional deferrals (P9-R16):** deferred until the device run or later; see [the v1.1 backlog](launch-ops/v1.1-backlog.md) groups B and D. [backlog]
 
 **Android 13+ per-app language** (DM-103): the in-app language wins over Android's per-app setting, and the two screens can disagree (the accepted P9-R7 residual). A one-way sync is backlog V11-14.
 
 ## Known issues (tooling)
 
-- **The wrapper test from a PowerShell parent:** `sh_ios_build_resolves_analytics_without_the_ad_id` (in `app/test/tool/release_wrappers_test.dart`) fails when the test run is started from a plain PowerShell window and passes from Git Bash. Task 9.13 fixes it. Until then, run `powershell -File tool/check.ps1` from Git Bash. The release scripts themselves are not affected.
+- **Load-sensitive tests:** Run the final full check on a quiet machine. Under heavy load, `discover_pair_press_key_flow` and the latency p95 can fail; both pass alone. Don't change the thresholds.
 - **Don't run `flutter build` while `flutter test` runs** on Windows (learnings): one of them fails with "Unable to determine engine version" or a broken plugin registrant. A cold `flutter build apk --release` can take over 12 minutes.

@@ -16,7 +16,7 @@ The short version:
 
 ## 1. What stays on your phone
 
-The app keeps the following on your phone only. None of it is sent to us, to Firebase, to AdMob, to RevenueCat or to anyone else:
+The app keeps the following on your phone only. None of it is sent to us, to Firebase, to AdMob, to RevenueCat or to anyone else; only your own TV takes part in the connection (section 2), and the pairing certificate goes only to that TV:
 
 - your TVs' names and the nicknames you give them;
 - their network addresses (IP addresses and local host names) and MAC addresses;
@@ -69,7 +69,7 @@ Analytics data is kept for {{ANALYTICS_RETENTION}}.
 
 If crash reports are on, the app sends a report to Firebase Crashlytics when it crashes or hits a serious error. A report contains the error and the code location where it happened, device and app information (such as the phone model, system version, app version and free memory), and a crash installation identifier. When usage statistics are also on, Crashlytics may attach the app's most recent analytics events (the events listed above) to the report, to show what led up to the crash.
 
-Before a report leaves the phone, the app removes anything that could identify your TVs, your network or you: TV names, network addresses, MAC addresses, pairing codes, e-mail addresses, certificates and similar values. If the app doesn't yet know your saved TVs' names, it holds the report back rather than send it unscrubbed. Development builds of the app never send crash reports.
+Before a report leaves the phone, the app removes anything that could identify your TVs, your network or you: TV names, network addresses, MAC addresses, pairing codes, e-mail addresses, certificates and similar values. If the app doesn't yet know your saved TVs' names, it holds the report back rather than send it unscrubbed. Debug builds of the app never send crash reports.
 
 **Your control.** Settings → **Privacy choices** → **Share crash reports**. The default works the same way as for usage statistics. When you turn it off, reports waiting on the phone are deleted.
 
@@ -132,7 +132,7 @@ This section is a draft for places, such as the European Economic Area and the U
 - Turn usage statistics and crash reports on or off in Settings → **Privacy choices**.
 - Change your ad consent in Settings → **Privacy choices** → **Ad privacy choices**, and ad tracking in the iPhone's Settings.
 - Buy Premium to remove ads.
-- Delete the app to delete what it keeps on your phone; a new installation gets new random identifiers. On iPhone, iOS may keep the app's pairing certificate in the keychain after you delete the app; the app replaces it with a new one when you install it again.
+- Delete the app to delete what it keeps on your phone; a new installation gets new random identifiers [owner to confirm for Firebase on iOS, which may keep some identifiers in the keychain]. On iPhone, iOS may keep the app's pairing certificate in the keychain after you delete the app; the app replaces it with a new one when you install it again.
 
 Depending on where you live, you may have the right to ask for access to, correction of, deletion of, or a portable copy of information about you, to restrict or object to its use, or to withdraw consent. Because the app has no accounts, we can't look you up by name or e-mail address; the services above hold only random identifiers. Contact us and we will help as far as we can. You can also complain to your local data protection authority.
 
@@ -163,7 +163,7 @@ These points are written from the code and the project's decisions, but someone 
 8. **Legal basis (EEA/UK):** if the GDPR applies to you, the legal basis for each use (consent for analytics, crash reports and personalised ads; legitimate interest or contract for Remote Config and purchases) and the name of the data controller.
 9. **Children:** that the store target audience is set to 18+ on Google Play. The App Store age rating (4+) reflects content; the audience is adults. Cap AdMob's ad content at G so the ads suit that rating (`docs/release/forms/content-rating.md`).
 10. **Full-screen ads:** the app ships an interstitial that Remote Config can turn on (`ads_interstitial_enabled`, off by default; shown when leaving Settings, paced by `ads_interstitial_min_interval_s`). Keep the disclosure in the summary and section 3 as long as that code path ships, and keep the store forms consistent with it.
-11. **Pairing certificate on iPhone:** the wording in sections 1 and 9 relies on the code change that replaces the stored certificate when the app is installed again (ruling P9-C8). Task 9.13 made it: a database created on this launch deletes the stored certificate before anything can pair, so the next pairing makes a new one. Confirm on an iPhone (delete, reinstall, pair: the TV asks for a code) before hosting. **(unverified, device)**
+11. **Pairing certificate on iPhone:** the wording in sections 1 and 9 relies on the app replacing the stored certificate when it is installed again (ruling P9-C8): when the app's database is new, it deletes the stored certificate before anything can pair, so the next pairing makes a new one. Host only after DM-108 (3) has passed on a TestFlight build (delete, reinstall, pair: the TV asks for a new code). **(unverified, device)**
 12. **Consent regions:** the regions named in section 3 are examples; the real list is whatever consent messages you publish in AdMob (UMP then reports consent as required there).
 13. **Privacy Sandbox and SKAdNetwork:** confirm what the merged Android manifest keeps (`ACCESS_ADSERVICES_*`, see the store forms) and the iOS `SKAdNetworkItems`, and that section 3's sentence matches.
 14. **Malaysia (PDPA):** if Malaysia's Personal Data Protection Act applies to you, it requires the notice in both Malay and English; this draft is English only.

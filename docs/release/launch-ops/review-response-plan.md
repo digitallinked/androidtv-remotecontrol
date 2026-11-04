@@ -18,7 +18,7 @@ How the owner answers store reviews in launch week and after. Every reply below 
 4. **Be short and specific.** Google Play limits a reply to 350 characters, so every reply below fits that. Sign as the app's team, not as a person, unless the owner prefers otherwise.
 5. **No promises of dates or features.** Say "we've noted it", not "coming next month". Store copy may only claim what v1 does (Ruling P9-R13); replies follow the same rule.
 6. **Never argue about a rating, never offer anything in exchange for changing one, and never mention another app.**
-7. **Ads:** describe them exactly as the privacy policy does (banners on the Apps and Settings screens; never on the remote or while pairing; Premium removes them). If the owner has switched interstitials on, also say an occasional full-screen ad can appear when leaving Settings.
+7. **Ads:** describe them exactly as the privacy policy does: banners only on the Apps and Settings screens; an occasional full-screen ad when leaving Settings, only if we have switched those on; never while pairing; Premium removes them.
 8. **Malay reviews get a Malay reply.** The Malay drafts below are **UNREVIEWED**: they need the owner's sign-off (with the DM-068 review) before use. Until then, reply in English.
 9. **Update the reply** when a fix ships: "Version X.Y.Z fixes this" is the best reply there is.
 
@@ -73,7 +73,7 @@ Maaf atas sambungan yang terputus. Apl akan bersambung semula dengan sendirinya 
 Typical review: "too many ads", "ads everywhere", "ad covered the button".
 
 ```text
-Thanks for the honest feedback. In the free version, banners sit at the bottom of the Apps and Settings screens; the remote and the pairing screens have no ads. Premium removes ads completely. If an ad ever covered a button or showed somewhere else, please tell us through Settings → Send feedback so we can fix it.
+Thanks for the feedback. The free version shows banners on the Apps and Settings screens, and maybe an occasional full-screen ad when you leave Settings; pairing never shows ads. Premium removes them all. If an ad covered a button or appeared elsewhere, please tell us via Settings → Send feedback.
 ```
 
 Malay draft (UNREVIEWED):
