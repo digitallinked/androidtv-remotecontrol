@@ -99,7 +99,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
    ```
 
    It writes every `docs/release/**/*.md` with the values filled in to the git-ignored `build/release-docs/`. If a value is still missing, it lists the tokens and exits 1; fix them and run it again. Use the filled copies for everything you paste or host.
-5. **Host** the filled privacy policy and terms at the two URLs (and the support page). **Only after DM-108 (3) has passed on a TestFlight build** (a reinstall makes the TV ask for a new code): the policy's iPhone keychain sentence depends on it (privacy-policy owner item 11).
+5. **Host** the filled privacy policy and terms at the two URLs (and the support page). **Host them before the Play closed test** (step 11.1 needs the URL). Confirm the iPhone keychain sentence with DM-108 (3) before the iOS app reaches anyone outside your team (TestFlight external or the App Store). If it fails, fix the app or correct the hosted policy before any iOS release (privacy-policy owner item 11).
 
 **Verify:** `cd app; flutter test test/release` passes (`app_links_match_the_placeholder_values`); `dart tool/fill_release_docs.dart` exits 0; both URLs open on a phone (**DM-035**); the release check no longer lists `placeholder-links` or `app-store-id` (step 10).
 
@@ -137,7 +137,7 @@ Run the matrix with Claude ([the device matrix](../knowledge/device-matrix.md), 
 | The first Play upload itself | **DM-105** (real build, signing, Play accepts it) |
 | Promoting to closed testing | **DM-109** (kill switches), **DM-110** (crash alert), **DM-107** (Android half: the prod version's mapping listed in Crashlytics), **DM-111** (screenshots), and the real-device run DM-001…DM-102 as far as the owner's devices allow (`status.md` "Next up" item 1) |
 | The first TestFlight upload | **DM-058** and **DM-059** (Swift storage channel, database location), **DM-066** (Malay `ms.lproj`), **DM-106** (iOS build plumbing), **DM-112** (Swift packages: no ad-id Analytics, the dSYM tool) |
-| TestFlight external (a public beta) | **DM-060** and **DM-061** (iOS restore and Quick Start: **if the TVs travel with Quick Start, that's a release issue: stop**). The plan gates these before "any upload"; they gate the first build outside your own team instead, because a Play upload can't reveal an iOS backup problem and TestFlight internal reaches only you. |
+| TestFlight external (a public beta) | **DM-060** and **DM-061** (iOS restore and Quick Start: **if the TVs travel with Quick Start, that's a release issue: stop**), and **DM-108 (3)** (a reinstall makes the TV ask for a new code; the hosted policy's keychain sentence depends on it). The plan gates these before "any upload"; they gate the first build outside your own team instead, because a Play upload can't reveal an iOS backup problem and TestFlight internal reaches only you. |
 | App Store submission | **DM-107** (iOS half: the dSYM UUIDs in Crashlytics), **DM-108** (upgrade, reinstall and restore on a TestFlight build) |
 | Any Malay listing | **DM-068** and **DM-113** (step 8) |
 
@@ -216,7 +216,7 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
    - attach the three in-app purchases to the version; then **Submit for Review**.
 9. The first App Store version goes to everyone when you release it (choose a manual release so you can pick the moment). For later versions use **Phased Release for automatic updates** (`crashlytics-alerts.md`).
 
-**Verify:** **DM-058**, **DM-059**, **DM-066**, **DM-106**, **DM-112** before the first upload; **DM-060**, **DM-061** before TestFlight external; **DM-107**, **DM-108** before submission; App Store Connect shows the build as processed with no missing-compliance warning.
+**Verify:** **DM-058**, **DM-059**, **DM-066**, **DM-106**, **DM-112** before the first upload; **DM-060**, **DM-061** and **DM-108 (3)** before TestFlight external; **DM-107**, **DM-108** before submission; App Store Connect shows the build as processed with no missing-compliance warning.
 
 ## Step 13. Launch week
 
@@ -258,7 +258,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Ea
 16. **"Anonymous" in the app:** the Privacy choices page says "Anonymous counts…", but the app instance id makes the data pseudonymous. The strings are frozen for v1; fix after v1 (backlog V11-17) or accept the wording.
 17. **California (CCPA/CPRA):** whether personalised AdMob ads count as "sharing" and need a "Do not sell or share" statement.
 18. **Malaysia (PDPA):** if it applies, the notice must be in Malay and English.
-19. **The iPhone pairing certificate:** host the policy only after DM-108 (3) has passed on a TestFlight build (a reinstall makes the TV ask for a new code); the policy's keychain sentence depends on it.
+19. **The iPhone pairing certificate:** host the policy before the Play closed test. Confirm the iPhone keychain sentence with DM-108 (3) before the iOS app reaches anyone outside your team (TestFlight external or the App Store). If it fails, fix the app or correct the hosted policy before any iOS release.
 20. **Store forms** (P9-C12; confirm each in the console's current wording, and the vendor disclosure links, which weren't checked online):
     - **Apple App Privacy, "Linked to the user":** answer **per [apple-app-privacy.md](forms/apple-app-privacy.md)**. Today that is **Yes** for every type AdMob collects (Device ID, Product Interaction, Advertising Data, Crash Data, Performance Data, Other Diagnostic Data, Coarse Location), because a type used for tracking can't honestly be "not linked" and AdMob collects crash data too, and **No** only for Purchase History, the one purely first-party row. **Performance Data** and **Other Diagnostic Data** are Linked: Yes (AdMob). The tracking marks per type are our reading of AdMob's page.
     - **Play Data safety, Crash logs:** collected by Crashlytics **and AdMob**, **Required** (AdMob collects it in the free version) and **Shared** (AdMob); copy AdMob's exact purposes from its page ([play-data-safety.md](forms/play-data-safety.md)). The "Shared" marks for the other AdMob types are our reading of Google's page too.

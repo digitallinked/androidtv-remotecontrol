@@ -79,7 +79,7 @@ Thanks for the feedback. The free version shows banners on the Apps and Settings
 Malay draft (UNREVIEWED):
 
 ```text
-Terima kasih atas maklum balas anda. Dalam versi percuma, iklan sepanduk berada di bahagian bawah skrin Apl dan Tetapan; skrin alat kawalan jauh dan skrin penggandingan tidak mempunyai iklan. Premium membuang semua iklan. Jika iklan pernah menutup butang, sila beritahu kami melalui Tetapan → Hantar maklum balas.
+Terima kasih atas maklum balas anda. Versi percuma memaparkan iklan sepanduk pada skrin Apl dan Tetapan, dan mungkin sekali-sekala iklan skrin penuh apabila anda meninggalkan Tetapan; penggandingan tidak sekali-kali memaparkan iklan. Premium membuang semuanya. Jika iklan menutup butang, sila beritahu kami melalui Tetapan → Hantar maklum balas.
 ```
 
 ### 5. Premium and restoring a purchase
