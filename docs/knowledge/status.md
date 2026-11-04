@@ -54,15 +54,15 @@ _Nothing._
 ## Next up
 
 1. **The owner works through `docs/release/runbook.md`**, in order:
-   - **Lead-time items first:** start the Play closed test (12 testers × 14 days) and request the Apple multicast entitlement.
+   - **Lead-time items first:** recruit the 12 closed-test testers (the 14-day test starts once a build is uploaded) and request the Apple multicast entitlement.
    - **Step 1:** the final app name and ids (`docs/release/rename-checklist.md`). The Play package name is permanent.
    - **Step 2:** accounts.
    - **Step 3:** Firebase.
    - **Step 4:** AdMob. Publish the UMP GDPR message and set the **G** content cap in the console.
    - **Step 5:** RevenueCat.
-   - **Step 6:** the legal pages, `placeholders.json` and `tool/fill_release_docs`.
+   - **Step 6:** the legal pages, `placeholders.json` and `dart tool/fill_release_docs.dart` (from `app/`).
    - **Step 7:** the upload keystore and `key.properties`, then DM-105.
-2. **The device-matrix run with Claude** (runbook step 9): the gates DM-056/057/060/061 first, then DM-001…DM-113. Includes the reinstall check (pairing asks for a code again). **Ask before any Power or Wake-on-LAN step.**
+2. **The device-matrix run with Claude** (runbook step 9): DM-001…DM-113, with the Android gates DM-056/057 before the first upload. The iOS restore and Quick Start gates DM-060/061 come before TestFlight external, and so does DM-108 (3): a reinstall must ask for a code again. **Ask before any Power or Wake-on-LAN step.**
 3. **The Malay sign-off** (runbook step 8, DM-068), including "Tahan semula jadi", before any Malay listing.
 4. **The Mac** (runbook step 12): `pod install`, DM-058/059/066/106/107/112, `tool/release.sh --platform ios`, TestFlight.
 5. **Release:**
@@ -82,7 +82,10 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 ## Known flakes and residuals
 
 - **Under heavy machine load:** `discover_pair_press_key_flow` (a 20 s wait) and the atv_remote latency p95 (30 ms) can fail. Both pass alone. Run the final full check on a quiet machine, and keep the thresholds.
-- **Stale preferences:** a fresh-database preference write or identity delete that fails or times out leaves the old values or certificate for that launch (reported to Crashlytics).
+- **Fresh-database residuals:**
+  - A preference reset that fails or times out leaves the old values for that launch.
+  - An identity delete that fails or times out keeps the old pairing certificate until the next reinstall.
+  - Both failures are reported to Crashlytics.
 
 ## Blocked / needs the owner
 

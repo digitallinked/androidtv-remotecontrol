@@ -20,6 +20,7 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
 
 ## Rules
 - **Startup order** (decision #38):
+  0. The database opens. If this run created it, the three "this phone" preferences reset and the stored client identity is deleted, each bounded at 2 s and reported (decisions #51/#52).
   1. Firebase, bounded at 4.5 s, then Crashlytics behind the scrubbing reporter.
   2. Remote Config activate (5 s, then `seal()`; fetched values apply next launch).
   3. The first frame.

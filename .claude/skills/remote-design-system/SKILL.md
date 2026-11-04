@@ -43,6 +43,20 @@ Onboarding (3 cards + permission explainers) → Discovery (scan list, manual IP
 
 Layouts: phone portrait (primary), phone landscape (pad left, controls right), tablet (two panes). **Accessibility:** every control has a semantic label ("Volume up"); D-pad works with TalkBack/VoiceOver; colour is never the only signal.
 
+**Text is never cut** (P9-R9, decision #52 C6/C7):
+- **The sweep:** Malay and the pseudo-locale, 320 dp at 200 % with linear and non-linear scalers, every paragraph on every screen and every error state.
+- **Allowed to ellipsize,** each with the full text in semantics and matched by widget or role:
+  - app-bar titles;
+  - user-entered TV names;
+  - the Remote layout preview;
+  - the floated field label;
+  - colour-key labels;
+  - app names and package ids;
+  - the touchpad hint, only when its text is in semantics.
+- **Fix rule:** raise `maxLines`, `helperMaxLines` or `errorMaxLines`, or let the row grow. Never shorten copy. At enlarged text, field labels always float.
+
+**Store art** (P9-R14, C11): the feature graphic and the screenshot frames use the accent background `#3D5AFE`, white Roboto captions in the top 18 %, the screen at 78 % width, and corners of 4 % of the shortest side. No third-party app names or logos, no demo badge, no ads.
+
 ## Paywall rules
 Show the value (no ads, widgets, themes, multiple TVs) first, prices second. Pre-select the best-value plan honestly, show renewal terms under each price, and put Restore + Terms + Privacy on the screen. Closing returns to where the user came from.
 

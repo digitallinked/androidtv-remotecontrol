@@ -14,6 +14,22 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 - **iOS:** automatic signing, team in Xcode, bundle id fixed once chosen. Archive via `flutter build ipa --flavor prod`.
 - CI later (GitHub Actions + fastlane); for v1, scripted local builds in `tool/release.ps1`. The CI `check` job runs `flutter build apk --config-only` before `tool/check.sh`, so the Gradle dry-run tests have a `gradlew`.
 
+## Release docs (`docs/release/`, Phase 9)
+- **`runbook.md`:** the owner's step-by-step path from accounts to launch week, ending with the owner-decision list. Start there.
+- **Placeholders:**
+  - `placeholders.json` is the one values file (decision #35, P9-R11), and docs use `{{TOKEN}}` only.
+  - `dart tool/fill_release_docs.dart` (from `app/`) writes the filled copies to `build/release-docs/`. It exits 1 while any token is unfilled, unless you pass `--allow-missing`.
+  - `AppLinks` stays the code source, and a test keeps the two equal.
+- **Drafts:**
+  - `legal/` holds the privacy policy and terms (DRAFT, not legal advice).
+  - `store-listing/en.md` and `ms.md` hold the store copy (Malay UNREVIEWED).
+  - `forms/` holds the Data safety, App Privacy, content rating, export, SKAdNetwork and Play declaration drafts.
+  - `review/` holds the Apple review notes and the demo-video script.
+  - Also `rename-checklist.md` and `launch-ops/`.
+- **Images:**
+  - `store-assets/feature_graphic.png` is a golden.
+  - The screenshots come from `tool/store_screenshots.ps1`/`.sh`, which writes to `build/store-screenshots/<set>/<locale>/`. They are never committed.
+
 ## Google Play checklist
 - [ ] **New personal developer account:** closed test with ≥ 12 testers opted in for 14 continuous days before production access.
 - [ ] **Backup rules (closed in code, decision #49):** `allowBackup="false"`, `fullBackupContent="false"` and `data_extraction_rules.xml` exclude everything. Before upload, grep the **prodRelease** merged manifest for all three; the Privacy page's "never leave this phone" and the FAQ answers depend on them. Run device-matrix rows DM-056/057 (Android) and DM-060/061 (iOS restore and Quick Start; DM-061 is a release issue if the DB travels).

@@ -32,6 +32,15 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
   - `ListTile` → `InkWell` drops `Semantics(button, enabled)`: add it back explicitly.
   - A `LayoutBuilder` that adds a scroll view only below a size threshold rebuilds the subtree and resets its state. Keep the child under a `GlobalKey` (`ScrollWhenShort`).
   - `testWidgets` makes one `WidgetTester` per declaration and shares it across `variant` runs. An `Expando` keyed on the tester registers once per declaration.
+- **CLI signals:**
+  - On Windows, `ProcessSignal.sigint.watch()` works but `ProcessSignal.sigterm.watch()` throws `SignalException`, so watch SIGTERM only off Windows.
+  - Once SIGINT is watched, Ctrl+C no longer kills the process: the program must release the key and exit by itself (`holdKey` returns 130).
+- **Merged manifest under AGP 9:**
+  - The prodRelease manifest is at `app/build/app/intermediates/merged_manifests/prodRelease/processProdReleaseManifest/AndroidManifest.xml`. The same content is also under `merged_manifest/prodRelease/…`, which is why the checker uses the newest `merged_manifest*` match.
+  - The blame report is `app/build/app/outputs/logs/manifest-merger-prod-release-report.txt`.
+- **Real fonts in tests:**
+  - Widget tests render the Ahem test font unless you load fonts yourself. `test/helpers/real_fonts.dart` `loadRealFonts()` loads Roboto and MaterialIcons from the SDK's `material_fonts`. It finds them via `FLUTTER_ROOT`, then the folders above the runner, so it also works on Linux CI.
+  - Roboto is also registered under `CupertinoSystemText`/`CupertinoSystemDisplay` for iOS-platform renders. There is no SF Pro, so the iOS screenshots use Roboto.
 - **Codegen:**
   - The riverpod_generator hash uses `toSource()`, which drops comments. Doc comments edited by hand in `*.g.dart` keep the hash valid, but must match the source text.
 - Source: Phase 9 SDD (`.superpowers/sdd/2026-10-31-phase-9-release-prep/`).
