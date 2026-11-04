@@ -50,6 +50,7 @@ class IdentityStore {
   final Future<ClientIdentity> Function() _generate;
   final Duration _readRetryDelay;
   Future<ClientIdentity>? _pending;
+  Future<void>? _forgetting;
 
   static Future<ClientIdentity> _generateOffUiIsolate() =>
       Isolate.run(ClientIdentity.generate);
@@ -67,8 +68,17 @@ class IdentityStore {
   /// keychain keeps the identity after the app is deleted, and a reinstall
   /// must not present the old phone's certificate. Both keys are tried even
   /// when one delete fails; the first failure is then rethrown.
-  Future<void> forget() async {
+  ///
+  /// The caller may stop waiting (the start bounds it), but the deletes run
+  /// on, so [loadOrCreate] waits for them first: a late delete must not
+  /// remove an identity made after it. A keychain that never answers would
+  /// hold the identity's own reads and writes just the same.
+  Future<void> forget() {
     _pending = null;
+    return _forgetting = _forget();
+  }
+
+  Future<void> _forget() async {
     Object? failure;
     StackTrace? failureStack;
     for (final key in const [certificateKey, privateKeyKey]) {
@@ -83,6 +93,11 @@ class IdentityStore {
   }
 
   Future<ClientIdentity> _loadOrCreate() async {
+    try {
+      await _forgetting;
+    } on Object {
+      // Reported by forget's caller; the load below copes with what's left.
+    }
     try {
       final stored = await _loadStored();
       if (stored != null) return stored;

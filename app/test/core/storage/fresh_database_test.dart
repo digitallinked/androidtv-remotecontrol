@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,7 @@ import 'package:tv_remote/features/apps/data/shortcut_repository.dart';
 import '../../helpers/failing_preferences.dart';
 import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/test_catalogue.dart';
+import '../../helpers/test_identity.dart';
 
 /// What an iPhone restore or Quick Start brings back: the old phone's
 /// "done" flags, without its database (Ruling P8-R1).
@@ -310,6 +312,44 @@ void main() {
       expect(settings.onboardingComplete, isFalse);
     },
   );
+
+  // Review Minor 1: the delete keeps running after its 2 s bound. If the user
+  // pairs before it finishes, the identity made then must survive it.
+  test('a_late_identity_delete_spares_the_identity_made_after_it', () async {
+    final settings = await SettingsStore.open();
+    final made = testIdentity();
+    final secure = _storedIdentity();
+    final store = IdentityStore(secure, generate: () async => made);
+
+    fakeAsync((async) {
+      // Made in the fake zone, so its late answer is a fake microtask.
+      final keychain = Completer<void>();
+      secure.deleteGate = keychain.future;
+      unawaited(
+        forgetPhoneStateIfDatabaseIsNew(
+          settings: settings,
+          databaseIsNew: () async => true,
+          forgetIdentity: store.forget,
+          onError: (_, _) {},
+        ),
+      );
+      async.elapse(freshDatabaseWriteTimeout);
+      // The start has gone on; the keychain answers again for new calls,
+      // but the first delete is still stuck. The user pairs.
+      secure.deleteGate = null;
+      ClientIdentity? paired;
+      unawaited(store.loadOrCreate().then((id) => paired = id));
+      async.flushMicrotasks();
+
+      // The stuck delete finishes late.
+      keychain.complete();
+      async.flushMicrotasks();
+
+      expect(paired?.certificatePem, made.certificatePem);
+      expect(secure.values[IdentityStore.certificateKey], made.certificatePem);
+      expect(secure.values[IdentityStore.privateKeyKey], made.privateKeyPem);
+    });
+  });
 
   test('an_identity_delete_that_hangs_does_not_hold_the_start', () async {
     final settings = await SettingsStore.open();
