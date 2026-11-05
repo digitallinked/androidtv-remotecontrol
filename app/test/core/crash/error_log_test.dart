@@ -21,6 +21,7 @@ import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
 import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crashlytics_sink.dart';
 
 const _tvName = 'Bedroom TV';
 const _ip = '192.168.0.42';
@@ -52,6 +53,17 @@ void main() {
     // Runs before the directory goes: tear-downs run last-added first.
     addTearDown(() => log.idle);
     return log;
+  }
+
+  /// Lets what has been completed run.
+  Future<void> settled() => Future<void>.delayed(Duration.zero);
+
+  /// Leaves one entry, `stored`, in [file].
+  Future<void> seed() async {
+    final log = boundLog();
+    await log.idle;
+    await log.recordError(Exception('stored'), null);
+    await log.idle;
   }
 
   List<Map<String, Object?>> stored() {
@@ -199,6 +211,23 @@ void main() {
   });
 
   group('the hold (decision #50)', () {
+    test('held_errors_stop_at_the_capacity', () async {
+      final names = Completer<void>();
+      final log = boundLog(namesKnown: names.future);
+      await log.idle;
+
+      for (var i = 0; i <= errorLogCapacity; i++) {
+        await log.recordError(Exception('error $i'), null);
+      }
+      names.complete();
+      await settled();
+      await log.idle;
+
+      expect(log.entries, hasLength(errorLogCapacity));
+      expect(log.entries.first.message, endsWith('error $errorLogCapacity'));
+      expect(log.entries.last.message, endsWith('error 1'));
+    });
+
     test('nothing_is_shown_or_written_until_the_names_are_known', () async {
       final known = Completer<void>();
       final log = boundLog(namesKnown: known.future);
@@ -315,6 +344,80 @@ void main() {
     });
   });
 
+  group('a slow start', () {
+    /// A log whose file arrives when [lookup] completes.
+    ErrorLog slowLog(Completer<File?> lookup) {
+      final log = ErrorLog()
+        ..bind(
+          namesKnown: Future<void>.value(),
+          scrubber: _scrubber,
+          file: () => lookup.future,
+        );
+      addTearDown(() => log.idle);
+      return log;
+    }
+
+    test('stored_entries_arrive_below_newer_ones', () async {
+      await seed();
+      final lookup = Completer<File?>();
+      final log = slowLog(lookup);
+      await settled();
+
+      await log.recordError(Exception('newer'), null);
+      expect(stored(), hasLength(1), reason: 'nothing is written before');
+
+      lookup.complete(file);
+      await log.idle;
+
+      expect(log.entries.map((e) => e.message), [
+        endsWith('newer'),
+        endsWith('stored'),
+      ]);
+      expect(stored(), hasLength(2));
+    });
+
+    test('a_clear_before_the_read_wins', () async {
+      await seed();
+      final lookup = Completer<File?>();
+      final log = slowLog(lookup);
+
+      await log.clear();
+      lookup.complete(file);
+      await log.idle;
+
+      expect(log.entries, isEmpty);
+      expect(stored(), isEmpty);
+    });
+
+    test('an_older_bind_that_finishes_late_changes_nothing', () async {
+      final other = File('${dir.path}/other.json');
+      final lookup = Completer<File?>();
+      final names = Completer<void>();
+      final log = ErrorLog()
+        ..bind(
+          namesKnown: names.future,
+          scrubber: () => throw StateError('the older scrubber'),
+          file: () => lookup.future,
+        )
+        ..bind(
+          namesKnown: Future<void>.value(),
+          scrubber: _scrubber,
+          file: () async => file,
+        );
+      await log.idle;
+
+      names.complete();
+      lookup.complete(other);
+      await settled();
+      await log.recordError(_leaky(), null);
+      await log.idle;
+
+      expect(log.entries.single.message, contains('<tv>'));
+      expect(stored(), hasLength(1));
+      expect(other.existsSync(), isFalse);
+    });
+  });
+
   test('clear_empties_the_list_and_the_file', () async {
     final log = boundLog();
     await log.idle;
@@ -344,14 +447,21 @@ void main() {
   test('it_has_no_sharing_firebase_or_build_type_gate', () async {
     final log = boundLog();
     await log.idle;
+    final sink = RecordingCrashlyticsSink();
     final reporter = CompositeCrashReporter([
       const LoggingCrashReporter(),
       log,
+      ScrubbingCrashReporter(
+        sink: sink,
+        scrubber: _scrubber(),
+        enabled: () => false,
+      ),
     ]);
 
     await reporter.recordError(Exception('recorded'), null);
 
     expect(kDebugMode, isTrue, reason: 'flutter test is a debug build');
+    expect(sink.errors, isEmpty, reason: 'sharing is off');
     expect(log.entries.single.message, contains('recorded'));
   });
 

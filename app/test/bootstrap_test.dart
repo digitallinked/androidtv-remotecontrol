@@ -1277,13 +1277,14 @@ void main() {
       DelegatingCrashReporter reporter, {
       FirebaseStatus firebase = FirebaseStatus.notConfigured,
       List<StartupStep> startupSteps = const [],
+      AppDatabase Function()? openDatabase,
     }) => buildRootWidget(
       flavor: Flavor.dev,
       crashReporter: reporter,
       errorLog: log,
       initFirebase: (_) async => firebase,
       startupSteps: startupSteps,
-      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      openDatabase: openDatabase ?? () => AppDatabase(NativeDatabase.memory()),
       overrides: [
         ...fakeAdsOverrides(),
         crashlyticsSinkProvider.overrideWithValue(RecordingCrashlyticsSink()),
@@ -1331,6 +1332,36 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 30));
+    });
+
+    testWidgets('the_log_is_stored_scrubbed_next_to_a_real_database', (
+      tester,
+    ) async {
+      final dir = Directory.systemTemp.createTempSync('bootstrap_log_');
+      final log = ErrorLog();
+      addTearDown(log.dispose);
+      final reporter = DelegatingCrashReporter(log);
+      late AppDatabase database;
+
+      // Real files need real time, and building the root is what binds it.
+      final stored = await tester.runAsync(() async {
+        await root(
+          log,
+          reporter,
+          startupSteps: [() async => throw StateError('lost Bedroom TV')],
+          openDatabase: () => database = AppDatabase(
+            NativeDatabase(File('${dir.path}/app.db')),
+          ),
+        );
+        await log.idle;
+        final text = await File('${dir.path}/$errorLogFileName').readAsString();
+        await database.close();
+        dir.deleteSync(recursive: true);
+        return text;
+      });
+
+      expect(stored, contains('lost <tv>'));
+      expect(stored, isNot(contains('Bedroom TV')));
     });
 
     testWidgets('the_log_stays_in_the_chain_when_crashlytics_is_installed', (
