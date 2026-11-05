@@ -189,6 +189,7 @@ PowerController powerController(Ref ref) {
   final hapticsEnabled = ref.watch(
     settingsControllerProvider.select((s) => s.hapticsEnabled),
   );
+  final crashes = ref.watch(crashReporterProvider);
   return PowerController(
     session: session,
     actions: ref.watch(remoteActionsProvider),
@@ -198,13 +199,8 @@ PowerController powerController(Ref ref) {
     haptics: ref.watch(hapticsProvider),
     hapticsEnabled: hapticsEnabled,
     onRefused: ref.read(notConnectedNoticesProvider.notifier).notify,
-    onError: (error, stack, reason) => unawaited(
-      safeRecordError(
-        ref.read(crashReporterProvider),
-        error,
-        stack,
-        reason: reason,
-      ),
-    ),
+    // Not through `ref` in the callback: it is gone after a rebuild.
+    onError: (error, stack, reason) =>
+        unawaited(safeRecordError(crashes, error, stack, reason: reason)),
   );
 }

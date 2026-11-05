@@ -195,6 +195,8 @@ class _EditFormState extends ConsumerState<_EditForm> {
     final nickname = _name.text.trim().isEmpty ? null : _name.text.trim();
     final mac = _mac.text.trim().isEmpty ? null : parseMac(_mac.text);
     final actions = ref.read(deviceActionsProvider);
+    // Read now: `ref` is gone if the screen closes during the write.
+    final crashes = ref.read(crashReporterProvider);
     setState(() {
       _busy = true;
       _nameError = null;
@@ -212,7 +214,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
       // goes through the scrubbing chain (Ruling P9-C14).
       unawaited(
         safeRecordError(
-          ref.read(crashReporterProvider),
+          crashes,
           error,
           stack,
           reason: 'device save',
@@ -256,6 +258,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final removed = l10n.editDeviceRemoved(label);
+    final crashes = ref.read(crashReporterProvider);
     setState(() => _busy = true);
     widget.onRemovingChanged(true);
     try {
@@ -263,7 +266,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     } on Object catch (error, stack) {
       unawaited(
         safeRecordError(
-          ref.read(crashReporterProvider),
+          crashes,
           error,
           stack,
           reason: 'device remove',

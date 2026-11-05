@@ -76,6 +76,8 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
       _failed = false;
       _alreadyThere = false;
     });
+    // Read now: `ref` is gone if the sheet closes during the write.
+    final crashes = ref.read(crashReporterProvider);
     try {
       final added = await ref.read(shortcutActionsProvider).add(app);
       if (!mounted) return;
@@ -90,7 +92,7 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
     } on Object catch (error, stack) {
       unawaited(
         safeRecordError(
-          ref.read(crashReporterProvider),
+          crashes,
           error,
           stack,
           reason: 'shortcut save',

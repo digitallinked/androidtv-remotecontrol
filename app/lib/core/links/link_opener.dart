@@ -49,13 +49,11 @@ class UrlLauncherLinkOpener implements LinkOpener {
 
 /// The app's [LinkOpener].
 @Riverpod(keepAlive: true)
-LinkOpener linkOpener(Ref ref) => UrlLauncherLinkOpener(
-  onError: (error, stack) => unawaited(
-    safeRecordError(
-      ref.read(crashReporterProvider),
-      error,
-      stack,
-      reason: 'open link',
+LinkOpener linkOpener(Ref ref) {
+  final crashes = ref.watch(crashReporterProvider);
+  return UrlLauncherLinkOpener(
+    onError: (error, stack) => unawaited(
+      safeRecordError(crashes, error, stack, reason: 'open link'),
     ),
-  ),
-);
+  );
+}

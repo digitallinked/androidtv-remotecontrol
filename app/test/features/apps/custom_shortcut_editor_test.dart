@@ -8,6 +8,7 @@ import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
+import '../../helpers/held_writes.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_crash_reporter.dart';
@@ -388,6 +389,32 @@ void main() {
     repo.failNextWrite = StateError('disk full');
     await save(t);
     expect(crashes.errors.single.reason, 'shortcut save');
+  });
+
+  // Ruling P9-C17: see add_app_sheet_test.
+  testWidgets('an_edit_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldShortcutRepository(repo.apps);
+    repo = held;
+    await pumpEditor(
+      t,
+      edit: 'Netflix',
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await type(t, _name, 'Films');
+    final button = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(button);
+    await t.pumpAndSettle();
+    await t.tap(button);
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'shortcut save');
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('a_failed_edit_says_so_and_the_editor_stays_open', (t) async {

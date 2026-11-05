@@ -96,6 +96,8 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final failed = AppLocalizations.of(context).manageAppsSaveFailed;
     final actions = ref.read(shortcutActionsProvider);
+    // Read now: `ref` is gone if the screen closes during the write.
+    final crashes = ref.read(crashReporterProvider);
     if (next != null) setState(() => _items = next);
     _writes++;
     var ok = true;
@@ -104,7 +106,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     } on Object catch (error, stack) {
       unawaited(
         safeRecordError(
-          ref.read(crashReporterProvider),
+          crashes,
           error,
           stack,
           reason: 'shortcut save',
@@ -229,6 +231,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     // bare read of its future would end with a disposed-provider error. A
     // listener keeps it alive for this one read.
     final sub = container.listen(shortcutsProvider.future, (_, _) {});
+    final crashes = container.read(crashReporterProvider);
     try {
       final base = await sub.read();
       final restored = _withApp(base, app, index);
@@ -237,7 +240,7 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     } on Object catch (error, stack) {
       unawaited(
         safeRecordError(
-          container.read(crashReporterProvider),
+          crashes,
           error,
           stack,
           reason: 'shortcut save',

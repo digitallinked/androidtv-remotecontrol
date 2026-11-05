@@ -10,6 +10,7 @@ import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 
+import '../../helpers/held_writes.dart';
 import '../../helpers/in_memory_app_usage_repository.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
@@ -248,6 +249,29 @@ void main() {
     repo.failNextWrite = StateError('disk full');
     await tapRow(t, inSheet(find.text('Kodi')));
     expect(crashes.errors.single.reason, 'shortcut save');
+  });
+
+  // Ruling P9-C17: the reporter is read before the write, so a write that
+  // fails after the sheet has gone is still handled.
+  testWidgets('an_add_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldShortcutRepository();
+    repo = held;
+    await pumpSheet(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await search(t, 'kodi');
+    await t.tap(inSheet(find.text('Kodi')));
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'shortcut save');
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('a_failed_add_says_so_and_keeps_the_sheet', (t) async {

@@ -22,6 +22,7 @@ import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
+import '../../helpers/held_writes.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_crash_reporter.dart';
@@ -352,6 +353,52 @@ void main() {
     await t.tap(find.widgetWithText(TextButton, 'Remove'));
     await t.pumpAndSettle();
     expect(crashes.errors.last.reason, 'device remove');
+  });
+
+  // Ruling P9-C17: see add_app_sheet_test.
+  testWidgets('a_save_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldDeviceRepository(repo.saved.values);
+    repo = held;
+    await pumpEdit(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await openEdit(t);
+    await t.enterText(field('Name on this phone'), 'Den');
+    await t.tap(find.widgetWithText(FilledButton, 'Save'));
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'device save');
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('a_remove_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldDeviceRepository(repo.saved.values);
+    repo = held;
+    await pumpEdit(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await openEdit(t);
+    await t.tap(find.text('Remove TV'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'device remove');
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('remove_failure_keeps_the_tv_and_says_so', (t) async {

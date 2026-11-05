@@ -243,17 +243,12 @@ PurchaseService purchaseService(Ref ref) {
       .watch(serviceConfigProvider)
       .revenueCatKey(defaultTargetPlatform);
   if (key == null) return const UnavailablePurchaseService();
+  final crashes = ref.watch(crashReporterProvider);
   final service = RevenueCatPurchaseService(
     apiKey: key,
     debugLogs: ref.watch(flavorProvider) == Flavor.dev,
-    onError: (error, stack, reason) => unawaited(
-      safeRecordError(
-        ref.read(crashReporterProvider),
-        error,
-        stack,
-        reason: reason,
-      ),
-    ),
+    onError: (error, stack, reason) =>
+        unawaited(safeRecordError(crashes, error, stack, reason: reason)),
   );
   ref.onDispose(service.dispose);
   return service;

@@ -89,6 +89,7 @@ class DiscoveryController extends _$DiscoveryController {
       state = current();
     }
 
+    final crashes = ref.read(crashReporterProvider);
     final subscription = discovery.watch().listen(
       (found) {
         // Names of TVs nobody saved must not reach a crash report or the
@@ -104,12 +105,7 @@ class DiscoveryController extends _$DiscoveryController {
       onError: (Object error, StackTrace stack) {
         // The user sees a failed search, so it is recorded (Ruling P9-C14).
         unawaited(
-          safeRecordError(
-            ref.read(crashReporterProvider),
-            error,
-            stack,
-            reason: 'discovery',
-          ),
+          safeRecordError(crashes, error, stack, reason: 'discovery'),
         );
         failed = true;
         publish();

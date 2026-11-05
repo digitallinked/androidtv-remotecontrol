@@ -125,6 +125,8 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
       _failed = false;
     });
     final actions = ref.read(shortcutActionsProvider);
+    // Read now: `ref` is gone if the editor closes during the write.
+    final crashes = ref.read(crashReporterProvider);
     final existing = widget.existing;
     final name = _nameText;
     try {
@@ -165,7 +167,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
     } on Object catch (error, stack) {
       unawaited(
         safeRecordError(
-          ref.read(crashReporterProvider),
+          crashes,
           error,
           stack,
           reason: 'shortcut save',

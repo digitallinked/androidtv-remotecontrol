@@ -14,16 +14,13 @@ TvDiscoveryFactory tvDiscoveryFactory(Ref ref) => NsdTvDiscovery.new;
 
 /// Finds a saved TV's current address by its mDNS service name.
 @Riverpod(keepAlive: true)
-HostResolver hostResolver(Ref ref) =>
-    (name) => resolveHostByServiceName(
-      ref.read(tvDiscoveryFactoryProvider),
-      name,
-      onError: (error, stack) => unawaited(
-        safeRecordError(
-          ref.read(crashReporterProvider),
-          error,
-          stack,
-          reason: 'host lookup',
-        ),
-      ),
-    );
+HostResolver hostResolver(Ref ref) {
+  final crashes = ref.watch(crashReporterProvider);
+  return (name) => resolveHostByServiceName(
+    ref.read(tvDiscoveryFactoryProvider),
+    name,
+    onError: (error, stack) => unawaited(
+      safeRecordError(crashes, error, stack, reason: 'host lookup'),
+    ),
+  );
+}
