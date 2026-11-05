@@ -183,6 +183,38 @@ void main() {
     });
   });
 
+  // Ruling P9-C14: the search failed on every phone once and nothing recorded
+  // why. A failed search reports each time, and still shows as failed.
+  test('a_failed_search_reports_each_time_with_the_reason_discovery', () {
+    fakeAsync((async) {
+      final crashes = RecordingCrashReporter();
+      final c = ProviderContainer.test(
+        overrides: [
+          tvDiscoveryFactoryProvider.overrideWithValue(discoveries.create),
+          settingsStoreProvider.overrideWithValue(settings),
+          analyticsSinkProvider.overrideWithValue(analyticsSink),
+          analyticsDebugBuildProvider.overrideWithValue(true),
+          crashReporterProvider.overrideWithValue(crashes),
+        ],
+      )..listen(discoveryControllerProvider, (_, _) {});
+
+      discoveries.created.single.fail(StateError('refused'));
+      async.flushMicrotasks();
+      expect(read(c).failed, isTrue);
+      expect(crashes.errors, hasLength(1));
+      expect(crashes.errors.single.reason, 'discovery');
+      expect(crashes.errors.single.fatal, isFalse);
+      expect(crashes.errors.single.error, isA<StateError>());
+
+      c.read(discoveryControllerProvider.notifier).rescan();
+      async.elapse(Duration.zero);
+      discoveries.created.last.fail(StateError('refused again'));
+      async.flushMicrotasks();
+      expect(crashes.errors, hasLength(2));
+      expect(crashes.errors.last.reason, 'discovery');
+    });
+  });
+
   test('rescan_restarts_discovery_and_the_timer', () {
     fakeAsync((async) {
       final c = makeContainer();

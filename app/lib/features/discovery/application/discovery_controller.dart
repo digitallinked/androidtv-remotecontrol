@@ -100,7 +100,16 @@ class DiscoveryController extends _$DiscoveryController {
         tvs = _sorted(found);
         publish();
       },
-      onError: (Object error) {
+      onError: (Object error, StackTrace stack) {
+        // The user sees a failed search, so it is recorded (Ruling P9-C14).
+        unawaited(
+          safeRecordError(
+            ref.read(crashReporterProvider),
+            error,
+            stack,
+            reason: 'discovery',
+          ),
+        );
         failed = true;
         publish();
       },
