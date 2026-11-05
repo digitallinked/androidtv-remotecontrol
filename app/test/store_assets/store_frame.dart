@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
@@ -664,8 +665,14 @@ Future<ui.Image> captureScreen(
   }
 }
 
-/// Fails when the screen shows a catalogue app's name, "Google", the demo
-/// badge or a loaded ad.
+/// Fails when a third-party logo is on screen: the only SVGs the app draws
+/// are logos (Rulings P9-R14, P9-C16).
+void expectNoLogo(String reason) {
+  expect(find.byType(SvgPicture), findsNothing, reason: reason);
+}
+
+/// Fails when the screen shows a catalogue app's name, a logo, "Google", the
+/// demo badge or a loaded ad.
 Future<void> _expectStoreSafe(
   WidgetTester t,
   Locale locale,
@@ -694,6 +701,7 @@ Future<void> _expectStoreSafe(
       );
     }
   }
+  expectNoLogo('${shot.set.name} ${shot.id} $locale shows no logo');
   expect(
     find.byWidgetPredicate((w) => '${w.runtimeType}' == '_LoadedBanner'),
     findsNothing,

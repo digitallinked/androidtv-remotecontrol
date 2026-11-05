@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/domain/app_logos.dart';
+import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
 import '../helpers/real_fonts.dart';
 import '../helpers/test_catalogue.dart';
@@ -169,6 +172,31 @@ void main() {
     }
     expect(storeSession().isDemo, isFalse, reason: 'no demo badge');
     expect(storeSession().tvName, 'Living Room TV');
+  });
+
+  testWidgets('the_store_art_shows_no_logo', (t) async {
+    // The check itself finds a logo tile, so a pass below means something.
+    await t.pumpWidget(
+      const MaterialApp(
+        home: AppIconSquare(
+          app: AppEntry(package: 'com.netflix.ninja', name: 'Netflix'),
+        ),
+      ),
+    );
+    expect(() => expectNoLogo('a logo tile'), throwsA(isA<TestFailure>()));
+
+    for (final app in storeShortcuts) {
+      expect(kAppLogos, isNot(contains(app.package)), reason: app.name);
+    }
+    // Every shot fails in captureScreen if a logo is on screen.
+    for (final shot in storeShots) {
+      final screen = await captureScreen(t, shot, const Locale('en'));
+      screen.dispose();
+    }
+    await t.pumpWidget(
+      const FeatureGraphic(title: 'Title', tagline: 'Tagline'),
+    );
+    expectNoLogo('the feature graphic');
   });
 
   test('the_screenshot_output_is_git_ignored', () async {
