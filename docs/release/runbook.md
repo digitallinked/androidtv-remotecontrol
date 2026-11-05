@@ -135,7 +135,7 @@ Run the matrix with Claude ([the device matrix](../knowledge/device-matrix.md), 
 |---|---|
 | The first Play upload (internal testing) | **DM-104** (dry run), **DM-056** and **DM-057** (Android backup and device transfer bring no TV data), **DM-103** (per-app language) |
 | The first Play upload itself | **DM-105** (real build, signing, Play accepts it) |
-| Promoting to closed testing | **DM-109** (kill switches), **DM-110** (crash alert), **DM-107** (Android half: the prod version's mapping listed in Crashlytics), **DM-111** (screenshots), **DM-114** (the error log holds no TV data), and the real-device run DM-001…DM-102 as far as the owner's devices allow (`status.md` "Next up" item 1) |
+| Promoting to closed testing | **DM-109** (kill switches), **DM-110** (crash alert), **DM-107** (Android half: the prod version's mapping listed in Crashlytics), **DM-111** (screenshots), **DM-114** (the error log holds no TV data), **DM-115** (the app logos on a real phone), and the real-device run DM-001…DM-102 as far as the owner's devices allow (`status.md` "Next up" item 1) |
 | The first TestFlight upload | **DM-058** and **DM-059** (Swift storage channel, database location), **DM-066** (Malay `ms.lproj`), **DM-106** (iOS build plumbing), **DM-112** (Swift packages: no ad-id Analytics, the dSYM tool) |
 | TestFlight external (a public beta) | **DM-060** and **DM-061** (iOS restore and Quick Start: **if the TVs travel with Quick Start, that's a release issue: stop**), and **DM-108 (3)** (a reinstall makes the TV ask for a new code; the hosted policy's keychain sentence depends on it). The plan gates these before "any upload"; they gate the first build outside your own team instead, because a Play upload can't reveal an iOS backup problem and TestFlight internal reaches only you. |
 | App Store submission | **DM-107** (iOS half: the dSYM UUIDs in Crashlytics), **DM-108** (upgrade, reinstall and restore on a TestFlight build) |
@@ -239,7 +239,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Ea
 7. No code obfuscation in v1. [yes]
 8. Keep the AdServices permissions. [keep; [adservices-permissions.md](forms/adservices-permissions.md)]
 9. Interstitials stay off. [off; if you switch them on, the prod build needs interstitial unit ids and the disclosures stay; [kill-switch-checklist.md](launch-ops/kill-switch-checklist.md)]
-10. Real app icons on the tiles. [no; backlog V11-16]
+10. Real app logos on the tiles. [on, your decision of 2026-11-05: 27 catalogue apps show their logo as nominative fair use, with no licence from the brands. A brand or store objection is answered by removing that row from `app/lib/features/apps/domain/app_logos.dart`; the tile goes back to its letter. The other 28 apps are backlog V11-16.]
 
 **Names and store copy:**
 

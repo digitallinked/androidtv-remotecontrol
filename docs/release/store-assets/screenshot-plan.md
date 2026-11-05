@@ -79,7 +79,7 @@ The script empties `build/store-screenshots/` and runs `app/test/store_assets/st
    - text is real, with no boxes;
    - no caption is cut;
    - there's no ad and no demo badge;
-   - no third-party app name or logo appears;
+   - no third-party app name or logo appears (catalogue tiles show real logos in the app, but the shots only use our custom shortcuts, and `the_store_art_shows_no_logo` fails if a logo is drawn);
    - the app name and colours are the final ones.
 3. Compare one phone shot with the app on a real phone (DM-111). Differences are expected: iOS uses San Francisco on a device, and the status bar isn't drawn.
 4. Have the Malay captions signed off (DM-068) before you upload the `ms` sets.

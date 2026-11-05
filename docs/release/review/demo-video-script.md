@@ -33,7 +33,7 @@ If the App Tracking Transparency explanation ("About ads in this app") and iOS's
 
 ## Checks before uploading
 
-- [ ] No third-party app, show, film or logo is readable on the TV. The phone's Apps screen may show the built-in catalogue's app names; that's fine for review, but don't open any of them. **[owner]**
+- [ ] No third-party app, show, film or logo is readable on the TV. The phone's Apps screen and quick-access row may show the built-in catalogue's app names and logos; that's fine for review, but don't open any of them. **[owner]**
 - [ ] No personal names, e-mail addresses, Wi-Fi names or notifications are visible. **[owner]**
 - [ ] The video is 60–90 seconds, uploaded as unlisted (watchable without sign-in), and the link is in `DEMO_VIDEO_URL`. **[owner]**
 - [ ] The build in the video is the one being submitted (or its screens match it). **[owner]**

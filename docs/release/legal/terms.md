@@ -41,6 +41,8 @@ The free version shows ads from Google AdMob, and the app uses other services de
 
 Android TV and Google TV are trademarks of Google LLC. This app isn't made or endorsed by Google.
 
+The names and logos of other apps shown in this app belong to their owners, and those owners don't endorse this app.
+
 ## 7. No warranty
 
 The app is provided "as is" and "as available". To the extent the law allows, we make no warranties of any kind, express or implied, including that the app is fit for a particular purpose, works without interruption or errors, or works with your TV. Some places don't allow these exclusions, so some of them may not apply to you.
