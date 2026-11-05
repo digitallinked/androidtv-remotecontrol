@@ -15,6 +15,22 @@ typedef NsdStart =
 /// Stops a browse; `stopDiscovery` from `package:nsd`.
 typedef NsdStop = Future<void> Function(Discovery discovery);
 
+/// Browses with the plugin. Its Dart side refuses a service name over 15
+/// characters (RFC 6335), and the TV's `androidtvremote2` has 16, so its check
+/// is turned off. The check is only in Dart; the platforms take the name.
+Future<Discovery> _startBrowse(
+  String serviceType, {
+  bool autoResolve = true,
+  IpLookupType ipLookupType = IpLookupType.none,
+}) {
+  disableServiceTypeValidation(true);
+  return startDiscovery(
+    serviceType,
+    autoResolve: autoResolve,
+    ipLookupType: ipLookupType,
+  );
+}
+
 /// Finds Android TVs with the platform's mDNS service (`nsd`).
 ///
 /// On Android the plugin holds the Wi-Fi multicast lock while a browse runs,
@@ -23,7 +39,7 @@ class NsdTvDiscovery implements TvDiscovery {
   /// Creates a discovery. The start and stop functions default to the plugin
   /// and are replaced in tests.
   NsdTvDiscovery({
-    this._start = startDiscovery,
+    this._start = _startBrowse,
     this._stop = stopDiscovery,
   });
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nsd/nsd.dart';
 import 'package:tv_remote/features/discovery/data/nsd_tv_discovery.dart';
@@ -64,6 +65,52 @@ void main() {
       await d.stop();
     },
   );
+
+  // The fakes above skip the plugin's own Dart code. This one keeps it and
+  // fakes only Android, because the plugin refuses a service name over 15
+  // characters and `androidtvremote2` has 16: the search failed on every
+  // phone while every other test here passed.
+  test('the_real_plugin_browses_both_android_tv_service_types', () async {
+    const channel = 'com.haberey/nsd';
+    const replies = {
+      'startDiscovery': 'onDiscoveryStartSuccessful',
+      'stopDiscovery': 'onDiscoveryStopSuccessful',
+    };
+    final messenger = TestWidgetsFlutterBinding.ensureInitialized()
+        .defaultBinaryMessenger;
+    final browsed = <Object?>[];
+    messenger.setMockMethodCallHandler(const MethodChannel(channel), (
+      call,
+    ) async {
+      final arguments = call.arguments as Map<Object?, Object?>;
+      if (call.method == 'startDiscovery') {
+        browsed.add(arguments['service.type']);
+      }
+      final reply = const StandardMethodCodec().encodeMethodCall(
+        MethodCall(replies[call.method]!, arguments),
+      );
+      scheduleMicrotask(
+        () => unawaited(
+          messenger.handlePlatformMessage(channel, reply, (_) {}),
+        ),
+      );
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(
+        const MethodChannel(channel),
+        null,
+      ),
+    );
+
+    final errors = <Object>[];
+    final d = NsdTvDiscovery()..watch().listen((_) {}, onError: errors.add);
+    await pumpEventQueue();
+    await d.stop();
+
+    expect(errors, isEmpty);
+    expect(browsed, NsdTvDiscovery.serviceTypes);
+  });
 
   test('emits_resolved_tvs_from_both_service_types', () async {
     final d = create();
