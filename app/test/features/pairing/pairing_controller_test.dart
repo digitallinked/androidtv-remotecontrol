@@ -497,6 +497,59 @@ void main() {
     expect(crashes.errors.single.reason, 'pairing save');
   });
 
+  // Ruling P9-C17: leaving closes the client, which fails whatever it was
+  // doing. The user saw nothing, so nothing is recorded.
+  test('backing_out_during_start_records_nothing', () async {
+    final hold = Completer<void>();
+    fakes.onCreate = (client) => client.holdStart = hold;
+    final c = ProviderContainer.test(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        identityStoreProvider.overrideWithValue(testIdentityStore()),
+        pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        ...analyticsOverrides,
+      ],
+    );
+    final subscription = c.listen(pairingControllerProvider(tv0), (_, _) {});
+    for (var i = 0; i < 20 && fakes.created.isEmpty; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    subscription.close();
+    await Future<void>.delayed(Duration.zero);
+
+    hold.complete();
+    await pumpEventQueue();
+
+    expect(crashes.errors, isEmpty);
+  });
+
+  test('backing_out_while_the_code_is_checked_records_nothing', () async {
+    final hold = Completer<void>();
+    fakes.onCreate = (client) => client
+      ..holdSubmit = hold
+      ..submitError = const PairingException(PairingFailure.connectionFailed);
+    final c = ProviderContainer.test(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        identityStoreProvider.overrideWithValue(testIdentityStore()),
+        pairingClientFactoryProvider.overrideWithValue(fakes.create),
+        ...analyticsOverrides,
+      ],
+    );
+    final subscription = c.listen(pairingControllerProvider(tv0), (_, _) {});
+    await until(c, (s) => s is PairingWaitingForCode);
+    final submitting = notifier(c).submit('AB12CD');
+    await Future<void>.delayed(Duration.zero);
+    subscription.close();
+    await Future<void>.delayed(Duration.zero);
+
+    hold.complete();
+    await submitting;
+    await pumpEventQueue();
+
+    expect(crashes.errors, isEmpty);
+  });
+
   test('leaving_during_start_does_not_update_state_after_dispose', () async {
     final hold = Completer<void>();
     fakes.onCreate = (client) => client.holdStart = hold;

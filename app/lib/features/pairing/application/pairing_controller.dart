@@ -81,21 +81,20 @@ class PairingController extends _$PairingController {
     try {
       await client.submitCode(code);
     } on PairingException catch (e, stack) {
-      // A mistyped code is the user's to fix, not a failure to record.
-      if (e.reason != PairingFailure.invalidCode) {
-        _report(crashes, e, stack, 'pairing');
-      }
+      // Leaving closes the client, which fails this: nothing to record.
       if (!ref.mounted || run != _run) return;
       if (e.reason == PairingFailure.invalidCode) {
+        // A mistyped code is the user's to fix, not a failure to record.
         _backToWaiting(codeMismatch: true);
       } else {
+        _report(crashes, e, stack, 'pairing');
         _end(PairingFailed(_kindOf(e.reason)));
       }
       return;
     } on Object catch (error, stack) {
       // Whatever else the client throws is a bug, not something to show.
-      _report(crashes, error, stack, 'pairing');
       if (!ref.mounted || run != _run) return;
+      _report(crashes, error, stack, 'pairing');
       _end(const PairingFailed(PairingErrorKind.pairingError));
       return;
     }
@@ -179,12 +178,14 @@ class PairingController extends _$PairingController {
       _client = client;
       await client.start(clientName: pairingClientName);
     } on PairingException catch (e, stack) {
+      if (stale()) return;
       _report(crashes, e, stack, 'pairing');
-      if (!stale()) _end(PairingFailed(_kindOf(e.reason)));
+      _end(PairingFailed(_kindOf(e.reason)));
       return;
     } on Object catch (error, stack) {
+      if (stale()) return;
       _report(crashes, error, stack, 'pairing');
-      if (!stale()) _end(const PairingFailed(PairingErrorKind.pairingError));
+      _end(const PairingFailed(PairingErrorKind.pairingError));
       return;
     }
     if (stale()) return;
