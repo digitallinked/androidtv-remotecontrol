@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:atv_remote/atv_remote.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -18,7 +19,9 @@ import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/config/update_gate.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_log.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
+import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -27,6 +30,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'helpers/existing_database.dart';
 import 'helpers/fake_ads_overrides.dart';
 import 'helpers/fake_config_source.dart';
+import 'helpers/fake_remote_session.dart';
 import 'helpers/in_memory_device_repository.dart';
 import 'helpers/in_memory_secure_store.dart';
 import 'helpers/platform_override.dart';
@@ -1257,6 +1261,94 @@ void main() {
       // The app closes its database before the directory goes.
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
+    });
+  });
+
+  // Ruling P9-C15: the log is in the reporter chain whatever Firebase and the
+  // privacy choices say, and it is scrubbed with the saved TVs' names.
+  group('Error log', () {
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+    });
+
+    Future<Widget> root(
+      ErrorLog log,
+      DelegatingCrashReporter reporter, {
+      FirebaseStatus firebase = FirebaseStatus.notConfigured,
+      List<StartupStep> startupSteps = const [],
+    }) => buildRootWidget(
+      flavor: Flavor.dev,
+      crashReporter: reporter,
+      errorLog: log,
+      initFirebase: (_) async => firebase,
+      startupSteps: startupSteps,
+      openDatabase: () => AppDatabase(NativeDatabase.memory()),
+      overrides: [
+        ...fakeAdsOverrides(),
+        crashlyticsSinkProvider.overrideWithValue(RecordingCrashlyticsSink()),
+        deviceRepositoryProvider.overrideWithValue(
+          InMemoryDeviceRepository([savedTv(name: 'Bedroom TV')]),
+        ),
+        // A saved TV opens the remote; nothing here may start connecting.
+        remoteSessionProvider.overrideWith(
+          (ref) async => FakeRemoteSession(
+            initial: const TvConnectionState(
+              status: ConnectionStatus.connected,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    testWidgets('an_early_error_is_logged_scrubbed_with_firebase_off', (
+      tester,
+    ) async {
+      final log = ErrorLog();
+      addTearDown(log.dispose);
+      final reporter = DelegatingCrashReporter(log);
+
+      await tester.pumpWidget(
+        await root(
+          log,
+          reporter,
+          startupSteps: [() async => throw StateError('lost Bedroom TV')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final entry = log.entries.single;
+      expect(entry.reason, 'startup step 1');
+      expect(entry.message, 'StateError: Bad state: lost <tv>');
+      expect(
+        tester
+            .widget<UncontrolledProviderScope>(
+              find.byType(UncontrolledProviderScope),
+            )
+            .container
+            .read(errorLogProvider),
+        same(log),
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 30));
+    });
+
+    testWidgets('the_log_stays_in_the_chain_when_crashlytics_is_installed', (
+      tester,
+    ) async {
+      final log = ErrorLog();
+      addTearDown(log.dispose);
+      final reporter = DelegatingCrashReporter(log);
+
+      await tester.pumpWidget(
+        await root(log, reporter, firebase: FirebaseStatus.ready),
+      );
+      await tester.pumpAndSettle();
+      expect(reporter.delegate, isA<CompositeCrashReporter>());
+
+      await reporter.recordError(StateError('later'), null, reason: 'later');
+
+      expect(log.entries.single.reason, 'later');
     });
   });
 

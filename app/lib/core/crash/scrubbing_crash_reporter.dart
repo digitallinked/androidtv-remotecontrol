@@ -16,6 +16,70 @@ final class ScrubbedError {
   String toString() => message;
 }
 
+/// What a report says, before anything is scrubbed. The one place that
+/// decides which parts of an error may be used at all, for Crashlytics and
+/// the on-phone error log alike.
+final class ReportFacts {
+  /// Facts of a caught error.
+  ReportFacts.ofError(Object error, this.stack, {String? reason})
+    : type = error.runtimeType,
+      message = error.toString,
+      reason = reason;
+
+  /// Facts of a framework error.
+  ///
+  /// A framework error's full text is a diagnostics dump that can quote
+  /// widgets and values, so only its summary line is used. The reason is the
+  /// context's own description; `informationCollector`, which can hold widget
+  /// values such as typed text, is never read.
+  ReportFacts.ofFlutterError(FlutterErrorDetails details)
+    : type = details.exception.runtimeType,
+      message = details.exception is FlutterError
+          ? details.summary.toDescription
+          : details.exceptionAsString,
+      stack = details.stack,
+      reason = details.context?.toDescription();
+
+  /// The error's type.
+  final Type type;
+
+  /// Reads the raw message. Unscrubbed: it never goes anywhere as it is.
+  final String Function() message;
+
+  /// The stack trace.
+  final StackTrace? stack;
+
+  /// The raw reason. Unscrubbed, like [message].
+  final String? reason;
+
+  /// The scrubbed `'<type>: <message>'`, clipped after scrubbing.
+  String scrubbedMessage(CrashScrubber scrubber) =>
+      scrubbedMessageOf(type, message(), scrubber);
+
+  /// The scrubbed, clipped reason, or `null` when there is none.
+  String? scrubbedReason(CrashScrubber scrubber) =>
+      scrubbedReasonOf(reason, scrubber);
+
+  /// [scrubbedMessage] of a message already read.
+  static String scrubbedMessageOf(
+    Type type,
+    String message,
+    CrashScrubber scrubber,
+  ) => clip('$type: ${scrubber.scrub(message)}');
+
+  /// [scrubbedReason] of a reason already read.
+  static String? scrubbedReasonOf(String? reason, CrashScrubber scrubber) =>
+      reason == null ? null : clip(scrubber.scrub(reason));
+
+  /// [text] cut to [ScrubbingCrashReporter.maxLength]. A cut is made after
+  /// scrubbing, so it can never split a pattern the scrubber would have
+  /// recognised.
+  static String clip(String text) =>
+      text.length <= ScrubbingCrashReporter.maxLength
+      ? text
+      : text.substring(0, ScrubbingCrashReporter.maxLength);
+}
+
 /// A [CrashReporter] that scrubs every report and hands it to a
 /// [CrashlyticsSink] (Ruling P6-R5).
 ///
@@ -47,51 +111,25 @@ class ScrubbingCrashReporter implements CrashReporter {
     StackTrace? stack, {
     bool fatal = false,
     String? reason,
-  }) => _send(
-    error.runtimeType,
-    error.toString,
-    stack,
-    reason: reason,
-    fatal: fatal,
-  );
+  }) => _send(ReportFacts.ofError(error, stack, reason: reason), fatal: fatal);
 
   @override
   Future<void> recordFlutterError(
     FlutterErrorDetails details, {
     bool fatal = false,
-  }) => _send(
-    details.exception.runtimeType,
-    // A framework error's full text is a diagnostics dump that can quote
-    // widgets and values; only its summary line is sent.
-    details.exception is FlutterError
-        ? details.summary.toDescription
-        : details.exceptionAsString,
-    details.stack,
-    // Only the context's own description; `informationCollector` is dropped.
-    reason: details.context?.toDescription(),
-    fatal: fatal,
-  );
+  }) => _send(ReportFacts.ofFlutterError(details), fatal: fatal);
 
   /// The longest text sent. A cut is made after scrubbing, so it can never
   /// split a pattern the scrubber would have recognised.
   static const maxLength = 1024;
 
-  static String _clip(String text) =>
-      text.length <= maxLength ? text : text.substring(0, maxLength);
-
-  Future<void> _send(
-    Type type,
-    String Function() message,
-    StackTrace? stack, {
-    required String? reason,
-    required bool fatal,
-  }) async {
+  Future<void> _send(ReportFacts facts, {required bool fatal}) async {
     try {
       if (_isDebugBuild || !_enabled()) return;
       await _sink.recordError(
-        ScrubbedError(_clip('$type: ${_scrubber.scrub(message())}')),
-        stack,
-        reason: reason == null ? null : _clip(_scrubber.scrub(reason)),
+        ScrubbedError(facts.scrubbedMessage(_scrubber)),
+        facts.stack,
+        reason: facts.scrubbedReason(_scrubber),
         fatal: fatal,
       );
     } on Object {

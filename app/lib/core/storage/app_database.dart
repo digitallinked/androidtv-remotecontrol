@@ -112,6 +112,18 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
+  /// The path of the database file, or `null` for a database in memory.
+  /// Opens the database if nothing has yet.
+  Future<String?> filePath() async {
+    final rows = await customSelect('PRAGMA database_list').get();
+    for (final row in rows) {
+      if (row.read<String>('name') != 'main') continue;
+      final file = row.read<String>('file');
+      return file.isEmpty ? null : file;
+    }
+    return null;
+  }
+
   /// Whether this run created the database file, empty: a fresh install, or
   /// a phone whose preferences came back from a backup or a transfer while
   /// the database didn't (Ruling P8-R1). Preferences that describe the

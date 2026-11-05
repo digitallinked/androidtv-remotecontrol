@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show appFlavor;
@@ -14,6 +15,7 @@ import 'package:tv_remote/core/config/service_config.dart';
 import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
+import 'package:tv_remote/core/crash/error_log.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/fresh_database.dart';
@@ -78,6 +80,10 @@ Future<void> runStartupSteps(
 /// The database is opened by the provider graph, so the first screen is
 /// resolved through a single [ProviderContainer] that the app then keeps
 /// using. A second container would open a second database.
+///
+/// With [errorLog], which must already be in [crashReporter]'s chain, the log
+/// is bound to the crash scrubber and to a file next to the database, whatever
+/// Firebase's status is (Ruling P9-C15).
 Future<Widget> buildRootWidget({
   required Flavor flavor,
   required CrashReporter crashReporter,
@@ -87,6 +93,7 @@ Future<Widget> buildRootWidget({
       initializeFirebase,
   Future<SettingsStore> Function() openSettings = SettingsStore.open,
   AppDatabase Function() openDatabase = AppDatabase.open,
+  ErrorLog? errorLog,
   @visibleForTesting List<Override> overrides = const [],
 }) async {
   // Assumed failed until it answers: a throw or a timeout leaves it so.
@@ -115,6 +122,7 @@ Future<Widget> buildRootWidget({
       }),
       // Read only after the line below has set it.
       initialLocationProvider.overrideWith((ref) => location!),
+      if (errorLog != null) errorLogProvider.overrideWithValue(errorLog),
       ...overrides,
     ],
   );
@@ -165,8 +173,12 @@ Future<Widget> buildRootWidget({
       ),
     ),
   );
-  if (firebaseResult == FirebaseStatus.ready &&
-      crashReporter is DelegatingCrashReporter) {
+  final installOn =
+      firebaseResult == FirebaseStatus.ready &&
+          crashReporter is DelegatingCrashReporter
+      ? crashReporter
+      : null;
+  if (installOn != null || errorLog != null) {
     // Read once, before the first frame, so an early error is scrubbed of
     // saved names before the saved-list stream's first event (Ruling
     // P8-R11). The database was just read, so this is quick; the bound
@@ -186,9 +198,11 @@ Future<Widget> buildRootWidget({
     } on Object {
       // Unknown: the saved-list stream decides.
     }
-    _installCrashlytics(
+    _startCrashCollection(
       container,
       crashReporter,
+      installOn: installOn,
+      errorLog: errorLog,
       seed: saved,
       lateSeed: lateRead,
     );
@@ -205,18 +219,22 @@ Future<Widget> buildRootWidget({
   return _RootHost(container: container);
 }
 
-/// Seeds the scrubber with [seed], the saved TVs, then points [reporter] at
-/// the log and the scrubbing Crashlytics reporter. A failure leaves it
-/// logging only; the app still starts.
+/// Seeds the scrubber with [seed], the saved TVs, binds [errorLog] to it,
+/// then points [installOn], when given, at the log and the scrubbing
+/// Crashlytics reporter. A failure, reported to [reporter], leaves it logging
+/// only; the app still starts.
 ///
-/// With no [seed] (the read failed or timed out) [reporter] keeps logging
+/// With no [seed] (the read failed or timed out) [installOn] keeps logging
 /// only until the scrubber knows the saved names: when [lateSeed], the read
 /// that timed out, answers or the saved list's first event arrives,
 /// whichever comes first. Reports before then are logged, never sent, so
-/// none can carry a saved TV's name.
-void _installCrashlytics(
+/// none can carry a saved TV's name. [errorLog] holds its entries back until
+/// the same moment.
+void _startCrashCollection(
   ProviderContainer container,
-  DelegatingCrashReporter reporter, {
+  CrashReporter reporter, {
+  required DelegatingCrashReporter? installOn,
+  required ErrorLog? errorLog,
   required List<SavedDevice>? seed,
   Future<List<SavedDevice>>? lateSeed,
 }) {
@@ -226,8 +244,14 @@ void _installCrashlytics(
     // this subscription when it is disposed.
     final listening = container.listen(crashCollectionProvider, (_, _) {});
     final collection = container.read(crashCollectionProvider.notifier);
-    void install() => reporter.delegate = CompositeCrashReporter([
+    errorLog?.bind(
+      namesKnown: collection.savedNamesKnown,
+      scrubber: () => collection.scrubber,
+      file: () => _errorLogFile(container),
+    );
+    void install() => installOn?.delegate = CompositeCrashReporter([
       const LoggingCrashReporter(),
+      ?errorLog,
       collection.reporter,
     ]);
     if (seed != null) {
@@ -250,6 +274,14 @@ void _installCrashlytics(
       safeRecordError(reporter, error, stack, reason: 'crash reporter setup'),
     );
   }
+}
+
+/// The error log's file, next to the database; `null` for a database in
+/// memory.
+Future<File?> _errorLogFile(ProviderContainer container) async {
+  final path = await container.read(appDatabaseProvider).filePath();
+  if (path == null) return null;
+  return File('${File(path).parent.path}/$errorLogFileName');
 }
 
 /// Provides [container] to the [App] and disposes it with the widget tree.
@@ -437,7 +469,12 @@ Future<void> bootstrap(Flavor flavor) async {
   );
   // Installed before anything else starts; once Firebase is ready the
   // delegate becomes the Crashlytics reporter (Ruling P6-R3).
-  final reporter = DelegatingCrashReporter(const LoggingCrashReporter());
+  // The error log is in the chain from the start, so nothing early is missed;
+  // it holds entries back until it knows the saved TVs' names.
+  final errorLog = ErrorLog();
+  final reporter = DelegatingCrashReporter(
+    CompositeCrashReporter([const LoggingCrashReporter(), errorLog]),
+  );
   installErrorHandlers(reporter);
   registerAppLicenses();
   runApp(
@@ -446,6 +483,7 @@ Future<void> bootstrap(Flavor flavor) async {
       build: () => buildRootWidget(
         flavor: flavor,
         crashReporter: reporter,
+        errorLog: errorLog,
         // `environment` differs from the default whenever defines are given.
         // ignore: avoid_redundant_argument_values
         serviceConfig: ServiceConfig.environment,
