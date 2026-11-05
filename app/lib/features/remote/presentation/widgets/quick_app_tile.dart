@@ -4,12 +4,12 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
-/// A shortcut to one TV app: its [AppIconSquare] (a monogram or the icon the
-/// user picked), with the app's name below.
+/// A shortcut to one TV app: its [AppIconSquare] (the user's style, the app's
+/// logo or a monogram), with the app's name below.
 ///
-/// It never draws a logo. The tile is [widthOf] dp wide: [width] at ordinary
-/// text sizes, wider for large text, whose name then takes [nameLinesOf]
-/// lines (Ruling P7-R11). When [isCurrent], a [NowOnTvDot] marks the square
+/// The tile is [widthOf] dp wide: [width] at ordinary text sizes, wider for
+/// large text, whose name then takes [nameLinesOf] lines (Ruling P7-R11).
+/// When [isCurrent], a [NowOnTvDot] marks the square
 /// and the spoken label says the app is on the TV now. While the square is
 /// pressed it scales to [AppMotion.pressScale] (Ruling P7-R5).
 class QuickAppTile extends StatefulWidget {
@@ -27,7 +27,7 @@ class QuickAppTile extends StatefulWidget {
   /// The widest a tile grows for large text.
   static const double maxWidth = 112;
 
-  /// Side of the monogram square.
+  /// Side of the square.
   static const double squareSize = kAppSquareSize;
 
   /// The app this tile opens.

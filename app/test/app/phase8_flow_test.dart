@@ -695,6 +695,8 @@ void main() {
       );
       await t.pump(const Duration(milliseconds: 700));
       await t.pump();
+      // The quick row's logos finish loading: a rebuild, not an animation.
+      await t.pump();
       expect(find.text(l.statusConnected), findsOneWidget);
       still('demo connected');
 

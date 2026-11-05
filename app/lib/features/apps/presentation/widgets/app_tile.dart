@@ -1,19 +1,64 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/domain/app_logos.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
 
 /// The side of the square on every app tile, in dp.
 const double kAppSquareSize = 56;
 
-/// The rounded square that stands for an app: its colour and its icon or
-/// monogram, and nothing else (no logo; Ruling P5-R4).
+/// The share of the square's side a logo takes.
+const double kAppLogoShare = 0.6;
+
+/// Loads a bundled logo so that a failure reaches only `errorBuilder`.
+///
+/// flutter_svg's cache listens to every load with no error handler, so a
+/// failed load would also land in the zone as an uncaught error, and from
+/// there in the crash reports. This zone takes that copy and hands the first
+/// error to the caller. The cache keeps a failure as pending for ever, and
+/// its error can't reach a later caller's zone, so that tile would stay empty:
+/// a later caller gets the failure from [_failed] instead.
+class _LogoLoader extends SvgAssetLoader {
+  const _LogoLoader(super.assetName);
+
+  /// The logos that failed to load, by cache key.
+  static final Map<Object, Future<ByteData>> _failed = {};
+
+  @override
+  Future<ByteData> loadBytes(BuildContext? context) {
+    final key = cacheKey(context);
+    final failed = _failed[key];
+    if (failed != null) return failed;
+    final loaded = Completer<ByteData>();
+    unawaited(
+      runZonedGuarded(
+        () async => loaded.complete(await super.loadBytes(context)),
+        (error, stack) {
+          if (loaded.isCompleted) return;
+          _failed[key] = loaded.future;
+          loaded.completeError(error, stack);
+        },
+      ),
+    );
+    return loaded.future;
+  }
+}
+
+/// The rounded square that stands for an app: the user's style, the app's
+/// logo or a monogram, in that order (Ruling P9-C16).
 ///
 /// An entry the user styled draws its [AppEntry.customColor] with readable
 /// ink and its [AppEntry.customIcon] (an unknown id draws the generic app
-/// icon). Any other entry is a monogram, the first letter of its name in upper
-/// case, on the raised surface.
+/// icon). An unstyled entry whose package is in [kAppLogos] draws the logo
+/// from the bundle on [kAppLogoTile], in both themes, and never from the
+/// network. Any other entry is a monogram, the first letter of its name in
+/// upper case, on the raised surface. A logo that fails to load leaves the
+/// monogram on the logo's tile.
 ///
 /// It is left out of semantics: the tile that holds it carries the label.
 class AppIconSquare extends StatelessWidget {
@@ -32,24 +77,20 @@ class AppIconSquare extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = app.customColor ?? context.appColors.surfaceRaised;
+    final logo = appLogoOf(app);
+    final fill =
+        app.customColor ?? logo?.fill ?? context.appColors.surfaceRaised;
     final ink = appSquareInk(context, app);
     final iconId = app.customIcon;
-    final Widget content;
-    if (iconId != null) {
-      content = Icon(
-        kShortcutIcons[iconId] ?? Icons.apps,
-        size: size / 2,
-        color: ink,
-      );
-    } else {
+
+    Widget monogram() {
       final base = Theme.of(context).textTheme.titleLarge;
       final scale = size / kAppSquareSize;
       // The first grapheme, so an accent or an emoji stays whole.
       final letter = app.name.isEmpty
           ? ''
           : app.name.characters.first.toUpperCase();
-      content = Padding(
+      return Padding(
         padding: const EdgeInsets.all(AppSpacing.xs),
         // The letter grows with the text size but never past its square.
         child: FittedBox(
@@ -63,6 +104,25 @@ class AppIconSquare extends StatelessWidget {
           ),
         ),
       );
+    }
+
+    final Widget content;
+    if (logo != null) {
+      content = SvgPicture(
+        _LogoLoader(logo.asset),
+        width: size * kAppLogoShare,
+        height: size * kAppLogoShare,
+        colorFilter: ColorFilter.mode(logo.ink, BlendMode.srcIn),
+        errorBuilder: (_, _, _) => monogram(),
+      );
+    } else if (iconId != null) {
+      content = Icon(
+        kShortcutIcons[iconId] ?? Icons.apps,
+        size: size / 2,
+        color: ink,
+      );
+    } else {
+      content = monogram();
     }
     return ExcludeSemantics(
       child: SizedBox.square(
@@ -82,12 +142,13 @@ class AppIconSquare extends StatelessWidget {
 }
 
 /// The ink that reads on the square of [app]: the readable label colour on a
-/// custom colour, the primary text colour on the default fill.
+/// custom colour or a logo's tile, the primary text colour on the default
+/// fill. A logo is drawn in its own [AppLogo.ink], not in this one.
 Color appSquareInk(BuildContext context, AppEntry app) {
-  final custom = app.customColor;
-  return custom == null
+  final fill = app.customColor ?? appLogoOf(app)?.fill;
+  return fill == null
       ? context.appColors.textPrimary
-      : colourKeyLabelColor(custom);
+      : colourKeyLabelColor(fill);
 }
 
 /// The "now on TV" mark of an app tile: an accent dot inside a

@@ -728,8 +728,10 @@ void main() {
         await e.value(t, look);
         final labels = _fittedLabels(t);
         // The layout page's only FittedBox is its preview: a miniature of
-        // the remote, scaled down on purpose, whose labels aren't read.
-        if (e.key != 'remote_layout_page') {
+        // the remote, scaled down on purpose, whose labels aren't read. The
+        // Apps screen's were its monograms, and every app of the default row
+        // now draws a logo: `app_tile_test.dart` holds the monogram's fit.
+        if (e.key != 'remote_layout_page' && e.key != 'apps') {
           expect(labels, isNotEmpty, reason: '${e.key}: has fitted labels');
         }
         for (final label in labels) {

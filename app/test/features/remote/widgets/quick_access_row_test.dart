@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -134,11 +135,14 @@ void main() {
     expect(find.byKey(const ValueKey('quick_app_current_dot')), findsNothing);
   });
 
-  testWidgets('app_tile_shows_letter_name_and_is_72_wide', (t) async {
+  testWidgets('app_tile_shows_logo_name_and_is_72_wide', (t) async {
     await pumpBar(t, QuickAccessRow.apps);
     final tile = find.byType(QuickAppTile).first;
     expect(t.getSize(tile).width, 72);
-    expect(find.descendant(of: tile, matching: find.text('N')), findsOneWidget);
+    expect(
+      find.descendant(of: tile, matching: find.byType(SvgPicture)),
+      findsOneWidget,
+    );
     expect(
       find.descendant(of: tile, matching: find.text('Netflix')),
       findsOneWidget,
