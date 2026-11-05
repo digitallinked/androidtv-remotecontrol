@@ -12,11 +12,11 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     const channel = MethodChannel('purchases_flutter');
     final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(
-      channel,
-      (_) async => throw PlatformException(code: 'store'),
-    );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          ..setMockMethodCallHandler(
+            channel,
+            (_) async => throw PlatformException(code: 'store'),
+          );
     addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
     final reasons = <String>[];
     final service = RevenueCatPurchaseService(

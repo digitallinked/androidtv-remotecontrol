@@ -87,14 +87,14 @@ final class ErrorLogEntry {
 /// An error waiting for the saved TV names. Unscrubbed, so it lives only here
 /// in memory: it is never shown or written (decision #50).
 final class _Held {
-  _Held(
-    this.time,
-    this.fatal,
-    this.type,
-    this.message,
-    this.reason,
-    this.stack,
-  );
+  _Held({
+    required this.time,
+    required this.fatal,
+    required this.type,
+    required this.message,
+    required this.reason,
+    required this.stack,
+  });
 
   final DateTime time;
   final bool fatal;
@@ -184,9 +184,11 @@ class ErrorLog extends ChangeNotifier implements CrashReporter {
     var stored = const <ErrorLogEntry>[];
     try {
       found = await file();
-      if (found != null && !_loaded && await found.exists()) {
+      if (found != null && !_loaded) {
         stored = _decode(await found.readAsString());
       }
+    } on PathNotFoundException {
+      // The first run: nothing stored yet.
     } on Object catch (error) {
       developer.log('error log unreadable', name: 'crash', error: error);
     }
@@ -207,8 +209,7 @@ class ErrorLog extends ChangeNotifier implements CrashReporter {
     final list = decoded['entries'];
     if (list is! List<Object?>) return const [];
     return [
-      for (final item in list)
-        if (ErrorLogEntry._fromJson(item) case final entry?) entry,
+      for (final item in list) ?ErrorLogEntry._fromJson(item),
     ];
   }
 
@@ -240,12 +241,12 @@ class ErrorLog extends ChangeNotifier implements CrashReporter {
 
   void _record(ReportFacts facts, bool fatal) {
     final held = _Held(
-      clock.now().toUtc(),
-      fatal,
-      facts.type,
-      facts.message(),
-      facts.reason,
-      facts.stack,
+      time: clock.now().toUtc(),
+      fatal: fatal,
+      type: facts.type,
+      message: facts.message(),
+      reason: facts.reason,
+      stack: facts.stack,
     );
     final scrubber = _scrubber;
     if (scrubber == null) {

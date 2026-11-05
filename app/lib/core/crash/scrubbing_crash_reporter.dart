@@ -21,10 +21,9 @@ final class ScrubbedError {
 /// the on-phone error log alike.
 final class ReportFacts {
   /// Facts of a caught error.
-  ReportFacts.ofError(Object error, this.stack, {String? reason})
+  ReportFacts.ofError(Object error, this.stack, {this.reason})
     : type = error.runtimeType,
-      message = error.toString,
-      reason = reason;
+      message = error.toString;
 
   /// Facts of a framework error.
   ///

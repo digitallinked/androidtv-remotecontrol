@@ -233,7 +233,6 @@ class PairingController extends _$PairingController {
     }
   }
 
-  /// Releases the client and the clock, then publishes [next].
   /// Records a failure the user is about to see (Ruling P9-C14). Takes the
   /// reporter read earlier, so it still works after the screen has gone.
   void _report(
@@ -243,6 +242,7 @@ class PairingController extends _$PairingController {
     String reason,
   ) => unawaited(safeRecordError(crashes, error, stack, reason: reason));
 
+  /// Releases the client and the clock, then publishes [next].
   void _end(PairingState next) {
     _release();
     final analytics = ref.read(appAnalyticsProvider.notifier);
