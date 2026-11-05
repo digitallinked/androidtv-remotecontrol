@@ -23,7 +23,8 @@ The app keeps the following on your phone only. None of it is sent to us, to Fir
 - the pairing certificate the app creates for your phone, and the TV key pins it uses to recognise each TV again;
 - your app shortcuts, and the counts of which TV apps you use (kept on the phone to suggest shortcuts; the counts themselves never leave it, but see section 3 for the event sent when you start an app from the app's list);
 - your settings, including your Privacy choices;
-- anything you type with the keyboard feature, which goes straight to the TV.
+- anything you type with the keyboard feature, which goes straight to the TV;
+- a short error log (Settings → Help → Error log) with TV names and addresses removed, which leaves your phone only if you copy it yourself.
 
 **Backup and moving to a new phone.** On Android, the app turns off Android backup and device transfer for all its data, so none of the above goes into a Google backup or onto a new phone. On iPhone, the database that holds your TVs is excluded from iCloud and computer backups, and the pairing certificate is kept in the iPhone keychain as a this-device-only item, so neither moves to another iPhone. After you move to a new phone, you pair your TVs again. On iPhone, the app's simple preferences (such as theme and layout, which contain nothing about your TVs) are stored like other apps' preferences and may be included in your own iPhone backup. [owner to confirm]
 
