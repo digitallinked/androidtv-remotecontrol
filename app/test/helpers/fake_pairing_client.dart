@@ -38,12 +38,13 @@ class FakePairingClient implements PairingClient {
   /// The TV key this client reports once started.
   final Uint8List serverKey;
 
-  /// Thrown by [start] when set.
-  PairingException? startError;
+  /// Thrown by [start] when set: a [PairingException], or anything else for
+  /// a client bug.
+  Object? startError;
 
   /// Thrown by [submitCode] for a code that [validCode] would accept, when
-  /// set.
-  PairingException? submitError;
+  /// set: a [PairingException], or anything else for a client bug.
+  Object? submitError;
 
   /// When set, [start] waits for it before it ends.
   Completer<void>? holdStart;
@@ -77,6 +78,8 @@ class FakePairingClient implements PairingClient {
     final error = startError;
     if (error != null) {
       closed = true;
+      // Tests inject arbitrary objects.
+      // ignore: only_throw_errors
       throw error;
     }
     _started = true;
@@ -93,6 +96,8 @@ class FakePairingClient implements PairingClient {
     final error = submitError;
     if (error != null) {
       closed = true;
+      // Tests inject arbitrary objects.
+      // ignore: only_throw_errors
       throw error;
     }
     closed = true;

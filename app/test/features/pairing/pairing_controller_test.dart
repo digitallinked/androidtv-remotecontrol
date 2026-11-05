@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -28,6 +29,7 @@ import '../../helpers/fake_remote_session.dart';
 import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_secure_store.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
 
@@ -107,6 +109,7 @@ void main() {
   late AppDatabase db;
   late RecordingAnalyticsSink analyticsSink;
   late List<Override> analyticsOverrides;
+  late RecordingCrashReporter crashes;
 
   setUp(() async {
     SharedPreferencesAsyncPlatform.instance =
@@ -114,8 +117,10 @@ void main() {
     final settings = await SettingsStore.open();
     await settings.setConsentRegion(ConsentRegion.notRequired);
     analyticsSink = RecordingAnalyticsSink();
+    crashes = RecordingCrashReporter();
     // The guard throws as in a debug build, so a bad event fails the test.
     analyticsOverrides = [
+      crashReporterProvider.overrideWithValue(crashes),
       settingsStoreProvider.overrideWithValue(settings),
       analyticsSinkProvider.overrideWithValue(analyticsSink),
       analyticsDebugBuildProvider.overrideWithValue(true),
@@ -419,6 +424,51 @@ void main() {
     );
   });
 
+  // Ruling P9-C14: every failure the user sees is recorded. A mistyped code is
+  // the user's, not a failure of the app.
+  test('a_failed_start_is_recorded', () async {
+    fakes.onCreate = (client) =>
+        client.startError = const PairingException(PairingFailure.timeout);
+    final c = makeContainer();
+    await until(c, (s) => s is PairingFailed);
+    expect(crashes.errors.single.reason, 'pairing');
+    expect(crashes.errors.single.fatal, isFalse);
+  });
+
+  test('an_unexpected_start_error_is_recorded', () async {
+    fakes.onCreate = (client) => client.startError = StateError('bug');
+    final c = makeContainer();
+    await until(c, (s) => s is PairingFailed);
+    expect(crashes.errors.single.reason, 'pairing');
+  });
+
+  test('a_refused_code_is_recorded_and_a_mistyped_one_is_not', () async {
+    fakes.onCreate = (client) => client.submitError = const PairingException(
+      PairingFailure.invalidCode,
+    );
+    final mistyped = makeContainer();
+    await until(mistyped, (s) => s is PairingWaitingForCode);
+    await notifier(mistyped).submit('AB12CD');
+    expect(crashes.errors, isEmpty);
+
+    fakes = FakePairingClients()
+      ..onCreate = (client) => client.submitError = const PairingException(
+        PairingFailure.badSecret,
+      );
+    final refused = makeContainer();
+    await until(refused, (s) => s is PairingWaitingForCode);
+    await notifier(refused).submit('AB12CD');
+    expect(crashes.errors.single.reason, 'pairing');
+  });
+
+  test('an_unexpected_submit_error_is_recorded', () async {
+    fakes.onCreate = (client) => client.submitError = StateError('bug');
+    final c = makeContainer();
+    await until(c, (s) => s is PairingWaitingForCode);
+    await notifier(c).submit('AB12CD');
+    expect(crashes.errors.single.reason, 'pairing');
+  });
+
   test('a_failed_start_closes_the_client', () async {
     fakes.onCreate = (client) =>
         client.startError = const PairingException(PairingFailure.timeout);
@@ -435,6 +485,7 @@ void main() {
     await until(c, (s) => s is PairingFailed);
     expect(read(c), const PairingFailed(PairingErrorKind.identityUnavailable));
     expect(fakes.created, isEmpty);
+    expect(crashes.errors.single.reason, 'pairing identity');
   });
 
   test('save_failure_offers_try_again', () async {
@@ -443,6 +494,7 @@ void main() {
     await notifier(c).submit('AB12CD');
     expect(read(c), const PairingFailed(PairingErrorKind.saveFailed));
     expect(c.read(activeTargetProvider), isNull);
+    expect(crashes.errors.single.reason, 'pairing save');
   });
 
   test('leaving_during_start_does_not_update_state_after_dispose', () async {

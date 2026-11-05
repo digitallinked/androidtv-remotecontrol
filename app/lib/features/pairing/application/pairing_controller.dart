@@ -6,6 +6,8 @@ import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
@@ -73,11 +75,16 @@ class PairingController extends _$PairingController {
     final devices = ref.read(deviceRepositoryProvider);
     final analytics = ref.read(appAnalyticsProvider.notifier);
     final container = ref.container;
+    final crashes = ref.read(crashReporterProvider);
     state = const PairingVerifying();
 
     try {
       await client.submitCode(code);
-    } on PairingException catch (e) {
+    } on PairingException catch (e, stack) {
+      // A mistyped code is the user's to fix, not a failure to record.
+      if (e.reason != PairingFailure.invalidCode) {
+        _report(crashes, e, stack, 'pairing');
+      }
       if (!ref.mounted || run != _run) return;
       if (e.reason == PairingFailure.invalidCode) {
         _backToWaiting(codeMismatch: true);
@@ -85,8 +92,9 @@ class PairingController extends _$PairingController {
         _end(PairingFailed(_kindOf(e.reason)));
       }
       return;
-    } on Object {
+    } on Object catch (error, stack) {
       // Whatever else the client throws is a bug, not something to show.
+      _report(crashes, error, stack, 'pairing');
       if (!ref.mounted || run != _run) return;
       _end(const PairingFailed(PairingErrorKind.pairingError));
       return;
@@ -110,7 +118,8 @@ class PairingController extends _$PairingController {
         lastConnectedAt: DateTime.now().toUtc(),
       );
       await devices.upsert(device);
-    } on Object {
+    } on Object catch (error, stack) {
+      _report(crashes, error, stack, 'pairing save');
       if (ref.mounted && run == _run) {
         _end(const PairingFailed(PairingErrorKind.saveFailed));
       }
@@ -149,10 +158,12 @@ class PairingController extends _$PairingController {
         .read(appAnalyticsProvider.notifier)
         .log(const AnalyticsEvent.pairStart());
 
+    final crashes = ref.read(crashReporterProvider);
     final ClientIdentity identity;
     try {
       identity = await ref.read(identityStoreProvider).loadOrCreate();
-    } on Object {
+    } on Object catch (error, stack) {
+      _report(crashes, error, stack, 'pairing identity');
       if (!stale()) {
         _end(const PairingFailed(PairingErrorKind.identityUnavailable));
       }
@@ -167,10 +178,12 @@ class PairingController extends _$PairingController {
       );
       _client = client;
       await client.start(clientName: pairingClientName);
-    } on PairingException catch (e) {
+    } on PairingException catch (e, stack) {
+      _report(crashes, e, stack, 'pairing');
       if (!stale()) _end(PairingFailed(_kindOf(e.reason)));
       return;
-    } on Object {
+    } on Object catch (error, stack) {
+      _report(crashes, error, stack, 'pairing');
       if (!stale()) _end(const PairingFailed(PairingErrorKind.pairingError));
       return;
     }
@@ -221,6 +234,15 @@ class PairingController extends _$PairingController {
   }
 
   /// Releases the client and the clock, then publishes [next].
+  /// Records a failure the user is about to see (Ruling P9-C14). Takes the
+  /// reporter read earlier, so it still works after the screen has gone.
+  void _report(
+    CrashReporter crashes,
+    Object error,
+    StackTrace stack,
+    String reason,
+  ) => unawaited(safeRecordError(crashes, error, stack, reason: reason));
+
   void _end(PairingState next) {
     _release();
     final analytics = ref.read(appAnalyticsProvider.notifier);
