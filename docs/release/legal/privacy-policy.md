@@ -70,7 +70,7 @@ Analytics data is kept for {{ANALYTICS_RETENTION}}.
 
 If crash reports are on, the app sends a report to Firebase Crashlytics when it crashes or hits a serious error. A report contains the error and the code location where it happened, device and app information (such as the phone model, system version, app version and free memory), and a crash installation identifier. When usage statistics are also on, Crashlytics may attach the app's most recent analytics events (the events listed above) to the report, to show what led up to the crash.
 
-Before a report leaves the phone, the app removes anything that could identify your TVs, your network or you: TV names, network addresses, MAC addresses, pairing codes, e-mail addresses, certificates and similar values. If the app doesn't yet know your saved TVs' names, it holds the report back rather than send it unscrubbed. Debug builds of the app never send crash reports.
+Before a report leaves the phone, the app removes the names of the TVs it knows, network addresses, MAC addresses, pairing codes, e-mail addresses, certificates, database text and similar values. If the app doesn't yet know your saved TVs' names, it holds the report back rather than send it unscrubbed. Debug builds of the app never send crash reports.
 
 **Your control.** Settings → **Privacy choices** → **Share crash reports**. The default works the same way as for usage statistics. When you turn it off, reports waiting on the phone are deleted.
 

@@ -55,6 +55,8 @@ Layouts: phone portrait (primary), phone landscape (pad left, controls right), t
   - the touchpad hint, only when its text is in semantics.
 - **Fix rule:** raise `maxLines`, `helperMaxLines` or `errorMaxLines`, or let the row grow. Never shorten copy. At enlarged text, field labels always float.
 
+**App tiles** (decision #53): the user's style, then the logo, then the letter. A logo sits on a fixed `#141414` tile at 0.6 of its size, in brand ink, or white if that's under 3:1. Logos are bundled, never loaded from the network, and never appear on store art.
+
 **Store art** (P9-R14, C11): the feature graphic and the screenshot frames use the accent background `#3D5AFE`, white Roboto captions in the top 18 %, the screen at 78 % width, and corners of 4 % of the shortest side. No third-party app names or logos, no demo badge, no ads.
 
 ## Paywall rules

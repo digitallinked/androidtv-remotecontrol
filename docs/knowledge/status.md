@@ -1,15 +1,19 @@
 # Project status
 
-_Last updated: 2026-11-04 by Claude (controller, subagent-driven run, Phase 9 merged)._
+_Last updated: 2026-11-05 by Claude (controller, owner's first real-device run)._
 
 ## Current phase
 
-**All planned build phases (0–9) are merged into `main`.** Phase 9 (release preparation) is done in code and docs. Everything that can be prepared without the owner's accounts, keys, devices or Mac is ready, and nothing was signed, uploaded or hosted (P9-R1).
+**Phase 9 (release preparation) is on `feat/phase-9-release-prep`, not yet merged; `main` is at Phase 8.** The owner has started testing on the real phone and TV, and the merge waits for the app-button fix and a quiet full check. Nothing was signed, uploaded or hosted (P9-R1).
 
 What remains is the **owner's release work**, in the order of `docs/release/runbook.md`, and the **real-device run** (`docs/knowledge/device-matrix.md`, rows DM-001…DM-113, results empty). The device run gates every upload (runbook step 9).
 
 ## Done
 
+- **Owner's real-device requests (decision #53):**
+  - **Finding the TV:** fixed and proven on the real TV (448961e). Pairing and connecting work.
+  - **Task 9.14, error recording and the error log:** approved. Every failure the user sees is recorded, and Settings → Help → Error log keeps the last 50 errors on the phone.
+  - **Task 9.15, real logos:** approved. 27 of 55 apps show a logo. **Not installed on the phone yet.**
 - **Phase 9 (release preparation, decisions #51–#52):**
   - **Release checker:** `app/tool/release_check.dart` with the `tool/release.{ps1,sh}` wrappers. It refuses an incomplete prod build, listing every problem at once. Stages: pre, manifest and post.
   - **Android:** `key.properties` signing; the prod bundle refuses the test or malformed AdMob id and debug signing (`taskGraph` backstop); `localeConfig`; R8 with the Crashlytics mapping upload.
@@ -31,7 +35,7 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
     - the rename checklist;
     - **the release runbook** and its owner-decision list;
     - launch-ops docs and the v1.1 backlog.
-  - **Tests:** app +2261, gradle-tagged +7, atv_remote +208.
+  - **Tests:** app +2261, gradle-tagged +7, atv_remote +208, before the owner's requests; final counts come with the next full check.
 - **Phase 8 (quality and hardening):**
   - **Release blocker closed in code** (decision #49): Android backup and device transfer off (`allowBackup`, `fullBackupContent`, `data_extraction_rules.xml`; verified in the devDebug and prodRelease merged manifests). iOS DB in a backup-excluded `Application Support/Database` via a small Swift channel; keychain this-device-only; a fresh DB re-seeds the Apps row. New-phone FAQ.
   - **Tests:** the fake TV is a test library (`package:atv_remote/testing.dart`); discover → pair → key and demo flows run on the host and on a device; key-press latency (p95 < 30 ms, host) and a 50-cycle resume leak test; `tool/measure_android.{ps1,sh}` for cold start, trace and battery (device numbers not yet measured).
@@ -49,9 +53,15 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## In progress
 
-_Nothing._
+**App buttons do nothing on the real TV.** Likely the `market://launch?id=` break (learnings; unverified on this TV). Every app sends that link today (`app_entry.dart:20`), `shortcut_repository.dart` stores it in the DB, and `demo_remote_session.dart` parses it.
+- **Waiting on the owner:** the code on the TV, to pair a test tool. The link test is written but not in the repo: a throwaway `link_test.dart` and `links.txt` in the session's scratchpad.
+- **Then:** per-app deep links in the catalogue, stored rows remapped or resolved from the catalogue at launch, the demo and catalogue validation updated, tests, a decision, and DM-029.
 
 ## Next up
+
+**First:** the app-button fix, then `tool/check.ps1` on a quiet machine, a new build on the phone, merge `--no-ff` to `main`, full check on `main`, push, and watch the first CI run.
+
+Then:
 
 1. **The owner works through `docs/release/runbook.md`**, in order:
    - **Lead-time items first:** recruit the 12 closed-test testers (the 14-day test starts once a build is uploaded) and request the Apple multicast entitlement.
@@ -75,7 +85,7 @@ _Nothing._
 After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch backlog. It includes:
 - the CLI minors;
 - the in-app/system language sync;
-- real app icons;
+- real logos for the 28 apps that still show a letter;
 - the store-art list;
 - "Anonymous" → "pseudonymous" in `privacyUsageSubtitle`.
 
@@ -86,8 +96,15 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
   - A preference reset that fails or times out leaves the old values for that launch.
   - An identity delete that **fails** keeps the old pairing certificate until the next reinstall. One that only times out usually completes later, and `loadOrCreate` waits up to 5 s for it.
   - Both failures go to the crash reporter. It is still in its hold phase then, so they are only logged on the device and never reach Crashlytics (decision #50).
+- **Error log residuals:**
+  - `AppDatabase.filePath()` is proven on Windows only; if it answers empty on a phone, the log stays in memory (DM-114 step 5 catches it).
+  - An error naming a TV the phone has never seen keeps that name.
+  - The typed paths were traced on 2026-11-05 and found clean; the keyboard path is safe by construction, not by scrubbing.
+- **Logo residuals:** the release compile path is proven by a desktop AOT stand-in only (DM-115 runs it on a phone); HBO Max reads "max"; "First letter" in the shortcut editor shows the logo on a mapped package; a failed logo load leaves no trace.
 
 ## Blocked / needs the owner
+
+**The code on the TV** blocks the app-button fix.
 
 Everything is a step of `docs/release/runbook.md`; its end has the owner-decision list. In short:
 
@@ -106,7 +123,9 @@ Everything is a step of `docs/release/runbook.md`; its end has the owner-decisio
 - **Export compliance:** `ITSAppUsesNonExemptEncryption` and the France declaration.
 - **Malay sign-off** (DM-068).
 - **The device matrix and the Mac rows.**
-- **Real app icons** (default no) and the real Malaysian app ids (from the TV).
+- **The real Malaysian app ids** (from the TV).
+- **Logos:** on by the owner's decision of 2026-11-05 (runbook item 10). The brands have given no licence, so the risk stands.
+- **Privacy policy:** the crash-report sentence was narrowed on 2026-11-05 so it promises only what the scrubber does; review it with the rest of the draft.
 - **Apple multicast entitlement** for Wake-on-LAN on iOS.
 - **Optional:** delete the stale git-ignored golden `failures/` folders under `app/test/`.
 

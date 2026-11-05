@@ -33,6 +33,7 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
   8. The banner.
 
   `StartupGate` is bounded at 20 s. The remote must be usable even if every service fails or is offline; `test/app/services_flow_test.dart` proves it.
+- **Errors:** a failure the user sees reports through `safeRecordError` with a fixed reason, and nothing else goes in `reason`. The reporter chain includes `ErrorLog`, which keeps the last 50 scrubbed entries on the phone whatever the privacy choices say. Crash collection runs with Firebase off too (decision #53).
 - **Vendor imports:** each SDK is imported in exactly one adapter file, enforced by `test/platform/vendor_imports_test.dart`. Interface↔adapter import pairs are the accepted shape (decision #45).
 - **Premium** = RevenueCat entitlement `premium`. Products: `premium_monthly`, `premium_yearly`, `premium_lifetime` (non-consumable). Never decide premium from local flags alone; cache the last entitlement for offline use.
 - **Ads:**

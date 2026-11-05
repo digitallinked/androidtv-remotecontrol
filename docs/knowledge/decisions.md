@@ -4,6 +4,22 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #53 — 2026-11-05 — Owner's real-device requests (P9-C14–C17)
+- **Every failure the user sees is recorded (C14, C17).** Each one goes through `safeRecordError` with a fixed reason, including catches that only called `developer.log`, which shows nothing in a release build. Routine offline and optional-feature failures stay silent. Failure screens fed by `AsyncValue` report once per failure through a listener, never in `build` (`session`, `devices read`, `apps read`). This supersedes Phase 8's "an Apps read error is shown, never reported", which had no reason behind it.
+- **The error log (C15).**
+  - `ErrorLog` is a `CrashReporter` in the chain from the first instruction of `bootstrap()`. It keeps the last 50 entries in `error_log.json` beside the database, in the backup-excluded directory.
+  - It records whatever the privacy choices, Firebase status or build type say, because nothing leaves the phone unless the user copies it.
+  - Crash collection therefore runs with Firebase off too, for the scrubber and `savedNamesKnown`, and it calls no sink.
+  - The #50 hold applies: nothing is written or shown until the names are known.
+  - `ReportFacts` is the one place that decides what may be read from an error.
+- **SQL text never leaves (C17).** `CrashScrubber` cuts everything from `Causing statement` onward before anything else is scrubbed. sqlite's error text lists the statement's parameters, and a failed rename's new name isn't a known term yet.
+- **Stale pairing runs (C17):** `pairing identity` and `pairing save` still report on a stale run, because they are real storage failures, not the `closed` artefact of backing out.
+- **Pairing with a TV that's off reports** (`pairing`). It may be the commonest Crashlytics entry. If that's noise, skip `connectionFailed` and `timeout`.
+- **Connection drops are not recorded.** They are session states, not caught errors.
+- **Real logos on the tiles (C16).** The owner's request replaces the default "no" of P5-R4 and P9-R16. 27 of 55 apps: Simple Icons 16.36.0 (23) and selfh.st at `b2378abb` (Prime Video, Disney+, Hulu, Peacock). The other 28 keep the letter; nothing is drawn or traced. Order: the user's style, then the logo, then the letter. Fixed tile `#141414`, brand ink, white if under 3:1. Bundled only, never a network image. `flutter_svg` 2.3.2 added. Store art stays logo-free (P9-R14), and a logo on any store shot fails the capture.
+- **Why:** the owner's first real-device run found a search that failed on every phone with its error thrown away, and asked for real app icons.
+- **Revisit:** a brand or store objection (runbook item 10 has the removal steps, and it takes an app update); Crashlytics noise from pairing.
+
 ### #52 — 2026-11-04 — Phase 9 controller rulings (P9-C1–C13)
 - **Release checker (C1):** one documented fake publisher id is allowed in fixtures; never a real one. The unsigned-bundle refusal stays.
 - **Android bundle (C2):** the prod bundle refuses Google's test publisher whether it comes from the fallback or is set explicitly. A `taskGraph.whenReady` backstop gives aggregate tasks (`bundle`, `build`, `:app:bundleProdRel`) the same signing and AdMob refusals, all reported in one exception. A malformed id is refused on every path; an explicit test id on a non-bundle build warns. Build-script warnings use `logger.quiet` (`flutter build` passes `-q`), and `logger.warn|lifecycle|info|debug` are banned by a test.
@@ -218,7 +234,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - Global, one per package, dense positions. Seeded once from the region's default row (`seedIfEmpty` + a stored flag; emptying the list never re-seeds). Region = first phone locale with a country code, read at seeding and on Reset (Reset asks first and replaces the whole list).
 - Edit apps: reorder by the handle (plus the framework's own localised Move actions — ours removed to avoid duplicates); remove with Undo (re-inserted at its original index into the *current* list; a second removal replaces the first Undo); suggestions exclude listed apps; custom shortcuts pick a monogram colour and a generic icon.
 
-### #28 — 2026-10-27 — App catalogue (P5-R4)
+### #28 — 2026-10-27 — App catalogue (P5-R4) (no-logo rule SUPERSEDED by #53)
 - Our own `apps_v1.json`: 55 apps and 8 region default rows (`*`, MY, SG, ID, IN, US, GB, AU), < 40 KB (bigger strings are decoded on an isolate that never finishes in `testWidgets`). The schema is **closed**: `version` 1; app keys `package`/`name`/`regions`/`launchLink`; unknown keys, duplicate packages and repeated packages in a row are rejected. No icons, icon URLs or brand colours — monograms or generic icons; launch via `market://launch?id=`.
 - `com.wbd.stream` is named "HBO Max" (its Play title). Four packages are kept although Play web returns 404 (geo/TV-only listings; device run). No verified ids yet for Astro GO, sooka, Tonton or mewatch.
 - `search(query, {region})` ranks region-available apps first. `catalogueProvider` and `catalogueSourceProvider` use `retry: noRetry`.

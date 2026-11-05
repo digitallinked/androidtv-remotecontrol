@@ -60,6 +60,8 @@ Android minSdk 24, targetSdk ≥ 35; iOS 15.0 (Firebase iOS SDK 13). The Flutter
 - **Tests:** `test/flutter_test_config.dart` gives every test an in-memory secure storage; a test that builds the whole app never touches a real platform channel. Run `flutter test` processes one at a time on Windows (`sqlite3.dll`).
 
 ## Common mistakes
+- Reading a provider through `ref` in a catch after an await: read it before the await. New user-visible failures report through `safeRecordError` with a fixed reason.
+- Loading an image from the network: app logos are bundled SVGs (`flutter_svg`).
 - Putting socket or protobuf code in a widget or provider file.
 - Showing state from the paired-devices table as live connection state.
 - Forgetting `ref.onDispose` for streams → leaked sockets after hot reload.

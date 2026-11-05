@@ -4,6 +4,23 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Real-device run (2026-11-05)
+- **A fake that replaces a plugin also replaces the plugin's Dart.** `nsd`'s Dart side refuses a service name over 15 characters, and `_androidtvremote2._tcp` has 16, so every search failed on every phone while every test passed. Call `disableServiceTypeValidation(true)`. Rule: one test per plugin goes through the plugin's real Dart with only the channel mocked. Source: `nsd_tv_discovery_test.dart`, `the_real_plugin_browses_both_android_tv_service_types`.
+- **`developer.log` shows nothing in a release build.** A catch that only logs drops the error for real users.
+- **sqlite's error text quotes values.** `SqliteException.toString()` ends with `Causing statement: ..., parameters: <values>`, and drift keeps that text through its isolate. A scrubber can't remove a value it doesn't know, so cut the tail. Source: sqlite3-3.5.2 `lib/src/exception.dart`.
+- **`ref.read` in a catch after an await throws once the widget is gone,** and replaces the handled failure. Read the reporter before the await.
+- **A stacked route keeps the screen beneath alive,** so two screens on one provider both see a failure. Report from a shared provider, not per screen.
+- **`market://launch?id=` is reported broken on many devices since about August 2026** after a Google Play change: the command sends and nothing happens. (Unverified on the owner's TV until the link test runs; [HA docs](https://www.home-assistant.io/integrations/androidtv_remote).)
+- **flutter_svg:**
+  - `compute` runs synchronously under `kDebugMode`, so debug builds never exercise the release isolate path. Device rows that judge logos need a release build.
+  - A logo appears one frame late, so a test that doesn't settle shows an empty tile.
+  - `Cache` leaks an uncaught error on a failed load and never clears `_pending`. A guarded zone's failed future can't reach a listener in another error zone, which is why `_LogoLoader` keeps `_failed`.
+- **`hasRunningAnimations` counts any pending `LayoutBuilder` rebuild,** not only tickers.
+- **Overlapping `flutter test` runs crash with `PathAccessException` on `sqlite3.dll`.** Rerun once the other has finished.
+- **Real file I/O in `testWidgets` needs `tester.runAsync`.**
+- **`PRAGMA database_list` gives the database's real path** without `path_provider`. Proven on Windows only until DM-114 step 5 runs.
+- **Simple Icons has no Prime Video, Disney+, Hulu or Peacock,** and its CC0 doesn't cover every icon or any trademark (`DISCLAIMER.md`). Check coverage against the catalogue before promising a logo.
+
 ### Phase 9 gotchas (release prep)
 - **Gradle and Android:**
   - `flutter build` runs Gradle with `-q`, so `logger.warn` and `logger.lifecycle` are hidden. Use `logger.quiet` for build warnings the user must see.
