@@ -13,6 +13,9 @@ class FakeWakeOnLan implements WakeOnLanService {
   Future<void>? gate;
 
   @override
+  void Function(Object error, StackTrace stack)? get onError => null;
+
+  @override
   Future<bool> wake({required String mac, String? tvHost}) async {
     wakes.add((mac, tvHost));
     await gate;
