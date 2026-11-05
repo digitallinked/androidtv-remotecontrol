@@ -52,4 +52,4 @@ final class LinkOpenerProvider
   }
 }
 
-String _$linkOpenerHash() => r'9a60883fe4aa9ce6888ab41f2a4eaccf6fdfbe0d';
+String _$linkOpenerHash() => r'27a217eebb506b2a2ba8108d92e82f7f70bac74d';

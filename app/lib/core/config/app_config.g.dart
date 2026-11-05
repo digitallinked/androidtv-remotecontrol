@@ -112,7 +112,7 @@ final class AppConfigProvider
   }
 }
 
-String _$appConfigHash() => r'eb6ff3dc196abca763276aff9240f13577bad5d7';
+String _$appConfigHash() => r'ec9d922edf9485bd98c128688de47351cc3ffd3f';
 
 /// The Remote Config values for this session.
 ///

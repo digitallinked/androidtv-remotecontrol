@@ -57,7 +57,7 @@ final class WakeOnLanServiceProvider
   }
 }
 
-String _$wakeOnLanServiceHash() => r'01eba0fece21385b2bf02057484f140125109634';
+String _$wakeOnLanServiceHash() => r'38afbcfb39fbba153cb57573b7e1499bf0e27bed';
 
 /// Whether this platform can send Wake-on-LAN packets: always on Android, and
 /// on iOS only when [kIosWakeOnLanEnabled] is set. Where it is `false` the
