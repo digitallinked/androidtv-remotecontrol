@@ -86,7 +86,7 @@ final class ShortcutsSeedProvider
   }
 }
 
-String _$shortcutsSeedHash() => r'94cac245432dabcf7698ed1eaded84536e262615';
+String _$shortcutsSeedHash() => r'4ad26f7f710f0e6ad8c7ef10c804c7ca20e9756d';
 
 /// The user's shortcuts by position, once the first-run seeding is done.
 ///
