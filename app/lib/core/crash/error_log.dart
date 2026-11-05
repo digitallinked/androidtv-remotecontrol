@@ -129,8 +129,8 @@ class ErrorLog extends ChangeNotifier implements CrashReporter {
   /// Set by each [bind]: a slower, older one must not take over.
   Object? _binding;
 
-  /// Whether the stored entries have been read, or there is nothing to read.
-  /// Nothing is written before: it would overwrite them.
+  /// Whether the stored entries have been read. Nothing is written before:
+  /// it would overwrite them.
   bool _loaded = false;
 
   /// Whether [clear] ran before the stored entries arrived.
@@ -192,7 +192,8 @@ class ErrorLog extends ChangeNotifier implements CrashReporter {
     } on Object catch (error) {
       developer.log('error log unreadable', name: 'crash', error: error);
     }
-    if (!identical(binding, _binding)) return;
+    // No file yet: a later bind still reads what is stored.
+    if (found == null || !identical(binding, _binding)) return;
     _file = found;
     if (!_loaded) {
       _loaded = true;
@@ -331,26 +332,37 @@ class ErrorLog extends ChangeNotifier implements CrashReporter {
   }
 
   Future<void> _drain() async {
-    try {
-      while (_dirty) {
-        _dirty = false;
-        final file = _file;
-        if (file == null) break;
-        final tmp = File('${file.path}.tmp');
+    while (_dirty) {
+      _dirty = false;
+      final file = _file;
+      if (file == null) break;
+      final entries = [for (final entry in _entries) entry._toJson()];
+      final tmp = File('${file.path}.tmp');
+      try {
         await tmp.writeAsString(
-          jsonEncode({
-            'version': 1,
-            'entries': [for (final entry in _entries) entry._toJson()],
-          }),
+          jsonEncode({'version': 1, 'entries': entries}),
           flush: true,
         );
         await tmp.rename(file.path);
+      } on Object catch (error) {
+        // The entries stay in memory; a write queued meanwhile, or the next
+        // error, tries again.
+        developer.log('error log not saved', name: 'crash', error: error);
+        if (entries.isEmpty) await _remove(file, tmp);
       }
-    } on Object catch (error) {
-      // The entries stay in memory; the next error tries again.
-      developer.log('error log not saved', name: 'crash', error: error);
-    } finally {
-      _writer = null;
+    }
+    _writer = null;
+  }
+
+  /// A full disk can't take the empty list, but it can lose the files, and
+  /// what was cleared must not come back after a restart.
+  Future<void> _remove(File file, File tmp) async {
+    for (final stale in [file, tmp]) {
+      try {
+        await stale.delete();
+      } on Object catch (error) {
+        developer.log('error log not removed', name: 'crash', error: error);
+      }
     }
   }
 

@@ -298,6 +298,62 @@ void main() {
       expect(log.entries.single.message, contains('kept'));
     });
 
+    // A full disk can't take the empty list, but it can lose the file.
+    test('a_clear_the_disk_refuses_stays_cleared_after_a_restart', () async {
+      await seed();
+      Directory('${file.path}.tmp').createSync();
+      final log = boundLog();
+      await log.idle;
+      expect(log.entries, hasLength(1));
+
+      await log.clear();
+
+      Directory('${file.path}.tmp').deleteSync();
+      final restarted = boundLog();
+      await restarted.idle;
+      expect(restarted.entries, isEmpty);
+    });
+
+    test('a_clear_during_a_failing_write_is_not_lost', () async {
+      await seed();
+      Directory('${file.path}.tmp').createSync();
+      final log = boundLog();
+      await log.idle;
+
+      unawaited(log.recordError(Exception('newer'), null));
+      await log.clear();
+
+      Directory('${file.path}.tmp').deleteSync();
+      final restarted = boundLog();
+      await restarted.idle;
+      expect(restarted.entries, isEmpty);
+    });
+
+    test('a_retry_after_a_failed_lookup_keeps_what_was_stored', () async {
+      await seed();
+      final log = ErrorLog()
+        ..bind(
+          namesKnown: Future<void>.value(),
+          scrubber: _scrubber,
+          file: () async => throw StateError('no directory'),
+        );
+      await log.idle;
+      await log.recordError(Exception('newer'), null);
+
+      log.bind(
+        namesKnown: Future<void>.value(),
+        scrubber: _scrubber,
+        file: () async => file,
+      );
+      await log.idle;
+
+      expect(log.entries.map((e) => e.message), [
+        endsWith('newer'),
+        endsWith('stored'),
+      ]);
+      expect(stored(), hasLength(2));
+    });
+
     test('a_file_lookup_that_fails_leaves_it_working_in_memory', () async {
       final log = ErrorLog()
         ..bind(
