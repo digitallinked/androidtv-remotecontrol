@@ -540,12 +540,12 @@ void main() {
     await until(c, (s) => s is PairingWaitingForCode);
     final submitting = notifier(c).submit('AB12CD');
     await Future<void>.delayed(Duration.zero);
+    // Leaving closes the client, and closing ends its wait.
     subscription.close();
-    await Future<void>.delayed(Duration.zero);
-
-    hold.complete();
     await submitting;
     await pumpEventQueue();
+
+    expect(hold.isCompleted, isTrue);
 
     expect(crashes.errors, isEmpty);
   });
