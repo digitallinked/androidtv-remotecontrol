@@ -283,8 +283,11 @@ void main() {
 
       expect(t.takeException(), isNull);
       expect(find.byType(screen), findsOneWidget);
-      final error = crashes.errors.single;
-      expect(error.reason, 'onboarding write');
+      // The demo's Apps row seeds through the same failing store, and that
+      // is its own report.
+      final error = crashes.errors.singleWhere(
+        (e) => e.reason == 'onboarding write',
+      );
       expect(error.fatal, isFalse);
       expect(error.error, isA<StateError>());
       expect(sink.eventNames, ['onboarding_complete']);
