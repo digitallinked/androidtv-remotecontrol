@@ -292,6 +292,8 @@ _routes = {
       _pump(t, l, AppRoutes.settingsRemoteBehaviour),
   AppRouteNames.settingsHelp: (t, l) => _pump(t, l, AppRoutes.settingsHelp),
   AppRouteNames.settingsAbout: (t, l) => _pump(t, l, AppRoutes.settingsAbout),
+  AppRouteNames.settingsErrorLog: (t, l) =>
+      _pump(t, l, AppRoutes.settingsErrorLog),
   AppRouteNames.settingsPrivacy: (t, l) =>
       _pump(t, l, AppRoutes.settingsPrivacy),
   AppRouteNames.paywall: (t, l) => _pump(

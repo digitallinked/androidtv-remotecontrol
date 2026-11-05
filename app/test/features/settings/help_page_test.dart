@@ -85,8 +85,7 @@ void main() {
     expect(find.text(a1), findsNothing);
 
     // Tapping the open question closes it.
-    await t.tap(find.text(q2));
-    await t.pumpAndSettle();
+    await open(t, q2);
     expect(find.text(a2), findsNothing);
   });
 

@@ -2101,5 +2101,45 @@
         "example": "5"
       }
     }
+  },
+  "pageTitleErrorLog": "Error log",
+  "@pageTitleErrorLog": {
+    "description": "Title of the error log page; Help page button."
+  },
+  "errorLogNote": "This log stays on this phone. It goes nowhere unless you copy it.",
+  "@errorLogNote": {
+    "description": "Error log page: what happens to the log."
+  },
+  "errorLogEmpty": "No errors recorded.",
+  "@errorLogEmpty": {
+    "description": "Error log page: empty state."
+  },
+  "errorLogCopyAll": "Copy all",
+  "@errorLogCopyAll": {
+    "description": "Error log page: copies the whole log as text."
+  },
+  "errorLogCopied": "Error log copied",
+  "@errorLogCopied": {
+    "description": "Snackbar after Copy all."
+  },
+  "errorLogClear": "Clear",
+  "@errorLogClear": {
+    "description": "Error log page: removes every entry; asks first."
+  },
+  "errorLogClearTitle": "Clear the error log?",
+  "@errorLogClearTitle": {
+    "description": "Clear confirmation dialog title."
+  },
+  "errorLogClearBody": "This removes every entry from this phone.",
+  "@errorLogClearBody": {
+    "description": "Clear confirmation dialog text."
+  },
+  "errorLogSerious": "Serious",
+  "@errorLogSerious": {
+    "description": "Error log entry: marks an error that stopped what the app was doing."
+  },
+  "errorLogNoReason": "Unexpected error",
+  "@errorLogNoReason": {
+    "description": "Error log entry heading when the error has no recorded place."
   }
 }

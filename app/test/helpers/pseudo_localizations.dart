@@ -109,6 +109,36 @@ class PseudoLocalizations extends AppLocalizationsEn {
   String get onboardingAppsTitle => pseudo(super.onboardingAppsTitle);
 
   @override
+  String get pageTitleErrorLog => pseudo(super.pageTitleErrorLog);
+
+  @override
+  String get errorLogNote => pseudo(super.errorLogNote);
+
+  @override
+  String get errorLogEmpty => pseudo(super.errorLogEmpty);
+
+  @override
+  String get errorLogCopyAll => pseudo(super.errorLogCopyAll);
+
+  @override
+  String get errorLogCopied => pseudo(super.errorLogCopied);
+
+  @override
+  String get errorLogClear => pseudo(super.errorLogClear);
+
+  @override
+  String get errorLogClearTitle => pseudo(super.errorLogClearTitle);
+
+  @override
+  String get errorLogClearBody => pseudo(super.errorLogClearBody);
+
+  @override
+  String get errorLogSerious => pseudo(super.errorLogSerious);
+
+  @override
+  String get errorLogNoReason => pseudo(super.errorLogNoReason);
+
+  @override
   String get onboardingAppsBody => pseudo(super.onboardingAppsBody);
 
   @override

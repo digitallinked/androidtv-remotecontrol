@@ -2821,6 +2821,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{app} moved to position {position} of {count}'**
   String manageAppsMoved(String app, int position, int count);
+
+  /// Title of the error log page; Help page button.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log'**
+  String get pageTitleErrorLog;
+
+  /// Error log page: what happens to the log.
+  ///
+  /// In en, this message translates to:
+  /// **'This log stays on this phone. It goes nowhere unless you copy it.'**
+  String get errorLogNote;
+
+  /// Error log page: empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'No errors recorded.'**
+  String get errorLogEmpty;
+
+  /// Error log page: copies the whole log as text.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get errorLogCopyAll;
+
+  /// Snackbar after Copy all.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log copied'**
+  String get errorLogCopied;
+
+  /// Error log page: removes every entry; asks first.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get errorLogClear;
+
+  /// Clear confirmation dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the error log?'**
+  String get errorLogClearTitle;
+
+  /// Clear confirmation dialog text.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes every entry from this phone.'**
+  String get errorLogClearBody;
+
+  /// Error log entry: marks an error that stopped what the app was doing.
+  ///
+  /// In en, this message translates to:
+  /// **'Serious'**
+  String get errorLogSerious;
+
+  /// Error log entry heading when the error has no recorded place.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected error'**
+  String get errorLogNoReason;
 }
 
 class _AppLocalizationsDelegate

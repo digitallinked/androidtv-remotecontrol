@@ -20,15 +20,37 @@ Uri feedbackMailUri({
   required String subject,
   required String prompt,
 }) {
-  final body =
-      '$prompt\n\n\n---\n'
-      'App: ${info.version} (${info.buildNumber})\n'
-      'System: ${info.os} ${info.osVersion}';
+  final body = '$prompt\n\n\n---\n${feedbackFooter(info)}';
   return Uri.parse(
     'mailto:${AppLinks.supportEmail}'
     '?subject=${Uri.encodeComponent(subject)}'
     '&body=${Uri.encodeComponent(body)}',
   );
+}
+
+/// The app and system versions, in English, and nothing about any TV: the
+/// footer of a feedback email, and the header of a copied error log.
+String feedbackFooter(AppInfo info) =>
+    'App: ${info.version} (${info.buildNumber})\n'
+    'System: ${info.os} ${info.osVersion}';
+
+/// The app's details, or the flavor's name, `?` for the version and
+/// [fallbackOsVersion] for the system when they can't be read.
+Future<AppInfo> readAppInfoOrFallback(WidgetRef ref) async {
+  // Read now: `ref` may be gone after the await.
+  final flavorName = ref.read(flavorProvider).displayName;
+  try {
+    return await ref.read(appInfoProvider.future);
+  } on Object {
+    final system = fallbackOsVersion(defaultTargetPlatform);
+    return AppInfo(
+      appName: flavorName,
+      version: '?',
+      buildNumber: '?',
+      os: system.os,
+      osVersion: system.version,
+    );
+  }
 }
 
 /// Asks before opening the mail app, then opens a draft addressed to us.
@@ -39,9 +61,6 @@ Uri feedbackMailUri({
 Future<void> sendFeedback(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context);
   final opener = ref.read(linkOpenerProvider);
-  // Read now: a failed app-info read falls back to this name, and `ref` may
-  // be gone after the awaits.
-  final flavorName = ref.read(flavorProvider).displayName;
   final confirmed = await showAppDialog<bool>(
     context: context,
     title: l10n.feedbackTitle,
@@ -57,19 +76,7 @@ Future<void> sendFeedback(BuildContext context, WidgetRef ref) async {
   );
   if (confirmed != true || !context.mounted) return;
 
-  AppInfo info;
-  try {
-    info = await ref.read(appInfoProvider.future);
-  } on Object {
-    final system = fallbackOsVersion(defaultTargetPlatform);
-    info = AppInfo(
-      appName: flavorName,
-      version: '?',
-      buildNumber: '?',
-      os: system.os,
-      osVersion: system.version,
-    );
-  }
+  final info = await readAppInfoOrFallback(ref);
   if (!context.mounted) return;
 
   final opened = await opener.open(

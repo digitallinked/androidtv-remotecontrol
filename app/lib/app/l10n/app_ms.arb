@@ -453,5 +453,15 @@
   "updateRequiredFailed": "Tidak dapat membuka gedung apl. Kemas kini apl ini daripada gedung apl telefon anda.",
   "loadingLabel": "Memuatkan…",
   "manageAppsMoreOptions": "Lagi pilihan",
-  "manageAppsMoved": "{app} dialihkan ke kedudukan {position} daripada {count}"
+  "manageAppsMoved": "{app} dialihkan ke kedudukan {position} daripada {count}",
+  "pageTitleErrorLog": "Log ralat",
+  "errorLogNote": "Log ini kekal pada telefon ini. Log ini tidak dihantar ke mana-mana melainkan anda menyalinnya.",
+  "errorLogEmpty": "Tiada ralat direkodkan.",
+  "errorLogCopyAll": "Salin semua",
+  "errorLogCopied": "Log ralat disalin",
+  "errorLogClear": "Kosongkan",
+  "errorLogClearTitle": "Kosongkan log ralat?",
+  "errorLogClearBody": "Ini akan memadamkan semua entri daripada telefon ini.",
+  "errorLogSerious": "Serius",
+  "errorLogNoReason": "Ralat tidak dijangka"
 }

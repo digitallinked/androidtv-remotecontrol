@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/discovery/presentation/widgets/troubleshooting_sheet.dart';
 import 'package:tv_remote/features/settings/application/feedback.dart';
@@ -71,12 +73,26 @@ class HelpPage extends ConsumerWidget {
             ),
             child: Align(
               alignment: AlignmentDirectional.centerStart,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.square(AppSizes.touchMin),
-                ),
-                onPressed: () => unawaited(sendFeedback(context, ref)),
-                child: Text(l10n.settingsFeedback),
+              child: Wrap(
+                spacing: AppSpacing.s,
+                runSpacing: AppSpacing.s,
+                children: [
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.square(AppSizes.touchMin),
+                    ),
+                    onPressed: () => unawaited(sendFeedback(context, ref)),
+                    child: Text(l10n.settingsFeedback),
+                  ),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.square(AppSizes.touchMin),
+                    ),
+                    onPressed: () =>
+                        unawaited(context.push(AppRoutes.settingsErrorLog)),
+                    child: Text(l10n.pageTitleErrorLog),
+                  ),
+                ],
               ),
             ),
           ),

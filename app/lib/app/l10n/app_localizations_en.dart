@@ -1546,4 +1546,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String manageAppsMoved(String app, int position, int count) {
     return '$app moved to position $position of $count';
   }
+
+  @override
+  String get pageTitleErrorLog => 'Error log';
+
+  @override
+  String get errorLogNote =>
+      'This log stays on this phone. It goes nowhere unless you copy it.';
+
+  @override
+  String get errorLogEmpty => 'No errors recorded.';
+
+  @override
+  String get errorLogCopyAll => 'Copy all';
+
+  @override
+  String get errorLogCopied => 'Error log copied';
+
+  @override
+  String get errorLogClear => 'Clear';
+
+  @override
+  String get errorLogClearTitle => 'Clear the error log?';
+
+  @override
+  String get errorLogClearBody => 'This removes every entry from this phone.';
+
+  @override
+  String get errorLogSerious => 'Serious';
+
+  @override
+  String get errorLogNoReason => 'Unexpected error';
 }

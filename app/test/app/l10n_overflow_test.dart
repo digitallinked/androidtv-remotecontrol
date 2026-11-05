@@ -18,6 +18,8 @@ import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/crash/crash_scrubber.dart';
+import 'package:tv_remote/core/crash/error_log.dart';
 import 'package:tv_remote/core/links/link_opener.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/purchases/purchase_service.dart';
@@ -1002,6 +1004,61 @@ final Map<String, _Screen> _screens = {
     open: (t, look) async {
       await _pumpWithSavedTv(t, look, AppRoutes.settingsAbout);
       _expectOn(find.text(_l(t).pageTitleAbout), 'about');
+    },
+  ),
+  'settings_error_log_empty': (
+    group: 'settings',
+    ios: false,
+    open: (t, look) async {
+      await _pumpWithSavedTv(t, look, AppRoutes.settingsErrorLog);
+      _expectOn(find.text(_l(t).pageTitleErrorLog), 'error log');
+      _expectOn(find.text(_l(t).errorLogEmpty), 'empty error log');
+    },
+  ),
+  'settings_error_log': (
+    group: 'settings',
+    ios: false,
+    open: (t, look) async {
+      final log = ErrorLog()
+        ..bind(
+          namesKnown: Future<void>.value(),
+          scrubber: CrashScrubber.new,
+          file: () async => null,
+        );
+      addTearDown(log.dispose);
+      await t.pump();
+      await log.recordError(StateError('a'), null, reason: 'discovery');
+      await log.recordError(StateError('b'), null, fatal: true);
+      await _pumpWithSavedTv(
+        t,
+        look,
+        AppRoutes.settingsErrorLog,
+        overrides: [errorLogProvider.overrideWithValue(log)],
+      );
+      _expectOn(find.text(_l(t).errorLogCopyAll), 'error log');
+    },
+  ),
+  'settings_error_log_clear_dialog': (
+    group: 'settings',
+    ios: false,
+    open: (t, look) async {
+      final log = ErrorLog()
+        ..bind(
+          namesKnown: Future<void>.value(),
+          scrubber: CrashScrubber.new,
+          file: () async => null,
+        );
+      addTearDown(log.dispose);
+      await t.pump();
+      await log.recordError(StateError('a'), null);
+      await _pumpWithSavedTv(
+        t,
+        look,
+        AppRoutes.settingsErrorLog,
+        overrides: [errorLogProvider.overrideWithValue(log)],
+      );
+      await _tapText(t, _l(t).errorLogClear);
+      _expectOn(find.text(_l(t).errorLogClearTitle), 'clear the error log');
     },
   ),
   'settings_privacy': (

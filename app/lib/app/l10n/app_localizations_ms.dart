@@ -1568,4 +1568,36 @@ class AppLocalizationsMs extends AppLocalizations {
   String manageAppsMoved(String app, int position, int count) {
     return '$app dialihkan ke kedudukan $position daripada $count';
   }
+
+  @override
+  String get pageTitleErrorLog => 'Log ralat';
+
+  @override
+  String get errorLogNote =>
+      'Log ini kekal pada telefon ini. Log ini tidak dihantar ke mana-mana melainkan anda menyalinnya.';
+
+  @override
+  String get errorLogEmpty => 'Tiada ralat direkodkan.';
+
+  @override
+  String get errorLogCopyAll => 'Salin semua';
+
+  @override
+  String get errorLogCopied => 'Log ralat disalin';
+
+  @override
+  String get errorLogClear => 'Kosongkan';
+
+  @override
+  String get errorLogClearTitle => 'Kosongkan log ralat?';
+
+  @override
+  String get errorLogClearBody =>
+      'Ini akan memadamkan semua entri daripada telefon ini.';
+
+  @override
+  String get errorLogSerious => 'Serius';
+
+  @override
+  String get errorLogNoReason => 'Ralat tidak dijangka';
 }
