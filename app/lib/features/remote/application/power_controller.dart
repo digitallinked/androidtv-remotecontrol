@@ -4,6 +4,8 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/haptics/haptics.dart';
 import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
@@ -69,7 +71,12 @@ class PowerController {
     required this.haptics,
     required this.hapticsEnabled,
     required this.onRefused,
+    this.onError,
   });
+
+  /// Told about each failure the user sees, with a fixed reason (Ruling
+  /// P9-C14).
+  final void Function(Object error, StackTrace stack, String reason)? onError;
 
   /// The session the power action targets, or `null` while there is none.
   final RemoteSession? session;
@@ -130,7 +137,12 @@ class PowerController {
       onRefused();
       return PowerOutcome.notConnected;
     }
-    await devices.setWolMac(target.serviceName, mac);
+    try {
+      await devices.setWolMac(target.serviceName, mac);
+    } on Object catch (error, stack) {
+      onError?.call(error, stack, 'mac save');
+      rethrow;
+    }
     return _wake(session, target);
   }
 
@@ -149,9 +161,11 @@ class PowerController {
       if (!await wakeOnLan.wake(mac: mac, tvHost: device.lastHost)) {
         return PowerOutcome.wakeFailed;
       }
-    } on Object {
+    } on Object catch (error, stack) {
       // A broken lookup or a malformed stored MAC: nothing went out. The
-      // details are not logged, they hold the user's addresses.
+      // details can hold the user's addresses, so they are only ever passed
+      // on to the scrubbing report chain.
+      onError?.call(error, stack, 'wake');
       return PowerOutcome.wakeFailed;
     }
     // Fresh backoff and a re-resolved host, so the TV is found as it boots.
@@ -184,5 +198,13 @@ PowerController powerController(Ref ref) {
     haptics: ref.watch(hapticsProvider),
     hapticsEnabled: hapticsEnabled,
     onRefused: ref.read(notConnectedNoticesProvider.notifier).notify,
+    onError: (error, stack, reason) => unawaited(
+      safeRecordError(
+        ref.read(crashReporterProvider),
+        error,
+        stack,
+        reason: reason,
+      ),
+    ),
   );
 }

@@ -24,6 +24,14 @@ class _FailingWrites extends DriftDeviceRepository {
       Future<void>.error(Exception('disk full'));
 }
 
+class _FailingReads extends DriftDeviceRepository {
+  _FailingReads(super._db);
+
+  @override
+  Future<SavedDevice?> find(String serviceName) =>
+      Future<SavedDevice?>.error(Exception('disk full'));
+}
+
 void main() {
   late AppDatabase db;
   late DeviceRepository repo;
@@ -52,9 +60,11 @@ void main() {
     bool hapticsEnabled = true,
     DeviceRepository? devices,
     FakeRemoteSession? session,
+    void Function(Object error, StackTrace stack, String reason)? onError,
   }) {
     final s = session ?? fake;
     return PowerController(
+      onError: onError,
       session: noSession ? null : s,
       actions: RemoteActions(
         session: noSession ? null : s,
@@ -143,6 +153,29 @@ void main() {
     await expectLater(c.saveMacAndWake('AA:BB:CC:DD:EE:F0'), throwsException);
     expect(wol.wakes, isEmpty);
     expect(fake.reconnectCalls, 0);
+  });
+
+  // Ruling P9-C14: the user sees both failures, so both are recorded.
+  test('a_failed_mac_save_and_a_failed_wake_are_recorded', () async {
+    final reasons = <String>[];
+    fake.emit(_offline);
+    final saving = controller(
+      devices: _FailingWrites(db),
+      onError: (_, _, reason) => reasons.add(reason),
+    );
+    await expectLater(
+      saving.saveMacAndWake('AA:BB:CC:DD:EE:F0'),
+      throwsException,
+    );
+    expect(reasons, ['mac save']);
+
+    reasons.clear();
+    final waking = controller(
+      devices: _FailingReads(db),
+      onError: (_, _, reason) => reasons.add(reason),
+    );
+    expect(await waking.press(), PowerOutcome.wakeFailed);
+    expect(reasons, ['wake']);
   });
 
   test('wake_failure_reports_wake_failed_and_does_not_reconnect', () async {

@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 
 part 'link_opener.g.dart';
 
@@ -15,16 +21,28 @@ abstract interface class LinkOpener {
 /// [LinkOpener] from the `url_launcher` plugin.
 ///
 /// The address always opens in another app (the browser or the mail app),
-/// never inside this one. A platform error counts as "nothing handled it".
+/// never inside this one. A platform error counts as "nothing handled it"
+/// and goes to [onError]; "no app can open it" is an answer, not an error.
 class UrlLauncherLinkOpener implements LinkOpener {
   /// Creates the plugin-backed opener.
-  const UrlLauncherLinkOpener();
+  const UrlLauncherLinkOpener({this.onError, this.launch = _launch});
+
+  /// Told about a platform error (Ruling P9-C14).
+  final void Function(Object error, StackTrace stack)? onError;
+
+  /// The plugin call; only a test replaces it.
+  @visibleForTesting
+  final Future<bool> Function(Uri uri) launch;
+
+  static Future<bool> _launch(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   @override
   Future<bool> open(Uri uri) async {
     try {
-      return await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } on Object {
+      return await launch(uri);
+    } on Object catch (error, stack) {
+      onError?.call(error, stack);
       return false;
     }
   }
@@ -32,4 +50,13 @@ class UrlLauncherLinkOpener implements LinkOpener {
 
 /// The app's [LinkOpener].
 @Riverpod(keepAlive: true)
-LinkOpener linkOpener(Ref ref) => const UrlLauncherLinkOpener();
+LinkOpener linkOpener(Ref ref) => UrlLauncherLinkOpener(
+  onError: (error, stack) => unawaited(
+    safeRecordError(
+      ref.read(crashReporterProvider),
+      error,
+      stack,
+      reason: 'open link',
+    ),
+  ),
+);
