@@ -1586,6 +1586,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get errorLogCopied => 'Log ralat disalin';
 
   @override
+  String get errorLogCopyFailed => 'Tidak dapat menyalin log. Cuba lagi.';
+
+  @override
   String get errorLogClear => 'Kosongkan';
 
   @override

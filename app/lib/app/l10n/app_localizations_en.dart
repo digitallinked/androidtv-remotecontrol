@@ -1564,6 +1564,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorLogCopied => 'Error log copied';
 
   @override
+  String get errorLogCopyFailed => 'Couldn\'t copy the log. Try again.';
+
+  @override
   String get errorLogClear => 'Clear';
 
   @override

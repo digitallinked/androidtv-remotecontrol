@@ -124,6 +124,9 @@ class PseudoLocalizations extends AppLocalizationsEn {
   String get errorLogCopied => pseudo(super.errorLogCopied);
 
   @override
+  String get errorLogCopyFailed => pseudo(super.errorLogCopyFailed);
+
+  @override
   String get errorLogClear => pseudo(super.errorLogClear);
 
   @override

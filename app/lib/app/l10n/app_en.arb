@@ -2122,6 +2122,10 @@
   "@errorLogCopied": {
     "description": "Snackbar after Copy all."
   },
+  "errorLogCopyFailed": "Couldn't copy the log. Try again.",
+  "@errorLogCopyFailed": {
+    "description": "Snackbar when Copy all can't reach the clipboard."
+  },
   "errorLogClear": "Clear",
   "@errorLogClear": {
     "description": "Error log page: removes every entry; asks first."

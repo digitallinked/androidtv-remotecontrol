@@ -459,6 +459,7 @@
   "errorLogEmpty": "Tiada ralat direkodkan.",
   "errorLogCopyAll": "Salin semua",
   "errorLogCopied": "Log ralat disalin",
+  "errorLogCopyFailed": "Tidak dapat menyalin log. Cuba lagi.",
   "errorLogClear": "Kosongkan",
   "errorLogClearTitle": "Kosongkan log ralat?",
   "errorLogClearBody": "Ini akan memadamkan semua entri daripada telefon ini.",

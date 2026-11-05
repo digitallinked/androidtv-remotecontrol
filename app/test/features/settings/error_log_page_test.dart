@@ -145,6 +145,32 @@ void main() {
     expect(find.text('Error log copied'), findsOneWidget);
   });
 
+  testWidgets('a_failed_copy_says_so', (t) async {
+    t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'clipboard');
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await pumpPage(t, await _log(t, entries: 1));
+
+    await t.tap(find.text('Copy all'));
+    await t.pump();
+    await t.pump();
+
+    expect(find.text("Couldn't copy the log. Try again."), findsOneWidget);
+    expect(find.text('Error log copied'), findsNothing);
+  });
+
   testWidgets('clear_asks_first_and_cancel_keeps_everything', (t) async {
     final log = await _log(t, entries: 2);
     await pumpPage(t, log);

@@ -134,6 +134,9 @@ class ErrorLogPage extends ConsumerWidget {
       );
     } on Object catch (error, stack) {
       await safeRecordError(crashes, error, stack, reason: 'error log copy');
+      messenger
+        ..clearSnackBars()
+        ..showAppSnackBar(SnackBar(content: Text(l10n.errorLogCopyFailed)));
       return;
     }
     messenger

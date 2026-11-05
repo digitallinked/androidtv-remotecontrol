@@ -2852,6 +2852,12 @@ abstract class AppLocalizations {
   /// **'Error log copied'**
   String get errorLogCopied;
 
+  /// Snackbar when Copy all can't reach the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t copy the log. Try again.'**
+  String get errorLogCopyFailed;
+
   /// Error log page: removes every entry; asks first.
   ///
   /// In en, this message translates to:

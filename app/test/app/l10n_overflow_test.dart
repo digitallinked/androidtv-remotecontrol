@@ -7,6 +7,7 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -1036,6 +1037,37 @@ final Map<String, _Screen> _screens = {
         overrides: [errorLogProvider.overrideWithValue(log)],
       );
       _expectOn(find.text(_l(t).errorLogCopyAll), 'error log');
+    },
+  ),
+  'settings_error_log_copy_failed': (
+    group: 'settings',
+    ios: false,
+    open: (t, look) async {
+      final log = ErrorLog()
+        ..bind(
+          namesKnown: Future<void>.value(),
+          scrubber: CrashScrubber.new,
+          file: () async => null,
+        );
+      addTearDown(log.dispose);
+      await t.pump();
+      await log.recordError(StateError('a'), null, reason: 'discovery');
+      await _pumpWithSavedTv(
+        t,
+        look,
+        AppRoutes.settingsErrorLog,
+        overrides: [errorLogProvider.overrideWithValue(log)],
+      );
+      final messenger = t.binding.defaultBinaryMessenger
+        ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            throw PlatformException(code: 'clipboard');
+          }
+          return null;
+        });
+      await _tapText(t, _l(t).errorLogCopyAll);
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      _expectOn(find.text(_l(t).errorLogCopyFailed), 'copy failed');
     },
   ),
   'settings_error_log_clear_dialog': (
