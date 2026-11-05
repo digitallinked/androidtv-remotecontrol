@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -17,6 +18,7 @@ import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/ink_features.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_catalogue.dart';
 
 /// The package of a row in the "*" default row, by its name.
@@ -416,6 +418,18 @@ void main() {
       for (final p in testCatalogue().defaultRows['MY']!)
         testCatalogue().byPackage(p)!.name,
     ]);
+  });
+
+  testWidgets('a_failed_write_is_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    await pumpManage(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    repo.failNextWrite = StateError('disk full');
+    await t.tap(find.byTooltip('Remove YouTube'));
+    await t.pumpAndSettle();
+    expect(crashes.errors.single.reason, 'shortcut save');
   });
 
   testWidgets('a_failed_write_says_so_and_resyncs', (t) async {

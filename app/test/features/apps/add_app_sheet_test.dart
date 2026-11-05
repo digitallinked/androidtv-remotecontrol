@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
@@ -12,6 +13,7 @@ import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import '../../helpers/in_memory_app_usage_repository.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 
 const _netflix = AppEntry(package: 'com.netflix.ninja', name: 'Netflix');
 const _youtube = AppEntry(
@@ -234,6 +236,18 @@ void main() {
     await tapRow(t, inSheet(find.text('Tvapp')));
     expect(repo.apps.last.name, 'Tvapp');
     expect(repo.apps.last.customIcon, 'app');
+  });
+
+  testWidgets('a_failed_add_is_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    await pumpSheet(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await search(t, 'kodi');
+    repo.failNextWrite = StateError('disk full');
+    await tapRow(t, inSheet(find.text('Kodi')));
+    expect(crashes.errors.single.reason, 'shortcut save');
   });
 
   testWidgets('a_failed_add_says_so_and_keeps_the_sheet', (t) async {

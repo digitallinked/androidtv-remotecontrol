@@ -7,6 +7,8 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/app/widgets/field_text.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/package_names.dart';
@@ -160,7 +162,15 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
         if (!mounted) return;
         Navigator.of(context).pop(l10n.shortcutSaved);
       }
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          ref.read(crashReporterProvider),
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       if (!mounted) return;
       setState(() {
         _saving = false;

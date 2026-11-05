@@ -10,6 +10,8 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/app/widgets/field_text.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/mac_address.dart';
@@ -205,8 +207,17 @@ class _EditFormState extends ConsumerState<_EditForm> {
       if (mac != device.wolMac) {
         await actions.setWolMac(device.serviceName, mac);
       }
-    } on Object {
-      // The reason is not shown or logged: it can hold the user's data.
+    } on Object catch (error, stack) {
+      // The reason is never shown: it can hold the user's data. The report
+      // goes through the scrubbing chain (Ruling P9-C14).
+      unawaited(
+        safeRecordError(
+          ref.read(crashReporterProvider),
+          error,
+          stack,
+          reason: 'device save',
+        ),
+      );
       if (mounted) {
         setState(() => _busy = false);
         _say(l10n.editDeviceSaveFailed);
@@ -249,7 +260,15 @@ class _EditFormState extends ConsumerState<_EditForm> {
     widget.onRemovingChanged(true);
     try {
       await ref.read(deviceActionsProvider).delete(device.serviceName);
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          ref.read(crashReporterProvider),
+          error,
+          stack,
+          reason: 'device remove',
+        ),
+      );
       // The TV stays: the page must follow the saved list again.
       widget.onRemovingChanged(false);
       if (mounted) {

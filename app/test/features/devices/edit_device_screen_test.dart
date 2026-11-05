@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -23,6 +24,7 @@ import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
 
@@ -330,6 +332,26 @@ void main() {
     await tapSave(t);
     expect(repo.saved[_name]!.nickname, 'Den');
     expect(find.text('Saved'), findsOneWidget);
+  });
+
+  testWidgets('failed_saves_and_removes_are_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    await pumpEdit(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await openEdit(t);
+    await t.enterText(field('Name on this phone'), 'Den');
+    repo.failNextWrite = StateError('disk full');
+    await tapSave(t);
+    expect(crashes.errors.single.reason, 'device save');
+
+    repo.failNextWrite = StateError('disk full');
+    await t.tap(find.text('Remove TV'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+    await t.pumpAndSettle();
+    expect(crashes.errors.last.reason, 'device remove');
   });
 
   testWidgets('remove_failure_keeps_the_tv_and_says_so', (t) async {

@@ -7,6 +7,8 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/app/widgets/field_text.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -85,7 +87,15 @@ class _AddAppFormState extends ConsumerState<_AddAppForm> {
           _alreadyThere = true;
         });
       }
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          ref.read(crashReporterProvider),
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       if (!mounted) return;
       setState(() {
         _saving = false;

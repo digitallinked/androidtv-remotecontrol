@@ -8,6 +8,8 @@ import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/add_app_sheet.dart';
@@ -99,7 +101,15 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     var ok = true;
     try {
       await write(actions);
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          ref.read(crashReporterProvider),
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       ok = false;
       _anyFailed = true;
       messenger
@@ -224,7 +234,15 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
       final restored = _withApp(base, app, index);
       if (restored == null) return;
       await container.read(shortcutActionsProvider).replaceAll(restored);
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          container.read(crashReporterProvider),
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       messenger.showAppSnackBar(
         SnackBar(content: Text(l10n.manageAppsSaveFailed)),
       );

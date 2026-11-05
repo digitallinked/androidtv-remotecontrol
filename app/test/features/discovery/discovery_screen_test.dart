@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nsd/nsd.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -24,6 +25,7 @@ import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 
 /// These saved TVs, paired.
@@ -437,6 +439,26 @@ void main() {
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
     expect(repo.writes, 0);
+  });
+
+  testWidgets('a_failed_merge_is_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20'),
+    ])..failNextWrite = StateError('disk full');
+    await pumpDiscover(
+      t,
+      overrides: [
+        ..._repoOverrides(repo),
+        crashReporterProvider.overrideWithValue(crashes),
+      ],
+    );
+    await found(t, [tv('Living Room TV 3')]);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+
+    expect(crashes.errors.single.reason, 'device merge');
   });
 
   testWidgets('a_failed_merge_says_so_and_stays', (t) async {
