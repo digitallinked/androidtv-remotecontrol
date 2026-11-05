@@ -1,7 +1,12 @@
 /// Removes what could identify a TV, a network or the user from error text
 /// before it leaves the phone (Ruling P6-R5).
 ///
-/// The rules run in a fixed order, each on the output of the one before:
+/// First, everything from `Causing statement` onward is cut. That is the tail
+/// of a sqlite error, also inside drift's wrappers: the SQL and its bound
+/// values, and a value being saved was by definition never saved, so no rule
+/// below could know it (Ruling P9-C17).
+///
+/// The rules then run in a fixed order, each on the output of the one before:
 ///
 /// 1. PEM blocks (also a truncated one) become `<pem>`.
 /// 2. UUIDs become `<id>`.
@@ -100,7 +105,7 @@ class CrashScrubber {
   /// for `null`.
   String scrub(String? text) {
     if (text == null || text.isEmpty) return '';
-    final out = text
+    final out = _withoutSqlTail(text)
         .replaceAll(_pem, '<pem>')
         .replaceAll(_uuid, '<id>')
         .replaceAllMapped(_base64, (m) {
@@ -129,6 +134,11 @@ class CrashScrubber {
         })
         .replaceAll(_hexRun, '<hex>')
         .replaceAll(_code, '<code>');
+  }
+
+  static String _withoutSqlTail(String text) {
+    final tail = text.indexOf('Causing statement');
+    return tail < 0 ? text : '${text.substring(0, tail).trimRight()} <sql>';
   }
 
   String _scrubKnownTerms(String text) {

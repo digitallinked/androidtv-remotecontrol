@@ -1,3 +1,4 @@
+import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/crash/crash_scrubber.dart';
@@ -20,6 +21,27 @@ void main() {
   setUp(() {
     sink = RecordingCrashlyticsSink();
     enabled = true;
+  });
+
+  // Ruling P9-C17: the value being saved is unknown to the scrubber, because
+  // the save failed.
+  test('a_failed_save_never_sends_the_value_it_was_saving', () async {
+    const unsaved = 'Sarah bedroom';
+
+    await reporter().recordError(
+      SqliteException(
+        extendedResultCode: 13,
+        message: 'database or disk is full',
+        causingStatement: 'UPDATE devices SET nickname = ? WHERE id = ?',
+        parametersToStatement: [unsaved, 'id'],
+      ),
+      null,
+      reason: 'device save',
+    );
+
+    final sent = sink.errors.single.error.toString();
+    expect(sent, isNot(contains(unsaved)));
+    expect(sent, contains('database or disk is full'));
   });
 
   test('sends_only_scrubbed_text', () async {

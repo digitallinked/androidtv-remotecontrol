@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,6 +94,30 @@ void main() {
         expect(shown, isNot(contains(leak)), reason: leak);
       }
     }
+  });
+
+  // Ruling P9-C17: the value being saved is unknown to the scrubber, because
+  // the save failed.
+  test('a_failed_save_never_stores_the_value_it_was_saving', () async {
+    final log = boundLog();
+    await log.idle;
+    const unsaved = 'Sarah bedroom';
+
+    await log.recordError(
+      SqliteException(
+        extendedResultCode: 13,
+        message: 'database or disk is full',
+        causingStatement: 'UPDATE devices SET nickname = ? WHERE id = ?',
+        parametersToStatement: [unsaved, 'id'],
+      ),
+      null,
+      reason: 'device save',
+    );
+    await log.idle;
+
+    expect(file.readAsStringSync(), isNot(contains(unsaved)));
+    expect(log.entries.single.message, isNot(contains(unsaved)));
+    expect(log.entries.single.message, contains('database or disk is full'));
   });
 
   test(
