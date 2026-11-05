@@ -76,8 +76,8 @@ void main() {
       'startDiscovery': 'onDiscoveryStartSuccessful',
       'stopDiscovery': 'onDiscoveryStopSuccessful',
     };
-    final messenger = TestWidgetsFlutterBinding.ensureInitialized()
-        .defaultBinaryMessenger;
+    final messenger =
+        TestWidgetsFlutterBinding.ensureInitialized().defaultBinaryMessenger;
     final browsed = <Object?>[];
     messenger.setMockMethodCallHandler(const MethodChannel(channel), (
       call,
