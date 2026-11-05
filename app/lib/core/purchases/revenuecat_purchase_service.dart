@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:tv_remote/core/purchases/purchase_service.dart';
@@ -142,6 +143,11 @@ class RevenueCatPurchaseService implements PurchaseService {
     await _ready();
   }
 
+  /// Lets a test buy [package] as [kind] without loading the offer.
+  @visibleForTesting
+  void debugUsePackage(PremiumPlanKind kind, Package package) =>
+      _packages[kind] = package;
+
   /// Configures the SDK once. A failure is forgotten, so the next call tries
   /// again.
   Future<bool> _ready() {
@@ -242,8 +248,15 @@ class RevenueCatPurchaseService implements PurchaseService {
       // entitlement yet (or not readably); the answer arrives on
       // [entitlements] when it does.
       return snapshot.active ? Purchased(snapshot) : const PurchasePending();
-    } on PlatformException catch (error) {
-      return purchaseOutcomeFor(_codeOf(error));
+    } on PlatformException catch (error, stack) {
+      // How store failures really arrive. Cancelling isn't a failure, and a
+      // pending payment may still go through.
+      final code = _codeOf(error);
+      if (code != PurchasesErrorCode.purchaseCancelledError &&
+          code != PurchasesErrorCode.paymentPendingError) {
+        onError?.call(error, stack, 'purchases');
+      }
+      return purchaseOutcomeFor(code);
     } on Object catch (error, stack) {
       _log('purchase failed', error);
       onError?.call(error, stack, 'purchases');
