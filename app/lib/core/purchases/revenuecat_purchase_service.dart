@@ -99,7 +99,16 @@ class RevenueCatPurchaseService implements PurchaseService {
   /// Creates the service for the public SDK key [apiKey]. It touches the
   /// platform only when [configure] is called. With [debugLogs] the SDK logs
   /// at debug level (the dev flavor).
-  RevenueCatPurchaseService({required this.apiKey, required this.debugLogs});
+  RevenueCatPurchaseService({
+    required this.apiKey,
+    required this.debugLogs,
+    this.onError,
+  });
+
+  /// Told about each failure the user sees, with a fixed reason (Ruling
+  /// P9-C14). A cancelled purchase isn't one, and an offline customer-info
+  /// read is expected.
+  final void Function(Object error, StackTrace stack, String reason)? onError;
 
   /// The public SDK key.
   final String apiKey;
@@ -148,8 +157,9 @@ class RevenueCatPurchaseService implements PurchaseService {
       if (debugLogs) await Purchases.setLogLevel(LogLevel.debug);
       await Purchases.configure(PurchasesConfiguration(apiKey));
       Purchases.addCustomerInfoUpdateListener(_onCustomerInfo);
-    } on Object catch (error) {
+    } on Object catch (error, stack) {
       _log('configure failed', error);
+      onError?.call(error, stack, 'purchases');
       return false;
     }
     try {
@@ -209,8 +219,9 @@ class RevenueCatPurchaseService implements PurchaseService {
             ),
       ];
       return plans.isEmpty ? null : PremiumOffer(plans: plans);
-    } on Object catch (error) {
+    } on Object catch (error, stack) {
       _log('offerings failed', error);
+      onError?.call(error, stack, 'purchases');
       return null;
     }
   }
@@ -233,8 +244,9 @@ class RevenueCatPurchaseService implements PurchaseService {
       return snapshot.active ? Purchased(snapshot) : const PurchasePending();
     } on PlatformException catch (error) {
       return purchaseOutcomeFor(_codeOf(error));
-    } on Object catch (error) {
+    } on Object catch (error, stack) {
       _log('purchase failed', error);
+      onError?.call(error, stack, 'purchases');
       return const PurchaseFailed(PurchaseFailure.unknown);
     }
   }
@@ -249,8 +261,9 @@ class RevenueCatPurchaseService implements PurchaseService {
       return snapshot.active
           ? RestoreOutcome.restoredPremium
           : RestoreOutcome.nothingToRestore;
-    } on Object catch (error) {
+    } on Object catch (error, stack) {
       _log('restore failed', error);
+      onError?.call(error, stack, 'purchases');
       return RestoreOutcome.failed;
     }
   }

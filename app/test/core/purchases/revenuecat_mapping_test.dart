@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchases_flutter/purchases_flutter.dart'
     show PurchasesErrorCode;
@@ -5,6 +6,30 @@ import 'package:tv_remote/core/purchases/purchase_service.dart';
 import 'package:tv_remote/core/purchases/revenuecat_purchase_service.dart';
 
 void main() {
+  // Ruling P9-C14: a store that can't start stops purchases, so it is
+  // recorded. The plugin's error goes to the hook, not out of the service.
+  test('a_failed_store_setup_goes_to_on_error', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('purchases_flutter');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      channel,
+      (_) async => throw PlatformException(code: 'store'),
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final reasons = <String>[];
+    final service = RevenueCatPurchaseService(
+      apiKey: 'fake-key',
+      debugLogs: false,
+      onError: (_, _, reason) => reasons.add(reason),
+    );
+
+    expect(await service.loadOffer(), isNull);
+
+    expect(reasons, ['purchases']);
+  });
+
   test('purchase_failure_codes_map_to_outcomes', () {
     PurchaseFailure? failureOf(PurchasesErrorCode code) {
       final outcome = purchaseOutcomeFor(code);

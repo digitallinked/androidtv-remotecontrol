@@ -8,6 +8,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/purchases/purchase_service.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -17,6 +18,7 @@ import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 
 import '../../helpers/fake_purchase_service.dart';
 import '../../helpers/recording_analytics_sink.dart';
+import '../../helpers/recording_crash_reporter.dart';
 
 void main() {
   late SettingsStore store;
@@ -112,6 +114,28 @@ void main() {
     expect(c.read(provider), isA<PaywallLoading>());
     expect(await settled(c), isA<PaywallReady>());
     expect(fake.loadOfferCalls, 2);
+  });
+
+  // Ruling P9-C14: each is a failure the user sees.
+  test('a_store_that_throws_is_recorded', () async {
+    final crashes = RecordingCrashReporter();
+    fake.loadOfferError = Exception('boom');
+    final failing = containerFor(
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await settled(failing);
+    expect(crashes.errors.single.reason, 'paywall');
+
+    crashes.errors.clear();
+    final throwing = _ThrowingService();
+    final c = containerFor(
+      service: throwing,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await settled(c);
+    await c.read(provider.notifier).purchase();
+    await c.read(provider.notifier).restore();
+    expect(crashes.errors.map((e) => e.reason), ['paywall', 'paywall']);
   });
 
   test('a_throwing_store_is_unavailable_not_an_error', () async {
@@ -385,6 +409,9 @@ class _ThrowingService extends FakePurchaseService {
   @override
   Future<PurchaseOutcome> purchase(PremiumPlanKind kind) =>
       throw StateError('boom');
+
+  @override
+  Future<RestoreOutcome> restore() => throw StateError('boom');
 }
 
 /// An analytics door whose `log` throws for the purchase and restore events.
