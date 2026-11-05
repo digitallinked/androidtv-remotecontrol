@@ -469,6 +469,23 @@ void main() {
     );
   });
 
+  // Ruling P9-C17. Your TVs is underneath, showing the same failure.
+  testWidgets('a_read_error_is_recorded_once', (t) async {
+    final crashes = RecordingCrashReporter();
+    repo.watchError = StateError('disk');
+    await pumpEdit(
+      t,
+      location: AppRoutes.editDevice(_name),
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    expect(find.byType(DevicesScreen, skipOffstage: false), findsOneWidget);
+    expect(crashes.errors.single.reason, 'devices read');
+
+    await t.tap(find.widgetWithText(FilledButton, 'Try again'));
+    await t.pumpAndSettle();
+    expect(crashes.errors, hasLength(2));
+  });
+
   testWidgets('a_read_error_shows_try_again_not_not_found', (t) async {
     repo.watchError = StateError('disk');
     await pumpEdit(t, location: AppRoutes.editDevice(_name));

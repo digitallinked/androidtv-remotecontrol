@@ -24,6 +24,7 @@ class DevicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    ref.watch(devicesReadReportProvider);
     final saved = ref.watch(savedDevicesProvider);
     final inUse = ref
         .watch(remoteSessionProvider)

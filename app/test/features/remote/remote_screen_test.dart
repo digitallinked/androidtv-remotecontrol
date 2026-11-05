@@ -11,6 +11,7 @@ import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 import 'package:tv_remote/core/ads/consent_service.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/privacy/privacy_choices.dart';
 import 'package:tv_remote/core/session/remote_client_factory.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
@@ -37,6 +38,7 @@ import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_app_usage_repository.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
@@ -439,6 +441,31 @@ void main() {
       isTrue,
     );
     expect(top(t).uri.toString(), AppRoutes.settingsFromSetup);
+  });
+
+  // Ruling P9-C17: the failure page is recorded once per failure, and a
+  // failed Try again is a new one.
+  testWidgets('a_failed_session_is_recorded_once_per_failure', (t) async {
+    final crashes = RecordingCrashReporter();
+    await pumpRouterApp(
+      t,
+      initialLocation: AppRoutes.remote,
+      overrides: [
+        crashReporterProvider.overrideWithValue(crashes),
+        remoteSessionProvider.overrideWith(
+          (ref) async => throw const IdentityStoreException('boom'),
+        ),
+      ],
+    );
+    expect(crashes.errors.single.reason, 'session');
+    expect(crashes.errors.single.fatal, isFalse);
+
+    await t.pump(const Duration(seconds: 1));
+    expect(crashes.errors, hasLength(1), reason: 'not on every frame');
+
+    await t.tap(find.text('Try again'));
+    await t.pumpAndSettle();
+    expect(crashes.errors, hasLength(2));
   });
 
   testWidgets('identity_store_failure_offers_retry', (t) async {

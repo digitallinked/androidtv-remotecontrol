@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' show StreamProvider;
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show Provider, StreamProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/session/no_retry.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/database_location.dart';
@@ -53,3 +56,23 @@ final StreamProvider<List<SavedDevice>> savedDevicesProvider =
       name: 'savedDevicesProvider',
       retry: noRetry,
     );
+
+/// Reports the failure Your TVs and Edit TV show (Ruling P9-C17). Both watch
+/// it: they can be stacked over the one read, and that is one failure.
+final Provider<void> devicesReadReportProvider = Provider.autoDispose<void>((
+  ref,
+) {
+  final crashes = ref.watch(crashReporterProvider);
+  ref.listen(
+    savedDevicesProvider,
+    (previous, next) => reportShownFailure(
+      crashes,
+      previous,
+      next,
+      shown: (state) =>
+          state.hasError && state.value == null && !state.isLoading,
+      reason: 'devices read',
+    ),
+    fireImmediately: true,
+  );
+});

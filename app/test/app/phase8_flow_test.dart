@@ -474,30 +474,28 @@ void main() {
       expect(find.text(l.statusConnected), findsOneWidget);
       expect(reporter.delegate, isA<CompositeCrashReporter>());
 
-      unawaited(_containerOf(t).read(appRouterProvider).push(AppRoutes.apps));
-      // At once: a frame for the push and one for the failed stream, not
-      // after ~38 s of retries.
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 100));
-      expect(find.text(l.appsLoadFailed), findsOneWidget);
-      await t.pumpAndSettle();
-      expect(find.text(l.appsLoadFailed), findsOneWidget);
-
-      // In production an Apps read error is shown, never reported.
-      expect(
-        crashSink.errors,
-        isEmpty,
-        reason: 'an Apps read error is shown, never reported',
-      );
-
-      // If the storage error were reported (by an error handler, as a
-      // framework error, or as a caught error), it would arrive scrubbed:
-      // the real bootstrap seeded the scrubber. The log reporter's console
-      // echo is captured, so the test output stays clean.
+      // The log reporter's console echo is captured, so the test output
+      // stays clean.
       final echoed = <String>[];
       final print = debugPrint;
       debugPrint = (message, {wrapWidth}) => echoed.add('$message');
       try {
+        unawaited(_containerOf(t).read(appRouterProvider).push(AppRoutes.apps));
+        // At once: a frame for the push and one for the failed stream, not
+        // after ~38 s of retries.
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 100));
+        expect(find.text(l.appsLoadFailed), findsOneWidget);
+        await t.pumpAndSettle();
+        expect(find.text(l.appsLoadFailed), findsOneWidget);
+
+        // A failure the user sees is reported (Ruling P9-C17), once, scrubbed
+        // by the real chain.
+        expect(crashSink.errors, hasLength(1));
+        expect(crashSink.errors.single.reason, 'apps read');
+
+        // So is the same storage error by an error handler, as a framework
+        // error or as a caught error: the real bootstrap seeded the scrubber.
         await reporter.recordFlutterError(
           const FlutterErrorDetails(exception: disk),
           fatal: true,
@@ -506,9 +504,9 @@ void main() {
       } finally {
         debugPrint = print;
       }
-      expect(echoed, hasLength(2), reason: 'both were logged here');
+      expect(echoed, hasLength(3), reason: 'all were logged here');
 
-      expect(crashSink.errors, hasLength(2));
+      expect(crashSink.errors, hasLength(3));
       final sent = [
         for (final e in crashSink.errors) ...[
           e.error.toString(),

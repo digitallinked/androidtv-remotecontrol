@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/core/tv/saved_device_x.dart';
@@ -17,6 +18,7 @@ import '../../helpers/disk_exception.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
@@ -169,6 +171,26 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text("Couldn't load your TVs."), findsOneWidget);
     expect(repo.watchAllCalls, 1);
+  });
+
+  // Ruling P9-C17.
+  testWidgets('unreadable_tvs_are_recorded_once_per_failure', (t) async {
+    final crashes = RecordingCrashReporter();
+    repo.watchError = StateError('disk');
+    await pumpDevices(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    expect(crashes.errors.single.reason, 'devices read');
+
+    await t.tap(find.widgetWithText(FilledButton, 'Try again'));
+    await t.pumpAndSettle();
+    expect(crashes.errors, hasLength(2));
+
+    repo.watchError = null;
+    await t.tap(find.widgetWithText(FilledButton, 'Try again'));
+    await t.pumpAndSettle();
+    expect(crashes.errors, hasLength(2), reason: 'that one worked');
   });
 
   testWidgets('unreadable_tvs_show_an_error_with_retry_not_an_empty_list', (

@@ -52,6 +52,7 @@ class _EditDeviceScreenState extends ConsumerState<EditDeviceScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    ref.watch(devicesReadReportProvider);
     final saved = ref.watch(savedDevicesProvider);
     final devices = saved.value;
     if (devices == null && saved.isLoading) {
