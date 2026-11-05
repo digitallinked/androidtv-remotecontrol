@@ -69,7 +69,8 @@ class _BrokenBundle extends CachingAssetBundle {
   }
 }
 
-/// Runs real time until [finder] shows: a corrupt file fails on an isolate.
+/// Runs real time until [finder] shows: a logo's load finishes outside the
+/// fake clock.
 Future<void> _waitFor(WidgetTester t, Finder finder) async {
   for (var i = 0; i < 100 && finder.evaluate().isEmpty; i++) {
     await t.runAsync(

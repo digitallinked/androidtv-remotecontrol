@@ -239,7 +239,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Ea
 7. No code obfuscation in v1. [yes]
 8. Keep the AdServices permissions. [keep; [adservices-permissions.md](forms/adservices-permissions.md)]
 9. Interstitials stay off. [off; if you switch them on, the prod build needs interstitial unit ids and the disclosures stay; [kill-switch-checklist.md](launch-ops/kill-switch-checklist.md)]
-10. Real app logos on the tiles. [on, your decision of 2026-11-05: 27 catalogue apps show their logo as nominative fair use, with no licence from the brands. A brand or store objection is answered by removing that row from `app/lib/features/apps/domain/app_logos.dart`; the tile goes back to its letter. The other 28 apps are backlog V11-16.]
+10. Real app logos on the tiles. [on, your decision of 2026-11-05: 27 catalogue apps show their logo as nominative fair use, with no licence from the brands. A brand or store objection is answered by an app update that removes that app's row from `app/lib/features/apps/domain/app_logos.dart`, its SVG, its `SOURCES.md` row and its name in the licence notice, and updates the logo count in the test; the tile goes back to its letter. Nothing does this remotely. The other 28 apps are backlog V11-16.]
 
 **Names and store copy:**
 
