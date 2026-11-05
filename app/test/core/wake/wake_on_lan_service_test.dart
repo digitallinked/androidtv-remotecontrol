@@ -153,6 +153,36 @@ void main() {
       });
     });
 
+    // Ruling P9-C17: the user sees a failed wake when every send was refused,
+    // so that is recorded. One send getting out is a success.
+    test('every_send_refused_is_reported_once', () async {
+      final errors = <Object>[];
+      final service = WakeOnLanService(
+        subnetBroadcast: () async => '192.168.0.255',
+        send: (mac, {broadcastAddresses, port = 9}) async =>
+            throw const SocketException('Network is unreachable'),
+        onError: (error, _) => errors.add(error),
+      );
+
+      expect(await service.wake(mac: _mac), isFalse);
+      expect(errors, [isA<SocketException>()]);
+    });
+
+    test('one_send_getting_out_reports_nothing', () async {
+      final errors = <Object>[];
+      var calls = 0;
+      final service = WakeOnLanService(
+        subnetBroadcast: () async => '192.168.0.255',
+        send: (mac, {broadcastAddresses, port = 9}) async {
+          if (++calls == 1) throw const OSError('refused');
+        },
+        onError: (error, _) => errors.add(error),
+      );
+
+      expect(await service.wake(mac: _mac), isTrue);
+      expect(errors, isEmpty);
+    });
+
     test('sync_throwing_lookup_still_sends_the_tv_fallback', () async {
       final calls = <List<String>>[];
       final service = WakeOnLanService(
