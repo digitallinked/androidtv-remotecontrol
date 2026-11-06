@@ -67,7 +67,7 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## Next up
 
-**First:** the owner tries the design on the phone (DM-116). Then the app-button fix, `tool/check.ps1` on a quiet machine, and a new build on the phone, using `flutter clean` first (learnings). Watch the first CI run on `main`.
+**First:** the owner tries the design on the phone (DM-116). Then the app-button fix, `tool/check.ps1` on a quiet machine, and a new build on the phone, using `flutter clean` first (learnings). Then make CI green (item 6).
 
 **Before any store upload:** run a **prod** release build on a phone. Only the dev flavor has been run in release. `tool/release.ps1` doesn't run `flutter clean`, so clean by hand until it does, or a store build could carry stale Dart.
 
@@ -90,7 +90,7 @@ Then:
    - internal → closed → staged production (step 11);
    - App Review with the review notes (step 12);
    - launch week (step 13).
-6. **CI:** the first Linux `check` job run is unverified. If the Gradle dry runs time out on a cold runner, warm Gradle in the CI step; never loosen the test.
+6. **CI:** red on `main` since at least Phase 7. On 2026-11-06 (`62a6f50`) `goldens` passed and `check` had 2319 passed, 3 failed, 4 skipped. All three stop in `setUpAll` because `bin/cache/artifacts/material_fonts/roboto-regular.ttf` is missing on the `check` runner: `l10n_short_labels_test` (the same failure as Phase 8), `store_frame_test` and `store_screenshots_test`. The file name matches the SDK, so it is not a case problem; why the runner lacks the fonts is unknown (unverified). If the Gradle dry runs time out on a cold runner, warm Gradle in the CI step; never loosen the test.
 
 After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch backlog. It includes:
 - the CLI minors;
