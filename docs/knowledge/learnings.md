@@ -4,6 +4,15 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Design pass (2026-11-06)
+- **`ThemeData.fontFamily` doesn't reach styles handed straight to a component theme.** `listTileTheme` was given styles from our own `TextTheme`, and every list row silently fell back to the default font; only a real-font render showed it. The family is set in `_style` itself.
+- **Goldens can't judge type.** They draw in the test font, so every word is a block, and long-looking subtitles there are short in reality. Judge copy and hierarchy from `loadRealFonts` renders, never from a golden.
+- **Atkinson Hyperlegible Next has no `→` (U+2192),** used in 28 strings ("Settings → Network"). Android and iOS fall back to a system font, but `flutter test` draws a box. Everything else in both ARB files is covered. DM-116 confirms it on a phone.
+- **`flutter_native_splash:create` rewrites untouched files with LF on Windows,** `Info.plist` and the storyboard included. They show as modified with an empty `git diff --numstat`; `git checkout` them. Binary changes and the two `v31` colours are the only real output of a colour change.
+- **`AnimatedContainer` turns a decoration's border into padding** (`Container` does, `DecoratedBox` doesn't). A pill that swapped one for the other grew 2 dp and overflowed the pseudo-locale sweep. Tween the decoration inside a `DecoratedBox`.
+- **Rows inside one panel are built together, so `scrollUntilVisible` stops early:** the row is in the tree while it is still off-screen, and the next tap misses it. Follow it with `ensureVisible`. A panel past the cache extent, on the other hand, isn't built at all, so scroll before `find`.
+- **A failed `Bash` heredoc can leave nothing applied or everything applied.** Write edit scripts to a file instead, and check `git status` after a shell error.
+
 ### Real-device run (2026-11-05)
 - **A fake that replaces a plugin also replaces the plugin's Dart.** `nsd`'s Dart side refuses a service name over 15 characters, and `_androidtvremote2._tcp` has 16, so every search failed on every phone while every test passed. Call `disableServiceTypeValidation(true)`. Rule: one test per plugin goes through the plugin's real Dart with only the channel mocked. Source: `nsd_tv_discovery_test.dart`, `the_real_plugin_browses_both_android_tv_service_types`.
 - **`developer.log` shows nothing in a release build.** A catch that only logs drops the error for real users.

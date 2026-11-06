@@ -4,6 +4,20 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #54 — 2026-11-06 — "Backlit": the visual identity pass
+- **The idea:** a good physical remote has dark moulded keys with legends lit from behind. The app's mark is already a ring around a disc with four carets, so the D-pad is that mark made into a control. The boldness goes there and into the touchpad; everything else stays quiet.
+- **Colour:** the brand accent `#3D5AFE`, the icon and the store art are unchanged. Neutral grey-black gave way to an ink derived from the brand hue (dark `#0B0D18` / `#141726` / `#1F2338` / `#2E3350`, accent `#7F96FF`; light `#F2F3FA` / `#FFFFFF` / `#E9EBF7` / `#CDD1E6`). The native splash follows `bg`, and its dark mark follows the dark accent.
+- **Type:** Atkinson Hyperlegible Next (400, 500, 600), with Atkinson Hyperlegible Mono (500) for the pairing code. It replaces "Inter or the system font". It was drawn so look-alike characters can't be confused, which is the actual problem with a six-character hex code and addresses read in a dim room. Both are SIL OFL with no reserved font name, about 250 KB bundled, and listed on the licence page.
+- **Relief is derived, not tokenised:** `Relief.of(colors, brightness)` works everything out from the palette, so colour styles, Theater Mode and dynamic colour get it for free. One light from above. `KeySurface` is the only moulded widget.
+- **Accent is rationed on the remote:** OK and the lit ring. The pad tabs are a recessed track with a raised key, because a block of accent on a navigation control outshouted the pad. Section titles lost their accent for the same reason.
+- **The status pill stays 48 dp high in every state.** While connected it drops its frame and reads as a lamp and a word. It never shrinks: a strip that grew on a reconnect would move the pad under the thumb, which costs more than the 20 dp it would free.
+- **Logo tiles keep `#141414`** (#53) and gain a 1 dp `outline` edge, or they melt into the new dark `bg`.
+- **`AppPanel`** groups rows on Settings, Your TVs and discovery. Sheets give `ListTile`s no padding of their own, so rows line up with the sheet title.
+- **Rejected:** soft double shadows (neumorphism: low contrast, and it fails the first principle in a dim room); a "deck" panel behind the controls (one accessory too many, and a layout risk in split and large-text forms); breathing or pulsing lamps (they never settle, and they are motion nobody asked for).
+- **Store art keeps Roboto captions** (P9-C11): only the screens inside the frames change.
+- **Why:** the owner asked for a full design pass. The app worked and was accessible but looked like stock Material 3, which doesn't help it beat Remote ATV on feel.
+- **Revisit:** a face that doesn't suit Malay (DM-113), or the owner preferring the older neutral look. `Relief` and the tokens are the only places to change.
+
 ### #53 — 2026-11-05 — Owner's real-device requests (P9-C14–C17)
 - **Every failure the user sees is recorded (C14, C17).** Each one goes through `safeRecordError` with a fixed reason, including catches that only called `developer.log`, which shows nothing in a release build. Routine offline and optional-feature failures stay silent. Failure screens fed by `AsyncValue` report once per failure through a listener, never in `build` (`session`, `devices read`, `apps read`). This supersedes Phase 8's "an Apps read error is shown, never reported", which had no reason behind it.
 - **The error log (C15).**
