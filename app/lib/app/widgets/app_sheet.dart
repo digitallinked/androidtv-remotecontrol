@@ -66,7 +66,12 @@ Future<T?> showAppSheet<T>({
                   AppSpacing.xl,
                   AppSpacing.xl,
                 ),
-                child: Builder(builder: builder),
+                // The sheet's padding is the rows' gutter: they line up with
+                // its title.
+                child: ListTileTheme.merge(
+                  contentPadding: EdgeInsets.zero,
+                  child: Builder(builder: builder),
+                ),
               ),
             ),
           ],

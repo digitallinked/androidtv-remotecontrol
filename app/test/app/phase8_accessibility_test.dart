@@ -96,6 +96,7 @@ final Map<String, Future<void> Function(WidgetTester t, _Look look)> _screens =
         await _tap(t, find.text('Enter IP address'));
         await t.pumpAndSettle();
         await t.enterText(find.byType(TextField), '999.1.1.1');
+        await t.pump();
         await _tap(t, find.text('Continue'));
         await t.pump();
         _expectOn(find.text('Enter an address like 192.168.1.20'));
@@ -727,8 +728,10 @@ void main() {
         await e.value(t, look);
         final labels = _fittedLabels(t);
         // The layout page's only FittedBox is its preview: a miniature of
-        // the remote, scaled down on purpose, whose labels aren't read.
-        if (e.key != 'remote_layout_page') {
+        // the remote, scaled down on purpose, whose labels aren't read. The
+        // Apps screen's were its monograms, and every app of the default row
+        // now draws a logo: `app_tile_test.dart` holds the monogram's fit.
+        if (e.key != 'remote_layout_page' && e.key != 'apps') {
           expect(labels, isNotEmpty, reason: '${e.key}: has fitted labels');
         }
         for (final label in labels) {

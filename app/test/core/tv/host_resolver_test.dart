@@ -47,6 +47,35 @@ void main() {
     });
   });
 
+  // Ruling P9-C14: a search that can't run stops IP-change recovery with
+  // nothing on screen, so it is recorded. A TV that isn't there is not.
+  test('a_stream_error_goes_to_on_error_and_a_timeout_does_not', () async {
+    final errors = <Object>[];
+    final f = FakeTvDiscoveries();
+    final failing = resolveHostByServiceName(
+      f.create,
+      'Living Room TV 3',
+      onError: (error, _) => errors.add(error),
+    );
+    await pumpEventQueue();
+    f.created.single.fail(StateError('mdns down'));
+    expect(await failing, isNull);
+    expect(errors, [isA<StateError>()]);
+
+    errors.clear();
+    fakeAsync((async) {
+      unawaited(
+        resolveHostByServiceName(
+          f.create,
+          'Living Room TV 3',
+          onError: (error, _) => errors.add(error),
+        ),
+      );
+      async.elapse(const Duration(seconds: 5));
+    });
+    expect(errors, isEmpty);
+  });
+
   test('stream_error_returns_null_and_stops', () async {
     final f = FakeTvDiscoveries();
     final result = resolveHostByServiceName(f.create, 'Living Room TV 3');

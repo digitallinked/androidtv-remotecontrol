@@ -8,16 +8,19 @@ part of 'ads_service.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The app's [AdsSdk]: Google Mobile Ads.
+/// The app's [AdsSdk]: Google Mobile Ads, reporting a G-cap failure to the
+/// crash reporter (Ruling P9-C13).
 
 @ProviderFor(adsSdk)
 final adsSdkProvider = AdsSdkProvider._();
 
-/// The app's [AdsSdk]: Google Mobile Ads.
+/// The app's [AdsSdk]: Google Mobile Ads, reporting a G-cap failure to the
+/// crash reporter (Ruling P9-C13).
 
 final class AdsSdkProvider extends $FunctionalProvider<AdsSdk, AdsSdk, AdsSdk>
     with $Provider<AdsSdk> {
-  /// The app's [AdsSdk]: Google Mobile Ads.
+  /// The app's [AdsSdk]: Google Mobile Ads, reporting a G-cap failure to the
+  /// crash reporter (Ruling P9-C13).
   AdsSdkProvider._()
     : super(
         from: null,
@@ -51,7 +54,7 @@ final class AdsSdkProvider extends $FunctionalProvider<AdsSdk, AdsSdk, AdsSdk>
   }
 }
 
-String _$adsSdkHash() => r'5277322c8a3d6fc431bb47574d954cb270fb8441';
+String _$adsSdkHash() => r'ceed2912e5750414b5219918a57d8697b77cb441';
 
 /// The ad unit ids of this build, flavor and platform.
 

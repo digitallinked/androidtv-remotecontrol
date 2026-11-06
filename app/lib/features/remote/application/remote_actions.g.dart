@@ -79,7 +79,7 @@ String _$remoteActionListenerHash() =>
 /// disposed instance refuses silently (returns `false`, no notice), so code
 /// that holds an instance across an async gap must use the return value.
 ///
-/// Rebuilt when the session, Smooth Press or haptics change; the old instance
+/// Rebuilt when the session, Natural hold or haptics change; the old instance
 /// is disposed, which releases an active hold, so a settings change or a TV
 /// switch in the middle of a hold never leaves a key stuck.
 
@@ -92,7 +92,7 @@ final remoteActionsProvider = RemoteActionsProvider._();
 /// disposed instance refuses silently (returns `false`, no notice), so code
 /// that holds an instance across an async gap must use the return value.
 ///
-/// Rebuilt when the session, Smooth Press or haptics change; the old instance
+/// Rebuilt when the session, Natural hold or haptics change; the old instance
 /// is disposed, which releases an active hold, so a settings change or a TV
 /// switch in the middle of a hold never leaves a key stuck.
 
@@ -105,7 +105,7 @@ final class RemoteActionsProvider
   /// disposed instance refuses silently (returns `false`, no notice), so code
   /// that holds an instance across an async gap must use the return value.
   ///
-  /// Rebuilt when the session, Smooth Press or haptics change; the old instance
+  /// Rebuilt when the session, Natural hold or haptics change; the old instance
   /// is disposed, which releases an active hold, so a settings change or a TV
   /// switch in the middle of a hold never leaves a key stuck.
   RemoteActionsProvider._()

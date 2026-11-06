@@ -56,4 +56,4 @@ final class PurchaseServiceProvider
   }
 }
 
-String _$purchaseServiceHash() => r'84d86d996ba4e6cfcdaa3a266dffecaf6f73e92f';
+String _$purchaseServiceHash() => r'25e2602d028e00c6538cf6406bb6fa09752c8fc2';

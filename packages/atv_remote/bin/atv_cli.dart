@@ -10,8 +10,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
+import 'package:atv_remote/src/cli/hold.dart';
 import 'package:atv_remote/src/cli/identity_store.dart';
 import 'package:atv_remote/src/cli/key_names.dart';
+import 'package:atv_remote/src/cli/messages.dart';
 
 const String _usage = '''
 Usage:
@@ -136,7 +138,8 @@ Future<int> _text(String host, String text) async {
   }
 }
 
-/// Presses [keyName] down, keeps it down for [rawMillis], then releases it.
+/// Presses [keyName] down, keeps it down for [rawMillis] or until Ctrl+C,
+/// then releases it.
 Future<int> _hold(String host, String keyName, String rawMillis) async {
   final keyCode = parseKeyName(keyName);
   if (keyCode == null) {
@@ -148,31 +151,39 @@ Future<int> _hold(String host, String keyName, String rawMillis) async {
     stderr.writeln('Invalid hold time "$rawMillis". Use 1 to 30000 ms.');
     return 1;
   }
-  final client = RemoteClient(
-    host: host,
-    identity: await _identity(),
-    deviceInfo: _deviceInfo,
+  return holdKey(
+    client: RemoteClient(
+      host: host,
+      identity: await _identity(),
+      deviceInfo: _deviceInfo,
+    ),
+    keyCode: keyCode,
+    keyName: keyName,
+    hold: Duration(milliseconds: millis),
+    interrupted: _interrupted(),
+    out: stdout,
+    err: stderr,
   );
-  try {
-    await client.connect();
-    client.sendKey(keyCode, direction: KeyDirection.startLong);
-    try {
-      await Future<void>.delayed(Duration(milliseconds: millis));
-    } finally {
-      // Never leave the key down on the TV, even if the wait was interrupted.
-      if (client.isReady) {
-        client.sendKey(keyCode, direction: KeyDirection.endLong);
-      }
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    stdout.writeln('Held $keyName for $millis ms.');
-    return 0;
-  } on RemoteConnectException catch (e) {
-    _printConnectError(e, host);
-    return 1;
-  } finally {
-    await client.close();
+}
+
+/// Completes on the first Ctrl+C (SIGINT), or SIGTERM where it can be
+/// watched.
+///
+/// Windows can watch SIGINT but not SIGTERM (`watch()` throws there), so
+/// SIGTERM is only watched elsewhere. Once watched, a signal no longer ends
+/// the process: the caller releases the key and exits itself.
+Future<void> _interrupted() {
+  final signals = [
+    ProcessSignal.sigint,
+    if (!Platform.isWindows) ProcessSignal.sigterm,
+  ];
+  final first = Completer<void>();
+  for (final signal in signals) {
+    signal.watch().first.then((_) {
+      if (!first.isCompleted) first.complete();
+    }).ignore();
   }
+  return first.future;
 }
 
 Future<int> _watch(String host) async {
@@ -203,13 +214,5 @@ Future<int> _watch(String host) async {
   }
 }
 
-void _printConnectError(RemoteConnectException e, String host) {
-  if (e.reason == RemoteCloseReason.certificateRejected) {
-    stderr.writeln('Not paired - run: pair $host');
-  } else {
-    stderr.writeln(
-      'Could not connect: ${e.reason.name}'
-      '${e.message == null ? '' : ' (${e.message})'}',
-    );
-  }
-}
+void _printConnectError(RemoteConnectException e, String host) =>
+    stderr.writeln(describeConnectError(e, host));

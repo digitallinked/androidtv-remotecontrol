@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 
 /// The smallest height of a settings row, in dp.
 const double kSettingsRowMin = 56;
 
-/// A section title in a settings list: accent-coloured, a screen-reader
-/// heading.
+/// A section title in a settings list: quiet, because the panel under it
+/// already shows the grouping and colour is kept for what can be pressed. A
+/// screen-reader heading.
 class SettingsSectionHeader extends StatelessWidget {
   /// Creates a header reading [title].
   const SettingsSectionHeader(this.title, {super.key});
@@ -20,16 +22,15 @@ class SettingsSectionHeader extends StatelessWidget {
       header: true,
       child: Padding(
         padding: const EdgeInsetsDirectional.fromSTEB(
-          AppSpacing.l,
-          AppSpacing.l,
-          AppSpacing.l,
-          AppSpacing.xs,
+          AppSpacing.xl,
+          AppSpacing.xl,
+          AppSpacing.xl,
+          AppSpacing.s,
         ),
         child: Text(
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: context.appColors.accent,
-            fontWeight: FontWeight.w600,
+            color: context.appColors.textSecondary,
           ),
         ),
       ),
@@ -173,7 +174,7 @@ class SettingsChoiceGroup<T> extends StatelessWidget {
               // A nullable T can be chosen as null; a non-null T never is.
               if (picked is T) onChanged(picked);
             },
-            child: Column(
+            child: AppPanel(
               children: [
                 for (final (choice, title, subtitle) in choices)
                   RadioListTile<T>(

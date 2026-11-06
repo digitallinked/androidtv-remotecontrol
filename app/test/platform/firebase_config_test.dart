@@ -38,6 +38,60 @@ void main() {
     expect(block.group(1), contains('com.google.firebase.crashlytics'));
   });
 
+  test(
+    'a_misplaced_google_services_file_is_reported_whatever_the_flavors_have',
+    () {
+      final gradle = read('android/app/build.gradle.kts');
+      // The Firebase if has no else-branch: the scan runs at top level,
+      // whether or not a flavor has its own file (Ruling P9-R3).
+      final block = RegExp(
+        r'\nif \(firebaseFlavors\.isNotEmpty\(\)\) \{.*?\n\}( else)?',
+        dotAll: true,
+      ).firstMatch(gradle);
+      expect(block, isNotNull);
+      expect(block!.group(1), isNull, reason: 'no else-branch');
+      expect(block.group(0), isNot(contains('unsupportedLocations')));
+      expect(gradle, contains('\nval unsupportedLocations = '));
+      expect(
+        gradle,
+        contains(
+          '\nunsupportedLocations.filter { '
+          'file(it + "google-services.json").exists() }.forEach {',
+        ),
+      );
+      // The locations: the module root, the build types and every
+      // flavor-and-build-type pair.
+      expect(
+        gradle,
+        contains(
+          'listOf("", "src/debug/", "src/release/", "src/profile/") +\n'
+          '    firebaseFlavorNames.flatMap { f -> '
+          r'listOf("Debug", "Release", "Profile").map { "src/$f$it/" } }',
+        ),
+      );
+      // Two wordings (Ruling P9-C2): with no flavor file the plugin isn't
+      // applied and the file really is ignored; once it is applied, the
+      // plugin may use the stray file for a flavor without its own.
+      expect(
+        gradle,
+        contains(
+          'val note = if (firebaseFlavors.isEmpty())\n'
+          '        "WARNING: ignoring '
+          r'app/android/app/${it}google-services.json; move it to '
+          'src/<flavor>/ (dev or prod) to enable Firebase."\n'
+          '    else\n'
+          '        "WARNING: '
+          r'app/android/app/${it}google-services.json is in a location this '
+          "build script doesn't manage. The Google Services plugin may use it "
+          'for a flavor that has no src/<flavor>/google-services.json, and '
+          "that flavor's Crashlytics mapping upload stays off. Move it to "
+          'src/<flavor>/ (dev or prod)."\n'
+          '    logger.quiet(note)',
+        ),
+      );
+    },
+  );
+
   test('firebase_collection_is_off_until_the_app_turns_it_on', () {
     final manifest = read('android/app/src/main/AndroidManifest.xml');
     for (final name in [
@@ -119,9 +173,11 @@ void main() {
 
     // It sits in Runner's buildPhases, after Resources.
     final runner = RegExp(
-      r'buildPhases = \(\n(\t+9740EEB61CF901F6004384FC.*?)\);',
+      r'/\* Runner \*/ = \{\n\t\t\tisa = PBXNativeTarget;.*?'
+      r'buildPhases = \((.*?)\);',
       dotAll: true,
     ).firstMatch(pbx)!.group(1)!;
+    expect(runner, contains('9740EEB61CF901F6004384FC /* Run Script */'));
     final lines = runner.split('\n').map((l) => l.trim()).toList();
     final resources = lines.indexWhere((l) => l.contains('/* Resources */'));
     final copy = lines.indexWhere((l) => l.contains('Copy Firebase config'));

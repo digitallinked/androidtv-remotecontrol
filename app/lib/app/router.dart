@@ -22,6 +22,7 @@ import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/settings/presentation/about_page.dart';
 import 'package:tv_remote/features/settings/presentation/appearance_page.dart';
+import 'package:tv_remote/features/settings/presentation/error_log_page.dart';
 import 'package:tv_remote/features/settings/presentation/help_page.dart';
 import 'package:tv_remote/features/settings/presentation/privacy_choices_page.dart';
 import 'package:tv_remote/features/settings/presentation/remote_behaviour_page.dart';
@@ -63,7 +64,7 @@ abstract final class AppRoutes {
   /// Settings: touchpad or D-pad, and the row above it.
   static const settingsRemoteLayout = '/settings/remote-layout';
 
-  /// Settings: haptics, Smooth Press, screen and keyboard.
+  /// Settings: haptics, Natural hold, screen and keyboard.
   static const settingsRemoteBehaviour = '/settings/remote-behaviour';
 
   /// Settings: troubleshooting and common questions.
@@ -71,6 +72,9 @@ abstract final class AppRoutes {
 
   /// Settings: version, licences and credits.
   static const settingsAbout = '/settings/about';
+
+  /// Settings: the error log, from Help.
+  static const settingsErrorLog = '/settings/error-log';
 
   /// Settings: usage statistics, crash reports and ads.
   static const settingsPrivacy = '/settings/privacy';
@@ -127,7 +131,7 @@ abstract final class AppRouteNames {
   /// Settings: touchpad or D-pad, and the row above it.
   static const settingsRemoteLayout = 'settings_remote_layout';
 
-  /// Settings: haptics, Smooth Press, screen and keyboard.
+  /// Settings: haptics, Natural hold, screen and keyboard.
   static const settingsRemoteBehaviour = 'settings_remote_behaviour';
 
   /// Settings: troubleshooting and common questions.
@@ -135,6 +139,9 @@ abstract final class AppRouteNames {
 
   /// Settings: version, licences and credits.
   static const settingsAbout = 'settings_about';
+
+  /// Settings: the error log, from Help.
+  static const settingsErrorLog = 'settings_error_log';
 
   /// Settings: usage statistics, crash reports and ads.
   static const settingsPrivacy = 'settings_privacy';
@@ -158,6 +165,7 @@ abstract final class AppRouteNames {
     settingsRemoteBehaviour,
     settingsHelp,
     settingsAbout,
+    settingsErrorLog,
     settingsPrivacy,
     paywall,
   };
@@ -321,6 +329,11 @@ GoRouter appRouter(Ref ref) {
             name: AppRouteNames.settingsAbout,
             path: 'about',
             pageBuilder: (_, state) => appPage(state, const AboutPage()),
+          ),
+          GoRoute(
+            name: AppRouteNames.settingsErrorLog,
+            path: 'error-log',
+            pageBuilder: (_, state) => appPage(state, const ErrorLogPage()),
           ),
           GoRoute(
             name: AppRouteNames.settingsPrivacy,

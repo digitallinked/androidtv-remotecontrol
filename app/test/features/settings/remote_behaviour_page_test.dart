@@ -18,7 +18,7 @@ final List<_Row> _rows = [
     write: (s, {required value}) => s.setHapticsEnabled(value),
   ),
   (
-    title: 'Smooth Press',
+    title: 'Natural hold',
     read: (s) => s.smoothPressEnabled,
     write: (s, {required value}) => s.setSmoothPressEnabled(value),
   ),

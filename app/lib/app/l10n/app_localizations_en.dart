@@ -535,7 +535,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Swipe to move, tap to select, tap with two fingers to go back.';
 
   @override
-  String get touchpadIdleHint => 'Swipe to move · Tap to select';
+  String get touchpadIdleHint => 'Swipe to move, tap to select';
 
   @override
   String get channelLabel => 'CH';
@@ -1006,7 +1006,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsRemoteBehaviourSubtitle =>
-      'Vibration, Smooth Press, screen and keyboard';
+      'Vibration, natural hold, screen and keyboard';
 
   @override
   String get settingsAppsSubtitle => 'Choose and order your app shortcuts';
@@ -1115,7 +1115,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'A short vibration when a key reaches the TV.';
 
   @override
-  String get behaviourSmoothPress => 'Smooth Press';
+  String get behaviourSmoothPress => 'Natural hold';
 
   @override
   String get behaviourSmoothPressSubtitle =>
@@ -1306,7 +1306,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyAdsInfo =>
-      'The free app shows a banner ad at the bottom of the Apps and Settings screens only.';
+      'The free app shows banner ads at the bottom of the Apps and Settings screens. An occasional full-screen ad may also appear when you leave Settings, but never while you pair a TV.';
 
   @override
   String get privacyAdsPremium => 'You have Premium, so the app shows no ads.';
@@ -1546,4 +1546,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String manageAppsMoved(String app, int position, int count) {
     return '$app moved to position $position of $count';
   }
+
+  @override
+  String get pageTitleErrorLog => 'Error log';
+
+  @override
+  String get errorLogNote =>
+      'This log stays on this phone. It goes nowhere unless you copy it.';
+
+  @override
+  String get errorLogEmpty => 'No errors recorded.';
+
+  @override
+  String get errorLogCopyAll => 'Copy all';
+
+  @override
+  String get errorLogCopied => 'Error log copied';
+
+  @override
+  String get errorLogCopyFailed => 'Couldn\'t copy the log. Try again.';
+
+  @override
+  String get errorLogClear => 'Clear';
+
+  @override
+  String get errorLogClearTitle => 'Clear the error log?';
+
+  @override
+  String get errorLogClearBody => 'This removes every entry from this phone.';
+
+  @override
+  String get errorLogSerious => 'Serious';
+
+  @override
+  String get errorLogNoReason => 'Unexpected error';
 }

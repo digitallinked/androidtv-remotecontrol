@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nsd/nsd.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/session/session_target.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
@@ -15,6 +17,7 @@ import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/application/discovery_controller.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 import 'package:tv_remote/features/discovery/presentation/discovery_screen.dart';
+import 'package:tv_remote/features/discovery/presentation/widgets/tv_list_tile.dart';
 import 'package:tv_remote/features/settings/presentation/settings_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
@@ -22,6 +25,7 @@ import '../../helpers/fake_tv_discovery.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/nonlinear_text_scaler.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 
 /// These saved TVs, paired.
@@ -129,18 +133,32 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
     final titles = t
-        .widgetList<ListTile>(find.byType(ListTile))
-        .map((tile) => (tile.title! as Text).data)
+        .widgetList<TvListTile>(find.byType(TvListTile))
+        .map((tile) => tile.tv.displayName)
         .toList();
     expect(titles, ['Attic', 'bedroom', 'Den']);
     expect(find.text('192.168.0.20'), findsNWidgets(3));
     expect(find.text('Enter IP address'), findsOneWidget);
   });
 
+  testWidgets('a_tv_row_is_an_enabled_button_to_a_screen_reader', (t) async {
+    // As a ListTile's was: the row is a custom one now (Ruling P9-C6).
+    final handle = t.ensureSemantics();
+    await pumpDiscover(t);
+    await found(t, [tv('Den')]);
+    final data = t.getSemantics(find.byType(TvListTile)).getSemanticsData();
+    expect(data.flagsCollection.isButton, isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    // The label is what the ListTile row gave: the name, then the address.
+    expect(data.label, 'Den\n192.168.0.20');
+    handle.dispose();
+  });
+
   testWidgets('tv_tiles_are_at_least_56dp_tall', (t) async {
     await pumpDiscover(t);
     await found(t, [tv('Den')]);
-    expect(t.getSize(find.byType(ListTile)).height, greaterThanOrEqualTo(56));
+    expect(t.getSize(find.byType(TvListTile)).height, greaterThanOrEqualTo(56));
   });
 
   testWidgets('legacy_tv_shows_update_service_help', (t) async {
@@ -421,6 +439,26 @@ void main() {
     await t.pumpAndSettle();
     expect(top(t).uri.path, AppRoutes.pair('Living Room TV 3'));
     expect(repo.writes, 0);
+  });
+
+  testWidgets('a_failed_merge_is_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final repo = InMemoryDeviceRepository([
+      savedTv(name: 'manual:192.168.0.20'),
+    ])..failNextWrite = StateError('disk full');
+    await pumpDiscover(
+      t,
+      overrides: [
+        ..._repoOverrides(repo),
+        crashReporterProvider.overrideWithValue(crashes),
+      ],
+    );
+    await found(t, [tv('Living Room TV 3')]);
+
+    await t.tap(find.text('Living Room TV 3'));
+    await t.pumpAndSettle();
+
+    expect(crashes.errors.single.reason, 'device merge');
   });
 
   testWidgets('a_failed_merge_says_so_and_stays', (t) async {

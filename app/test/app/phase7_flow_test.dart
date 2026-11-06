@@ -145,6 +145,13 @@ void main() {
       t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
       isTrue,
     );
+    await t.scrollUntilVisible(
+      find.text('Help'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await t.ensureVisible(find.text('Help'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Help'));
     await t.pumpAndSettle();
     expect(find.byType(HelpPage), findsOneWidget);
@@ -556,6 +563,8 @@ void main() {
     await t.pump();
     expect(find.byType(RemoteScreen), findsOneWidget);
     await t.pump(const Duration(milliseconds: 700));
+    await t.pump();
+    // The quick row's logos finish loading: a rebuild, not an animation.
     await t.pump();
     expect(find.text('Connected'), findsOneWidget);
     still('status change');

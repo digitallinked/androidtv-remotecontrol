@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
@@ -70,6 +71,54 @@ void main() {
 
       await expectLater(loadOrCreateIdentity(file), throwsA(anything));
       expect(file.readAsStringSync(), 'garbage');
+    });
+
+    test('a_failed_write_never_leaves_a_partial_identity', () async {
+      final file = cliIdentityFile(home: dir.path);
+
+      await expectLater(
+        loadOrCreateIdentity(
+          file,
+          writeFile: (tmp, contents) async {
+            await tmp.writeAsString(
+              contents.substring(0, contents.length ~/ 2),
+            );
+            throw const FileSystemException('disk full');
+          },
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(file.existsSync(), isFalse);
+    });
+
+    test('a_leftover_temp_file_is_replaced', () async {
+      final file = cliIdentityFile(home: dir.path);
+      final tmp = File('${file.path}.tmp')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('stale half-written identity');
+
+      final created = await loadOrCreateIdentity(file);
+
+      expect(tmp.existsSync(), isFalse);
+      final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      expect(json['certificatePem'], created.certificatePem);
+      expect(json['privateKeyPem'], created.privateKeyPem);
+    });
+
+    test('an_existing_identity_is_never_rewritten', () async {
+      final file = cliIdentityFile(home: dir.path);
+      final created = await loadOrCreateIdentity(file);
+      final before = file.readAsStringSync();
+      var writes = 0;
+
+      final loaded = await loadOrCreateIdentity(
+        file,
+        writeFile: (tmp, contents) async => writes++,
+      );
+
+      expect(writes, 0);
+      expect(loaded.publicParts.modulus, created.publicParts.modulus);
+      expect(file.readAsStringSync(), before);
     });
   });
 }

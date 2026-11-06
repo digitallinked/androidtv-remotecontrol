@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -21,8 +22,10 @@ import 'package:tv_remote/features/pairing/presentation/pairing_screen.dart';
 import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 
 import '../../helpers/fake_remote_session.dart';
+import '../../helpers/held_writes.dart';
 import '../../helpers/in_memory_device_repository.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_devices.dart';
 import '../../helpers/test_identity.dart';
 
@@ -332,6 +335,72 @@ void main() {
     expect(find.text('Saved'), findsOneWidget);
   });
 
+  testWidgets('failed_saves_and_removes_are_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    await pumpEdit(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await openEdit(t);
+    await t.enterText(field('Name on this phone'), 'Den');
+    repo.failNextWrite = StateError('disk full');
+    await tapSave(t);
+    expect(crashes.errors.single.reason, 'device save');
+
+    repo.failNextWrite = StateError('disk full');
+    await t.tap(find.text('Remove TV'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+    await t.pumpAndSettle();
+    expect(crashes.errors.last.reason, 'device remove');
+  });
+
+  // Ruling P9-C17: see add_app_sheet_test.
+  testWidgets('a_save_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldDeviceRepository(repo.saved.values);
+    repo = held;
+    await pumpEdit(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await openEdit(t);
+    await t.enterText(field('Name on this phone'), 'Den');
+    await t.tap(find.widgetWithText(FilledButton, 'Save'));
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'device save');
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('a_remove_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldDeviceRepository(repo.saved.values);
+    repo = held;
+    await pumpEdit(
+      t,
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await openEdit(t);
+    await t.tap(find.text('Remove TV'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'device remove');
+    expect(t.takeException(), isNull);
+  });
+
   testWidgets('remove_failure_keeps_the_tv_and_says_so', (t) async {
     await pumpEdit(t);
     await openEdit(t);
@@ -398,6 +467,23 @@ void main() {
       t.widget<TextField>(field('Name on this phone')).controller!.text,
       'Den',
     );
+  });
+
+  // Ruling P9-C17. Your TVs is underneath, showing the same failure.
+  testWidgets('a_read_error_is_recorded_once', (t) async {
+    final crashes = RecordingCrashReporter();
+    repo.watchError = StateError('disk');
+    await pumpEdit(
+      t,
+      location: AppRoutes.editDevice(_name),
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    expect(find.byType(DevicesScreen, skipOffstage: false), findsOneWidget);
+    expect(crashes.errors.single.reason, 'devices read');
+
+    await t.tap(find.widgetWithText(FilledButton, 'Try again'));
+    await t.pumpAndSettle();
+    expect(crashes.errors, hasLength(2));
   });
 
   testWidgets('a_read_error_shows_try_again_not_not_found', (t) async {

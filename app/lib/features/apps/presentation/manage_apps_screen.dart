@@ -8,6 +8,8 @@ import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_dialog.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/presentation/add_app_sheet.dart';
@@ -94,12 +96,22 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final failed = AppLocalizations.of(context).manageAppsSaveFailed;
     final actions = ref.read(shortcutActionsProvider);
+    // Read now: `ref` is gone if the screen closes during the write.
+    final crashes = ref.read(crashReporterProvider);
     if (next != null) setState(() => _items = next);
     _writes++;
     var ok = true;
     try {
       await write(actions);
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          crashes,
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       ok = false;
       _anyFailed = true;
       messenger
@@ -219,12 +231,21 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
     // bare read of its future would end with a disposed-provider error. A
     // listener keeps it alive for this one read.
     final sub = container.listen(shortcutsProvider.future, (_, _) {});
+    final crashes = container.read(crashReporterProvider);
     try {
       final base = await sub.read();
       final restored = _withApp(base, app, index);
       if (restored == null) return;
       await container.read(shortcutActionsProvider).replaceAll(restored);
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          crashes,
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       messenger.showAppSnackBar(
         SnackBar(content: Text(l10n.manageAppsSaveFailed)),
       );
@@ -280,8 +301,10 @@ class _ManageAppsScreenState extends ConsumerState<ManageAppsScreen> {
         child: CircularProgressIndicator(semanticsLabel: l10n.loadingLabel),
       );
     } else if (items == null || items.isEmpty) {
+      // Scrolls: at 200% text on a small phone the message is taller than
+      // the screen.
       body = Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
           child: Text(
             l10n.manageAppsEmpty,

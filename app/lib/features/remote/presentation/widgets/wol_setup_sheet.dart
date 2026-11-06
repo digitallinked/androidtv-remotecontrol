@@ -70,7 +70,8 @@ class _WolSetupFormState extends State<WolSetupForm> {
     try {
       await widget.onSave(mac);
     } on Object {
-      // The reason is not shown or logged: it can hold the user's data.
+      // The reason is never shown: it can hold the user's data. `onSave`
+      // records it (Ruling P9-C14).
       if (mounted) {
         setState(() {
           _saving = false;

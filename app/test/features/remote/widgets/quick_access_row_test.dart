@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
@@ -134,11 +136,14 @@ void main() {
     expect(find.byKey(const ValueKey('quick_app_current_dot')), findsNothing);
   });
 
-  testWidgets('app_tile_shows_letter_name_and_is_72_wide', (t) async {
+  testWidgets('app_tile_shows_logo_name_and_is_72_wide', (t) async {
     await pumpBar(t, QuickAccessRow.apps);
     final tile = find.byType(QuickAppTile).first;
     expect(t.getSize(tile).width, 72);
-    expect(find.descendant(of: tile, matching: find.text('N')), findsOneWidget);
+    expect(
+      find.descendant(of: tile, matching: find.byType(SvgPicture)),
+      findsOneWidget,
+    );
     expect(
       find.descendant(of: tile, matching: find.text('Netflix')),
       findsOneWidget,
@@ -172,7 +177,7 @@ void main() {
     }
     expect(
       colourKeyLabelColor(AppColors.dark.tvYellow),
-      const Color(0xFF0F1115),
+      const Color(0xFF0B0D18),
     );
     expect(colourKeyLabelColor(AppColors.dark.tvBlue), Colors.white);
   });
@@ -402,13 +407,9 @@ void main() {
       find.descendant(of: square, matching: find.byIcon(Icons.apps)),
       findsOneWidget,
     );
-    final material = t.widget<Material>(
-      find.descendant(of: square, matching: find.byType(Material)).first,
-    );
-    expect(material.color, AppColors.light.surface);
     expect(
-      (material.shape! as RoundedRectangleBorder).side.color,
-      AppColors.light.outline,
+      find.descendant(of: square, matching: find.byType(KeySurface)),
+      findsOneWidget,
     );
     // Right of every app tile, and outside the scrolling list.
     final list = t.getRect(find.byType(ListView));
@@ -429,10 +430,10 @@ void main() {
     await t.pumpAndSettle();
     expect(find.bySemanticsLabel('All apps'), findsNothing);
     expect(find.byKey(const ValueKey('quick_all_apps_square')), findsNothing);
-    // The list keeps its full gutter at the end.
+    // The last square stands on the gutter, in line with the pad's edge.
     final bar = t.getRect(find.byType(QuickAccessBar));
     expect(
-      t.getRect(find.byType(QuickAppTile).last).right,
+      t.getRect(find.byKey(const ValueKey('quick_app_square')).last).right,
       bar.right - AppSpacing.l,
     );
   });

@@ -89,18 +89,24 @@ class DiscoveryController extends _$DiscoveryController {
       state = current();
     }
 
+    final crashes = ref.read(crashReporterProvider);
     final subscription = discovery.watch().listen(
       (found) {
-        // Names of TVs nobody saved must not reach a crash report either
-        // (Ruling P8-R11). Crash collection runs only once Firebase is ready;
-        // without it there is nothing to scrub, so it isn't started here.
+        // Names of TVs nobody saved must not reach a crash report or the
+        // error log either (Ruling P8-R11). Bootstrap starts crash collection;
+        // where it hasn't, there is nothing to scrub, so it isn't started
+        // here.
         if (ref.mounted && ref.exists(crashCollectionProvider)) {
           ref.read(crashCollectionProvider.notifier).addDiscoveredTerms(found);
         }
         tvs = _sorted(found);
         publish();
       },
-      onError: (Object error) {
+      onError: (Object error, StackTrace stack) {
+        // The user sees a failed search, so it is recorded (Ruling P9-C14).
+        unawaited(
+          safeRecordError(crashes, error, stack, reason: 'discovery'),
+        );
         failed = true;
         publish();
       },

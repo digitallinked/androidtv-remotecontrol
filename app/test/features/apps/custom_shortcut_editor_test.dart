@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/features/apps/data/apps_data_providers.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
 
+import '../../helpers/held_writes.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
+import '../../helpers/recording_crash_reporter.dart';
 
 const _nameError = 'Enter a name of up to 30 characters.';
 const _packageError = 'Enter an app ID like com.example.app.';
@@ -28,6 +32,7 @@ void main() {
     List<AppEntry>? list,
     double textScale = 1,
     Brightness brightness = Brightness.light,
+    List<Override> overrides = const [],
   }) async {
     if (list != null) repo = InMemoryShortcutRepository(list);
     await pumpRouterApp(
@@ -38,7 +43,10 @@ void main() {
       prepareSettings: list == null
           ? null
           : (store) => store.setShortcutsSeeded(true),
-      overrides: [shortcutRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        shortcutRepositoryProvider.overrideWithValue(repo),
+        ...overrides,
+      ],
     );
     if (edit != null) {
       await t.tap(find.byTooltip('Edit $edit'));
@@ -368,6 +376,45 @@ void main() {
     await save(t);
     expect(find.text('New shortcut'), findsNothing);
     expect(repo.apps.last.name, 'Zed');
+  });
+
+  testWidgets('a_failed_edit_is_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    await pumpEditor(
+      t,
+      edit: 'Netflix',
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await type(t, _name, 'Films');
+    repo.failNextWrite = StateError('disk full');
+    await save(t);
+    expect(crashes.errors.single.reason, 'shortcut save');
+  });
+
+  // Ruling P9-C17: see add_app_sheet_test.
+  testWidgets('an_edit_that_fails_after_leaving_is_still_recorded', (t) async {
+    final crashes = RecordingCrashReporter();
+    final held = HeldShortcutRepository(repo.apps);
+    repo = held;
+    await pumpEditor(
+      t,
+      edit: 'Netflix',
+      overrides: [crashReporterProvider.overrideWithValue(crashes)],
+    );
+    await type(t, _name, 'Films');
+    final button = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(button);
+    await t.pumpAndSettle();
+    await t.tap(button);
+    await t.pump();
+
+    await leaveScreen(t);
+    held.gate.complete();
+    await t.pump();
+    await t.pump();
+
+    expect(crashes.errors.single.reason, 'shortcut save');
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('a_failed_edit_says_so_and_the_editor_stays_open', (t) async {

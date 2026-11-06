@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/key_labels.dart';
@@ -57,7 +58,9 @@ DpadRegion? dpadRegionAt(Offset local, Size size) {
   return d.dy < 0 ? DpadRegion.up : DpadRegion.down;
 }
 
-/// A round D-pad: four direction wedges around an OK disc (Ruling P4-R7).
+/// A round D-pad: four direction wedges around an OK disc (Ruling P4-R7),
+/// drawn as the app's mark made into a control (decision #54): a backlit ring
+/// that lights in the direction pressed, around the one accent key.
 ///
 /// A tap sends the key of the region under the finger. Holding a region for
 /// `kHoldThreshold` starts a hold on its key, and lifting (or a cancelled
@@ -205,6 +208,10 @@ class _DpadState extends State<Dpad> {
                 child: CustomPaint(
                   painter: _DpadPainter(
                     colors: colors,
+                    brightness: Theme.of(context).brightness,
+                    legend:
+                        Theme.of(context).textTheme.titleMedium ??
+                        const TextStyle(fontWeight: FontWeight.w600),
                     labels: labels,
                     pressed: _pressed,
                     textDirection: direction,
@@ -231,6 +238,8 @@ DpadRegion? dpadTintedRegion(CustomPainter? painter) =>
 class _DpadPainter extends CustomPainter {
   _DpadPainter({
     required this.colors,
+    required this.brightness,
+    required this.legend,
     required this.labels,
     required this.pressed,
     required this.textDirection,
@@ -238,12 +247,20 @@ class _DpadPainter extends CustomPainter {
   });
 
   final AppColors colors;
+  final Brightness brightness;
+  final TextStyle legend;
   final Map<DpadRegion, String> labels;
   final DpadRegion? pressed;
   final TextDirection textDirection;
   final ValueChanged<DpadRegion> onSemanticTap;
 
   static const double _sin45 = 0.7071067811865476;
+
+  /// How far in from the pad's edge the backlit ring runs.
+  static const double _ringInset = 10;
+
+  /// Space between a seam's ends and what they point at.
+  static const double _seamGap = 8;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -252,21 +269,56 @@ class _DpadPainter extends CustomPainter {
     final radius = diameter / 2;
     final centerRadius = dpadCenterRadius(diameter);
     final accent = colors.accent;
-    final tint = accent.withValues(alpha: 0.24);
+    final relief = Relief.of(colors, brightness);
+    final body = Rect.fromCircle(center: c, radius: radius);
 
+    // The pad, standing on its shadow: rim, then face.
     canvas
-      ..drawCircle(c, radius, Paint()..color = colors.surfaceRaised)
+      ..drawCircle(
+        c + const Offset(0, 3),
+        radius - 3,
+        Paint()
+          ..color = relief.shadow
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      )
+      ..drawCircle(c, radius, Paint()..shader = relief.rim.createShader(body))
       ..drawCircle(
         c,
-        radius - 0.5,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = colors.outline,
+        radius - 1,
+        Paint()..shader = relief.face.createShader(body),
       );
 
-    if (pressed != null && pressed != DpadRegion.center) {
-      final start = switch (pressed!) {
+    final ring = radius - _ringInset;
+    final seam = Paint()
+      ..strokeWidth = 1
+      ..color = colors.outline;
+    for (final (dx, dy) in const [
+      (_sin45, _sin45),
+      (-_sin45, _sin45),
+      (-_sin45, -_sin45),
+      (_sin45, -_sin45),
+    ]) {
+      final u = Offset(dx, dy);
+      canvas.drawLine(
+        c + u * (centerRadius + _seamGap),
+        c + u * (ring - _seamGap),
+        seam,
+      );
+    }
+
+    // The backlit ring, and where the thumb is, the part of it that lights
+    // up. Its arc stops short of the seams.
+    canvas.drawCircle(
+      c,
+      ring,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = accent.withValues(alpha: 0.32),
+    );
+    final lit = pressed;
+    if (lit != null && lit != DpadRegion.center) {
+      final start = switch (lit) {
         DpadRegion.right => -math.pi / 4,
         DpadRegion.down => math.pi / 4,
         DpadRegion.left => 3 * math.pi / 4,
@@ -281,36 +333,61 @@ class _DpadPainter extends CustomPainter {
           false,
         )
         ..close();
-      canvas.drawPath(wedge, Paint()..color = tint);
+      canvas.drawPath(
+        wedge,
+        Paint()..color = accent.withValues(alpha: 0.16),
+      );
+      final arc = Rect.fromCircle(center: c, radius: ring);
+      const trim = 0.09;
+      for (final paint in [
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 6
+          ..color = accent.withValues(alpha: 0.6)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 3
+          ..color = accent,
+      ]) {
+        canvas.drawArc(arc, start + trim, math.pi / 2 - 2 * trim, false, paint);
+      }
     }
 
-    canvas.drawCircle(c, centerRadius, Paint()..color = colors.surface);
-    if (pressed == DpadRegion.center) {
-      canvas.drawCircle(c, centerRadius, Paint()..color = tint);
+    // The OK key, the one spot of colour on the remote.
+    final down = lit == DpadRegion.center;
+    if (!down) {
+      canvas.drawCircle(
+        c + const Offset(0, 2),
+        centerRadius,
+        Paint()
+          ..color = relief.shadow
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
     }
     canvas.drawCircle(
       c,
-      centerRadius - 1,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = accent,
+      centerRadius,
+      Paint()..color = down ? Color.lerp(accent, colors.bg, 0.25)! : accent,
     );
+    _paintLegend(canvas, c, centerRadius);
 
     final chevron = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 3
-      ..color = colors.textPrimary;
-    final reach = (centerRadius + radius) / 2;
+      ..strokeWidth = 3;
+    final reach = (centerRadius + ring) / 2;
     final arm = math.max<double>(7, radius * 0.07);
-    for (final u in const [
-      Offset(0, -1),
-      Offset(0, 1),
-      Offset(-1, 0),
-      Offset(1, 0),
+    for (final (u, region) in const [
+      (Offset(0, -1), DpadRegion.up),
+      (Offset(0, 1), DpadRegion.down),
+      (Offset(-1, 0), DpadRegion.left),
+      (Offset(1, 0), DpadRegion.right),
     ]) {
+      chevron.color = region == lit ? accent : colors.textPrimary;
       final perp = Offset(-u.dy, u.dx);
       final base = c + u * reach;
       final back = base - u * arm * 0.4;
@@ -327,9 +404,42 @@ class _DpadPainter extends CustomPainter {
     }
   }
 
+  /// The OK key's word, shrunk to fit a language where it is longer.
+  void _paintLegend(Canvas canvas, Offset c, double keyRadius) {
+    final word = labels[DpadRegion.center];
+    if (word == null) return;
+    final room = keyRadius * 1.5;
+    TextPainter layout(double fontSize) => TextPainter(
+      text: TextSpan(
+        text: word,
+        style: legend.copyWith(
+          color: colors.onAccent,
+          fontSize: fontSize,
+          height: 1,
+        ),
+      ),
+      maxLines: 1,
+      textDirection: textDirection,
+    )..layout();
+    var fontSize = keyRadius * 0.62;
+    var text = layout(fontSize);
+    if (text.width > room) {
+      fontSize *= room / text.width;
+      text.dispose();
+      text = layout(fontSize);
+    }
+    text
+      ..paint(canvas, c - Offset(text.width / 2, text.height / 2))
+      ..dispose();
+  }
+
   @override
   bool shouldRepaint(_DpadPainter old) =>
-      old.pressed != pressed || old.colors != colors;
+      old.pressed != pressed ||
+      old.colors != colors ||
+      old.brightness != brightness ||
+      old.legend != legend ||
+      !mapEquals(old.labels, labels);
 
   /// Where each region comes in a screen reader's reading order.
   static const Map<DpadRegion, double> _readingOrder = {

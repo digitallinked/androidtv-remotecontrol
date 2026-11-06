@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -23,6 +24,7 @@ import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import '../../helpers/fake_remote_session.dart';
 import '../../helpers/in_memory_app_usage_repository.dart';
 import '../../helpers/in_memory_shortcut_repository.dart';
+import '../../helpers/recording_crash_reporter.dart';
 import '../../helpers/test_catalogue.dart';
 
 const _connected = TvConnectionState(status: ConnectionStatus.connected);
@@ -216,6 +218,16 @@ void main() {
       catalogue.complete();
       expect(await first, [_netflix]);
       expect(store.shortcutsSeeded, isTrue);
+    });
+
+    test('a_failed_seed_is_recorded', () async {
+      final crashes = RecordingCrashReporter();
+      shortcutRepo.failNextWrite = StateError('disk full');
+      final c = makeContainer(
+        overrides: [crashReporterProvider.overrideWithValue(crashes)],
+      );
+      expect(await c.read(shortcutsProvider.future), isEmpty);
+      expect(crashes.errors.single.reason, 'shortcut seed');
     });
 
     test('a_failed_seed_retries_next_time', () async {

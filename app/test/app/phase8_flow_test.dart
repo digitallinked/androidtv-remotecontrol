@@ -40,6 +40,7 @@ import 'package:tv_remote/features/remote/presentation/remote_screen.dart';
 import 'package:tv_remote/features/settings/presentation/help_page.dart';
 
 import '../helpers/a11y.dart';
+import '../helpers/existing_database.dart';
 import '../helpers/fake_ads_overrides.dart';
 import '../helpers/fake_config_source.dart';
 import '../helpers/fake_pairing_client.dart';
@@ -291,6 +292,8 @@ _routes = {
       _pump(t, l, AppRoutes.settingsRemoteBehaviour),
   AppRouteNames.settingsHelp: (t, l) => _pump(t, l, AppRoutes.settingsHelp),
   AppRouteNames.settingsAbout: (t, l) => _pump(t, l, AppRoutes.settingsAbout),
+  AppRouteNames.settingsErrorLog: (t, l) =>
+      _pump(t, l, AppRoutes.settingsErrorLog),
   AppRouteNames.settingsPrivacy: (t, l) =>
       _pump(t, l, AppRoutes.settingsPrivacy),
   AppRouteNames.paywall: (t, l) => _pump(
@@ -445,7 +448,9 @@ void main() {
           await store.setLocaleCode(code);
           return store;
         },
-        openDatabase: () => AppDatabase(NativeDatabase.memory()),
+        // A relaunch: the earlier run's database, so the onboarding and
+        // seeded flags stand (Ruling P9-R6).
+        openDatabase: await existingDatabases(),
         overrides: mergeOverrides(platformFakes, [
           ...fakeAdsOverrides(),
           remoteConfigSourceProvider.overrideWithValue(FakeConfigSource({})),
@@ -469,30 +474,28 @@ void main() {
       expect(find.text(l.statusConnected), findsOneWidget);
       expect(reporter.delegate, isA<CompositeCrashReporter>());
 
-      unawaited(_containerOf(t).read(appRouterProvider).push(AppRoutes.apps));
-      // At once: a frame for the push and one for the failed stream, not
-      // after ~38 s of retries.
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 100));
-      expect(find.text(l.appsLoadFailed), findsOneWidget);
-      await t.pumpAndSettle();
-      expect(find.text(l.appsLoadFailed), findsOneWidget);
-
-      // In production an Apps read error is shown, never reported.
-      expect(
-        crashSink.errors,
-        isEmpty,
-        reason: 'an Apps read error is shown, never reported',
-      );
-
-      // If the storage error were reported (by an error handler, as a
-      // framework error, or as a caught error), it would arrive scrubbed:
-      // the real bootstrap seeded the scrubber. The log reporter's console
-      // echo is captured, so the test output stays clean.
+      // The log reporter's console echo is captured, so the test output
+      // stays clean.
       final echoed = <String>[];
       final print = debugPrint;
       debugPrint = (message, {wrapWidth}) => echoed.add('$message');
       try {
+        unawaited(_containerOf(t).read(appRouterProvider).push(AppRoutes.apps));
+        // At once: a frame for the push and one for the failed stream, not
+        // after ~38 s of retries.
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 100));
+        expect(find.text(l.appsLoadFailed), findsOneWidget);
+        await t.pumpAndSettle();
+        expect(find.text(l.appsLoadFailed), findsOneWidget);
+
+        // A failure the user sees is reported (Ruling P9-C17), once, scrubbed
+        // by the real chain.
+        expect(crashSink.errors, hasLength(1));
+        expect(crashSink.errors.single.reason, 'apps read');
+
+        // So is the same storage error by an error handler, as a framework
+        // error or as a caught error: the real bootstrap seeded the scrubber.
         await reporter.recordFlutterError(
           const FlutterErrorDetails(exception: disk),
           fatal: true,
@@ -501,9 +504,9 @@ void main() {
       } finally {
         debugPrint = print;
       }
-      expect(echoed, hasLength(2), reason: 'both were logged here');
+      expect(echoed, hasLength(3), reason: 'all were logged here');
 
-      expect(crashSink.errors, hasLength(2));
+      expect(crashSink.errors, hasLength(3));
       final sent = [
         for (final e in crashSink.errors) ...[
           e.error.toString(),
@@ -691,6 +694,8 @@ void main() {
         reason: '$code: the remote opens in one frame',
       );
       await t.pump(const Duration(milliseconds: 700));
+      await t.pump();
+      // The quick row's logos finish loading: a rebuild, not an animation.
       await t.pump();
       expect(find.text(l.statusConnected), findsOneWidget);
       still('demo connected');

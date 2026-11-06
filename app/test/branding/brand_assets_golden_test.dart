@@ -9,8 +9,8 @@ import 'brand_mark.dart';
 /// The light accent `#3D5AFE`.
 const Color _accent = Color(0xFF3D5AFE);
 
-/// The dark accent `#6C8CFF`.
-const Color _accentDark = Color(0xFF6C8CFF);
+/// The dark accent `#7F96FF`.
+const Color _accentDark = Color(0xFF7F96FF);
 
 const Color _white = Color(0xFFFFFFFF);
 

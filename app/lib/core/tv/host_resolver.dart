@@ -35,6 +35,7 @@ Future<String?> resolveHostByServiceName(
   TvDiscoveryFactory createDiscovery,
   String serviceName, {
   Duration timeout = const Duration(seconds: 4),
+  void Function(Object error, StackTrace stack)? onError,
 }) async {
   final discovery = createDiscovery();
   try {
@@ -50,9 +51,11 @@ Future<String?> resolveHostByServiceName(
         })
         .firstWhere((host) => host != null, orElse: () => null)
         .timeout(timeout, onTimeout: () => null);
-  } on Object {
+  } on Object catch (error, stack) {
     // A discovery error means the host can't be resolved right now. The
-    // caller falls back to the address it already has.
+    // caller falls back to the address it already has. A timeout isn't one:
+    // that is only a TV that isn't there (Ruling P9-C14).
+    onError?.call(error, stack);
     return null;
   } finally {
     await discovery.stop();

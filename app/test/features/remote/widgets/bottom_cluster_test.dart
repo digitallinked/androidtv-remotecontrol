@@ -151,6 +151,6 @@ void main() {
     ];
     final left = rects.map((r) => r.left).reduce((a, b) => a < b ? a : b);
     final right = rects.map((r) => r.right).reduce((a, b) => a > b ? a : b);
-    expect(right - left, lessThanOrEqualTo(BottomCluster.width));
+    expect(right - left, lessThanOrEqualTo(BottomCluster.maxWidth));
   });
 }

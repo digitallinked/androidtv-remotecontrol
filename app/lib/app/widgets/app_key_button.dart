@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 
 /// A remote-control key: a rounded square with an icon, raised by default.
@@ -92,6 +93,12 @@ class _AppKeyButtonState extends State<AppKeyButton> {
     widget.onLongPressEnd?.call();
   }
 
+  /// [material] on a moulded key, unless the key was given a colour of its
+  /// own: a rocker's keys sit flat on the rocker.
+  Widget _moulded(Widget material) => widget.color != null
+      ? material
+      : KeySurface(radius: AppRadii.key, pressed: _pressed, child: material);
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -136,25 +143,27 @@ class _AppKeyButtonState extends State<AppKeyButton> {
             scale: _pressed ? AppMotion.pressScale : 1,
             duration: duration,
             curve: AppMotion.curve,
-            child: Material(
-              color: widget.color ?? colors.surfaceRaised,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadii.key),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _InkLayer(
-                onPointerDown: () => _setPressed(true),
-                onPointerUp: () => _setPressed(false),
-                onPointerCancel: () {
-                  _endHold();
-                  _setPressed(false);
-                },
-                child: IconTheme.merge(
-                  data: IconThemeData(color: colors.textPrimary),
-                  child: Center(
-                    widthFactor: 1,
-                    heightFactor: 1,
-                    child: widget.icon,
+            child: _moulded(
+              Material(
+                color: widget.color ?? Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.key),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _InkLayer(
+                  onPointerDown: () => _setPressed(true),
+                  onPointerUp: () => _setPressed(false),
+                  onPointerCancel: () {
+                    _endHold();
+                    _setPressed(false);
+                  },
+                  child: IconTheme.merge(
+                    data: IconThemeData(color: colors.textPrimary),
+                    child: Center(
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: widget.icon,
+                    ),
                   ),
                 ),
               ),

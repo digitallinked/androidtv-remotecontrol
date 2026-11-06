@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/core/config/service_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/purchases/revenuecat_purchase_service.dart';
 import 'package:tv_remote/core/purchases/unavailable_purchase_service.dart';
 
@@ -239,9 +243,12 @@ PurchaseService purchaseService(Ref ref) {
       .watch(serviceConfigProvider)
       .revenueCatKey(defaultTargetPlatform);
   if (key == null) return const UnavailablePurchaseService();
+  final crashes = ref.watch(crashReporterProvider);
   final service = RevenueCatPurchaseService(
     apiKey: key,
     debugLogs: ref.watch(flavorProvider) == Flavor.dev,
+    onError: (error, stack, reason) =>
+        unawaited(safeRecordError(crashes, error, stack, reason: reason)),
   );
   ref.onDispose(service.dispose);
   return service;

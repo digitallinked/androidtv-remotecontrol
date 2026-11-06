@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/apps/data/app_usage_repository.dart';
@@ -24,12 +26,16 @@ part 'shortcuts.g.dart';
 /// tries again.
 ///
 /// The flag lives in the preferences, which an iPhone restore or Quick Start
-/// brings back without the database (Ruling P8-R1). A store created in this
-/// run is seeded whatever the flag says.
+/// brings back without the database (Ruling P8-R1). Bootstrap clears it when
+/// a run creates the database (Ruling P9-R6), so a first start that fails
+/// and is retried with a new database instance still seeds. A store created
+/// in this run is also seeded whatever the flag says (`isNewStore()`, the
+/// second guard).
 @Riverpod(keepAlive: true)
 Future<void> shortcutsSeed(Ref ref) async {
   final store = ref.watch(settingsStoreProvider);
   final repository = ref.watch(shortcutRepositoryProvider);
+  final crashes = ref.read(crashReporterProvider);
   if (store.shortcutsSeeded) {
     // Seeded already (every start after the first): the catalogue is not
     // even read, unless the store is new.
@@ -53,8 +59,12 @@ Future<void> shortcutsSeed(Ref ref) async {
       await repository.seedIfEmpty(catalogue.defaultShortcutsFor(region));
     }
     await store.setShortcutsSeeded(true);
-  } on Object {
-    // Retried on the next launch.
+  } on Object catch (error, stack) {
+    // Retried on the next launch. The user sees an empty Apps row until
+    // then, so it is recorded (Ruling P9-C14).
+    unawaited(
+      safeRecordError(crashes, error, stack, reason: 'shortcut seed'),
+    );
   }
 }
 

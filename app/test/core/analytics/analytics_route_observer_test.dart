@@ -102,6 +102,8 @@ void main() {
       100,
       scrollable: find.byType(Scrollable).first,
     );
+    await t.ensureVisible(row);
+    await t.pumpAndSettle();
     await t.tap(row);
     await t.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);

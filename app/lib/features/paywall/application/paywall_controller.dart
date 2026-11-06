@@ -6,6 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/config/app_config.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/purchases/premium.dart';
 import 'package:tv_remote/core/purchases/purchase_service.dart';
 import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
@@ -159,11 +161,13 @@ class PaywallController extends _$PaywallController {
   }
 
   Future<void> _load(PurchaseService service) async {
+    final crashes = ref.read(crashReporterProvider);
     PremiumOffer? offer;
     try {
       offer = await service.loadOffer();
-    } on Object catch (error) {
+    } on Object catch (error, stack) {
       developer.log('loading plans failed', name: 'paywall', error: error);
+      unawaited(safeRecordError(crashes, error, stack, reason: 'paywall'));
     }
     if (!ref.mounted || state is PaywallActive) return;
     if (offer == null || offer.plans.isEmpty) {
@@ -225,13 +229,15 @@ class PaywallController extends _$PaywallController {
     final service = ref.read(purchaseServiceProvider);
     final premium = ref.read(premiumProvider.notifier);
     final analytics = ref.read(appAnalyticsProvider.notifier);
+    final crashes = ref.read(crashReporterProvider);
     _setBusy(PaywallBusy.purchasing);
     PurchaseOutcome outcome = const PurchaseFailed(PurchaseFailure.unknown);
     try {
       try {
         outcome = await service.purchase(kind);
-      } on Object catch (error) {
+      } on Object catch (error, stack) {
         developer.log('purchase failed', name: 'paywall', error: error);
+        unawaited(safeRecordError(crashes, error, stack, reason: 'paywall'));
         outcome = const PurchaseFailed(PurchaseFailure.unknown);
       }
       if (outcome case Purchased(:final entitlement)) {
@@ -253,13 +259,15 @@ class PaywallController extends _$PaywallController {
     if (_busyWith != null) return null;
     final service = ref.read(purchaseServiceProvider);
     final analytics = ref.read(appAnalyticsProvider.notifier);
+    final crashes = ref.read(crashReporterProvider);
     _setBusy(PaywallBusy.restoring);
     RestoreOutcome outcome;
     try {
       try {
         outcome = await service.restore();
-      } on Object catch (error) {
+      } on Object catch (error, stack) {
         developer.log('restore failed', name: 'paywall', error: error);
+        unawaited(safeRecordError(crashes, error, stack, reason: 'paywall'));
         outcome = RestoreOutcome.failed;
       }
       if (outcome == RestoreOutcome.restoredPremium) {

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/scroll_when_short.dart';
 import 'package:tv_remote/core/analytics/analytics_events.dart';
 import 'package:tv_remote/core/analytics/app_analytics.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -147,75 +148,80 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       },
       child: Scaffold(
         body: SafeArea(
-          child: Column(
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: AppSizes.touchMin,
-                ),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: AppSpacing.s,
+          // Below this the card has no room left between Skip and the
+          // buttons; it is well under what any phone gives the page.
+          child: ScrollWhenShort(
+            minHeight: 480,
+            child: Column(
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: AppSizes.touchMin,
                   ),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    // On the last card Skip is hidden but keeps its size, so
-                    // the cards don't change height at large text.
-                    child: Visibility(
-                      visible: !_isLast,
-                      maintainSize: true,
-                      maintainAnimation: true,
-                      maintainState: true,
-                      child: TextButton(
-                        onPressed: () => unawaited(_finish(_Exit.skip)),
-                        child: Text(l10n.onboardingSkip),
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: AppSpacing.s,
                     ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: PageView(
-                  controller: _pages,
-                  onPageChanged: (page) => setState(() => _index = page),
-                  children: [
-                    for (final kind in _cards) OnboardingCard(kind: kind),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.xl,
-                  AppSpacing.s,
-                  AppSpacing.xl,
-                  AppSpacing.l,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    OnboardingDots(count: _cards.length, index: _index),
-                    const SizedBox(height: AppSpacing.xl),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _primary,
-                        child: Text(
-                          _isLast
-                              ? l10n.onboardingGetStarted
-                              : l10n.onboardingNext,
-                          textAlign: TextAlign.center,
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      // On the last card Skip is hidden but keeps its size, so
+                      // the cards don't change height at large text.
+                      child: Visibility(
+                        visible: !_isLast,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: TextButton(
+                          onPressed: () => unawaited(_finish(_Exit.skip)),
+                          child: Text(l10n.onboardingSkip),
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s),
-                    TextButton(
-                      onPressed: () => unawaited(_finish(_Exit.demo)),
-                      child: Text(l10n.onboardingTryDemo),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: PageView(
+                    controller: _pages,
+                    onPageChanged: (page) => setState(() => _index = page),
+                    children: [
+                      for (final kind in _cards) OnboardingCard(kind: kind),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.xl,
+                    AppSpacing.s,
+                    AppSpacing.xl,
+                    AppSpacing.l,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      OnboardingDots(count: _cards.length, index: _index),
+                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _primary,
+                          child: Text(
+                            _isLast
+                                ? l10n.onboardingGetStarted
+                                : l10n.onboardingNext,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      TextButton(
+                        onPressed: () => unawaited(_finish(_Exit.demo)),
+                        child: Text(l10n.onboardingTryDemo),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

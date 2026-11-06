@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:atv_remote/atv_remote.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -145,6 +148,132 @@ void main() {
     );
     storage.throwOnWrite = null;
     expect((await s.loadOrCreate()).certificatePem, fixture.certificatePem);
+  });
+
+  // Ruling P9-C8: a fresh database forgets the identity, so a reinstall on
+  // the same iPhone (whose keychain outlives the app) gets a new one.
+  test(
+    'forget_deletes_both_halves_and_the_next_load_makes_a_new_identity',
+    () async {
+      final storage = InMemorySecureKeyValueStore();
+      var n = 0;
+      final store = IdentityStore(
+        storage,
+        generate: () async => n++ == 0 ? fixture : fixture2,
+      );
+      expect(
+        (await store.loadOrCreate()).certificatePem,
+        fixture.certificatePem,
+      );
+
+      await store.forget();
+
+      expect(storage.values, isEmpty);
+      // The same instance doesn't hand back the forgotten identity.
+      expect(
+        (await store.loadOrCreate()).certificatePem,
+        fixture2.certificatePem,
+      );
+      expect(
+        storage.values[IdentityStore.certificateKey],
+        fixture2.certificatePem,
+      );
+    },
+  );
+
+  // Re-review Minor A: a keychain delete that never finishes must not leave
+  // pairing waiting forever. The load fails like an unreadable store, so
+  // pairing shows "identity unavailable" with Try again, and it never makes
+  // an identity the late delete could remove.
+  test('a_forget_that_never_finishes_fails_the_load_after_its_bound', () {
+    fakeAsync((async) {
+      final keychain = Completer<void>();
+      final storage = InMemorySecureKeyValueStore()
+        ..values.addAll({
+          IdentityStore.certificateKey: fixture.certificatePem,
+          IdentityStore.privateKeyKey: fixture.privateKeyPem,
+        })
+        ..deleteGate = keychain.future;
+      var generated = 0;
+      final store = IdentityStore(
+        storage,
+        generate: () async {
+          generated++;
+          return fixture2;
+        },
+      );
+      unawaited(store.forget().then<void>((_) {}, onError: (_) {}));
+
+      Object? failure;
+      ClientIdentity? loaded;
+      unawaited(
+        store.loadOrCreate().then(
+          (id) => loaded = id,
+          onError: (Object e) => failure = e,
+        ),
+      );
+      async.elapse(
+        IdentityStore.forgetWaitTimeout - const Duration(milliseconds: 1),
+      );
+      expect(failure, isNull, reason: 'the delete is given its time');
+      expect(loaded, isNull);
+
+      async.elapse(const Duration(milliseconds: 1));
+      expect(failure, isA<IdentityStoreException>());
+      expect(loaded, isNull);
+      expect(generated, 0, reason: 'no identity the late delete could remove');
+
+      // Try again once the keychain answers: the delete finishes, and the
+      // load makes a new identity that stays.
+      keychain.complete();
+      async.flushMicrotasks();
+      unawaited(store.loadOrCreate().then((id) => loaded = id));
+      async.flushMicrotasks();
+      expect(loaded?.certificatePem, fixture2.certificatePem);
+      expect(
+        storage.values[IdentityStore.certificateKey],
+        fixture2.certificatePem,
+      );
+    });
+  });
+
+  // Re-review Minor B: a forget that fails doesn't stop a later load.
+  test('a_failed_forget_still_lets_the_next_load_complete', () async {
+    final storage = InMemorySecureKeyValueStore()
+      ..throwOnDelete = PlatformException(code: 'keychain');
+    final store = IdentityStore(storage, generate: () async => fixture);
+
+    await expectLater(store.forget(), throwsA(isA<PlatformException>()));
+    storage.throwOnDelete = null;
+
+    final id = await store.loadOrCreate();
+
+    expect(id.certificatePem, fixture.certificatePem);
+    expect(
+      storage.values[IdentityStore.certificateKey],
+      fixture.certificatePem,
+    );
+  });
+
+  test('forget_tries_both_keys_and_rethrows_a_failed_delete', () async {
+    final storage = InMemorySecureKeyValueStore()
+      ..values.addAll({
+        IdentityStore.certificateKey: fixture.certificatePem,
+        IdentityStore.privateKeyKey: fixture.privateKeyPem,
+      })
+      ..throwOnDelete = PlatformException(code: 'x');
+
+    await expectLater(
+      IdentityStore(storage).forget(),
+      throwsA(isA<PlatformException>()),
+    );
+    expect(
+      storage.deleted,
+      unorderedEquals([
+        IdentityStore.certificateKey,
+        IdentityStore.privateKeyKey,
+      ]),
+    );
   });
 
   test('ios_keychain_item_never_leaves_this_device', () {

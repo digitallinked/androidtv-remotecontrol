@@ -488,7 +488,7 @@ void main() {
       // hint). The test font is Ahem, one em per glyph, so the cap binds here
       // where a real font would fit: this proves the cap is 2 lines and the
       // text ends in an ellipsis rather than overflowing.
-      final hint = find.text('Swipe to move · Tap to select');
+      final hint = find.text('Swipe to move, tap to select');
       expect(hint, findsOneWidget);
       final text = t.widget<Text>(hint);
       expect(text.maxLines, 2);

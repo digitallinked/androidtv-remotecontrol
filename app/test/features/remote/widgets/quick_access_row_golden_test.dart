@@ -55,6 +55,8 @@ void main() {
         brightness: b,
         size: const Size(390, 380),
       );
+      // The logos load after the first frame.
+      await t.pumpAndSettle();
       await expectLater(
         find.byKey(const ValueKey('rows')),
         matchesGoldenFile('goldens/quick_access_rows_${b.name}.png'),

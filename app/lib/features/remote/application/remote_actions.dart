@@ -26,7 +26,7 @@ sealed class RemoteActionEvent {
 }
 
 /// A key press was sent. For a hold this is the first send only (its
-/// direction is `startLong` with Smooth Press, `short` when repeating);
+/// direction is `startLong` with Natural hold, `short` when repeating);
 /// repeats and releases are not reported.
 final class KeySent extends RemoteActionEvent {
   /// Creates the event.
@@ -117,7 +117,7 @@ RemoteActionListener remoteActionListener(Ref ref) {
 }
 
 /// Every press of a remote control goes through here: it sends the key,
-/// handles holds (Smooth Press or repeat) with a stuck-key guard, fires the
+/// handles holds (Natural hold or repeat) with a stuck-key guard, fires the
 /// haptics, and refuses commands while the TV isn't connected (Rulings
 /// P4-R3, P4-R4, P4-R6).
 ///
@@ -154,7 +154,7 @@ class RemoteActions implements RemoteInput {
     KeyCodes.channelDown,
   };
 
-  /// The holdable keys that repeat when Smooth Press is off. The centre key
+  /// The holdable keys that repeat when Natural hold is off. The centre key
   /// doesn't: its hold is a single press.
   static const Set<int> repeatableKeys = {
     KeyCodes.dpadUp,
@@ -336,7 +336,7 @@ class RemoteActions implements RemoteInput {
 /// disposed instance refuses silently (returns `false`, no notice), so code
 /// that holds an instance across an async gap must use the return value.
 ///
-/// Rebuilt when the session, Smooth Press or haptics change; the old instance
+/// Rebuilt when the session, Natural hold or haptics change; the old instance
 /// is disposed, which releases an active hold, so a settings change or a TV
 /// switch in the middle of a hold never leaves a key stuck.
 @riverpod

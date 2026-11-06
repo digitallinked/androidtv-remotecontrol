@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:atv_remote/atv_remote.dart';
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +15,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import '../../helpers/existing_database.dart';
 import '../../helpers/fake_ads_overrides.dart';
 import '../../helpers/fake_ads_sdk.dart';
 import '../../helpers/fake_config_source.dart';
@@ -58,7 +58,8 @@ void main() {
             (ref) => Stream.value(const <SavedDevice>[]),
           ),
         ],
-        openDatabase: () => AppDatabase(NativeDatabase.memory()),
+        // A relaunch (launch count 2): the earlier run's database.
+        openDatabase: await existingDatabases(),
       ),
     );
     await t.pumpAndSettle();

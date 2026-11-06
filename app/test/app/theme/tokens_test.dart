@@ -34,10 +34,10 @@ void main() {
   }
 
   test('token_values_match_design_system', () {
-    expect(AppColors.dark.bg, const Color(0xFF0F1115));
-    expect(AppColors.light.textSecondary, const Color(0xFF4A5263));
+    expect(AppColors.dark.bg, const Color(0xFF0B0D18));
+    expect(AppColors.light.textSecondary, const Color(0xFF474C68));
     expect(AppColors.light.dangerText, const Color(0xFFB83A3A));
-    expect(AppColors.dark.onAccent, const Color(0xFF0F1115));
+    expect(AppColors.dark.onAccent, const Color(0xFF0B0D18));
     expect(AppColors.light.tvYellow, const Color(0xFFF5D90A));
     expect((AppRadii.key, AppRadii.card, AppRadii.sheet), (20.0, 16.0, 28.0));
     expect(

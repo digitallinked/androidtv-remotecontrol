@@ -5,12 +5,26 @@ import 'package:flutter/services.dart' show rootBundle;
 ///
 /// The Apache-2.0 licence of the androidtvremote2 project is bundled as an
 /// asset because our protocol message definitions derive from that project.
-/// Call it once at startup, before `runApp`.
+/// The notices of the two collections the app logos come from are bundled
+/// too (Ruling P9-C16), and so is the licence of the bundled typefaces. Call
+/// it once at startup, before `runApp`.
 void registerAppLicenses() {
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(
       const ['androidtvremote2'],
       await rootBundle.loadString('assets/licenses/androidtvremote2.txt'),
+    );
+    yield LicenseEntryWithLineBreaks(
+      const ['Simple Icons'],
+      await rootBundle.loadString('assets/licenses/simple-icons.txt'),
+    );
+    yield LicenseEntryWithLineBreaks(
+      const ['selfh.st/icons'],
+      await rootBundle.loadString('assets/licenses/selfhst-icons.txt'),
+    );
+    yield LicenseEntryWithLineBreaks(
+      const ['Atkinson Hyperlegible Next', 'Atkinson Hyperlegible Mono'],
+      await rootBundle.loadString('assets/licenses/atkinson-hyperlegible.txt'),
     );
   });
 }

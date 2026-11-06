@@ -19,19 +19,25 @@ A one-handed, eyes-on-the-TV remote. Every decision serves: **find the control w
 ## Tokens (`app/lib/app/theme/tokens.dart`)
 | Token | Dark | Light |
 |---|---|---|
-| bg | `#0F1115` | `#F6F7F9` |
-| surface | `#181B21` | `#FFFFFF` |
-| surfaceRaised (keys) | `#232731` | `#ECEEF2` |
-| outline | `#2E3340` | `#D5D9E0` |
-| textPrimary | `#F2F4F8` | `#12151B` |
-| textSecondary (≥4.5:1) | `#A7AFBF` | `#4A5263` |
-| accent | `#6C8CFF` | `#3D5AFE` |
+| bg | `#0B0D18` | `#F2F3FA` |
+| surface | `#141726` | `#FFFFFF` |
+| surfaceRaised (keys) | `#1F2338` | `#E9EBF7` |
+| outline | `#2E3350` | `#CDD1E6` |
+| textPrimary | `#F0F2FC` | `#0F1222` |
+| textSecondary (≥4.5:1) | `#A9AFCB` | `#474C68` |
+| accent | `#7F96FF` | `#3D5AFE` |
 | success / warning / danger | `#3DDC97` / `#FFC857` / `#FF6B6B` | `#0F9D63` / `#B7791F` / `#D64545` |
 | TV colour keys | red `#E5484D`, green `#30A46C`, yellow `#F5D90A`, blue `#3E63DD` | same |
 
 Also support **Material You dynamic colour** on Android 12+ as an option in Settings → Appearance (System / Light / Dark / Dynamic).
 
-- **Type:** Inter (or the system font) — Display 28/34 semibold, Title 20/26 semibold, Body 16/22, Label 14/18 medium, Caption 12/16. Respect text scaling up to 200% (reflow, don't clip).
+**The identity is "Backlit" (decision #54):** dark moulded keys with lit legends. The D-pad is the app's mark made into a control: a ring that lights in the direction pressed, around the one accent key. Spend boldness there and on the touchpad's dot matrix; keep everything else quiet.
+
+- **Relief:** never hand-roll a key. `KeySurface` draws the face, rim and shadow; `Relief.of` derives them from the palette, so styles, Theater Mode and dynamic colour work with no extra tokens. One light from above. No double shadows.
+- **Accent on the remote:** OK and the lit ring only. Tabs, section titles and icons stay neutral. Colour marks what you can press or what just happened.
+- **Rows:** group them in `AppPanel`. Status: the pill keeps its 48 dp in every state, so a reconnect never moves the pad under the thumb.
+- **Type:** Atkinson Hyperlegible Next (`AppFonts.text`), weights 400/500/600 only; Atkinson Hyperlegible Mono (`AppFonts.mono`) for the pairing code only. Letter spacing 0. Display 28/34 semibold, Headline 24/30 semibold, Title 20/26 semibold, Title small 16/22 and 14/18 semibold, Body 16/22 and 14/20, Label 14/18 medium, Caption 12/16. Respect text scaling up to 200% (reflow, don't clip).
+- **Judge type from a real-font render** (`loadRealFonts`), never from a golden: goldens draw every word as a block.
 - **Shape:** keys 20 dp radius, cards 16, sheets 28 (top), pills fully rounded. **Spacing:** 4-pt grid (4, 8, 12, 16, 24, 32).
 - **Touch targets:** ≥ 56 dp for remote keys, ≥ 48 dp everything else; ≥ 8 dp gap between keys.
 - **Motion:** 150–250 ms ease-out; key press = scale 0.94 + ripple + haptic (light impact; heavy for power). Respect "reduce motion": no visible animation at all (decision #47). Take durations from `AppMotion.durationOf`, build routes with `appPage`, show snackbars with `showAppSnackBar`. Never give a button a widget-level colour that derives a pressed overlay (`styleFrom(foregroundColor:)`, `IconButton(color:)`); use `foregroundOnly(c)`.
@@ -39,9 +45,25 @@ Also support **Material You dynamic colour** on Android 12+ as an option in Sett
 ## Screens (v1)
 Onboarding (3 cards + permission explainers) → Discovery (scan list, manual IP entry, troubleshooting link) → Pairing (6-char code entry with paste, auto-advance, live validation) → **Remote** (status pill + device switcher, quick-access row, pad area [Touchpad | D-pad | Numpad, swipe between], bottom cluster [Back, Home, Mute, Keyboard, Vol rocker, Ch rocker, Power long-press]) → Keyboard sheet → Apps (grid, search, reorder, add custom, recommendations with real names/icons) → Devices → Settings → Paywall. **Demo mode** (reachable from onboarding and the empty Discovery state): the same remote UI driven by a simulated TV, a persistent "Demo" badge, and a small "TV preview" card showing the last action. App Store reviewers rely on it.
 
-**Smooth Press:** holding volume, channel or a D-pad key sends one long press (`START_LONG` … `END_LONG`) like a physical remote. When the setting is off, holding repeats short presses every 120 ms.
+**Natural hold** (setting `smoothPressEnabled`)**:** holding volume, channel or a D-pad key sends one long press (`START_LONG` … `END_LONG`) like a physical remote. When the setting is off, holding repeats short presses every 120 ms.
 
 Layouts: phone portrait (primary), phone landscape (pad left, controls right), tablet (two panes). **Accessibility:** every control has a semantic label ("Volume up"); D-pad works with TalkBack/VoiceOver; colour is never the only signal.
+
+**Text is never cut** (P9-R9, decision #52 C6/C7):
+- **The sweep:** Malay and the pseudo-locale, 320 dp at 200 % with linear and non-linear scalers, every paragraph on every screen and every error state.
+- **Allowed to ellipsize,** each with the full text in semantics and matched by widget or role:
+  - app-bar titles;
+  - user-entered TV names;
+  - the Remote layout preview;
+  - the floated field label;
+  - colour-key labels;
+  - app names and package ids;
+  - the touchpad hint, only when its text is in semantics.
+- **Fix rule:** raise `maxLines`, `helperMaxLines` or `errorMaxLines`, or let the row grow. Never shorten copy. At enlarged text, field labels always float.
+
+**App tiles** (decision #53): the user's style, then the logo, then the letter. A logo sits on a fixed `#141414` tile with a 1 dp `outline` edge, at 0.6 of its size, in brand ink, or white if that's under 3:1. Logos are bundled, never loaded from the network, and never appear on store art.
+
+**Store art** (P9-R14, C11): the feature graphic and the screenshot frames use the accent background `#3D5AFE`, white Roboto captions in the top 18 %, the screen at 78 % width, and corners of 4 % of the shortest side. No third-party app names or logos, no demo badge, no ads.
 
 ## Paywall rules
 Show the value (no ads, widgets, themes, multiple TVs) first, prices second. Pre-select the best-value plan honestly, show renewal terms under each price, and put Restore + Terms + Privacy on the screen. Closing returns to where the user came from.

@@ -12,6 +12,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/settings/application/feedback.dart';
 
+import '../../helpers/platform_override.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_link_opener.dart';
 import '../../helpers/test_devices.dart';
@@ -196,6 +197,30 @@ void main() {
     expect(mail, contains('App: ? (?)'));
     expect(mail, contains('System: '));
   });
+
+  testWidgetsOn(
+    TargetPlatform.iOS,
+    'feedback_falls_back_to_the_target_platform_when_app_info_fails',
+    (t) async {
+      final opener = RecordingLinkOpener();
+      await pumpHub(
+        t,
+        opener,
+        appInfo: appInfoProvider.overrideWith(
+          (ref) => throw StateError('no package info'),
+        ),
+      );
+
+      await openFeedback(t);
+      await t.tap(find.text('Write email'));
+      await t.pumpAndSettle();
+
+      final mail = Uri.decodeFull(opener.opened.single.toString());
+      expect(mail, contains('App: ? (?)'));
+      expect(mail, endsWith('System: iOS ?'));
+      expect(mail, isNot(contains(Platform.operatingSystemVersion)));
+    },
+  );
 
   testWidgets('the_fallback_subject_names_the_flavor_not_a_question_mark', (
     t,

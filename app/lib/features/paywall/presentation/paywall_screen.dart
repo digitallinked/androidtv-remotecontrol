@@ -352,7 +352,7 @@ class _Plans extends ConsumerWidget {
     Widget benefit(IconData icon, String title, String body) => ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: colors.accent),
-      title: Text(title, style: theme.textTheme.labelLarge),
+      title: Text(title, style: theme.textTheme.titleMedium),
       subtitle: Text(body, style: secondary),
     );
 

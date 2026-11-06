@@ -42,6 +42,11 @@ Moduli and exponents are unsigned big-endian bytes with no leading zero byte. Ta
 - **App lifecycle:** when the app goes to the background, keep the socket for up to 60 s (quick app switches stay instant), then close it. On resume, reconnect immediately. Don't try to keep a background connection in v1.
 - **Server key changed (TOFU mismatch):** the TV was reset or replaced. Never silently accept. Show "This TV's identity changed — pair again", delete the stored pin and pairing flag for that device, and route to pairing.
 - **Client cert lost** (app data cleared or reinstalled; Android restores of secure storage aren't guaranteed): treat it as a new install, and the TV will ask to pair again. Explain this in the FAQ; there's nothing to warn about at runtime.
+- **Reinstall on iOS:** the keychain can outlive the app. The app deletes the stored identity when the database is created fresh (decision #52, P9-C8), so a reinstall always gets a new certificate and pairs again. `loadOrCreate` waits, with a bound, for an in-flight delete. A relaunch never deletes it.
+- **CLI (`bin/atv_cli.dart`):**
+  - The identity file is written atomically (`identity.json.tmp`, then rename).
+  - `hold` lives in `lib/src/cli/hold.dart` (`holdKey`). Ctrl+C sends `endLong`, prints `Interrupted; released <key>.` and exits 130. A dropped connection mid-hold prints a message and exits 1.
+  - SIGTERM is watched only off Windows (learnings, Phase 9: `sigterm.watch()` throws there).
 
 ## Platform notes
 - **iOS:** `Info.plist` needs `NSLocalNetworkUsageDescription` and `NSBonjourServices = [_androidtvremote2._tcp, _androidtvremote._tcp]`. Wake-on-LAN broadcast needs Apple's multicast entitlement (`com.apple.developer.networking.multicast`, request it from Apple), otherwise ship WoL as Android-only.

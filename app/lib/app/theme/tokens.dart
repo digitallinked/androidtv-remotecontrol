@@ -80,19 +80,19 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// The dark palette.
   static const AppColors dark = AppColors(
-    bg: Color(0xFF0F1115),
-    surface: Color(0xFF181B21),
-    surfaceRaised: Color(0xFF232731),
-    outline: Color(0xFF2E3340),
-    textPrimary: Color(0xFFF2F4F8),
-    textSecondary: Color(0xFFA7AFBF),
-    accent: Color(0xFF6C8CFF),
-    onAccent: Color(0xFF0F1115),
+    bg: Color(0xFF0B0D18),
+    surface: Color(0xFF141726),
+    surfaceRaised: Color(0xFF1F2338),
+    outline: Color(0xFF2E3350),
+    textPrimary: Color(0xFFF0F2FC),
+    textSecondary: Color(0xFFA9AFCB),
+    accent: Color(0xFF7F96FF),
+    onAccent: Color(0xFF0B0D18),
     success: Color(0xFF3DDC97),
     warning: Color(0xFFFFC857),
     danger: Color(0xFFFF6B6B),
     dangerText: Color(0xFFFF6B6B),
-    onDanger: Color(0xFF0F1115),
+    onDanger: Color(0xFF0B0D18),
     tvRed: Color(0xFFE5484D),
     tvGreen: Color(0xFF30A46C),
     tvYellow: Color(0xFFF5D90A),
@@ -115,7 +115,7 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: Color(0xFFFFC857),
     danger: Color(0xFFFF6B6B),
     dangerText: Color(0xFFFF6B6B),
-    onDanger: Color(0xFF0F1115),
+    onDanger: Color(0xFF0B0D18),
     tvRed: Color(0xFFE5484D),
     tvGreen: Color(0xFF30A46C),
     tvYellow: Color(0xFFF5D90A),
@@ -124,12 +124,12 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// The light palette.
   static const AppColors light = AppColors(
-    bg: Color(0xFFF6F7F9),
+    bg: Color(0xFFF2F3FA),
     surface: Color(0xFFFFFFFF),
-    surfaceRaised: Color(0xFFECEEF2),
-    outline: Color(0xFFD5D9E0),
-    textPrimary: Color(0xFF12151B),
-    textSecondary: Color(0xFF4A5263),
+    surfaceRaised: Color(0xFFE9EBF7),
+    outline: Color(0xFFCDD1E6),
+    textPrimary: Color(0xFF0F1222),
+    textSecondary: Color(0xFF474C68),
     accent: Color(0xFF3D5AFE),
     onAccent: Color(0xFFFFFFFF),
     success: Color(0xFF0F9D63),
@@ -258,6 +258,17 @@ extension AppThemeX on BuildContext {
   AppColors get appColors => Theme.of(this).extension<AppColors>()!;
 }
 
+/// The bundled typefaces (decision #54). Atkinson Hyperlegible Next was drawn
+/// so that look-alike characters can't be confused, which is what a remote
+/// read in a dim room needs; its mono cut sets the hex pairing code.
+abstract final class AppFonts {
+  /// Every piece of text in the app.
+  static const String text = 'Atkinson Hyperlegible Next';
+
+  /// The pairing code, whose characters must not be mistaken for each other.
+  static const String mono = 'Atkinson Hyperlegible Mono';
+}
+
 /// Spacing scale on a 4-point grid.
 abstract final class AppSpacing {
   /// 4 dp.
@@ -355,7 +366,7 @@ double contrastRatio(Color a, Color b) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-const Color _darkLabel = Color(0xFF0F1115);
+const Color _darkLabel = Color(0xFF0B0D18);
 
 /// The label colour for a TV colour key filled with [key]: the dark ink or
 /// white, whichever has the higher WCAG contrast with [key].

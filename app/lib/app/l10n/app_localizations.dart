@@ -1043,7 +1043,7 @@ abstract class AppLocalizations {
   /// Short hint drawn on the touchpad while it is idle.
   ///
   /// In en, this message translates to:
-  /// **'Swipe to move · Tap to select'**
+  /// **'Swipe to move, tap to select'**
   String get touchpadIdleHint;
 
   /// Short visible label of the channel up/down rocker.
@@ -1871,7 +1871,7 @@ abstract class AppLocalizations {
   /// Subtitle of the Remote behaviour row on the Settings page, listing what that page changes.
   ///
   /// In en, this message translates to:
-  /// **'Vibration, Smooth Press, screen and keyboard'**
+  /// **'Vibration, natural hold, screen and keyboard'**
   String get settingsRemoteBehaviourSubtitle;
 
   /// Subtitle of the Apps row on the Settings page, which opens Edit apps.
@@ -2072,13 +2072,13 @@ abstract class AppLocalizations {
   /// **'A short vibration when a key reaches the TV.'**
   String get behaviourHapticsSubtitle;
 
-  /// Title of the Remote behaviour switch for Smooth Press, the app's own name for held keys.
+  /// Title of the Remote behaviour switch for natural hold, the app's own name for keys that act like keys held on a TV remote.
   ///
   /// In en, this message translates to:
-  /// **'Smooth Press'**
+  /// **'Natural hold'**
   String get behaviourSmoothPress;
 
-  /// Subtitle of the Remote behaviour switch for Smooth Press, explaining what holding a key does.
+  /// Subtitle of the Remote behaviour switch for natural hold, explaining what holding a key does.
   ///
   /// In en, this message translates to:
   /// **'Holding volume, channel or arrow keys acts like holding a key on a TV remote. When off, holding repeats the key.'**
@@ -2399,7 +2399,7 @@ abstract class AppLocalizations {
   /// Ads section text, free user.
   ///
   /// In en, this message translates to:
-  /// **'The free app shows a banner ad at the bottom of the Apps and Settings screens only.'**
+  /// **'The free app shows banner ads at the bottom of the Apps and Settings screens. An occasional full-screen ad may also appear when you leave Settings, but never while you pair a TV.'**
   String get privacyAdsInfo;
 
   /// Ads section text, Premium user.
@@ -2821,6 +2821,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{app} moved to position {position} of {count}'**
   String manageAppsMoved(String app, int position, int count);
+
+  /// Title of the error log page; Help page button.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log'**
+  String get pageTitleErrorLog;
+
+  /// Error log page: what happens to the log.
+  ///
+  /// In en, this message translates to:
+  /// **'This log stays on this phone. It goes nowhere unless you copy it.'**
+  String get errorLogNote;
+
+  /// Error log page: empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'No errors recorded.'**
+  String get errorLogEmpty;
+
+  /// Error log page: copies the whole log as text.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get errorLogCopyAll;
+
+  /// Snackbar after Copy all.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log copied'**
+  String get errorLogCopied;
+
+  /// Snackbar when Copy all can't reach the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t copy the log. Try again.'**
+  String get errorLogCopyFailed;
+
+  /// Error log page: removes every entry; asks first.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get errorLogClear;
+
+  /// Clear confirmation dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the error log?'**
+  String get errorLogClearTitle;
+
+  /// Clear confirmation dialog text.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes every entry from this phone.'**
+  String get errorLogClearBody;
+
+  /// Error log entry: marks an error that stopped what the app was doing.
+  ///
+  /// In en, this message translates to:
+  /// **'Serious'**
+  String get errorLogSerious;
+
+  /// Error log entry heading when the error has no recorded place.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected error'**
+  String get errorLogNoReason;
 }
 
 class _AppLocalizationsDelegate

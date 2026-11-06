@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
 import 'package:tv_remote/app/widgets/not_connected_snack_bar.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/banner_slot.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
@@ -40,6 +43,24 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
 
   /// The "Not connected" snackbar: one at a time.
   final NotConnectedSnackBar _notConnected = NotConnectedSnackBar();
+
+  @override
+  void initState() {
+    super.initState();
+    final crashes = ref.read(crashReporterProvider);
+    // Also fires for a failure that is already there when the screen opens.
+    ref.listenManual(
+      shortcutsProvider,
+      (previous, next) => reportShownFailure(
+        crashes,
+        previous,
+        next,
+        shown: (state) => state.hasError && !state.hasValue && !state.isLoading,
+        reason: 'apps read',
+      ),
+      fireImmediately: true,
+    );
+  }
 
   @override
   void dispose() {
@@ -223,6 +244,7 @@ class _AppsScreenState extends ConsumerState<AppsScreen> {
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           labelText: l10n.appsSearchLabel,
+          floatingLabelBehavior: fieldLabelBehavior(context),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadii.card),
           ),

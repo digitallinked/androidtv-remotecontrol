@@ -105,4 +105,4 @@ final class HostResolverProvider
   }
 }
 
-String _$hostResolverHash() => r'07f33eaf61bc2606ded7a81a4f6a74b08afd47a4';
+String _$hostResolverHash() => r'd9e59792fadb653b1be1ee645a81f86498bf8094';

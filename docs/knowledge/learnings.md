@@ -4,6 +4,79 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### First release build on a phone (2026-11-06)
+- **R8 full mode strips a constructor kept only by `-keep class X`.** Anything created by reflection needs `{ <init>(); }`. A host test can't see this; check `build/app/outputs/mapping/<variant>/usage.txt` (decision #55).
+- **`flutter build apk` can ship stale Dart and still report success.** New font assets went in while `libapp.so` held code from days earlier, with no error, across two builds. `flutter clean` cured it; the cause is unknown (unverified: the AOT stamps stayed older than `app.dill`). After a release build, prove the snapshot before trusting it: read `lib/arm64-v8a/libapp.so` from the APK and look for a string only the new code has.
+- **Searching a Dart snapshot:** one-byte strings are Latin-1, so `·` is `0xB7`, not UTF-8's `C2 B7`, and class names don't survive release. Search for a const string that exists nowhere else.
+- **A screenshot is the only proof the app updated.** The install succeeded, the hashes matched and the process ran while the phone showed last week's UI.
+
+### Design pass (2026-11-06)
+- **`ThemeData.fontFamily` doesn't reach styles handed straight to a component theme.** `listTileTheme` was given styles from our own `TextTheme`, and every list row silently fell back to the default font; only a real-font render showed it. The family is set in `_style` itself.
+- **Goldens can't judge type.** They draw in the test font, so every word is a block, and long-looking subtitles there are short in reality. Judge copy and hierarchy from `loadRealFonts` renders, never from a golden.
+- **Atkinson Hyperlegible Next has no `→` (U+2192),** used in 28 strings ("Settings → Network"). Android and iOS fall back to a system font, but `flutter test` draws a box. Everything else in both ARB files is covered. DM-116 confirms it on a phone.
+- **`flutter_native_splash:create` rewrites untouched files with LF on Windows,** `Info.plist` and the storyboard included. They show as modified with an empty `git diff --numstat`; `git checkout` them. Binary changes and the two `v31` colours are the only real output of a colour change.
+- **`AnimatedContainer` turns a decoration's border into padding** (`Container` does, `DecoratedBox` doesn't). A pill that swapped one for the other grew 2 dp and overflowed the pseudo-locale sweep. Tween the decoration inside a `DecoratedBox`.
+- **Rows inside one panel are built together, so `scrollUntilVisible` stops early:** the row is in the tree while it is still off-screen, and the next tap misses it. Follow it with `ensureVisible`. A panel past the cache extent, on the other hand, isn't built at all, so scroll before `find`.
+- **A failed `Bash` heredoc can leave nothing applied or everything applied.** Write edit scripts to a file instead, and check `git status` after a shell error.
+
+### Real-device run (2026-11-05)
+- **A fake that replaces a plugin also replaces the plugin's Dart.** `nsd`'s Dart side refuses a service name over 15 characters, and `_androidtvremote2._tcp` has 16, so every search failed on every phone while every test passed. Call `disableServiceTypeValidation(true)`. Rule: one test per plugin goes through the plugin's real Dart with only the channel mocked. Source: `nsd_tv_discovery_test.dart`, `the_real_plugin_browses_both_android_tv_service_types`.
+- **`developer.log` shows nothing in a release build.** A catch that only logs drops the error for real users.
+- **sqlite's error text quotes values.** `SqliteException.toString()` ends with `Causing statement: ..., parameters: <values>`, and drift keeps that text through its isolate. A scrubber can't remove a value it doesn't know, so cut the tail. Source: sqlite3-3.5.2 `lib/src/exception.dart`.
+- **`ref.read` in a catch after an await throws once the widget is gone,** and replaces the handled failure. Read the reporter before the await.
+- **A stacked route keeps the screen beneath alive,** so two screens on one provider both see a failure. Report from a shared provider, not per screen.
+- **`market://launch?id=` is reported broken on many devices since about August 2026** after a Google Play change: the command sends and nothing happens. (Unverified on the owner's TV until the link test runs; [HA docs](https://www.home-assistant.io/integrations/androidtv_remote).)
+- **flutter_svg:**
+  - `compute` runs synchronously under `kDebugMode`, so debug builds never exercise the release isolate path. Device rows that judge logos need a release build.
+  - A logo appears one frame late, so a test that doesn't settle shows an empty tile.
+  - `Cache` leaks an uncaught error on a failed load and never clears `_pending`. A guarded zone's failed future can't reach a listener in another error zone, which is why `_LogoLoader` keeps `_failed`.
+- **`hasRunningAnimations` counts any pending `LayoutBuilder` rebuild,** not only tickers.
+- **Overlapping `flutter test` runs crash with `PathAccessException` on `sqlite3.dll`.** Rerun once the other has finished.
+- **Real file I/O in `testWidgets` needs `tester.runAsync`.**
+- **`PRAGMA database_list` gives the database's real path** without `path_provider`. Proven on Windows only until DM-114 step 5 runs.
+- **Simple Icons has no Prime Video, Disney+, Hulu or Peacock,** and its CC0 doesn't cover every icon or any trademark (`DISCLAIMER.md`). Check coverage against the catalogue before promising a logo.
+
+### Phase 9 gotchas (release prep)
+- **Gradle and Android:**
+  - `flutter build` runs Gradle with `-q`, so `logger.warn` and `logger.lifecycle` are hidden. Use `logger.quiet` for build warnings the user must see.
+  - `gradlew build` and `assemble` never run the `bundle*` tasks. Refusals that must cover aggregate tasks need a `taskGraph.whenReady` backstop.
+  - `flutter build apk --config-only` writes `gradlew`, `gradlew.bat` and `local.properties` without building. CI needs it before any Gradle dry run (`-m`).
+  - Java Properties treats `\` as an escape: use forward slashes in `key.properties` paths.
+  - Don't run `flutter build` while `flutter test` runs ("Unable to determine engine version").
+- **iOS (from docs; Mac checks pending):**
+  - `FIREBASE_ANALYTICS_WITHOUT_ADID` is the SPM switch for Ad-ID-free Analytics; the Podfile global works for CocoaPods only.
+  - With a Podfile present, Flutter still runs `pod install` under SPM, and podhelper skips plugins that have a `Package.swift`.
+  - `flutter build ipa` keeps `BUILD_DIR`, while `flutter build ios` sets `build/ios`.
+  - A script phase whose `inputPaths` no task produces fails the build.
+- **Store facts:**
+  - dart:io TLS is Flutter's bundled BoringSSL, not the OS crypto. This changes the App Store export answer.
+  - App Review Guideline 1.3 is the Kids Category. Ads matching the age rating is **2.5.18**.
+  - Apple's App Privacy asks "Linked" per data type, so any type AdMob collects is Linked: Yes.
+- **Tests and tooling on Windows:**
+  - Parallel `flutter test` runs collide on the `sqlite3.dll` native asset: run one at a time.
+  - Git's `usr\bin\bash.exe` keeps PATH as given. Launched from PowerShell it lacks `dirname` and `rm`, so a test that spawns bash must build the child's PATH itself.
+  - A fresh worktree with `core.autocrlf=true` checks the docs out with CRLF. Doc-parsing tests normalise CRLF to LF (`releaseDoc()`).
+  - `flutter_secure_storage`'s method channel never answers in a test, and an awaited call outside a pump hangs `flutter_tester` for good. `test/flutter_test_config.dart` installs `FlutterSecureStorage.setMockInitialValues({})`. A hung tester holds `build/native_assets/windows/sqlite3.dll`, so every later run in that tree fails with `PathAccessException: Deletion failed`.
+  - Stopping a backgrounded `flutter test` shell leaves `flutter_tester.exe` running: check for orphans before rerunning.
+  - A git worktree has its own `build/` and so sidesteps a locked `sqlite3.dll`. Keep its path short: under the long scratchpad path, the SwiftPM plugin generation fails with `PathNotFoundException` (MAX_PATH).
+  - Under heavy machine load, the atv_remote latency p95 can pass 30 ms, and `discover_pair_press_key_flow` (a 20 s wait) can time out. Both pass alone at 2–5 ms. Run the final full check on a quiet machine, and don't change the thresholds.
+- **Flutter widgets:**
+  - `ListTile` → `InkWell` drops `Semantics(button, enabled)`: add it back explicitly.
+  - A `LayoutBuilder` that adds a scroll view only below a size threshold rebuilds the subtree and resets its state. Keep the child under a `GlobalKey` (`ScrollWhenShort`).
+  - `testWidgets` makes one `WidgetTester` per declaration and shares it across `variant` runs. An `Expando` keyed on the tester registers once per declaration.
+- **CLI signals:**
+  - On Windows, `ProcessSignal.sigint.watch()` works but `ProcessSignal.sigterm.watch()` throws `SignalException`, so watch SIGTERM only off Windows.
+  - Once SIGINT is watched, Ctrl+C no longer kills the process: the program must release the key and exit by itself (`holdKey` returns 130).
+- **Merged manifest under AGP 9:**
+  - The prodRelease manifest is at `app/build/app/intermediates/merged_manifests/prodRelease/processProdReleaseManifest/AndroidManifest.xml`. The same content is also under `merged_manifest/prodRelease/…`, which is why the checker uses the newest `merged_manifest*` match.
+  - The blame report is `app/build/app/outputs/logs/manifest-merger-prod-release-report.txt`.
+- **Real fonts in tests:**
+  - Widget tests render the Ahem test font unless you load fonts yourself. `test/helpers/real_fonts.dart` `loadRealFonts()` loads Roboto and MaterialIcons from the SDK's `material_fonts`. It finds them via `FLUTTER_ROOT`, then the folders above the runner, so it also works on Linux CI.
+  - Roboto is also registered under `CupertinoSystemText`/`CupertinoSystemDisplay` for iOS-platform renders. There is no SF Pro, so the iOS screenshots use Roboto.
+- **Codegen:**
+  - The riverpod_generator hash uses `toSource()`, which drops comments. Doc comments edited by hand in `*.g.dart` keep the hash valid, but must match the source text.
+- Source: Phase 9 SDD (`.superpowers/sdd/2026-10-31-phase-9-release-prep/`).
+
 ### Phase 8 gotchas (quality and hardening)
 - **Real sockets in widget tests:**
   - dart:io TLS uses zero-length timers: under the test binding, drive real I/O with `pump(Duration.zero)` inside a `runAsync` loop (`pumpUntil`), not a bare `pump()`.

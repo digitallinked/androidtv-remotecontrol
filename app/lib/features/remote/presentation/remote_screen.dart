@@ -13,6 +13,8 @@ import 'package:tv_remote/app/widgets/not_connected_snack_bar.dart';
 import 'package:tv_remote/app/widgets/settings_button.dart';
 import 'package:tv_remote/app/widgets/status_strip.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/device/keep_awake.dart';
 import 'package:tv_remote/core/device/theater_mode.dart';
 import 'package:tv_remote/core/session/not_connected_notices.dart';
@@ -84,6 +86,19 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     ref.listenManual(
       connectionStateProvider,
       _onConnectionState,
+      fireImmediately: true,
+    );
+    final crashes = ref.read(crashReporterProvider);
+    ref.listenManual(
+      remoteSessionProvider,
+      (previous, next) => reportShownFailure(
+        crashes,
+        previous,
+        next,
+        shown: (state) =>
+            state.hasError && !(state.isLoading && state.value == null),
+        reason: 'session',
+      ),
       fireImmediately: true,
     );
   }
@@ -411,7 +426,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             onPressed: () => unawaited(context.push(AppRoutes.settings)),
           ),
         ),
-        titleSpacing: AppSpacing.s,
+        titleSpacing: 0,
         title: DeviceSwitcher(
           currentName: tvName,
           currentServiceName: serviceName,
@@ -427,7 +442,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsetsDirectional.only(end: AppSpacing.s),
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.l),
             child: PowerButton(
               onHint: () => _say(l10n.powerHoldHint),
               onPower: () => unawaited(_power()),

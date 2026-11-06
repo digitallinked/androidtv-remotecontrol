@@ -1,3 +1,4 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/core/crash/crash_scrubber.dart';
 
@@ -7,6 +8,58 @@ MIIBszCCAVmgAwIBAgIUQw0rPVo3JkZ1bW9yZXRoYW5hbGlhc2VzdHVm
 -----END CERTIFICATE-----''';
 
 void main() {
+  // Ruling P9-C17: a failed write's SQL tail quotes the values being written,
+  // such as a new nickname, which by definition was never saved, so no
+  // known-terms rule can catch it.
+  group('the SQL tail', () {
+    final s = CrashScrubber();
+    const secret = 'Sarah bedroom';
+
+    test('a_failed_update_loses_its_statement_and_its_parameters', () {
+      final error = SqliteException(
+        extendedResultCode: 13,
+        message: 'database or disk is full',
+        causingStatement: 'UPDATE devices SET nickname = ? WHERE id = ?',
+        parametersToStatement: [secret, 'Living Room TV 3'],
+      );
+
+      final text = s.scrub(error.toString());
+
+      expect(text, isNot(contains(secret)));
+      expect(text, isNot(contains('UPDATE')));
+      expect(text, isNot(contains('Living Room')));
+      expect(text, contains('SqliteException(13)'));
+      expect(text, contains('database or disk is full'));
+    });
+
+    test('the_form_with_a_position_goes_too', () {
+      expect(
+        s.scrub(
+          'SqliteException(1): syntax error\n'
+          '  Causing statement (at position 7): UPDATE x, parameters: $secret',
+        ),
+        isNot(contains(secret)),
+      );
+    });
+
+    test('wrapped_text_loses_it_too', () {
+      // DriftRemoteException.toString() is its cause's text, and
+      // DriftWrappedException and CouldNotRollBackException quote it.
+      expect(
+        s.scrub(
+          'DriftWrappedException: Could not run, cause: SqliteException(13): '
+          'full\n  Causing statement: UPDATE x, parameters: $secret\n'
+          'For context: more text with $secret',
+        ),
+        isNot(contains(secret)),
+      );
+    });
+
+    test('text_without_a_statement_is_left_alone', () {
+      expect(s.scrub('Bad state: nothing to do'), 'Bad state: nothing to do');
+    });
+  });
+
   test('scrubs_ipv4_and_ipv6', () {
     final s = CrashScrubber();
     expect(

@@ -22,6 +22,7 @@ import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
 import 'package:tv_remote/features/discovery/data/discovery_providers.dart';
 
+import '../helpers/existing_database.dart';
 import '../helpers/fake_ads_overrides.dart';
 import '../helpers/fake_consent_service.dart';
 import '../helpers/fake_tv_discovery.dart';
@@ -45,6 +46,7 @@ Future<Widget> _root({
   FakeConsentService? consent,
   List<Override> extraOverrides = const [],
   RecordingCrashReporter? crashes,
+  AppDatabase Function()? database,
 }) => buildRootWidget(
   flavor: Flavor.dev,
   crashReporter: crashes ?? RecordingCrashReporter(),
@@ -60,7 +62,7 @@ Future<Widget> _root({
   ],
   openDatabase: () {
     onOpenDatabase?.call();
-    return AppDatabase(NativeDatabase.memory());
+    return database?.call() ?? AppDatabase(NativeDatabase.memory());
   },
 );
 
@@ -91,7 +93,9 @@ void main() {
 
   testWidgets('app_opens_discover_after_onboarding', (t) async {
     _prefs({'settings.onboarding_complete': true});
-    await t.pumpWidget(await _root());
+    // A relaunch: the database is the one the earlier run created. A new one
+    // would reset onboarding (Ruling P9-R6).
+    await t.pumpWidget(await _root(database: await existingDatabases()));
     await t.pumpAndSettle();
 
     expect(find.text('Choose your TV'), findsOneWidget);
@@ -222,7 +226,7 @@ void main() {
 
   testWidgets('theme_switch_applies_immediately', (t) async {
     _prefs({'settings.onboarding_complete': true});
-    await t.pumpWidget(await _root());
+    await t.pumpWidget(await _root(database: await existingDatabases()));
     await t.pumpAndSettle();
     unawaited(
       ProviderScope.containerOf(

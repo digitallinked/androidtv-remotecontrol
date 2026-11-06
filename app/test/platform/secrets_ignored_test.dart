@@ -70,13 +70,15 @@ void main() {
       'app/env/prod.json',
       'app/android/secrets.properties',
       'app/ios/Flutter/Secrets.xcconfig',
+      'app/android/key.properties',
     ]) {
       expect(git(path).exitCode, 0, reason: '$path must be git-ignored');
     }
-    expect(
-      git('app/env/example.json').exitCode,
-      1,
-      reason: 'example.json must be tracked',
-    );
+    for (final path in const [
+      'app/env/example.json',
+      'app/android/key.properties.example',
+    ]) {
+      expect(git(path).exitCode, 1, reason: '$path must be tracked');
+    }
   });
 }

@@ -21,6 +21,9 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
 ## Rules
 - **Startup order** (decision #38):
   1. Firebase, bounded at 4.5 s, then Crashlytics behind the scrubbing reporter.
+     - Then the database opens. If this run created it, the three "this phone" preferences reset and the stored client identity is deleted, each bounded at 2 s.
+     - Failures are logged only, because the reporter is still holding (decision #50).
+     - See decisions #51/#52.
   2. Remote Config activate (5 s, then `seal()`; fetched values apply next launch).
   3. The first frame.
   4. UMP silent update and RevenueCat, in parallel, so Premium is known before any ad.
@@ -30,6 +33,7 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
   8. The banner.
 
   `StartupGate` is bounded at 20 s. The remote must be usable even if every service fails or is offline; `test/app/services_flow_test.dart` proves it.
+- **Errors:** a failure the user sees reports through `safeRecordError` with a fixed reason, and nothing else goes in `reason`. The reporter chain includes `ErrorLog`, which keeps the last 50 scrubbed entries on the phone whatever the privacy choices say. Crash collection runs with Firebase off too (decision #53).
 - **Vendor imports:** each SDK is imported in exactly one adapter file, enforced by `test/platform/vendor_imports_test.dart`. Interface↔adapter import pairs are the accepted shape (decision #45).
 - **Premium** = RevenueCat entitlement `premium`. Products: `premium_monthly`, `premium_yearly`, `premium_lifetime` (non-consumable). Never decide premium from local flags alone; cache the last entitlement for offline use.
 - **Ads:**
@@ -45,6 +49,7 @@ There is no custom server. The services are Firebase (Analytics, Crashlytics, Re
   - **Premium and test IDs:**
     - No ads for Premium users, including offline (cached entitlement).
     - Use Google **test ad unit IDs** in the `dev` flavor.
+    - Ad content is capped at **G** (`maxAdContentRating`) before the SDK starts. If the cap can't be set, the SDK isn't started (it fails closed, with one non-fatal; decision #52). The owner sets the same cap in the AdMob console.
   - **ATT (iOS):**
     - The pre-prompt is shown at most once.
     - If iOS never showed its question, iOS is asked again on the next banner visit, with no second pre-prompt.

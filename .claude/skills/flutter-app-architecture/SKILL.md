@@ -45,18 +45,23 @@ packages/atv_remote/lib/   discovery, pairing, remote_client, certs, keycodes, w
 | Tests | `flutter_test`, `mocktail`, `integration_test`, the fake TV `package:atv_remote/testing.dart` (test-only; never imported from `app/lib`) |
 
 ## Platform floors
-Android minSdk 24, targetSdk ≥ 35; iOS 13.0. The Flutter version is pinned in `decisions.md`. The app catalogue is a bundled asset (`app/assets/catalogue/apps_v1.json`); the `catalogue_version` Remote Config key is reserved for a future remote catalogue.
+Android minSdk 24, targetSdk ≥ 35; iOS 15.0 (Firebase iOS SDK 13). The Flutter version is pinned in `decisions.md`. The app catalogue is a bundled asset (`app/assets/catalogue/apps_v1.json`); the `catalogue_version` Remote Config key is reserved for a future remote catalogue.
 
 ## Conventions
 - Providers expose immutable state (`freezed`); side effects go in controller methods (`AsyncNotifier`).
 - The connection is a single `remoteSessionProvider` (keepAlive) wrapping `RemoteClient`; widgets watch `connectionStateProvider`.
-- Every tap on a remote control goes through `RemoteActions` (adds haptics, analytics, Smooth Press repeat logic) and never calls the client directly.
+- Every tap on a remote control goes through `RemoteActions` (adds haptics, analytics, Natural hold / repeat logic) and never calls the client directly.
 - Strings go in ARB files (`app/lib/app/l10n/`), English first; no hard-coded UI text.
 - Lints: `very_good_analysis`. `flutter analyze` must be clean.
 - Tests: TDD for `atv_remote` and controllers (`superpowers:test-driven-development`); golden tests for key widgets (remote pad, dpad, paywall) in light + dark; one integration test per critical flow (discover → pair → press key) against the fake TV: the flow lives in `app/integration_test/flows/` and runs on the host in `test/integration/` (tag `integration`, `pumpUntil`) and on a device. Perf and leak tests are plain `test()`s using `startPairedFakeTv()` and `waitFor()`. Dispose a `SemanticsHandle` in a `finally`. Every new string needs both `app_en.arb` and `app_ms.arb` (strict parity test); every new route joins `AppRouteNames.all` and the l10n sweep.
 - Flavors: `dev` (test ad IDs, debug Firebase project) and `prod`. Run with `--flavor dev -t lib/main_dev.dart`.
+- **A fresh database** (`AppDatabase.createdThisRun()`) resets `onboarding_complete`, `att_preprompt_shown` and `shortcuts_seeded`, and deletes the stored client identity, each bounded at 2 s and reported, before the first route (decisions #51/#52). Anything new that describes "this phone's data" joins that hook.
+- **No `dart:io` `Platform` in `app/lib`:** branch on `defaultTargetPlatform` (a scan test enforces it).
+- **Tests:** `test/flutter_test_config.dart` gives every test an in-memory secure storage; a test that builds the whole app never touches a real platform channel. Run `flutter test` processes one at a time on Windows (`sqlite3.dll`).
 
 ## Common mistakes
+- Reading a provider through `ref` in a catch after an await: read it before the await. New user-visible failures report through `safeRecordError` with a fixed reason.
+- Loading an image from the network: app logos are bundled SVGs (`flutter_svg`).
 - Putting socket or protobuf code in a widget or provider file.
 - Showing state from the paired-devices table as live connection state.
 - Forgetting `ref.onDispose` for streams → leaked sockets after hot reload.

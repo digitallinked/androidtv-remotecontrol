@@ -1,10 +1,133 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchases_flutter/purchases_flutter.dart'
-    show PurchasesErrorCode;
+    show
+        Package,
+        PackageType,
+        PresentedOfferingContext,
+        PurchasesErrorCode,
+        StoreProduct;
 import 'package:tv_remote/core/purchases/purchase_service.dart';
 import 'package:tv_remote/core/purchases/revenuecat_purchase_service.dart';
 
 void main() {
+  // Ruling P9-C14: every failure the paywall shows is recorded, and the
+  // plugin's error goes to the hook, not out of the service.
+  group('store failures', () {
+    late List<String> reasons;
+    late RevenueCatPurchaseService service;
+
+    /// The plugin's channel, answering [method] with [answer].
+    void plugin(String method, Future<Object?> Function() answer) {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      const channel = MethodChannel('purchases_flutter');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            ..setMockMethodCallHandler(
+              channel,
+              (call) async => call.method == method ? answer() : null,
+            );
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    }
+
+    PlatformException storeError(PurchasesErrorCode code) =>
+        PlatformException(code: '${code.index}');
+
+    setUp(() {
+      reasons = [];
+      service =
+          RevenueCatPurchaseService(
+            apiKey: 'fake-key',
+            debugLogs: false,
+            onError: (_, _, reason) => reasons.add(reason),
+          )..debugUsePackage(
+            PremiumPlanKind.monthly,
+            const Package(
+              'monthly',
+              PackageType.monthly,
+              StoreProduct('id', 'description', 'title', 1, '1', 'USD'),
+              PresentedOfferingContext('offering', null, null),
+            ),
+          );
+      addTearDown(service.dispose);
+    });
+
+    test('a_failed_store_setup_is_recorded', () async {
+      plugin(
+        'setupPurchases',
+        () async => throw storeError(
+          PurchasesErrorCode.configurationError,
+        ),
+      );
+
+      await service.configure();
+
+      expect(reasons, ['purchases']);
+    });
+
+    test('failed_offerings_are_recorded', () async {
+      plugin(
+        'getOfferings',
+        () async => throw storeError(
+          PurchasesErrorCode.networkError,
+        ),
+      );
+
+      expect(await service.loadOffer(), isNull);
+
+      expect(reasons, ['purchases']);
+    });
+
+    test('a_store_failure_during_a_purchase_is_recorded', () async {
+      plugin(
+        'purchasePackage',
+        () async => throw storeError(
+          PurchasesErrorCode.storeProblemError,
+        ),
+      );
+
+      final outcome = await service.purchase(PremiumPlanKind.monthly);
+
+      expect(outcome, const PurchaseFailed(PurchaseFailure.storeProblem));
+      expect(reasons, ['purchases']);
+    });
+
+    test('an_unexpected_purchase_error_is_recorded', () async {
+      plugin('purchasePackage', () async => 'not a purchase result');
+
+      final outcome = await service.purchase(PremiumPlanKind.monthly);
+
+      expect(outcome, const PurchaseFailed(PurchaseFailure.unknown));
+      expect(reasons, ['purchases']);
+    });
+
+    test('a_cancelled_or_pending_purchase_is_not_a_failure', () async {
+      for (final code in const [
+        PurchasesErrorCode.purchaseCancelledError,
+        PurchasesErrorCode.paymentPendingError,
+      ]) {
+        plugin('purchasePackage', () async => throw storeError(code));
+
+        await service.purchase(PremiumPlanKind.monthly);
+
+        expect(reasons, isEmpty, reason: '$code');
+      }
+    });
+
+    test('a_failed_restore_is_recorded', () async {
+      plugin(
+        'restorePurchases',
+        () async => throw storeError(
+          PurchasesErrorCode.networkError,
+        ),
+      );
+
+      expect(await service.restore(), RestoreOutcome.failed);
+
+      expect(reasons, ['purchases']);
+    });
+  });
+
   test('purchase_failure_codes_map_to_outcomes', () {
     PurchaseFailure? failureOf(PurchasesErrorCode code) {
       final outcome = purchaseOutcomeFor(code);

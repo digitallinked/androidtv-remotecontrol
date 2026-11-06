@@ -1,12 +1,16 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/app_theme.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
+import 'package:tv_remote/features/apps/domain/app_logos.dart';
 import 'package:tv_remote/features/apps/domain/shortcut_style.dart';
 import 'package:tv_remote/features/apps/presentation/widgets/app_tile.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -50,6 +54,32 @@ class _NonlinearTwoX extends TextScaler {
   int get hashCode => 2;
 }
 
+/// A bundle whose assets are all missing, or all hold [corrupt] when it is
+/// set.
+class _BrokenBundle extends CachingAssetBundle {
+  _BrokenBundle({this.corrupt});
+
+  final String? corrupt;
+
+  @override
+  Future<ByteData> load(String key) async {
+    final text = corrupt;
+    if (text == null) throw FlutterError('No asset $key');
+    return ByteData.sublistView(Uint8List.fromList(text.codeUnits));
+  }
+}
+
+/// Runs real time until [finder] shows: a logo's load finishes outside the
+/// fake clock.
+Future<void> _waitFor(WidgetTester t, Finder finder) async {
+  for (var i = 0; i < 100 && finder.evaluate().isEmpty; i++) {
+    await t.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await t.pump();
+  }
+}
+
 void main() {
   testWidgets('custom_entries_show_an_upper_case_monogram', (t) async {
     await pumpApp(
@@ -73,6 +103,23 @@ void main() {
       ),
     );
     expect(find.text('É'), findsOneWidget);
+  });
+
+  testWidgets('the_monogram_never_shrinks_at_100_or_200_percent_text', (
+    t,
+  ) async {
+    for (final scale in const [1.0, 2.0]) {
+      await pumpApp(
+        t,
+        const AppIconSquare(
+          app: AppEntry(package: 'a.b', name: 'Plex'),
+        ),
+        textScale: scale,
+      );
+      final letter = find.text('P');
+      final drawn = t.getBottomRight(letter) - t.getTopLeft(letter);
+      expect(drawn.dy, greaterThanOrEqualTo(26), reason: '$scale');
+    }
   });
 
   testWidgets('an_empty_name_draws_an_empty_square', (t) async {
@@ -458,5 +505,229 @@ void main() {
       expect(taps, 1);
       await t.pumpAndSettle();
     }
+  });
+
+  group('logos', () {
+    const netflix = AppEntry(package: 'com.netflix.ninja', name: 'Netflix');
+    final logo = kAppLogos[netflix.package]!;
+
+    testWidgets('a_mapped_app_draws_its_logo_on_the_dark_tile', (t) async {
+      for (final b in Brightness.values) {
+        await pumpApp(t, const AppIconSquare(app: netflix), brightness: b);
+        await t.pumpAndSettle();
+        expect(_fillOf(t), const Color(0xFF141414), reason: b.name);
+        expect(find.text('N'), findsNothing, reason: b.name);
+        final picture = t.widget<SvgPicture>(find.byType(SvgPicture));
+        expect(
+          picture.colorFilter,
+          ColorFilter.mode(logo.ink, BlendMode.srcIn),
+          reason: b.name,
+        );
+      }
+    });
+
+    testWidgets('the_logo_is_six_tenths_of_the_square_and_centred', (t) async {
+      for (final size in const [40.0, 56.0, 72.0]) {
+        await pumpApp(t, AppIconSquare(app: netflix, size: size));
+        await t.pumpAndSettle();
+        final drawn = find.byType(SvgPicture);
+        expect(t.getSize(drawn), Size.square(size * 0.6), reason: '$size');
+        expect(
+          t.getCenter(drawn),
+          t.getCenter(find.byType(AppIconSquare)),
+          reason: '$size',
+        );
+      }
+    });
+
+    testWidgets('a_custom_shortcut_of_a_mapped_package_gets_the_logo', (
+      t,
+    ) async {
+      await pumpApp(
+        t,
+        const AppIconSquare(
+          app: AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'Films',
+            isCustom: true,
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(SvgPicture), findsOneWidget);
+      expect(find.text('F'), findsNothing);
+    });
+
+    testWidgets('a_style_of_the_user_wins_over_the_logo', (t) async {
+      const colour = Color(0xFF2563EB);
+      await pumpApp(
+        t,
+        const AppIconSquare(
+          app: AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'Netflix',
+            customColor: colour,
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(find.text('N'), findsOneWidget);
+      expect(_fillOf(t), colour);
+
+      await pumpApp(
+        t,
+        const AppIconSquare(
+          app: AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'Netflix',
+            customIcon: 'live',
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(t.widget<Icon>(find.byType(Icon)).icon, Icons.live_tv_outlined);
+      expect(_fillOf(t), AppColors.light.surfaceRaised);
+    });
+
+    testWidgets('an_unmapped_app_keeps_the_letter', (t) async {
+      await pumpApp(
+        t,
+        const AppIconSquare(
+          app: AppEntry(package: 'a.b', name: 'Netflix'),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(find.text('N'), findsOneWidget);
+    });
+
+    testWidgets('the_dot_on_a_logo_tile_has_a_contrasting_ring', (t) async {
+      await pumpApp(
+        t,
+        SizedBox(
+          width: 96,
+          height: 130,
+          child: AppTile(app: netflix, isCurrent: true, onTap: () {}),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(
+        contrastRatio(
+          t.widget<NowOnTvDot>(find.byType(NowOnTvDot)).ringColor,
+          kAppLogoTile,
+        ),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    for (final b in Brightness.values) {
+      testWidgets('logo_tiles_keep_their_semantics_at_320_dp_200_${b.name}', (
+        t,
+      ) async {
+        t.view
+          ..physicalSize = const Size(320, 700)
+          ..devicePixelRatio = 1;
+        addTearDown(t.view.reset);
+        final handle = t.ensureSemantics();
+        await pumpApp(
+          t,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Builder(
+                builder: (context) => SizedBox(
+                  width: 83,
+                  height: AppTile.heightOf(context),
+                  child: AppTile(app: netflix, isCurrent: false, onTap: () {}),
+                ),
+              ),
+              Builder(
+                builder: (context) => SizedBox(
+                  height: QuickAppTile.heightOf(context),
+                  child: QuickAppTile(
+                    app: const AppEntry(
+                      package: 'com.google.android.youtube.tv',
+                      name: 'YouTube',
+                    ),
+                    isCurrent: true,
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ],
+          ),
+          brightness: b,
+          textScaler: const _NonlinearTwoX(),
+        );
+        await t.pumpAndSettle();
+        expect(t.takeException(), isNull);
+        expect(find.byType(SvgPicture), findsNWidgets(2));
+        expect(
+          t.getSemantics(find.bySemanticsLabel('Open Netflix')),
+          isSemantics(isButton: true, hasTapAction: true),
+        );
+        expect(find.bySemanticsLabel('YouTube, now on TV'), findsOneWidget);
+        // The logo says nothing: only the tile does.
+        expect(find.bySemanticsLabel('Netflix'), findsNothing);
+        expect(find.bySemanticsLabel('N'), findsNothing);
+        handle.dispose();
+      });
+    }
+  });
+
+  group('a_failed_logo', () {
+    const netflix = AppEntry(package: 'com.netflix.ninja', name: 'Netflix');
+
+    testWidgets('that_is_missing_shows_the_letter_and_throws_nothing', (
+      t,
+    ) async {
+      final bundle = _BrokenBundle();
+      await pumpApp(
+        t,
+        DefaultAssetBundle(
+          bundle: bundle,
+          child: const AppIconSquare(app: netflix),
+        ),
+      );
+      await _waitFor(t, find.text('N'));
+      expect(find.text('N'), findsOneWidget);
+      expect(t.takeException(), isNull);
+      expect(
+        t.widget<Text>(find.text('N')).style?.color,
+        colourKeyLabelColor(kAppLogoTile),
+      );
+      expect(_fillOf(t), kAppLogoTile);
+
+      // A tile built again, as a list does on scrolling back, fails the same
+      // way.
+      await pumpApp(t, const SizedBox());
+      await pumpApp(
+        t,
+        DefaultAssetBundle(
+          bundle: bundle,
+          child: const AppIconSquare(app: netflix),
+        ),
+      );
+      await _waitFor(t, find.text('N'));
+      expect(find.text('N'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('that_is_corrupt_shows_the_letter_and_throws_nothing', (
+      t,
+    ) async {
+      await pumpApp(
+        t,
+        DefaultAssetBundle(
+          bundle: _BrokenBundle(corrupt: '<svg not really'),
+          child: const AppIconSquare(app: netflix),
+        ),
+      );
+      await _waitFor(t, find.text('N'));
+      expect(find.text('N'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
   });
 }

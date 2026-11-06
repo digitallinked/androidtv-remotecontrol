@@ -15,6 +15,15 @@ class InMemorySecureKeyValueStore implements SecureKeyValueStore {
   /// When set, [write] throws this object.
   Object? throwOnWrite;
 
+  /// When set, [delete] throws this object.
+  Object? throwOnDelete;
+
+  /// When set, [delete] waits for it before removing the key.
+  Future<void>? deleteGate;
+
+  /// The keys [delete] was asked to remove, in order.
+  final List<String> deleted = [];
+
   @override
   Future<String?> read(String key) async {
     if (failNextReads > 0) {
@@ -39,6 +48,13 @@ class InMemorySecureKeyValueStore implements SecureKeyValueStore {
 
   @override
   Future<void> delete(String key) async {
+    deleted.add(key);
+    final gate = deleteGate;
+    if (gate != null) await gate;
+    final error = throwOnDelete;
+    // Tests inject arbitrary objects, e.g. a PlatformException.
+    // ignore: only_throw_errors
+    if (error != null) throw error;
     values.remove(key);
   }
 }

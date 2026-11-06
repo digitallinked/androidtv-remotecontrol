@@ -1,0 +1,18 @@
+# Upload-key signing for release builds (Ruling P9-R3; store-release skill).
+#
+# Copy this file to android/key.properties (git-ignored; never commit it) and fill it in.
+# The upload keystore lives outside the repository. The owner creates it once with:
+#
+#   keytool -genkeypair -v -keystore ~/keys/atvremote-upload.jks -keyalg RSA -keysize 4096 -validity 10000 -alias upload
+#
+# Then back it up offline; losing it means a Play upload-key reset.
+#
+# storeFile may be absolute or start with ~/ (your home directory); anything else is
+# relative to android/. Without android/key.properties, release APKs and dev bundles are
+# signed with the debug key and the prod app bundle is refused.
+# Use forward slashes in storeFile even on Windows (C:/Users/you/keys/upload.jks): a
+# backslash is an escape character in a .properties file.
+storeFile=~/keys/atvremote-upload.jks
+storePassword=CHANGE_ME
+keyAlias=upload
+keyPassword=CHANGE_ME

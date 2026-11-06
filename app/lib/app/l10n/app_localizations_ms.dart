@@ -536,7 +536,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Leret untuk bergerak, ketik untuk memilih, ketik dengan dua jari untuk kembali.';
 
   @override
-  String get touchpadIdleHint => 'Leret untuk bergerak · Ketik untuk memilih';
+  String get touchpadIdleHint => 'Leret untuk bergerak, ketik untuk memilih';
 
   @override
   String get channelLabel => 'CH';
@@ -1012,7 +1012,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsRemoteBehaviourSubtitle =>
-      'Getaran, Smooth Press, skrin dan papan kekunci';
+      'Getaran, tahan semula jadi, skrin dan papan kekunci';
 
   @override
   String get settingsAppsSubtitle => 'Pilih dan susun pintasan apl anda';
@@ -1124,7 +1124,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Getaran pendek apabila kekunci sampai ke TV.';
 
   @override
-  String get behaviourSmoothPress => 'Smooth Press';
+  String get behaviourSmoothPress => 'Tahan semula jadi';
 
   @override
   String get behaviourSmoothPressSubtitle =>
@@ -1321,7 +1321,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacyAdsInfo =>
-      'Versi percuma apl ini memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan sahaja.';
+      'Versi percuma apl ini memaparkan iklan sepanduk di bahagian bawah skrin Apl dan Tetapan. Iklan skrin penuh sekali-sekala mungkin juga dipaparkan apabila anda keluar dari Tetapan, tetapi tidak semasa anda menggandingkan TV.';
 
   @override
   String get privacyAdsPremium =>
@@ -1568,4 +1568,39 @@ class AppLocalizationsMs extends AppLocalizations {
   String manageAppsMoved(String app, int position, int count) {
     return '$app dialihkan ke kedudukan $position daripada $count';
   }
+
+  @override
+  String get pageTitleErrorLog => 'Log ralat';
+
+  @override
+  String get errorLogNote =>
+      'Log ini kekal pada telefon ini. Log ini tidak dihantar ke mana-mana melainkan anda menyalinnya.';
+
+  @override
+  String get errorLogEmpty => 'Tiada ralat direkodkan.';
+
+  @override
+  String get errorLogCopyAll => 'Salin semua';
+
+  @override
+  String get errorLogCopied => 'Log ralat disalin';
+
+  @override
+  String get errorLogCopyFailed => 'Tidak dapat menyalin log. Cuba lagi.';
+
+  @override
+  String get errorLogClear => 'Kosongkan';
+
+  @override
+  String get errorLogClearTitle => 'Kosongkan log ralat?';
+
+  @override
+  String get errorLogClearBody =>
+      'Ini akan memadamkan semua entri daripada telefon ini.';
+
+  @override
+  String get errorLogSerious => 'Serius';
+
+  @override
+  String get errorLogNoReason => 'Ralat tidak dijangka';
 }

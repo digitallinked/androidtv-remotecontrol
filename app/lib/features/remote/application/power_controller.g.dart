@@ -65,4 +65,4 @@ final class PowerControllerProvider
   }
 }
 
-String _$powerControllerHash() => r'959d4d0c50998821fd45a41bb32a13f88a52e873';
+String _$powerControllerHash() => r'8a0da3dd50ff2d2b22dc32ef0054c998ea62dd87';

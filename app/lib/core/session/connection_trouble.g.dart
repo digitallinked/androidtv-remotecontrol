@@ -104,7 +104,7 @@ final class ConnectionTroubleProvider
   }
 }
 
-String _$connectionTroubleHash() => r'eca68feb4cafa3d1fe5bb9c203496aa015107579';
+String _$connectionTroubleHash() => r'829368cc85733c06fb25aaa26f1a6ef420300920';
 
 /// When the connection last had trouble (Rulings P8-R12, P8-C9), or `null`
 /// if it hasn't since the app started.

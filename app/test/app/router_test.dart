@@ -14,6 +14,7 @@ import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/paywall/presentation/paywall_screen.dart';
 import 'package:tv_remote/features/settings/presentation/about_page.dart';
 import 'package:tv_remote/features/settings/presentation/appearance_page.dart';
+import 'package:tv_remote/features/settings/presentation/error_log_page.dart';
 import 'package:tv_remote/features/settings/presentation/help_page.dart';
 import 'package:tv_remote/features/settings/presentation/remote_behaviour_page.dart';
 import 'package:tv_remote/features/settings/presentation/remote_layout_page.dart';
@@ -49,6 +50,7 @@ void main() {
       AppRoutes.settingsRemoteBehaviour: 'Remote behaviour',
       AppRoutes.settingsHelp: 'Help',
       AppRoutes.settingsAbout: 'About this app',
+      AppRoutes.settingsErrorLog: 'Error log',
       AppRoutes.settingsPrivacy: 'Privacy choices',
       '/paywall': 'Premium',
     };
@@ -76,6 +78,7 @@ void main() {
       AppRoutes.settingsRemoteBehaviour: RemoteBehaviourPage,
       AppRoutes.settingsHelp: HelpPage,
       AppRoutes.settingsAbout: AboutPage,
+      AppRoutes.settingsErrorLog: ErrorLogPage,
     };
     for (final e in screens.entries) {
       await pumpRouterApp(t, initialLocation: e.key);
@@ -95,6 +98,7 @@ void main() {
       AppRoutes.settingsRemoteBehaviour,
       AppRoutes.settingsHelp,
       AppRoutes.settingsAbout,
+      AppRoutes.settingsErrorLog,
       AppRoutes.settingsPrivacy,
     ]) {
       unawaited(router.push(path));
@@ -185,7 +189,7 @@ void main() {
     }
 
     walk(container.read(appRouterProvider).configuration.routes);
-    expect(AppRouteNames.all, hasLength(16));
+    expect(AppRouteNames.all, hasLength(17));
     expect(names.toSet(), hasLength(names.length), reason: 'duplicate names');
     expect(names, everyElement(isIn(AppRouteNames.all)));
     expect(names.toSet(), AppRouteNames.all);
@@ -230,7 +234,7 @@ void main() {
     }
 
     walk(router.configuration.routes);
-    expect(count, 16);
+    expect(count, 17);
   });
 
   testWidgets('the_error_page_is_a_material_page', (t) async {

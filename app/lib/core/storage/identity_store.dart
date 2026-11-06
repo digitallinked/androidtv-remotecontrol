@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:isolate';
 
 import 'package:atv_remote/atv_remote.dart';
@@ -40,6 +41,10 @@ class IdentityStore {
   }) : _storage = storage,
        _generate = generate ?? _generateOffUiIsolate;
 
+  /// How long [loadOrCreate] waits for an earlier [forget] to finish before
+  /// it fails with [IdentityStoreException] (pairing then offers Try again).
+  static const forgetWaitTimeout = Duration(seconds: 5);
+
   /// Storage key of the PEM encoded certificate.
   static const certificateKey = 'client_identity.certificate_pem';
 
@@ -50,6 +55,7 @@ class IdentityStore {
   final Future<ClientIdentity> Function() _generate;
   final Duration _readRetryDelay;
   Future<ClientIdentity>? _pending;
+  Future<void>? _forgetting;
 
   static Future<ClientIdentity> _generateOffUiIsolate() =>
       Isolate.run(ClientIdentity.generate);
@@ -61,8 +67,39 @@ class IdentityStore {
   /// identity could not be saved; an unsaved identity is never returned.
   Future<ClientIdentity> loadOrCreate() => _pending ??= _loadOrCreate();
 
+  /// Deletes the stored identity, so the next [loadOrCreate] makes a new one.
+  ///
+  /// Called when this run created the database (Ruling P9-C8): on iOS the
+  /// keychain keeps the identity after the app is deleted, and a reinstall
+  /// must not present the old phone's certificate. Both keys are tried even
+  /// when one delete fails; the first failure is then rethrown.
+  ///
+  /// The caller may stop waiting (the start bounds it), but the deletes run
+  /// on, so [loadOrCreate] waits for them first: a late delete must not
+  /// remove an identity made after it. A keychain that never answers would
+  /// hold the identity's own reads and writes just the same.
+  Future<void> forget() {
+    _pending = null;
+    return _forgetting = _forget();
+  }
+
+  Future<void> _forget() async {
+    Object? failure;
+    StackTrace? failureStack;
+    for (final key in const [certificateKey, privateKeyKey]) {
+      try {
+        await _storage.delete(key);
+      } on Object catch (error, stack) {
+        failure ??= error;
+        failureStack ??= stack;
+      }
+    }
+    if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
+  }
+
   Future<ClientIdentity> _loadOrCreate() async {
     try {
+      await _awaitForget();
       final stored = await _loadStored();
       if (stored != null) return stored;
       await _clear();
@@ -72,6 +109,24 @@ class IdentityStore {
     } on Object {
       _pending = null;
       rethrow;
+    }
+  }
+
+  /// Waits up to [forgetWaitTimeout] for an earlier [forget]. A forget that
+  /// failed was reported by its caller, and the load copes with what's left.
+  /// One that is still running fails this load instead: going on could make
+  /// an identity that the late delete then removes.
+  Future<void> _awaitForget() async {
+    final forgetting = _forgetting;
+    if (forgetting == null) return;
+    try {
+      await forgetting.timeout(forgetWaitTimeout);
+    } on TimeoutException {
+      throw const IdentityStoreException(
+        'The previous client identity is still being deleted',
+      );
+    } on Object {
+      // Reported by forget's caller.
     }
   }
 

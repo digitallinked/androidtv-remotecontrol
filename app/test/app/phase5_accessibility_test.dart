@@ -51,6 +51,7 @@ final Map<String, String> _routes = {
   AppRoutes.settingsRemoteBehaviour: 'settings_remote_behaviour',
   AppRoutes.settingsHelp: 'settings_help',
   AppRoutes.settingsAbout: 'settings_about',
+  AppRoutes.settingsErrorLog: 'settings_error_log',
 };
 
 void main() {

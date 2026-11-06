@@ -6,6 +6,9 @@ import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_sheet.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
+import 'package:tv_remote/app/widgets/field_text.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/features/apps/application/shortcuts.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/package_names.dart';
@@ -122,6 +125,8 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
       _failed = false;
     });
     final actions = ref.read(shortcutActionsProvider);
+    // Read now: `ref` is gone if the editor closes during the write.
+    final crashes = ref.read(crashReporterProvider);
     final existing = widget.existing;
     final name = _nameText;
     try {
@@ -159,7 +164,15 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
         if (!mounted) return;
         Navigator.of(context).pop(l10n.shortcutSaved);
       }
-    } on Object {
+    } on Object catch (error, stack) {
+      unawaited(
+        safeRecordError(
+          crashes,
+          error,
+          stack,
+          reason: 'shortcut save',
+        ),
+      );
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -221,9 +234,10 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
           onChanged: (_) => setState(() => _nameTouched = true),
           decoration: InputDecoration(
             labelText: l10n.shortcutNameLabel,
-            errorText: _nameTouched || _submitted ? _nameError(l10n) : null,
-            // At 200% text on a 320 dp phone the error takes up to 4 lines.
-            errorMaxLines: 6,
+            floatingLabelBehavior: fieldLabelBehavior(context),
+            error: fieldError(
+              _nameTouched || _submitted ? _nameError(l10n) : null,
+            ),
           ),
         ),
         TextField(
@@ -238,19 +252,18 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
           onChanged: (_) => setState(() => _packageTouched = true),
           decoration: InputDecoration(
             labelText: l10n.shortcutPackageLabel,
+            floatingLabelBehavior: fieldLabelBehavior(context),
             hintText: l10n.shortcutPackageHint,
             // At 200% text on a 320 dp phone the example ID wraps; one line
             // would cut it.
-            hintMaxLines: 3,
-            helperText: l10n.shortcutPackageHelp,
-            // At 200% text on a 320 dp phone the help takes up to 9 lines.
-            helperMaxLines: 10,
-            errorText: _packageTouched || _submitted
-                ? _packageError(l10n, listed)
-                : null,
-            // At 200% text on a 320 dp phone the error, with its example
-            // ID, takes up to 5 lines.
-            errorMaxLines: 6,
+            hintMaxLines: 4,
+            // Help and errors wrap in full at any text size (Ruling P9-C6).
+            helper: fieldHelper(context, l10n.shortcutPackageHelp),
+            error: fieldError(
+              _packageTouched || _submitted
+                  ? _packageError(l10n, listed)
+                  : null,
+            ),
           ),
         ),
         _SectionLabel(l10n.shortcutColourLabel),

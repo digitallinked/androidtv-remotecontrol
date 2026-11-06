@@ -519,7 +519,7 @@ void main() {
     client.sentKeys.clear();
 
     await openFromSettings(t, 'Remote behaviour');
-    await tapAndSettle(t, find.text('Smooth Press'));
+    await tapAndSettle(t, find.text('Natural hold'));
     await back(t, 2);
     expect(find.byType(RemoteScreen), findsOneWidget);
 
@@ -606,6 +606,7 @@ void main() {
       AppRoutes.settingsRemoteBehaviour: 'Remote behaviour',
       AppRoutes.settingsHelp: 'Help',
       AppRoutes.settingsAbout: 'About this app',
+      AppRoutes.settingsErrorLog: 'Error log',
     };
     for (final e in routes.entries) {
       await pumpApp(t, location: e.key);
@@ -635,6 +636,7 @@ void main() {
     AppRoutes.settingsRemoteBehaviour: 0,
     AppRoutes.settingsHelp: 0,
     AppRoutes.settingsAbout: 0,
+    AppRoutes.settingsErrorLog: 0,
     AppRoutes.paywall(source: PaywallSource.unknown): 0,
     AppRoutes.settingsPrivacy: 0,
   };

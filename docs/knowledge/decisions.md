@@ -4,11 +4,109 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #55 — 2026-11-06 — Release builds keep Room's constructor
+- **Decision:** `app/android/app/proguard-rules.pro` keeps `<init>()` on every `RoomDatabase` subclass. Flutter's Gradle plugin picks the file up by name. `android.enableR8.fullMode` stays on and nothing else is loosened; `test/platform/release_shrinker_test.dart` pins the rule.
+- **Why:** the first release build ever run on a phone crashed at process start with `Failed to create an instance of androidx.work.impl.WorkDatabase`, before any Flutter code. Room's library rule keeps the class but not its constructor, so R8 full mode removes `<init>()` (`usage.txt` shows it). WorkManager comes in through the ads and Firebase libraries. Prod has the same dependencies and shrinker settings, so it needs the same rule.
+- **Revisit:** a Room release whose own consumer rule keeps the constructor.
+
+### #54 — 2026-11-06 — "Backlit": the visual identity pass
+- **The idea:** a good physical remote has dark moulded keys with legends lit from behind. The app's mark is already a ring around a disc with four carets, so the D-pad is that mark made into a control. The boldness goes there and into the touchpad; everything else stays quiet.
+- **Colour:** the brand accent `#3D5AFE`, the icon and the store art are unchanged. Neutral grey-black gave way to an ink derived from the brand hue (dark `#0B0D18` / `#141726` / `#1F2338` / `#2E3350`, accent `#7F96FF`; light `#F2F3FA` / `#FFFFFF` / `#E9EBF7` / `#CDD1E6`). The native splash follows `bg`, and its dark mark follows the dark accent.
+- **Type:** Atkinson Hyperlegible Next (400, 500, 600), with Atkinson Hyperlegible Mono (500) for the pairing code. It replaces "Inter or the system font". It was drawn so look-alike characters can't be confused, which is the actual problem with a six-character hex code and addresses read in a dim room. Both are SIL OFL with no reserved font name, about 250 KB bundled, and listed on the licence page.
+- **Relief is derived, not tokenised:** `Relief.of(colors, brightness)` works everything out from the palette, so colour styles, Theater Mode and dynamic colour get it for free. One light from above. `KeySurface` is the only moulded widget.
+- **Accent is rationed on the remote:** OK and the lit ring. The pad tabs are a recessed track with a raised key, because a block of accent on a navigation control outshouted the pad. Section titles lost their accent for the same reason.
+- **The status pill stays 48 dp high in every state.** While connected it drops its frame and reads as a lamp and a word. It never shrinks: a strip that grew on a reconnect would move the pad under the thumb, which costs more than the 20 dp it would free.
+- **Logo tiles keep `#141414`** (#53) and gain a 1 dp `outline` edge, or they melt into the new dark `bg`.
+- **`AppPanel`** groups rows on Settings, Your TVs and discovery. Sheets give `ListTile`s no padding of their own, so rows line up with the sheet title.
+- **Rejected:** soft double shadows (neumorphism: low contrast, and it fails the first principle in a dim room); a "deck" panel behind the controls (one accessory too many, and a layout risk in split and large-text forms); breathing or pulsing lamps (they never settle, and they are motion nobody asked for).
+- **Store art keeps Roboto captions** (P9-C11): only the screens inside the frames change.
+- **Why:** the owner asked for a full design pass. The app worked and was accessible but looked like stock Material 3, which doesn't help it beat Remote ATV on feel.
+- **Revisit:** a face that doesn't suit Malay (DM-113), or the owner preferring the older neutral look. `Relief` and the tokens are the only places to change.
+
+### #53 — 2026-11-05 — Owner's real-device requests (P9-C14–C17)
+- **Every failure the user sees is recorded (C14, C17).** Each one goes through `safeRecordError` with a fixed reason, including catches that only called `developer.log`, which shows nothing in a release build. Routine offline and optional-feature failures stay silent. Failure screens fed by `AsyncValue` report once per failure through a listener, never in `build` (`session`, `devices read`, `apps read`). This supersedes Phase 8's "an Apps read error is shown, never reported", which had no reason behind it.
+- **The error log (C15).**
+  - `ErrorLog` is a `CrashReporter` in the chain from the first instruction of `bootstrap()`. It keeps the last 50 entries in `error_log.json` beside the database, in the backup-excluded directory.
+  - It records whatever the privacy choices, Firebase status or build type say, because nothing leaves the phone unless the user copies it.
+  - Crash collection therefore runs with Firebase off too, for the scrubber and `savedNamesKnown`, and it calls no sink.
+  - The #50 hold applies: nothing is written or shown until the names are known.
+  - `ReportFacts` is the one place that decides what may be read from an error.
+- **SQL text never leaves (C17).** `CrashScrubber` cuts everything from `Causing statement` onward before anything else is scrubbed. sqlite's error text lists the statement's parameters, and a failed rename's new name isn't a known term yet.
+- **Stale pairing runs (C17):** `pairing identity` and `pairing save` still report on a stale run, because they are real storage failures, not the `closed` artefact of backing out.
+- **Pairing with a TV that's off reports** (`pairing`). It may be the commonest Crashlytics entry. If that's noise, skip `connectionFailed` and `timeout`.
+- **Connection drops are not recorded.** They are session states, not caught errors.
+- **Real logos on the tiles (C16).** The owner's request replaces the default "no" of P5-R4 and P9-R16. 27 of 55 apps: Simple Icons 16.36.0 (23) and selfh.st at `b2378abb` (Prime Video, Disney+, Hulu, Peacock). The other 28 keep the letter; nothing is drawn or traced. Order: the user's style, then the logo, then the letter. Fixed tile `#141414`, brand ink, white if under 3:1. Bundled only, never a network image. `flutter_svg` 2.3.2 added. Store art stays logo-free (P9-R14), and a logo on any store shot fails the capture.
+- **Why:** the owner's first real-device run found a search that failed on every phone with its error thrown away, and asked for real app icons.
+- **Revisit:** a brand or store objection (runbook item 10 has the removal steps, and it takes an app update); Crashlytics noise from pairing.
+
+### #52 — 2026-11-04 — Phase 9 controller rulings (P9-C1–C13)
+- **Release checker (C1):** one documented fake publisher id is allowed in fixtures; never a real one. The unsigned-bundle refusal stays.
+- **Android bundle (C2):** the prod bundle refuses Google's test publisher whether it comes from the fallback or is set explicitly. A `taskGraph.whenReady` backstop gives aggregate tasks (`bundle`, `build`, `:app:bundleProdRel`) the same signing and AdMob refusals, all reported in one exception. A malformed id is refused on every path; an explicit test id on a non-bundle build warns. Build-script warnings use `logger.quiet` (`flutter build` passes `-q`), and `logger.warn|lifecycle|info|debug` are banned by a test.
+- **iOS symbols and the ad id (C3, C4):** the dSYM phase tries Pods, then the SPM checkouts under `BUILD_DIR` and then `OBJROOT`, and warns if it finds neither. Debug configs use `dwarf-with-dsym`; there is no plist input path. SPM stays (Flutter's default). `tool/release.sh --platform ios` exports `FIREBASE_ANALYTICS_WITHOUT_ADID=true`, which is the SPM switch (the Podfile global is CocoaPods-only). Mac checks: DM-106/107/112.
+- **Fresh database (C5, C8):** the preference reset is bounded at 2 s (the first-frame budget, #38). A database created this run also deletes the stored client identity (keychain or keystore), bounded at 2 s, so a reinstalled iPhone gets a new certificate and the TV asks for a code again (device check DM-108 (3)).
+  - **Failures:** each one goes to the crash reporter with reason `fresh database`. That runs before the saved TV names are known, so the reporter only logs them on the device (#50 hold).
+  - **A late delete:** `loadOrCreate` waits up to 5 s for an in-flight delete. On timeout it fails as `identityUnavailable` (pairing shows Try again) and never creates an identity.
+- **Text (C6, C7):** P9-R9's ellipsis exemptions are matched by widget or role, and each keeps the full text in semantics:
+  - the floated field label;
+  - colour-key labels;
+  - app names and package ids;
+  - the touchpad hint, only when the same text is in semantics.
+
+  The discovery row grows to fit its text, and real overflows are fixed. At enlarged text, field labels always float.
+- **Store copy and policy (C8, C9):** interstitials are disclosed: off by default, and remotely switchable to one when leaving Settings. Nothing says "banner ads only". The policy says iOS may keep the pairing certificate after the app is deleted, and that the app replaces it on reinstall.
+- **Competitor name (C10):** "Smooth Press" was Remote ATV's own setting name, so the user-visible label is now "Natural hold" / "Tahan semula jadi" everywhere. Internal identifiers (`smoothPress*`, the prefs key) stay, because renaming them would need a migration. A test bans the phrase from ARB values and store copy. This outranked the Phase 9 ARB freeze.
+- **Screenshots (C11):** the frame corner radius is 4 % of the shortest side, and capture uses the root layer.
+- **Store forms (C12, amends P9-R15):**
+  - **Play:** crash logs are collected by Crashlytics and AdMob.
+  - **Apple:** Linked: Yes for every type AdMob collects; Purchase History is the only "No".
+  - **Export:** the answers name bundled BoringSSL (dart:io) and pointycastle, so the recommended answer is "standard algorithms instead of, or in addition to, the OS". France is the owner's decision.
+  - **Ratings:** a 4+/Everyone content rating and an 18+ Play audience don't conflict.
+  - **The G cap:** ads are capped at G in the AdMob console (an owner step) and in code (`maxAdContentRating: G` before `MobileAds.initialize`).
+- **G cap fails closed (C13):** if the cap can't be set, the ads SDK never starts and no ad loads. One non-fatal goes to the crash reporter. The reason: an ad above the age rating is a 2.5.18 risk, and the remote never depends on ads.
+- **Accepted:**
+  - a first-launch keystore delete on Android, a no-op there;
+  - the Gradle dry-run test writing a git-ignored `android/secrets.properties` with public test ids (skipped if one exists, deleted in tear-down), an exception to P9-R2's temp-dir rule.
+- **Revisit:** if the first Linux CI run times out the Gradle dry runs, warm Gradle in the CI step; never loosen the test.
+
+### #51 — 2026-11-04 — Phase 9 release prep (P9-R1–R16)
+- **Scope (R1):** prepare everything and sign or submit nothing. Accounts, the keystore, real ids and config, hosting, uploads, test tracks, review, device and Mac runs, the Malay sign-off and the final name and bundle id are all the owner's (`docs/release/runbook.md`). No task creates any keystore, not even a throwaway one.
+- **One release checker (R2):** `app/tool/release_check.dart`, wrapped by `tool/release.{ps1,sh}`.
+  - **Stages:** pre, manifest and post. One run lists every problem as `REFUSED [code]`, then exits 0, 1 or 64.
+  - **What it refuses:** test or Test Store keys, test ad units, UMP debug settings, missing Firebase config, the test or placeholder AdMob app id, incomplete signing, tracked secrets, placeholder links, missing backup attributes in the manifest, `targetSdk` below 35, and a debug-signed AAB.
+  - **No Dart `--obfuscate` in v1.** Android R8 is on, and its mapping goes to Crashlytics.
+- **Android signing (R3):** from `android/key.properties`. An incomplete file or a missing store file fails with the file named. Without the file, the prod bundle is refused; other release builds use debug signing with a warning.
+- **The AdMob app id at upload time (R4):** the Android prod bundle and the iOS archive (`check_admob_app_id.sh`, the first Runner phase) refuse Google's test app id. Other prod builds warn.
+- **iOS plumbing (R5):**
+  - the Podfile at iOS 15.0, with nine configurations;
+  - per-flavor xcconfigs with optional Pods includes;
+  - the Crashlytics dSYM upload as the last build phase (see #52 C3/C4).
+- **Fresh database (R6):** a database created this run resets `onboarding_complete`, `att_preprompt_shown` and `shortcuts_seeded` before the first route. The review counters, privacy choices, theme and Premium cache are kept. Residual: a failed or timed-out write; a same-process Try again may read the old values.
+- **Per-app language (R7):** `locales_config.xml` lists the ARB locales. The in-app language wins; the Android 13 system choice applies only on "System default", so the two screens can disagree. Post-launch candidate: a one-way sync via `LocaleManager.setApplicationLocales`.
+- **No `dart:io` Platform (R8):** `app/lib` uses `defaultTargetPlatform`. A scan bans any `Platform.` member and any `show` import of `Platform`, single-line or multi-line.
+- **Text is never cut (R9):** the Malay/pseudo sweep checks every paragraph on every screen and every error state, with the exemptions in #52 C6.
+- **CLI (R10):** an atomic identity write (tmp, then rename); `holdKey` releases on Ctrl+C (exit 130) and reports a dropped connection (exit 1).
+- **Placeholders (R11):** `docs/release/placeholders.json` is the one values file. `fill_release_docs.dart` renders into `build/release-docs/`, and `AppLinks` stays the code source.
+- **Drafts (R12, R13):**
+  - **Legal:** the privacy policy and terms are DRAFTs written from our own facts.
+  - **Store copy:** `store-listing/en.md` and `ms.md` (Malay UNREVIEWED), with length limits counted after filling. No third-party trademarks in names, keywords, captions or the feature graphic.
+- **Store images (R14):** the feature graphic is a golden. Screenshots come from a two-pass generator into `build/store-screenshots/` and are never committed.
+- **Store forms (R15):** drafts in `docs/release/forms/`. Defaults: contains ads, an 18+ Play audience, 4+ / Everyone, Google's SKAdNetwork id only, and AdServices permissions kept. The export-compliance answer is the owner's (Info.plist unchanged). Corrected by #52 C12.
+- **Deferred (R16):**
+  - device and Mac work;
+  - theater `ExcludeSemantics`;
+  - Apps banner collapse;
+  - the predictive-back class;
+  - the D-pad wedge;
+  - real app icons;
+  - the Malaysian app ids;
+  - iOS Wake-on-LAN (needs the multicast entitlement);
+  - CI and fastlane uploads (v1.1).
+
 ### #50 — 2026-10-31 — Phase 8 controller rulings (P8-C1–C15)
 - **iOS storage channel (C1):** one minimal Swift method, no fallback to Documents; compiled and checked on a Mac before release (device matrix DM-058).
 - **Test helpers (C2, C3):** `pumpUntil` pumps `Duration.zero` inside a `runAsync` loop; `FakeTvServer.acceptedRemoteConnections` counts paired sockets; dispose a `SemanticsHandle` in a `finally`, not `addTearDown`.
 - **Disconnected remote (C4):** controls fade to `AppOpacity.unavailable` 0.85 (amends #21's 0.4) so text keeps 4.5:1; the state is carried by the live-region status pill and the refusal snackbar.
-- **Labels (C6, C13, C14):** `FittedLabel` never shrinks below 100 % text, then ellipsizes; with real fonts nothing is cut at 100 % on 320–390 dp. User-entered TV names and the scaled layout preview may ellipsize with the full text in semantics; "Smooth Press" and the style names stay English.
+- **Labels (C6, C13, C14):** `FittedLabel` never shrinks below 100 % text, then ellipsizes; with real fonts nothing is cut at 100 % on 320–390 dp. User-entered TV names and the scaled layout preview may ellipsize with the full text in semantics; the hold-setting label (now "Natural hold", #52) and the style names stay English.
 - **Reduce motion (C7):** "within one frame" = settled one 16 ms frame after the frame that starts the ticker, under the platform flag. The MediaQuery-only flag is never set alone in production.
 - **Connection trouble (C8–C10):** one `connectionTroubleProvider` (amends P8-R12 "behaviour unchanged"). `reconnecting` counts as trouble until it ends; `offline`/`needsPairing` are noted per emission and expire after the window. `analyticsHooks` never read trouble.
 - **Crash scrubbing (C11):** while the saved TV names are unknown (seed read timed out, failed or threw), crash reports are logged only, never sent; a late read or the first `watchAll` event installs the scrubbing reporter.
@@ -155,7 +253,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - Global, one per package, dense positions. Seeded once from the region's default row (`seedIfEmpty` + a stored flag; emptying the list never re-seeds). Region = first phone locale with a country code, read at seeding and on Reset (Reset asks first and replaces the whole list).
 - Edit apps: reorder by the handle (plus the framework's own localised Move actions — ours removed to avoid duplicates); remove with Undo (re-inserted at its original index into the *current* list; a second removal replaces the first Undo); suggestions exclude listed apps; custom shortcuts pick a monogram colour and a generic icon.
 
-### #28 — 2026-10-27 — App catalogue (P5-R4)
+### #28 — 2026-10-27 — App catalogue (P5-R4) (no-logo rule SUPERSEDED by #53)
 - Our own `apps_v1.json`: 55 apps and 8 region default rows (`*`, MY, SG, ID, IN, US, GB, AU), < 40 KB (bigger strings are decoded on an isolate that never finishes in `testWidgets`). The schema is **closed**: `version` 1; app keys `package`/`name`/`regions`/`launchLink`; unknown keys, duplicate packages and repeated packages in a row are rejected. No icons, icon URLs or brand colours — monograms or generic icons; launch via `market://launch?id=`.
 - `com.wbd.stream` is named "HBO Max" (its Play title). Four packages are kept although Play web returns 404 (geo/TV-only listings; device run). No verified ids yet for Astro GO, sooka, Tonton or mewatch.
 - `search(query, {region})` ranks region-available apps first. `catalogueProvider` and `catalogueSourceProvider` use `retry: noRetry`.
@@ -199,7 +297,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ### #20 — 2026-10-27 — Input path and holds (P4-R2..R6, R17)
 - Widgets take `KeyInput`/`RemoteInput`; `RemoteActions` (autoDispose; the screen watches it) is the only send path. A press with no session, a loading/errored session or a non-connected status is refused: nothing sent, no haptic, one not-connected notice. Unsupported key codes throw `ArgumentError` even when offline.
-- Hold threshold 300 ms (touchpad hold 500 ms). Smooth Press on → `startLong`/`endLong`; off → short repeats every 120 ms (centre never repeats). One hold at a time; auto-release after 15 s; dispose releases. Guard timers are armed before haptics/listeners; listener errors are swallowed.
+- Hold threshold 300 ms (touchpad hold 500 ms). Natural hold (the label was renamed by #52 / P9-C10; the setting key is still `smoothPress`) on → `startLong`/`endLong`; off → short repeats every 120 ms (centre never repeats). One hold at a time; auto-release after 15 s; dispose releases. Guard timers are armed before haptics/listeners; listener errors are swallowed.
 - Haptics: light (tap, step, launch, Enter), medium (hold start), heavy (power, once). The action listener gets the first send of a hold only and text length only — never text.
 
 ### #19 — 2026-10-26 — Phase 3 package pins

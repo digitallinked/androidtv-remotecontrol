@@ -5,6 +5,8 @@ import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/foundation.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+import 'package:tv_remote/core/crash/error_handlers.dart';
 
 part 'wake_on_lan_service.g.dart';
 
@@ -58,7 +60,12 @@ class WakeOnLanService {
     Future<String?> Function()? subnetBroadcast,
     this._send = sendWakeOnLan,
     this._lookupTimeout = const Duration(seconds: 2),
+    this.onError,
   }) : _subnetBroadcast = subnetBroadcast ?? NetworkInfo().getWifiBroadcast;
+
+  /// Told when the network refused every send, which the user sees as a
+  /// failed wake (Ruling P9-C17). One send getting out is a success.
+  final void Function(Object error, StackTrace stack)? onError;
 
   final Future<String?> Function() _subnetBroadcast;
   final WakeOnLanSender _send;
@@ -76,6 +83,7 @@ class WakeOnLanService {
   /// anything is sent.
   Future<bool> wake({required String mac, String? tvHost}) async {
     buildMagicPacket(mac);
+    _lastRefusal = null;
     final limited = InternetAddress(_limitedBroadcast);
     var sent = await _trySend(mac, [limited]);
 
@@ -88,16 +96,22 @@ class WakeOnLanService {
         if (target.address != _limitedBroadcast) target,
     ];
     if (rest.isNotEmpty && await _trySend(mac, rest)) sent = true;
+    final refused = _lastRefusal;
+    if (!sent && refused != null) onError?.call(refused.$1, refused.$2);
     return sent;
   }
+
+  (Object, StackTrace)? _lastRefusal;
 
   Future<bool> _trySend(String mac, List<InternetAddress> targets) async {
     try {
       await _send(mac, broadcastAddresses: targets);
       return true;
-    } on SocketException {
+    } on SocketException catch (error, stack) {
+      _lastRefusal = (error, stack);
       return false;
-    } on OSError {
+    } on OSError catch (error, stack) {
+      _lastRefusal = (error, stack);
       return false;
     }
   }
@@ -113,7 +127,13 @@ class WakeOnLanService {
 
 /// The app's [WakeOnLanService].
 @Riverpod(keepAlive: true)
-WakeOnLanService wakeOnLanService(Ref ref) => WakeOnLanService();
+WakeOnLanService wakeOnLanService(Ref ref) {
+  final crashes = ref.watch(crashReporterProvider);
+  return WakeOnLanService(
+    onError: (error, stack) =>
+        unawaited(safeRecordError(crashes, error, stack, reason: 'wake')),
+  );
+}
 
 /// Whether Wake-on-LAN is switched on for iOS. Off until Apple grants the
 /// `com.apple.developer.networking.multicast` entitlement, without which iOS

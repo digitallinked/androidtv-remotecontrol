@@ -2,10 +2,14 @@ import 'dart:async';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:tv_remote/core/ads/ads_service.dart';
 import 'package:tv_remote/core/ads/google_mobile_ads_sdk.dart';
+import 'package:tv_remote/core/crash/crash_reporter.dart';
+
+import '../../helpers/recording_crash_reporter.dart';
 
 /// The adaptive size the SDK would answer for a 360 dp wide portrait screen.
 AnchoredAdaptiveBannerAdSize _adaptive({
@@ -40,6 +44,11 @@ class _Platform {
   Error? interstitialStartError;
   InterstitialAdLoadCallback? interstitialCallback;
 
+  /// The SDK calls `initialize` makes, in order: `configure(<rating>)` and
+  /// `start`.
+  final List<String> sdkCalls = [];
+  Error? configureError;
+
   GoogleAdsPlatform get platform => GoogleAdsPlatform(
     lookupSize: (orientation, width) async {
       lookups.add((orientation, width));
@@ -56,6 +65,13 @@ class _Platform {
     },
     releaseAd: (ad) async {
       released.add(ad);
+    },
+    configureRequests: (configuration) async {
+      sdkCalls.add('configure(${configuration.maxAdContentRating})');
+      if (configureError != null) throw configureError!;
+    },
+    startSdk: () async {
+      sdkCalls.add('start');
     },
   );
 }
@@ -373,6 +389,108 @@ void main() {
         );
         async.flushMicrotasks();
         expect(result, isNull);
+      });
+    });
+  });
+
+  // Ruling P9-C12: the app is rated 4+ / Everyone, so its ads are capped at
+  // G in code too, before the SDK starts, whatever the console says.
+  group('the ad content rating', () {
+    test('initialize_caps_ads_at_g_before_the_sdk_starts', () async {
+      final p = _Platform();
+
+      await GoogleMobileAdsSdk(platform: p.platform).initialize();
+
+      expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})', 'start']);
+      expect(MaxAdContentRating.g, 'G');
+    });
+
+    // Ruling P9-C13: failing closed must not be silent. A session with no
+    // ads because the cap couldn't be set is one non-fatal report.
+    test('a_cap_that_cannot_be_set_is_reported_once_as_a_non_fatal', () async {
+      final reporter = RecordingCrashReporter();
+      final p = _Platform()..configureError = StateError('no request config');
+      final sdk = GoogleMobileAdsSdk.reportingTo(
+        reporter,
+        platform: p.platform,
+      );
+
+      await sdk.initialize();
+      await sdk.loadInterstitial('unit');
+
+      expect(reporter.errors, hasLength(1));
+      final report = reporter.errors.single;
+      expect(report.reason, adsContentCapReason);
+      expect(report.fatal, isFalse);
+      expect(report.error, isA<StateError>());
+      expect(adsContentCapReason, 'ads content cap');
+    });
+
+    test('the_app_s_ads_sdk_reports_a_cap_failure_to_its_crash_reporter', () {
+      final reporter = RecordingCrashReporter();
+      final container = ProviderContainer.test(
+        overrides: [crashReporterProvider.overrideWithValue(reporter)],
+      );
+
+      final sdk = container.read(adsSdkProvider);
+
+      expect(sdk, isA<GoogleMobileAdsSdk>());
+      expect((sdk as GoogleMobileAdsSdk).onContentCapFailure, isNotNull);
+    });
+
+    // Re-review Minor C: a report hook that throws can't break fail-closed
+    // or the AdsSdk "no method throws" contract.
+    test('a_throwing_cap_report_still_fails_closed', () async {
+      final p = _Platform()..configureError = StateError('no request config');
+      final sdk = GoogleMobileAdsSdk(
+        platform: p.platform,
+        onContentCapFailure: (_, _) async => throw StateError('reporter'),
+      );
+
+      await expectLater(sdk.initialize(), completes);
+      expect(await sdk.loadInterstitial('unit'), isNull);
+      expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})']);
+    });
+
+    test('a_cap_that_is_set_reports_nothing', () async {
+      final reporter = RecordingCrashReporter();
+      final p = _Platform();
+
+      await GoogleMobileAdsSdk.reportingTo(
+        reporter,
+        platform: p.platform,
+      ).initialize();
+
+      expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})', 'start']);
+      expect(reporter.errors, isEmpty);
+    });
+
+    test('without_the_cap_the_sdk_never_starts_and_nothing_loads', () {
+      timed((async) {
+        final p = _Platform(size: _adaptive())
+          ..configureError = StateError('x');
+        final sdk = GoogleMobileAdsSdk(platform: p.platform);
+        AdBannerSize? size;
+        Object? banner = 'unset';
+        Object? interstitial = 'unset';
+
+        unawaited(sdk.initialize());
+        async.flushMicrotasks();
+        unawaited(
+          sdk.bannerSize(Orientation.portrait, 360).then((v) => size = v),
+        );
+        async.flushMicrotasks();
+        unawaited(sdk.loadBanner('unit', size!).then((v) => banner = v));
+        unawaited(
+          sdk.loadInterstitial('unit').then((v) => interstitial = v),
+        );
+        async.flushMicrotasks();
+
+        expect(p.sdkCalls, ['configure(${MaxAdContentRating.g})']);
+        expect(banner, isNull);
+        expect(interstitial, isNull);
+        expect(p.started, isEmpty, reason: 'no banner request was made');
+        expect(p.interstitialCallback, isNull);
       });
     });
   });

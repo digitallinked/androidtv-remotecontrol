@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 import 'package:tv_remote/app/widgets/fitted_label.dart';
@@ -52,6 +55,11 @@ class QuickAccessBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // A tile is wider than its square. Taking that margin off the gutter
+    // puts the squares on the same line as the pad's edges.
+    final tileInset =
+        (QuickAppTile.widthOf(context) - QuickAppTile.squareSize) / 2;
+    final edge = math.max(0, AppSpacing.l - tileInset).toDouble();
     return switch (variant) {
       QuickAccessRow.apps => Semantics(
         container: true,
@@ -61,30 +69,28 @@ class QuickAccessBar extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  // With All apps pinned after the list, the list ends where
-                  // the gap before that tile begins.
-                  padding: EdgeInsetsDirectional.only(
-                    start: AppSpacing.l,
-                    end: onAllApps == null ? AppSpacing.l : 0,
-                  ),
-                  itemCount: apps.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(width: AppSpacing.s),
-                  itemBuilder: (context, i) => QuickAppTile(
-                    app: apps[i],
-                    isCurrent: apps[i].package == currentApp,
-                    onTap: () => input.launch(apps[i]),
+                child: _EdgeFade(
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    // With All apps pinned after the list, the list ends where
+                    // the gap before that tile begins.
+                    padding: EdgeInsetsDirectional.only(
+                      start: edge,
+                      end: onAllApps == null ? edge : 0,
+                    ),
+                    itemCount: apps.length,
+                    separatorBuilder: (_, _) => const SizedBox.shrink(),
+                    itemBuilder: (context, i) => QuickAppTile(
+                      app: apps[i],
+                      isCurrent: apps[i].package == currentApp,
+                      onTap: () => input.launch(apps[i]),
+                    ),
                   ),
                 ),
               ),
               if (onAllApps != null) ...[
-                // Also keeps a tile that is clipped at the list's edge 8 dp
-                // away from the pinned one.
-                const SizedBox(width: AppSpacing.s),
                 _AllAppsTile(onTap: onAllApps!),
-                const SizedBox(width: AppSpacing.l),
+                SizedBox(width: edge),
               ],
             ],
           ),
@@ -102,6 +108,76 @@ class QuickAccessBar extends StatelessWidget {
       ),
       QuickAccessRow.none => const SizedBox.shrink(),
     };
+  }
+}
+
+/// Fades [child], a horizontal list, into the page at an edge it can scroll
+/// past. A tile cut by the edge then reads as "there's more this way" rather
+/// than as a tile drawn wrong; a list that fits isn't touched.
+class _EdgeFade extends StatefulWidget {
+  const _EdgeFade({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_EdgeFade> createState() => _EdgeFadeState();
+}
+
+class _EdgeFadeState extends State<_EdgeFade> {
+  /// Width of the fade.
+  static const double _width = 28;
+
+  bool _before = false;
+  bool _after = false;
+
+  /// The mask at an edge: transparent shows nothing of the list there.
+  Color _edge({required bool fades}) =>
+      fades ? Colors.transparent : Colors.black;
+
+  bool _onMetrics(ScrollMetrics metrics) {
+    final before = metrics.extentBefore > 0;
+    final after = metrics.extentAfter > 0;
+    if (before != _before || after != _after) {
+      setState(() {
+        _before = before;
+        _after = after;
+      });
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (n) => _onMetrics(n.metrics),
+      child: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (n) => _onMetrics(n.metrics),
+        child: widget.child,
+      ),
+    );
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    // The list scrolls along the reading direction, so its start is on the
+    // right in a right-to-left language.
+    final left = rtl ? _after : _before;
+    final right = rtl ? _before : _after;
+    // The mask stays in the tree when there is nothing to fade: taking it out
+    // would rebuild the list and throw away its scroll position.
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (bounds) {
+        final stop = _width / bounds.width;
+        return LinearGradient(
+          stops: [0, stop, 1 - stop, 1],
+          colors: [
+            _edge(fades: left),
+            Colors.black,
+            Colors.black,
+            _edge(fades: right),
+          ],
+        ).createShader(bounds);
+      },
+      child: list,
+    );
   }
 }
 
@@ -134,17 +210,19 @@ class _AllAppsTile extends StatelessWidget {
             SizedBox.square(
               key: const ValueKey('quick_all_apps_square'),
               dimension: QuickAppTile.squareSize,
-              child: Material(
-                color: colors.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.key),
-                  side: BorderSide(color: colors.outline),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: onTap,
-                  child: Center(
-                    child: Icon(Icons.apps, color: colors.textPrimary),
+              child: KeySurface(
+                radius: AppRadii.key,
+                child: Material(
+                  type: MaterialType.transparency,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.key),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: onTap,
+                    child: Center(
+                      child: Icon(Icons.apps, color: colors.textPrimary),
+                    ),
                   ),
                 ),
               ),

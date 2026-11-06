@@ -78,81 +78,106 @@ class StatusPill extends StatelessWidget {
       action = const SizedBox.shrink(key: ValueKey('none'));
     }
 
+    // A TV that works needs no frame: only the lamp and its word. Anything
+    // else stands out as a pill.
+    final calm = status == ConnectionStatus.connected;
+
     return Semantics(
       container: true,
       liveRegion: true,
       label: l10n.statusSemantics(label),
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: colors.surface,
-          shape: StadiumBorder(side: BorderSide(color: colors.outline)),
-        ),
-        child: Padding(
-          padding: EdgeInsetsDirectional.only(
-            start: AppSpacing.m,
-            end: showReconnect || showPairAgain ? AppSpacing.xs : AppSpacing.m,
+      child: TweenAnimationBuilder<double>(
+        // A new palette shows at once, like the lamp's.
+        key: ValueKey(colors),
+        tween: Tween(end: calm ? 0 : 1),
+        duration: duration,
+        curve: AppMotion.curve,
+        builder: (context, frame, child) => DecoratedBox(
+          decoration: ShapeDecoration(
+            color: colors.surface.withValues(alpha: frame),
+            shape: StadiumBorder(
+              side: BorderSide(color: colors.outline.withValues(alpha: frame)),
+            ),
           ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
-            // The pill grows or shrinks with its content instead of jumping.
-            child: _Resize(
-              duration: duration,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // The label is spoken through the Semantics wrapper above,
-                  // so the outgoing label of a cross-fade is never read and
-                  // the pill stays one live region.
-                  Flexible(
-                    child: ExcludeSemantics(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // A new palette (a theme switch, Theater Mode) shows
-                          // at once; only a status change tweens the colour.
-                          TweenAnimationBuilder<Color?>(
-                            key: ValueKey(colors),
-                            tween: ColorTween(end: dot),
+          child: Padding(
+            // Without its frame the lamp stands on the page's left edge.
+            padding: EdgeInsetsDirectional.only(
+              start: AppSpacing.m * frame,
+              end: showReconnect || showPairAgain
+                  ? AppSpacing.xs
+                  : AppSpacing.m,
+            ),
+            child: child,
+          ),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSizes.touchMin),
+          // The pill grows or shrinks with its content instead of jumping.
+          child: _Resize(
+            duration: duration,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // The label is spoken through the Semantics wrapper above,
+                // so the outgoing label of a cross-fade is never read and
+                // the pill stays one live region.
+                Flexible(
+                  child: ExcludeSemantics(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // A new palette (a theme switch, Theater Mode) shows
+                        // at once; only a status change tweens the colour.
+                        TweenAnimationBuilder<Color?>(
+                          key: ValueKey(colors),
+                          tween: ColorTween(end: dot),
+                          duration: duration,
+                          curve: AppMotion.curve,
+                          builder: (context, colour, _) => SizedBox.square(
+                            dimension: 8,
+                            child: DecoratedBox(
+                              key: dotKey,
+                              decoration: BoxDecoration(
+                                color: colour,
+                                shape: BoxShape.circle,
+                                // The lamp lights the plastic around it.
+                                boxShadow: [
+                                  if (colour != null)
+                                    BoxShadow(
+                                      color: colour.withValues(alpha: 0.55),
+                                      blurRadius: 6,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s),
+                        Flexible(
+                          child: _CrossFade(
                             duration: duration,
-                            curve: AppMotion.curve,
-                            builder: (context, colour, _) => SizedBox.square(
-                              dimension: 8,
-                              child: DecoratedBox(
-                                key: dotKey,
-                                decoration: BoxDecoration(
-                                  color: colour,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
+                            child: Text(
+                              label,
+                              key: ValueKey(status),
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(color: colors.textPrimary),
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s),
-                          Flexible(
-                            child: _CrossFade(
-                              duration: duration,
-                              child: Text(
-                                label,
-                                key: ValueKey(status),
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(color: colors.textPrimary),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (showReconnect || showPairAgain)
-                    const SizedBox(width: AppSpacing.xs),
-                  // Without an action the slot takes no share of the width,
-                  // so the label keeps all of it (and a fading-out button
-                  // its own width).
-                  Flexible(
-                    flex: showReconnect || showPairAgain ? 1 : 0,
-                    child: _CrossFade(duration: duration, child: action),
-                  ),
-                ],
-              ),
+                ),
+                if (showReconnect || showPairAgain)
+                  const SizedBox(width: AppSpacing.xs),
+                // Without an action the slot takes no share of the width,
+                // so the label keeps all of it (and a fading-out button
+                // its own width).
+                Flexible(
+                  flex: showReconnect || showPairAgain ? 1 : 0,
+                  child: _CrossFade(duration: duration, child: action),
+                ),
+              ],
             ),
           ),
         ),
