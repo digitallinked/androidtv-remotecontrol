@@ -11,9 +11,11 @@ import 'package:tv_remote/features/remote/presentation/key_labels.dart';
 /// the volume rocker, a 2 × 2 grid (Mute and Keyboard over Back and Home) and
 /// the channel rocker.
 ///
-/// The cluster is 280 dp wide at its widest: it fits 288 dp, a 320 dp phone
-/// less two 16 dp gutters, and has no padding of its own. The rockers hold
-/// their keys: a hold starts after `kHoldThreshold` and ends on release.
+/// The cluster needs [width], so it fits 288 dp, a 320 dp phone less two 16 dp
+/// gutters, and has no padding of its own. With more room it spreads out to
+/// [maxWidth], so on an ordinary phone the rockers stand on the pad's edges.
+/// The rockers hold their keys: a hold starts after `kHoldThreshold` and ends
+/// on release.
 class BottomCluster extends StatelessWidget {
   /// Creates the cluster, sending presses to [input].
   ///
@@ -36,8 +38,11 @@ class BottomCluster extends StatelessWidget {
   /// Called when the Keyboard key is tapped.
   final VoidCallback onKeyboard;
 
-  /// Width of the widest layout, in dp.
+  /// Width the cluster needs, in dp.
   static const double width = 280;
+
+  /// Width the cluster spreads to when it has the room, in dp.
+  static const double maxWidth = 440;
 
   /// Height the cluster takes at the default text size, in dp. Large text
   /// makes the rockers a little taller.
@@ -83,7 +88,7 @@ class BottomCluster extends StatelessWidget {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: width),
+        constraints: const BoxConstraints(maxWidth: maxWidth),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

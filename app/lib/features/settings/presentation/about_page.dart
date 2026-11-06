@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/flavor.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/app_info/app_info.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -62,21 +63,25 @@ class AboutPage extends ConsumerWidget {
               ],
             ),
           ),
-          SettingsNavTile(
-            icon: Icons.description_outlined,
-            title: l10n.aboutLicences,
-            onTap: () => showLicensePage(
-              context: context,
-              applicationName: name,
-              applicationVersion: info?.version,
-            ),
+          AppPanel(
+            children: [
+              SettingsNavTile(
+                icon: Icons.description_outlined,
+                title: l10n.aboutLicences,
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: name,
+                  applicationVersion: info?.version,
+                ),
+              ),
+              if (flavor == Flavor.dev)
+                SettingsNavTile(
+                  icon: Icons.bug_report_outlined,
+                  title: l10n.aboutTestCrash,
+                  onTap: () => _sendTestCrash(context, ref),
+                ),
+            ],
           ),
-          if (flavor == Flavor.dev)
-            SettingsNavTile(
-              icon: Icons.bug_report_outlined,
-              title: l10n.aboutTestCrash,
-              onTap: () => _sendTestCrash(context, ref),
-            ),
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(
               AppSpacing.l,

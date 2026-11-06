@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
-import 'package:tv_remote/app/widgets/fitted_label.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/number_pad.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/pad_tabs.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 
 /// A page of the pad area.
@@ -21,8 +21,8 @@ enum PadPage {
   numbers,
 }
 
-/// The pad area of the remote: a labelled, always-visible segmented control
-/// over a pager with the touchpad, the D-pad and the number pad (Ruling
+/// The pad area of the remote: labelled, always-visible [PadTabs] over a
+/// pager with the touchpad, the D-pad and the number pad (Ruling
 /// P4-R7).
 ///
 /// The touchpad claims every gesture that starts on it, and the pager cannot
@@ -187,23 +187,12 @@ class _PadPagerState extends State<PadPager> {
         Semantics(
           container: true,
           label: l10n.remotePadTabsLabel,
-          child: SegmentedButton<PadPage>(
-            showSelectedIcon: false,
-            // A segment is 40 dp by default: +8 dp makes it 48 dp high, and
-            // shrink-wrapping keeps the strip from growing past that.
-            style: const ButtonStyle(
-              visualDensity: VisualDensity(vertical: 2),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            segments: [
-              for (final page in PadPage.values)
-                ButtonSegment(
-                  value: page,
-                  label: FittedLabel(_label(l10n, page)),
-                ),
-            ],
-            selected: {selected},
-            onSelectionChanged: (s) => _select(s.first),
+          child: PadTabs<PadPage>(
+            labels: {
+              for (final page in PadPage.values) page: _label(l10n, page),
+            },
+            selected: selected,
+            onSelect: _select,
           ),
         ),
         const SizedBox(height: AppSpacing.s),

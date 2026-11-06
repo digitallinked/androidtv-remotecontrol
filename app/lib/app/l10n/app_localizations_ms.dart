@@ -536,7 +536,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Leret untuk bergerak, ketik untuk memilih, ketik dengan dua jari untuk kembali.';
 
   @override
-  String get touchpadIdleHint => 'Leret untuk bergerak · Ketik untuk memilih';
+  String get touchpadIdleHint => 'Leret untuk bergerak, ketik untuk memilih';
 
   @override
   String get channelLabel => 'CH';

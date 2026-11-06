@@ -67,7 +67,6 @@ class ErrorLogPage extends ConsumerWidget {
                   child: Text(
                     l10n.errorLogEmpty,
                     style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.center,
                   ),
                 ),
               if (entries.isNotEmpty)

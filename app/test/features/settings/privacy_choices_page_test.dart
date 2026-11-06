@@ -226,11 +226,13 @@ void main() {
     await pumpPage(t);
     expect(find.text('Ads'), findsOneWidget);
     expect(find.textContaining('shows banner ads'), findsOneWidget);
+    await scrollTo(t, find.text('Remove ads with Premium'));
     expect(find.text('Remove ads with Premium'), findsOneWidget);
   });
 
   testWidgets('remove_ads_opens_the_paywall_from_privacy', (t) async {
     await pumpPage(t);
+    await scrollTo(t, find.text('Remove ads with Premium'));
     await t.tap(find.text('Remove ads with Premium'));
     await t.pumpAndSettle();
     final paywall = t.widget<PaywallScreen>(find.byType(PaywallScreen));

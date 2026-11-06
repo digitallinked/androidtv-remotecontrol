@@ -132,6 +132,11 @@ class AppIconSquare extends StatelessWidget {
             color: fill,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadii.key),
+              // A logo's dark tile would melt into the dark page: the edge
+              // keeps it a key. The user's own colour needs none.
+              side: logo != null && app.customColor == null
+                  ? BorderSide(color: Theme.of(context).colorScheme.outline)
+                  : BorderSide.none,
             ),
           ),
           child: Center(child: content),

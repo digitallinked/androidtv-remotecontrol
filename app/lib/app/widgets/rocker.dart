@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 
@@ -71,6 +72,8 @@ class Rocker extends StatelessWidget {
   /// label, for example "Volume 8 of 20". Otherwise they are read as they are.
   final String? valueSemantics;
 
+  static const double _stadiumRadius = 999;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -78,13 +81,11 @@ class Rocker extends StatelessWidget {
 
     return SizedBox(
       width: AppSizes.keyMin + 2 * AppSpacing.xs,
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: context.appColors.surfaceRaised,
-          shape: const StadiumBorder(),
-        ),
+      child: KeySurface(
+        radius: _stadiumRadius,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xs),
+          // With the rim, the 4 dp every rocker has: its keys stay 56 dp.
+          padding: const EdgeInsets.all(AppSpacing.xs - KeySurface.rim),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -44,7 +44,7 @@ class TvListTile extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: AppSizes.keyMin),
           child: Padding(
             padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.xl,
+              horizontal: AppSpacing.l,
               vertical: AppSpacing.s,
             ),
             child: Row(

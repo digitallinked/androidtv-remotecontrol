@@ -738,7 +738,7 @@
   "@touchpadHint": {
     "description": "Screen-reader hint of the touchpad area that explains its gestures."
   },
-  "touchpadIdleHint": "Swipe to move · Tap to select",
+  "touchpadIdleHint": "Swipe to move, tap to select",
   "@touchpadIdleHint": {
     "description": "Short hint drawn on the touchpad while it is idle."
   },

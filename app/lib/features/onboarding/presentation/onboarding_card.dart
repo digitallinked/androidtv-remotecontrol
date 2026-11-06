@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 
 /// The three onboarding cards, in the order they are shown.
@@ -26,7 +27,7 @@ class OnboardingCard extends StatelessWidget {
   final OnboardingCardKind kind;
 
   /// The diameter of the illustration's circle.
-  static const double illustrationSize = 96;
+  static const double illustrationSize = 112;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +36,7 @@ class OnboardingCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final (icon, title, body) = switch (kind) {
       OnboardingCardKind.connect => (
-        Icons.wifi_find_outlined,
+        Icons.connected_tv,
         l10n.onboardingConnectTitle,
         l10n.onboardingConnectBody,
       ),
@@ -67,17 +68,7 @@ class OnboardingCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ExcludeSemantics(
-                child: Container(
-                  width: illustrationSize,
-                  height: illustrationSize,
-                  decoration: BoxDecoration(
-                    color: colors.accent.withValues(alpha: 0.14),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 48, color: colors.accent),
-                ),
-              ),
+              ExcludeSemantics(child: _BacklitBadge(icon: icon)),
               const SizedBox(height: AppSpacing.xl),
               Semantics(
                 header: true,
@@ -98,6 +89,41 @@ class OnboardingCard extends StatelessWidget {
                 _NetworkNote(text: l10n.onboardingConnectNote),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A card's picture: [icon] on a round key inside the D-pad's backlit ring,
+/// so the first thing a new user sees is the control they are about to use.
+class _BacklitBadge extends StatelessWidget {
+  const _BacklitBadge({required this.icon});
+
+  final IconData icon;
+
+  /// How far in from the key's edge the ring runs, as on the D-pad.
+  static const double _ringInset = 9;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = context.appColors.accent;
+    return SizedBox.square(
+      dimension: OnboardingCard.illustrationSize,
+      child: KeySurface(
+        radius: OnboardingCard.illustrationSize,
+        child: Padding(
+          padding: const EdgeInsets.all(_ringInset),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: accent.withValues(alpha: 0.32),
+                width: 2,
+              ),
+            ),
+            child: Center(child: Icon(icon, size: 40, color: accent)),
           ),
         ),
       ),

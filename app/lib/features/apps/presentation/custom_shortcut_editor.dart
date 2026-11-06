@@ -256,7 +256,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
             hintText: l10n.shortcutPackageHint,
             // At 200% text on a 320 dp phone the example ID wraps; one line
             // would cut it.
-            hintMaxLines: 3,
+            hintMaxLines: 4,
             // Help and errors wrap in full at any text size (Ruling P9-C6).
             helper: fieldHelper(context, l10n.shortcutPackageHelp),
             error: fieldError(

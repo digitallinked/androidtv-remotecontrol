@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/widgets/app_key_button.dart';
 
 import '../../helpers/ink_features.dart';
@@ -194,7 +195,7 @@ void main() {
     expect((starts, ends), (1, 1));
   });
 
-  testWidgets('key_colour_override_is_painted', (t) async {
+  testWidgets('a_key_is_moulded_unless_it_has_a_colour_of_its_own', (t) async {
     Color? fill() => t
         .widget<Material>(
           find.descendant(
@@ -204,10 +205,10 @@ void main() {
         )
         .color;
     await pumpApp(t, key());
-    final raised = fill();
-    expect(raised, isNot(Colors.transparent));
-    await pumpApp(t, key(color: Colors.transparent));
-    expect(fill(), Colors.transparent);
+    expect(find.byType(KeySurface), findsOneWidget);
+    await pumpApp(t, key(color: Colors.red));
+    expect(find.byType(KeySurface), findsNothing);
+    expect(fill(), Colors.red);
   });
 
   testWidgets('transparent_key_still_shows_press_scale', (t) async {

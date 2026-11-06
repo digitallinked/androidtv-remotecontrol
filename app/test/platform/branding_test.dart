@@ -203,8 +203,8 @@ void main() {
     const res = 'android/app/src/main/res';
     // Android 12+: the generator writes the colour into the v31 styles.
     for (final (dir, colour) in [
-      ('values-v31', '#F6F7F9'),
-      ('values-night-v31', '#0F1115'),
+      ('values-v31', '#F2F3FA'),
+      ('values-night-v31', '#0B0D18'),
     ]) {
       final styles = read('$res/$dir/styles.xml');
       final m = RegExp(
@@ -215,8 +215,8 @@ void main() {
     // Before Android 12: the launch theme draws launch_background, a layer
     // list whose base is the generator's one-colour background.png.
     for (final (night, colour) in [
-      ('', 0xFFF6F7F9),
-      ('-night', 0xFF0F1115),
+      ('', 0xFFF2F3FA),
+      ('-night', 0xFF0B0D18),
     ]) {
       expect(
         read('$res/values$night/styles.xml'),

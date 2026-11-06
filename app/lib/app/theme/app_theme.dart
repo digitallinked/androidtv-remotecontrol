@@ -161,13 +161,58 @@ ThemeData _buildTheme({
   const buttonSize = WidgetStatePropertyAll(
     Size(AppSizes.touchMin, AppSizes.touchMin),
   );
+  final text = _textTheme(t);
+  final buttonText = WidgetStatePropertyAll(
+    text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+  );
+  OutlineInputBorder fieldBorder(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        borderSide: BorderSide(color: color, width: width),
+      );
 
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: colorScheme,
+    fontFamily: AppFonts.text,
     scaffoldBackgroundColor: t.bg,
-    textTheme: _textTheme(t),
+    textTheme: text,
+    dividerTheme: DividerThemeData(color: t.outline, thickness: 1, space: 1),
+    listTileTheme: ListTileThemeData(
+      iconColor: t.textSecondary,
+      titleTextStyle: text.bodyLarge,
+      subtitleTextStyle: text.bodyMedium?.copyWith(color: t.textSecondary),
+      leadingAndTrailingTextStyle: text.labelLarge?.copyWith(
+        color: t.textSecondary,
+      ),
+    ),
+    inputDecorationTheme: InputDecorationThemeData(
+      filled: true,
+      fillColor: t.surface,
+      border: fieldBorder(t.outline),
+      enabledBorder: fieldBorder(t.outline),
+      focusedBorder: fieldBorder(t.accent, 2),
+      errorBorder: fieldBorder(t.dangerText),
+      focusedErrorBorder: fieldBorder(t.dangerText, 2),
+      labelStyle: text.bodyLarge?.copyWith(color: t.textSecondary),
+      hintStyle: text.bodyLarge?.copyWith(color: t.textSecondary),
+      helperStyle: text.bodySmall,
+      errorStyle: text.bodySmall?.copyWith(color: t.dangerText),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: t.surface,
+      contentTextStyle: text.bodyMedium?.copyWith(color: t.textPrimary),
+      actionTextColor: t.accent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        side: BorderSide(color: t.outline),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: t.accent,
+      linearTrackColor: t.surfaceRaised,
+    ),
     dialogTheme: DialogThemeData(
       backgroundColor: t.surface,
       shape: RoundedRectangleBorder(
@@ -185,11 +230,18 @@ ThemeData _buildTheme({
       elevation: 0,
       scrolledUnderElevation: 0,
     ),
-    filledButtonTheme: const FilledButtonThemeData(
-      style: ButtonStyle(minimumSize: buttonSize),
+    filledButtonTheme: FilledButtonThemeData(
+      style: ButtonStyle(minimumSize: buttonSize, textStyle: buttonText),
     ),
-    textButtonTheme: const TextButtonThemeData(
-      style: ButtonStyle(minimumSize: buttonSize),
+    textButtonTheme: TextButtonThemeData(
+      style: ButtonStyle(minimumSize: buttonSize, textStyle: buttonText),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: ButtonStyle(
+        minimumSize: buttonSize,
+        textStyle: buttonText,
+        side: WidgetStatePropertyAll(BorderSide(color: t.outline)),
+      ),
     ),
     pageTransitionsTheme: appPageTransitionsTheme,
     extensions: [t],
@@ -204,14 +256,25 @@ TextStyle _style(
 ) => TextStyle(
   fontSize: size,
   height: lineHeight / size,
+  // In the style itself: component themes use these styles directly, and
+  // ThemeData.fontFamily doesn't reach those.
+  fontFamily: AppFonts.text,
+  // Zero, not Material's wide default: the face has open spacing of its own.
+  letterSpacing: 0,
   fontWeight: weight,
   color: color,
 );
 
 TextTheme _textTheme(AppColors t) => TextTheme(
   displaySmall: _style(28, 34, FontWeight.w600, t.textPrimary),
+  headlineSmall: _style(24, 30, FontWeight.w600, t.textPrimary),
   titleLarge: _style(20, 26, FontWeight.w600, t.textPrimary),
+  titleMedium: _style(16, 22, FontWeight.w600, t.textPrimary),
+  titleSmall: _style(14, 18, FontWeight.w600, t.textPrimary),
   bodyLarge: _style(16, 22, FontWeight.w400, t.textPrimary),
-  labelLarge: _style(14, 18, FontWeight.w500, t.textPrimary),
+  bodyMedium: _style(14, 20, FontWeight.w400, t.textPrimary),
   bodySmall: _style(12, 16, FontWeight.w400, t.textSecondary),
+  labelLarge: _style(14, 18, FontWeight.w500, t.textPrimary),
+  labelMedium: _style(12, 16, FontWeight.w500, t.textPrimary),
+  labelSmall: _style(11, 16, FontWeight.w500, t.textPrimary),
 );

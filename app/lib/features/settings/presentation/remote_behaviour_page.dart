@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
@@ -29,35 +31,42 @@ class RemoteBehaviourPage extends ConsumerWidget {
           bottom: MediaQuery.paddingOf(context).bottom,
         ),
         children: [
-          SettingsSwitchTile(
-            title: l10n.behaviourHaptics,
-            subtitle: l10n.behaviourHapticsSubtitle,
-            value: settings.hapticsEnabled,
-            onChanged: (value) => write((s) => s.setHapticsEnabled(value)),
-          ),
-          SettingsSwitchTile(
-            title: l10n.behaviourSmoothPress,
-            subtitle: l10n.behaviourSmoothPressSubtitle,
-            value: settings.smoothPressEnabled,
-            onChanged: (value) => write((s) => s.setSmoothPressEnabled(value)),
-          ),
-          SettingsSwitchTile(
-            title: l10n.behaviourKeepAwake,
-            subtitle: l10n.behaviourKeepAwakeSubtitle,
-            value: settings.keepScreenAwake,
-            onChanged: (value) => write((s) => s.setKeepScreenAwake(value)),
-          ),
-          SettingsSwitchTile(
-            title: l10n.behaviourTheater,
-            subtitle: l10n.behaviourTheaterSubtitle,
-            value: settings.theaterMode,
-            onChanged: (value) => write((s) => s.setTheaterMode(value)),
-          ),
-          SettingsSwitchTile(
-            title: l10n.behaviourAutoKeyboard,
-            subtitle: l10n.behaviourAutoKeyboardSubtitle,
-            value: settings.autoOpenKeyboard,
-            onChanged: (value) => write((s) => s.setAutoOpenKeyboard(value)),
+          const SizedBox(height: AppSpacing.s),
+          AppPanel(
+            children: [
+              SettingsSwitchTile(
+                title: l10n.behaviourHaptics,
+                subtitle: l10n.behaviourHapticsSubtitle,
+                value: settings.hapticsEnabled,
+                onChanged: (value) => write((s) => s.setHapticsEnabled(value)),
+              ),
+              SettingsSwitchTile(
+                title: l10n.behaviourSmoothPress,
+                subtitle: l10n.behaviourSmoothPressSubtitle,
+                value: settings.smoothPressEnabled,
+                onChanged: (value) =>
+                    write((s) => s.setSmoothPressEnabled(value)),
+              ),
+              SettingsSwitchTile(
+                title: l10n.behaviourKeepAwake,
+                subtitle: l10n.behaviourKeepAwakeSubtitle,
+                value: settings.keepScreenAwake,
+                onChanged: (value) => write((s) => s.setKeepScreenAwake(value)),
+              ),
+              SettingsSwitchTile(
+                title: l10n.behaviourTheater,
+                subtitle: l10n.behaviourTheaterSubtitle,
+                value: settings.theaterMode,
+                onChanged: (value) => write((s) => s.setTheaterMode(value)),
+              ),
+              SettingsSwitchTile(
+                title: l10n.behaviourAutoKeyboard,
+                subtitle: l10n.behaviourAutoKeyboardSubtitle,
+                value: settings.autoOpenKeyboard,
+                onChanged: (value) =>
+                    write((s) => s.setAutoOpenKeyboard(value)),
+              ),
+            ],
           ),
         ],
       ),

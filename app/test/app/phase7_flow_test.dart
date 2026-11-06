@@ -145,6 +145,13 @@ void main() {
       t.widget<SettingsScreen>(find.byType(SettingsScreen)).fromSetup,
       isTrue,
     );
+    await t.scrollUntilVisible(
+      find.text('Help'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await t.ensureVisible(find.text('Help'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Help'));
     await t.pumpAndSettle();
     expect(find.byType(HelpPage), findsOneWidget);

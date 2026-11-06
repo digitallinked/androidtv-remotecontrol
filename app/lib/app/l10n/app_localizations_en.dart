@@ -535,7 +535,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Swipe to move, tap to select, tap with two fingers to go back.';
 
   @override
-  String get touchpadIdleHint => 'Swipe to move · Tap to select';
+  String get touchpadIdleHint => 'Swipe to move, tap to select';
 
   @override
   String get channelLabel => 'CH';

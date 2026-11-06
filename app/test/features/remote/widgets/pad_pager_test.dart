@@ -4,6 +4,7 @@ import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/number_pad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/pad_tabs.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
 
 import '../../../helpers/key_input_recorder.dart';
@@ -115,7 +116,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byWidget(opacities.single),
-        matching: find.byType(SegmentedButton<PadPage>),
+        matching: find.byType(PadTabs<PadPage>),
       ),
       findsNothing,
     );
@@ -144,7 +145,7 @@ void main() {
   testWidgets('tabs_fit_288dp_at_200_percent_text', (t) async {
     await pumpPager(t, textScale: 2);
     expect(t.takeException(), isNull);
-    final strip = t.getRect(find.byType(SegmentedButton<PadPage>));
+    final strip = t.getRect(find.byType(PadTabs<PadPage>));
     expect(strip.width, lessThanOrEqualTo(288));
   });
 
@@ -198,10 +199,10 @@ void main() {
             .round()];
     void expectConsistent(String when) {
       final shown = shownPage();
-      final tabs = t.widget<SegmentedButton<PadPage>>(
-        find.byType(SegmentedButton<PadPage>),
+      final tabs = t.widget<PadTabs<PadPage>>(
+        find.byType(PadTabs<PadPage>),
       );
-      expect(tabs.selected, {shown}, reason: '$when: the highlight follows');
+      expect(tabs.selected, shown, reason: '$when: the highlight follows');
       // Numbers is where the pager began; it has nothing to report.
       expect(
         reported.isEmpty ? PadPage.numbers : reported.last,

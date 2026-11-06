@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/app/widgets/fitted_label.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
@@ -15,7 +16,7 @@ import '../helpers/pump_router_app.dart';
 import '../helpers/real_fonts.dart';
 import '../helpers/test_devices.dart';
 
-/// The pad tabs and the colour keys in Malay, drawn in the real Roboto
+/// The pad tabs and the colour keys in Malay, drawn in the real app font
 /// (the test font draws every glyph a full em wide, so it cuts labels a
 /// phone shows whole). At 320 dp and 100% text a pad tab has about 72 dp and
 /// a colour key about 50 dp, and `FittedLabel` never shrinks at 100%: a
@@ -74,8 +75,8 @@ void main() {
         final paragraph = t.renderObject<RenderParagraph>(text);
         expect(
           paragraph.text.style?.fontFamily,
-          'Roboto',
-          reason: '"$label" is drawn in Roboto',
+          AppFonts.text,
+          reason: '"$label" is drawn in the app font',
         );
         expect(
           paragraph.didExceedMaxLines,

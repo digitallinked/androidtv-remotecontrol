@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:flutter/gestures.dart';
@@ -6,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
+import 'package:tv_remote/app/theme/relief.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 import 'package:tv_remote/features/remote/presentation/key_labels.dart';
@@ -126,6 +129,7 @@ class _TouchpadState extends State<Touchpad>
 
   Widget _pad(BuildContext context) {
     final colors = context.appColors;
+    final relief = context.relief;
     final l10n = AppLocalizations.of(context);
     final radius = BorderRadius.circular(AppRadii.key * 1.5);
 
@@ -164,7 +168,7 @@ class _TouchpadState extends State<Touchpad>
           onPointerCancel: _cancel,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: colors.surfaceRaised,
+              color: relief.well,
               borderRadius: radius,
               border: Border.all(color: colors.outline),
             ),
@@ -173,6 +177,15 @@ class _TouchpadState extends State<Touchpad>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // Never changes, so it costs nothing while the trail runs.
+                  RepaintBoundary(
+                    child: CustomPaint(
+                      painter: _WellPainter(
+                        dot: relief.wellDot,
+                        edge: relief.wellEdge,
+                      ),
+                    ),
+                  ),
                   IgnorePointer(
                     child: CustomPaint(
                       key: Touchpad.trailKey,
@@ -182,13 +195,26 @@ class _TouchpadState extends State<Touchpad>
                   Padding(
                     padding: const EdgeInsets.all(AppSpacing.l),
                     child: Center(
-                      child: Text(
-                        l10n.touchpadIdleHint,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: colors.textSecondary,
+                      // On a patch of the floor, so no dot runs through the
+                      // words.
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: relief.well,
+                          borderRadius: BorderRadius.circular(AppRadii.card),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.m,
+                            vertical: AppSpacing.s,
+                          ),
+                          child: Text(
+                            l10n.touchpadIdleHint,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(color: colors.textSecondary),
+                          ),
                         ),
                       ),
                     ),
@@ -507,6 +533,67 @@ class _Feedback extends ChangeNotifier {
   }
 }
 
+/// Spacing of the dots of the touchpad's matrix.
+const double _dotPitch = 18;
+
+/// The touchpad's matrix of dots for a pad of a given size, centred in it.
+class _DotGrid {
+  _DotGrid(Size size)
+    : columns = (size.width / _dotPitch).floor(),
+      rows = (size.height / _dotPitch).floor(),
+      left =
+          (size.width - ((size.width / _dotPitch).floor() - 1) * _dotPitch) / 2,
+      top =
+          (size.height - ((size.height / _dotPitch).floor() - 1) * _dotPitch) /
+          2;
+
+  final int columns;
+  final int rows;
+  final double left;
+  final double top;
+
+  Offset dot(int column, int row) =>
+      Offset(left + column * _dotPitch, top + row * _dotPitch);
+}
+
+/// The floor of the touchpad: a matrix of dots, and the shade its top edge
+/// casts.
+class _WellPainter extends CustomPainter {
+  _WellPainter({required this.dot, required this.edge});
+
+  final Color dot;
+  final Color edge;
+
+  /// Depth of the shade under the top edge.
+  static const double _shadeDepth = 14;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dots = Paint()
+      ..color = dot
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2;
+    final grid = _DotGrid(size);
+    canvas.drawPoints(ui.PointMode.points, [
+      for (var c = 0; c < grid.columns; c++)
+        for (var r = 0; r < grid.rows; r++) grid.dot(c, r),
+    ], dots);
+    final shade = Rect.fromLTWH(0, 0, size.width, _shadeDepth);
+    canvas.drawRect(
+      shade,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [edge, edge.withValues(alpha: 0)],
+        ).createShader(shade),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_WellPainter old) => old.dot != dot || old.edge != edge;
+}
+
 /// Paints the fading trail, the edge glows and the tap pulses.
 class _FeedbackPainter extends CustomPainter {
   _FeedbackPainter(this.feedback, this.accent) : super(repaint: feedback);
@@ -523,6 +610,12 @@ class _FeedbackPainter extends CustomPainter {
   /// Accent alpha a tap pulse starts at.
   static const double _pulseAlpha = 0.35;
 
+  /// How far from the thumb the matrix lights up.
+  static const double _dotReach = 44;
+
+  /// How many steps of brightness the lit dots come in.
+  static const int _dotBands = 4;
+
   @override
   void paint(Canvas canvas, Size size) {
     final now = feedback.now;
@@ -530,16 +623,17 @@ class _FeedbackPainter extends CustomPainter {
     final line = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 8;
+      ..strokeWidth = 10;
     for (var i = 1; i < points.length; i++) {
       final fade =
           1 -
           (now - points[i].at).inMicroseconds /
               _Feedback.trailLife.inMicroseconds;
       if (fade <= 0) continue;
-      line.color = accent.withValues(alpha: 0.24 * fade);
+      line.color = accent.withValues(alpha: 0.28 * fade);
       canvas.drawLine(points[i - 1].position, points[i].position, line);
     }
+    _lightDots(canvas, size, points, now);
 
     for (final g in feedback.glows) {
       final fade =
@@ -591,6 +685,55 @@ class _FeedbackPainter extends CustomPainter {
         p.position,
         _pulseRadius * AppMotion.curve.transform(t),
         ring,
+      );
+    }
+  }
+
+  /// Lights the matrix around the thumb: each dot near a trail point takes
+  /// the accent, by how near it is and how fresh the point. The alphas are
+  /// grouped in a few steps, so one frame is a few draw calls.
+  void _lightDots(
+    Canvas canvas,
+    Size size,
+    List<_Point> points,
+    Duration now,
+  ) {
+    // One point is a touch, not a movement: like the line, nothing to show.
+    if (points.length < 2) return;
+    final grid = _DotGrid(size);
+    final reach = (_dotReach / _dotPitch).ceil();
+    final lit = <(int, int), double>{};
+    for (final p in points) {
+      final fade =
+          1 - (now - p.at).inMicroseconds / _Feedback.trailLife.inMicroseconds;
+      if (fade <= 0) continue;
+      final column = ((p.position.dx - grid.left) / _dotPitch).round();
+      final row = ((p.position.dy - grid.top) / _dotPitch).round();
+      for (var c = column - reach; c <= column + reach; c++) {
+        if (c < 0 || c >= grid.columns) continue;
+        for (var r = row - reach; r <= row + reach; r++) {
+          if (r < 0 || r >= grid.rows) continue;
+          final near = 1 - (grid.dot(c, r) - p.position).distance / _dotReach;
+          if (near <= 0) continue;
+          final strength = fade * near;
+          lit[(c, r)] = math.max(lit[(c, r)] ?? 0, strength);
+        }
+      }
+    }
+    final bands = List.generate(_dotBands, (_) => <Offset>[]);
+    lit.forEach((dot, strength) {
+      final band = (strength * _dotBands).floor().clamp(0, _dotBands - 1);
+      bands[band].add(grid.dot(dot.$1, dot.$2));
+    });
+    for (var i = 0; i < _dotBands; i++) {
+      if (bands[i].isEmpty) continue;
+      canvas.drawPoints(
+        ui.PointMode.points,
+        bands[i],
+        Paint()
+          ..color = accent.withValues(alpha: (i + 1) / _dotBands)
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 3,
       );
     }
   }

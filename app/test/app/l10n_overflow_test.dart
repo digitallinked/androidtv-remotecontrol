@@ -41,6 +41,7 @@ import 'package:tv_remote/features/pairing/data/pairing_providers.dart';
 import 'package:tv_remote/features/paywall/domain/paywall_source.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/dpad.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/pad_pager.dart';
+import 'package:tv_remote/features/remote/presentation/widgets/pad_tabs.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/power_button.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/quick_app_tile.dart';
 import 'package:tv_remote/features/remote/presentation/widgets/touchpad.dart';
@@ -1845,7 +1846,7 @@ void _expectReadable(WidgetTester t, Element element, String why) {
 /// - a TV name (the user's data, not our copy), such as the remote's TV
 ///   switcher, ends in an ellipsis like a long TV name does everywhere
 ///   (Task 8.4);
-/// - a pad tab's `FittedLabel` (in the `SegmentedButton<PadPage>`)
+/// - a pad tab's `FittedLabel` (in the `PadTabs<PadPage>`)
 ///   ellipsises once it is back at its 100% size; `l10n_short_labels_test`
 ///   checks with the real font that it doesn't at 100%.
 ///
@@ -1873,8 +1874,7 @@ void _expectTitlesAndButtonsReadable(WidgetTester t, String why) {
     // Only the pad tabs: any other FittedLabel button has no real-font
     // test behind it, so it gets the button rule.
     if (element.findAncestorWidgetOfExactType<FittedLabel>() != null &&
-        element.findAncestorWidgetOfExactType<SegmentedButton<PadPage>>() !=
-            null) {
+        element.findAncestorWidgetOfExactType<PadTabs<PadPage>>() != null) {
       _expectReadable(t, element, '$why pad tab');
       continue;
     }
@@ -1937,8 +1937,7 @@ String? _mayEllipsize(WidgetTester t, Element element, String text) {
     return 'TV name';
   }
   if (element.findAncestorWidgetOfExactType<FittedLabel>() != null) {
-    if (element.findAncestorWidgetOfExactType<SegmentedButton<PadPage>>() !=
-        null) {
+    if (element.findAncestorWidgetOfExactType<PadTabs<PadPage>>() != null) {
       return 'pad tab';
     }
     if (_under(element, '_ColourKeys')) return 'colour key';

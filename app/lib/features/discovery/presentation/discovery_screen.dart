@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/app/widgets/settings_button.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
@@ -68,18 +69,22 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
 
     final Widget body;
     if (state.tvs.isNotEmpty) {
-      body = ListView.builder(
-        itemCount: state.tvs.length,
-        itemBuilder: (context, index) {
-          final tv = state.tvs[index];
-          return TvListTile(
-            tv: tv,
-            isPaired:
-                pairedNames.contains(tv.serviceName) ||
-                manualMatches.containsKey(tv.serviceName),
-            onTap: () => unawaited(_open(tv, pairedNames, manualMatches)),
-          );
-        },
+      body = ListView(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+        children: [
+          AppPanel(
+            children: [
+              for (final tv in state.tvs)
+                TvListTile(
+                  tv: tv,
+                  isPaired:
+                      pairedNames.contains(tv.serviceName) ||
+                      manualMatches.containsKey(tv.serviceName),
+                  onTap: () => unawaited(_open(tv, pairedNames, manualMatches)),
+                ),
+            ],
+          ),
+        ],
       );
     } else if (state.showTroubleshooting) {
       body = DiscoveryEmptyState(

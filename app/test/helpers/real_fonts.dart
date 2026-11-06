@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/app/theme/tokens.dart';
 
 /// The families the Material text theme asks for on iOS (Typography's
 /// Cupertino styles). The SDK ships no San Francisco, so Roboto stands in
@@ -17,7 +18,8 @@ const List<String> _iosTextFamilies = [
 ///
 /// - Roboto regular, medium and bold, under `Roboto` (the Material text
 ///   theme on Android) and under the iOS text theme's families;
-/// - `MaterialIcons`, the font of `Icons`.
+/// - `MaterialIcons`, the font of `Icons`;
+/// - the app's bundled typefaces ([AppFonts]), from `assets/fonts`.
 ///
 /// The files come from the SDK's `bin/cache/artifacts/material_fonts`
 /// ([materialFontsDir]), which exists on every platform the SDK runs on, so
@@ -45,6 +47,22 @@ Future<void> loadRealFonts() async {
   await (FontLoader(
     'MaterialIcons',
   )..addFont(Future.value(read('materialicons-regular.otf')))).load();
+
+  ByteData bundled(String name) {
+    final file = File('assets/fonts/$name');
+    expect(file.existsSync(), isTrue, reason: '${file.path} exists');
+    return ByteData.sublistView(file.readAsBytesSync());
+  }
+
+  final text = FontLoader(AppFonts.text);
+  for (final weight in ['Regular', 'Medium', 'SemiBold']) {
+    text.addFont(Future.value(bundled('AtkinsonHyperlegibleNext-$weight.ttf')));
+  }
+  await text.load();
+  await (FontLoader(AppFonts.mono)..addFont(
+        Future.value(bundled('AtkinsonHyperlegibleMono-Medium.ttf')),
+      ))
+      .load();
 }
 
 /// `bin/cache/artifacts/material_fonts` of the Flutter SDK that runs the

@@ -929,7 +929,17 @@ void main() {
     devices = InMemoryDeviceRepository([savedTv()]);
     await pump(t, location: AppRoutes.remote);
     await openSettings(t);
+    await t.scrollUntilVisible(
+      find.text('Help'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tapAndSettle(t, find.text('Help'));
+    await t.scrollUntilVisible(
+      find.text('What does the app keep about my TV?'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tapAndSettle(t, find.text('What does the app keep about my TV?'));
     final answer = find.textContaining('Privacy choices');
     expect(answer, findsOneWidget);

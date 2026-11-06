@@ -1043,7 +1043,7 @@ abstract class AppLocalizations {
   /// Short hint drawn on the touchpad while it is idle.
   ///
   /// In en, this message translates to:
-  /// **'Swipe to move · Tap to select'**
+  /// **'Swipe to move, tap to select'**
   String get touchpadIdleHint;
 
   /// Short visible label of the channel up/down rocker.

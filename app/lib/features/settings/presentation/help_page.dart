@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 import 'package:tv_remote/features/discovery/presentation/widgets/troubleshooting_sheet.dart';
 import 'package:tv_remote/features/settings/application/feedback.dart';
 import 'package:tv_remote/features/settings/presentation/widgets/settings_tiles.dart';
@@ -148,7 +149,7 @@ class _FaqState extends State<_Faq> {
     ];
     assert(items.length == _count, 'one controller per question');
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return Column(
+    return AppPanel(
       children: [
         for (final (index, (question, answer)) in items.indexed)
           ExpansionTile(

@@ -426,7 +426,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
             onPressed: () => unawaited(context.push(AppRoutes.settings)),
           ),
         ),
-        titleSpacing: AppSpacing.s,
+        titleSpacing: 0,
         title: DeviceSwitcher(
           currentName: tvName,
           currentServiceName: serviceName,
@@ -442,7 +442,7 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsetsDirectional.only(end: AppSpacing.s),
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.l),
             child: PowerButton(
               onHint: () => _say(l10n.powerHoldHint),
               onPower: () => unawaited(_power()),

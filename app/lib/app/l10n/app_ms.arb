@@ -157,7 +157,7 @@
   "remotePadNumbers": "Nombor",
   "touchpadLabel": "Pad sentuh",
   "touchpadHint": "Leret untuk bergerak, ketik untuk memilih, ketik dengan dua jari untuk kembali.",
-  "touchpadIdleHint": "Leret untuk bergerak · Ketik untuk memilih",
+  "touchpadIdleHint": "Leret untuk bergerak, ketik untuk memilih",
   "channelLabel": "CH",
   "remoteVolumeValue": "{level}",
   "remoteMutedValue": "Senyap",

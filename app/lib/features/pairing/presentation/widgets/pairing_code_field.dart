@@ -121,8 +121,8 @@ class PairingCodeFieldState extends State<PairingCodeField> {
       enableIMEPersonalizedLearning: false,
       textAlign: TextAlign.center,
       style: base?.copyWith(
-        fontFamily: 'monospace',
-        fontFamilyFallback: const ['Menlo', 'Courier New', 'Roboto Mono'],
+        fontFamily: AppFonts.mono,
+        fontWeight: FontWeight.w500,
         letterSpacing: 6,
         fontSize: codeFontSize,
       ),

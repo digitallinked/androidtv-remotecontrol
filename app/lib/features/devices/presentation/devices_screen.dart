@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
@@ -45,19 +46,21 @@ class DevicesScreen extends ConsumerWidget {
     } else if (devices == null || devices.isEmpty) {
       body = _Empty(onAdd: () => unawaited(context.push(AppRoutes.discover)));
     } else {
-      body = ListView.separated(
+      body = ListView(
         padding: const EdgeInsetsDirectional.symmetric(
           vertical: AppSpacing.s,
         ),
-        itemCount: devices.length,
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final device = devices[index];
-          return _DeviceTile(
-            device: device,
-            inUse: device.serviceName == inUse,
-          );
-        },
+        children: [
+          AppPanel(
+            children: [
+              for (final device in devices)
+                _DeviceTile(
+                  device: device,
+                  inUse: device.serviceName == inUse,
+                ),
+            ],
+          ),
+        ],
       );
     }
 

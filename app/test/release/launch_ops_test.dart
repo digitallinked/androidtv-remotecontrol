@@ -21,7 +21,7 @@ const List<String> launchOpsDocs = [
 
 /// The device-matrix rows Phase 9 adds (Task 9.12).
 final List<String> phase9RowIds = [
-  for (var n = 103; n <= 115; n++) 'DM-$n',
+  for (var n = 103; n <= 116; n++) 'DM-$n',
 ];
 
 /// The cells of a Markdown table [row], split on unescaped `|`, without the

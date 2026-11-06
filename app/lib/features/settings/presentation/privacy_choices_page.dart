@@ -8,6 +8,7 @@ import 'package:tv_remote/app/app_links.dart';
 import 'package:tv_remote/app/l10n/app_localizations.dart';
 import 'package:tv_remote/app/router.dart';
 import 'package:tv_remote/app/theme/tokens.dart';
+import 'package:tv_remote/app/widgets/app_panel.dart';
 import 'package:tv_remote/app/widgets/app_snack_bar.dart';
 import 'package:tv_remote/core/ads/consent_controller.dart';
 import 'package:tv_remote/core/ads/tracking_service.dart';
@@ -134,57 +135,65 @@ class _PrivacyChoicesPageState extends ConsumerState<PrivacyChoicesPage> {
         children: [
           note(l10n.privacyIntro),
           SettingsSectionHeader(l10n.privacySectionImprove),
-          SettingsSwitchTile(
-            title: l10n.privacyUsageTitle,
-            subtitle: l10n.privacyUsageSubtitle,
-            value: choices.shareUsage,
-            onChanged: (value) => unawaited(_setUsage(value: value)),
-          ),
-          SettingsSwitchTile(
-            title: l10n.privacyCrashTitle,
-            subtitle: l10n.privacyCrashSubtitle,
-            value: choices.shareCrashReports,
-            onChanged: (value) => unawaited(_setCrashes(value: value)),
+          AppPanel(
+            children: [
+              SettingsSwitchTile(
+                title: l10n.privacyUsageTitle,
+                subtitle: l10n.privacyUsageSubtitle,
+                value: choices.shareUsage,
+                onChanged: (value) => unawaited(_setUsage(value: value)),
+              ),
+              SettingsSwitchTile(
+                title: l10n.privacyCrashTitle,
+                subtitle: l10n.privacyCrashSubtitle,
+                value: choices.shareCrashReports,
+                onChanged: (value) => unawaited(_setCrashes(value: value)),
+              ),
+            ],
           ),
           if (servicesOff) note(l10n.privacyServicesOff),
           SettingsSectionHeader(l10n.privacySectionAds),
-          if (premium)
-            note(l10n.privacyAdsPremium)
-          else ...[
-            note(l10n.privacyAdsInfo),
-            SettingsNavTile(
-              title: l10n.privacyRemoveAds,
-              onTap: () => unawaited(
-                context.push(AppRoutes.paywall(source: PaywallSource.privacy)),
-              ),
-            ),
-          ],
-          // UMP's rules: when it says the entry point is required, it stays
-          // reachable, Premium or not.
-          if (adChoices)
-            SettingsNavTile(
-              title: l10n.privacyAdChoices,
-              subtitle: l10n.privacyAdChoicesSubtitle,
-              onTap: () => unawaited(_openAdChoices()),
-            ),
-          if (trackingText != null)
-            Semantics(
-              hint: l10n.privacyOpensSettings,
-              child: SettingsNavTile(
-                title: l10n.privacyTrackingTitle,
-                subtitle: trackingText,
+          note(premium ? l10n.privacyAdsPremium : l10n.privacyAdsInfo),
+          const SizedBox(height: AppSpacing.s),
+          AppPanel(
+            children: [
+              if (!premium)
+                SettingsNavTile(
+                  title: l10n.privacyRemoveAds,
+                  onTap: () => unawaited(
+                    context.push(
+                      AppRoutes.paywall(source: PaywallSource.privacy),
+                    ),
+                  ),
+                ),
+              // UMP's rules: when it says the entry point is required, it
+              // stays reachable, Premium or not.
+              if (adChoices)
+                SettingsNavTile(
+                  title: l10n.privacyAdChoices,
+                  subtitle: l10n.privacyAdChoicesSubtitle,
+                  onTap: () => unawaited(_openAdChoices()),
+                ),
+              if (trackingText != null)
+                Semantics(
+                  hint: l10n.privacyOpensSettings,
+                  child: SettingsNavTile(
+                    title: l10n.privacyTrackingTitle,
+                    subtitle: trackingText,
+                    onTap: () => unawaited(
+                      openExternal(context, ref, Uri.parse('app-settings:')),
+                    ),
+                  ),
+                ),
+              SettingsNavTile(
+                icon: Icons.privacy_tip_outlined,
+                title: l10n.settingsPrivacy,
+                external: true,
                 onTap: () => unawaited(
-                  openExternal(context, ref, Uri.parse('app-settings:')),
+                  openExternal(context, ref, AppLinks.privacyPolicy),
                 ),
               ),
-            ),
-          SettingsNavTile(
-            icon: Icons.privacy_tip_outlined,
-            title: l10n.settingsPrivacy,
-            external: true,
-            onTap: () => unawaited(
-              openExternal(context, ref, AppLinks.privacyPolicy),
-            ),
+            ],
           ),
         ],
       ),
