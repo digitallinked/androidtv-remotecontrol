@@ -4,6 +4,13 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### CI and shells (2026-11-06)
+- **A file listing on Windows says nothing about the name on Linux.** The SDK's `fonts.zip` holds `Roboto-Regular.ttf`. Flutter's Windows unzip runs paths through `path.canonicalize`, which lower-cases them, so Windows has `roboto-regular.ttf`. The helper hardcoded the lower-case name, so CI failed on three test files for months while a note here said it couldn't be a case problem. Read the archive itself, and match names without case. A Windows test can still catch this by asserting the returned name, because a plain lookup succeeds on NTFS.
+- **In a Bash heredoc through this harness, `\\n` can arrive as `\n`,** so a Python edit script silently stops matching, or writes a real newline. Build the pattern with `chr(92)` or bytes, and look for `NOT FOUND` in the output.
+- **The TV answering ping doesn't mean it can be controlled.** It replied to ping while 6466 and 6467 timed out, and an hour later the ports were open (standby is the likely reason, unverified). `RemoteClient.connect` then reports `networkError`, while an unpaired client reports `certificateRejected`. Check the ports before calling something a pairing problem.
+- **When wireless debugging is off, nothing on the PC can bring it back.** `adb connect` is refused on the old port and no port in 30000-49999 listens. When it is back it may be on a new port, and `adb devices` can find it without a new pairing.
+- **A cold Gradle fails `release_gradle_test`'s first two tests on the 2-minute limit** on a loaded machine straight after `flutter clean`. The later tests take about a minute. Run a build or the tests once to warm it; don't raise the limit.
+
 ### First release build on a phone (2026-11-06)
 - **R8 full mode strips a constructor kept only by `-keep class X`.** Anything created by reflection needs `{ <init>(); }`. A host test can't see this; check `build/app/outputs/mapping/<variant>/usage.txt` (decision #55).
 - **`flutter build apk` can ship stale Dart and still report success.** New font assets went in while `libapp.so` held code from days earlier, with no error, across two builds. `flutter clean` cured it; the cause is unknown (unverified: the AOT stamps stayed older than `app.dill`). After a release build, prove the snapshot before trusting it: read `lib/arm64-v8a/libapp.so` from the APK and look for a string only the new code has.
@@ -25,7 +32,7 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 - **sqlite's error text quotes values.** `SqliteException.toString()` ends with `Causing statement: ..., parameters: <values>`, and drift keeps that text through its isolate. A scrubber can't remove a value it doesn't know, so cut the tail. Source: sqlite3-3.5.2 `lib/src/exception.dart`.
 - **`ref.read` in a catch after an await throws once the widget is gone,** and replaces the handled failure. Read the reporter before the await.
 - **A stacked route keeps the screen beneath alive,** so two screens on one provider both see a failure. Report from a shared provider, not per screen.
-- **`market://launch?id=` is reported broken on many devices since about August 2026** after a Google Play change: the command sends and nothing happens. (Unverified on the owner's TV until the link test runs; [HA docs](https://www.home-assistant.io/integrations/androidtv_remote).)
+- **`market://launch?id=` is reported broken on many devices** after a Google Play change: the command sends and nothing happens. The docs give no date. (Unverified on the owner's TV until DM-029 runs; [HA docs](https://www.home-assistant.io/integrations/androidtv_remote); decision #56.)
 - **flutter_svg:**
   - `compute` runs synchronously under `kDebugMode`, so debug builds never exercise the release isolate path. Device rows that judge logos need a release build.
   - A logo appears one frame late, so a test that doesn't settle shows an empty tile.

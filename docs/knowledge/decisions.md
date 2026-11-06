@@ -4,6 +4,13 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #56 — 2026-11-06 — App buttons use deep links, and the catalogue decides the link
+- **Decision:** the catalogue carries a deep link for the six apps with a published one: YouTube `https://www.youtube.com`, Netflix `netflix://`, Prime Video `https://app.primevideo.com`, Disney+ `https://www.disneyplus.com`, Plex `plex://`, Twitch `twitch://home`. The other 49 keep `market://launch?id=<package>`.
+- **The link is resolved at launch, not stored:** `AppCatalogue.launchLinkFor` beats the stored row, so shortcuts saved earlier need no migration and a corrected link reaches every phone with the next build. Only a link the user typed on a custom shortcut stays.
+- **Why:** the Home Assistant Android TV Remote docs say launching by application id "currently doesn't work reliably for many apps due to a Google Play Store change", and to use a deep link. Every app in ours used that form, and the owner saw app buttons do nothing.
+- **Unverified on the owner's TV.** The TV rejects the test tool's certificate and nothing on the phone shows the app that opened, so the links come from the published list, not from a test here. Which link form each app answers to is DM-029's job. `netflix://` was picked over `https://www.netflix.com/title/<id>?source=30` because the latter needs a title.
+- **Revisit:** DM-029 results. A link that fails gets corrected in `apps_v1.json` and in the demo's `_deepLinkPackages`. If the 49 stay dead, look for a link form that works by package.
+
 ### #55 — 2026-11-06 — Release builds keep Room's constructor
 - **Decision:** `app/android/app/proguard-rules.pro` keeps `<init>()` on every `RoomDatabase` subclass. Flutter's Gradle plugin picks the file up by name. `android.enableR8.fullMode` stays on and nothing else is loosened; `test/platform/release_shrinker_test.dart` pins the rule.
 - **Why:** the first release build ever run on a phone crashed at process start with `Failed to create an instance of androidx.work.impl.WorkDatabase`, before any Flutter code. Room's library rule keeps the class but not its constructor, so R8 full mode removes `<init>()` (`usage.txt` shows it). WorkManager comes in through the ads and Firebase libraries. Prod has the same dependencies and shrinker settings, so it needs the same rule.

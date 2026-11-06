@@ -1,17 +1,22 @@
 # Project status
 
-_Last updated: 2026-11-06 by Claude (full design pass, decision #54)._
+_Last updated: 2026-11-06 by Claude (CI, app links and release script fixes, decision #56)._
 
 ## Current phase
 
-**Phase 9 (release preparation) and the design pass are merged to `main`** at the owner's request on 2026-11-06, ahead of the app-button fix and a clean full check, which are still to come. Nothing was signed, uploaded or hosted (P9-R1).
+**Phase 9 (release preparation) and the design pass are merged to `main`** at the owner's request on 2026-11-06. Nothing was signed, uploaded or hosted (P9-R1).
 
-**On the phone:** a dev **release** build of this code, from a clean build, connected to Living Room TV 3. Its crash on launch is fixed (decision #55). Earlier installs on the phone were debug builds.
+**On the phone:** a dev **release** build with the deep links (decision #56), from a clean build, connected to Living Room TV 3. The installed APK's hash matches the build. It was opened with no taps: no crash, status Connected, volume read from the TV. Whether the links open apps has not been tried.
 
 What remains is the **owner's release work**, in the order of `docs/release/runbook.md`, and the **real-device run** (`docs/knowledge/device-matrix.md`, rows DM-001…DM-113, results empty). The device run gates every upload (runbook step 9).
 
 ## Done
 
+- **CI, app links and release script (2026-11-06):**
+  - **CI's `check` job:** the three red test files were a case bug. The SDK's `fonts.zip` holds `Roboto-Regular.ttf`, Windows unpacks it in lower case, and `real_fonts.dart` hardcoded lower case. `materialFontFile` now matches without case, with a test that catches this on Windows too.
+  - **App buttons (decision #56):** six apps send a published deep link, resolved at launch by `AppCatalogue.launchLinkFor`, so saved shortcuts need no migration. The demo follows.
+  - **Release wrappers:** `tool/release.ps1` and `.sh` run `flutter clean` before they build, and a failed clean stops the build.
+  - **Verified 2026-11-06, under load from another job (CPU at 100 %):** format and analyze clean; app 2402 passed, 1 skipped, 0 failed. In that run the first two Gradle tests hit the 2-minute limit on a cold Gradle straight after `flutter clean`, which stopped the script before atv_remote. Rerun on the same code: Gradle 7 of 7, atv_remote 208 of 208. So every step has passed on this code, but not in one `tool/check.ps1` run.
 - **Design pass (decision #54, 2026-11-06):**
   - **Identity:** a brand-hue ink palette, Atkinson Hyperlegible Next and Mono bundled, and `Relief` / `KeySurface` deriving moulded keys from any palette. The icon and store art are unchanged; the native splash follows the new `bg`.
   - **Remote:** the D-pad is the app's mark as a control (backlit ring, lit arc, accent OK key with a real label); a recessed touchpad with a dot matrix that lights under the thumb; `PadTabs` replaces the `SegmentedButton`; the cluster runs out to the pad's edges; the status lamp is calm while connected, in a strip that never changes height; the quick row lines up with the pad and fades where it scrolls.
@@ -61,15 +66,15 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## In progress
 
-**App buttons do nothing on the real TV.** Likely the `market://launch?id=` break (learnings; unverified on this TV). Every app sends that link today (`app_entry.dart:20`), `shortcut_repository.dart` stores it in the DB, and `demo_remote_session.dart` parses it.
-- **Waiting on the owner:** the code on the TV, to pair a test tool. The link test is written but not in the repo: a throwaway `link_test.dart` and `links.txt` in the session's scratchpad.
-- **Then:** per-app deep links in the catalogue, stored rows remapped or resolved from the catalogue at launch, the demo and catalogue validation updated, tests, a decision, and DM-029.
+**App buttons: fix shipped to the phone, not confirmed on the TV (decision #56).**
+- **Waiting on the owner:** tap Netflix, YouTube and Prime Video on the phone and say which open. Nothing on the phone shows the result: the test tool's certificate is rejected by the TV, so seeing it from here needs the code on the TV to pair the tool.
+- **The other 49 apps** still send `market://launch?id=`, which is the form reported broken. BBC iPlayer on the quick row is one of them. If they stay dead, finding a link form that works by package needs the paired tool or DM-029.
 
 ## Next up
 
-**First:** the owner tries the design on the phone (DM-116). Then the app-button fix, `tool/check.ps1` on a quiet machine, and a new build on the phone, using `flutter clean` first (learnings). Then make CI green (item 6).
+**First:** the owner taps the app buttons (see In progress), then tries the design on the phone (DM-116).
 
-**Before any store upload:** run a **prod** release build on a phone. Only the dev flavor has been run in release. `tool/release.ps1` doesn't run `flutter clean`, so clean by hand until it does, or a store build could carry stale Dart.
+**Before any store upload:** run a **prod** release build on a phone. Only the dev flavor has been run in release.
 
 Then:
 
@@ -90,7 +95,7 @@ Then:
    - internal → closed → staged production (step 11);
    - App Review with the review notes (step 12);
    - launch week (step 13).
-6. **CI:** red on `main` since at least Phase 7. On 2026-11-06 (`62a6f50`) `goldens` passed and `check` had 2319 passed, 3 failed, 4 skipped. All three stop in `setUpAll` because `bin/cache/artifacts/material_fonts/roboto-regular.ttf` is missing on the `check` runner: `l10n_short_labels_test` (the same failure as Phase 8), `store_frame_test` and `store_screenshots_test`. The file name matches the SDK, so it is not a case problem; why the runner lacks the fonts is unknown (unverified). If the Gradle dry runs time out on a cold runner, warm Gradle in the CI step; never loosen the test.
+6. **CI:** if the Gradle dry runs time out on a cold runner, warm Gradle in the CI step; never loosen the test.
 
 After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch backlog. It includes:
 - the CLI minors;

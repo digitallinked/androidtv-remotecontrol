@@ -25,7 +25,7 @@ Full message reference: `protocol-reference.md` in this directory.
 | Power state | `RemoteStart.started` (true = screen on) |
 | Volume | `RemoteSetVolumeLevel` from the TV (max, level, muted); send `KEYCODE_VOLUME_UP/DOWN/MUTE` to change it |
 | Current app | `RemoteImeKeyInject.app_info.app_package` from the TV |
-| Launch app | `RemoteAppLinkLaunchRequest.app_link` = deep link (`https://www.netflix.com/title`) or `market://launch?id=<package>` |
+| Launch app (prefer a deep link: `market://` fails for many apps, decision #56) | `RemoteAppLinkLaunchRequest.app_link` = deep link (`https://www.netflix.com/title`) or `market://launch?id=<package>` |
 | Press-and-hold | `RemoteKeyInject` direction `START_LONG` … `END_LONG`; normal tap = `SHORT` |
 | Power on from off | not possible over 6466 when the TV is fully off; send Wake-on-LAN magic packet (UDP 9) to the TV's Ethernet/Wi-Fi MAC. Works only if the TV has WoL enabled |
 
