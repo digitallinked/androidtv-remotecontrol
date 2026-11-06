@@ -4,6 +4,12 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### First release build on a phone (2026-11-06)
+- **R8 full mode strips a constructor kept only by `-keep class X`.** Anything created by reflection needs `{ <init>(); }`. A host test can't see this; check `build/app/outputs/mapping/<variant>/usage.txt` (decision #55).
+- **`flutter build apk` can ship stale Dart and still report success.** New font assets went in while `libapp.so` held code from days earlier, with no error, across two builds. `flutter clean` cured it; the cause is unknown (unverified: the AOT stamps stayed older than `app.dill`). After a release build, prove the snapshot before trusting it: read `lib/arm64-v8a/libapp.so` from the APK and look for a string only the new code has.
+- **Searching a Dart snapshot:** one-byte strings are Latin-1, so `·` is `0xB7`, not UTF-8's `C2 B7`, and class names don't survive release. Search for a const string that exists nowhere else.
+- **A screenshot is the only proof the app updated.** The install succeeded, the hashes matched and the process ran while the phone showed last week's UI.
+
 ### Design pass (2026-11-06)
 - **`ThemeData.fontFamily` doesn't reach styles handed straight to a component theme.** `listTileTheme` was given styles from our own `TextTheme`, and every list row silently fell back to the default font; only a real-font render showed it. The family is set in `_style` itself.
 - **Goldens can't judge type.** They draw in the test font, so every word is a block, and long-looking subtitles there are short in reality. Judge copy and hierarchy from `loadRealFonts` renders, never from a golden.

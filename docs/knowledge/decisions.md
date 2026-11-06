@@ -4,6 +4,11 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #55 — 2026-11-06 — Release builds keep Room's constructor
+- **Decision:** `app/android/app/proguard-rules.pro` keeps `<init>()` on every `RoomDatabase` subclass. Flutter's Gradle plugin picks the file up by name. `android.enableR8.fullMode` stays on and nothing else is loosened; `test/platform/release_shrinker_test.dart` pins the rule.
+- **Why:** the first release build ever run on a phone crashed at process start with `Failed to create an instance of androidx.work.impl.WorkDatabase`, before any Flutter code. Room's library rule keeps the class but not its constructor, so R8 full mode removes `<init>()` (`usage.txt` shows it). WorkManager comes in through the ads and Firebase libraries. Prod has the same dependencies and shrinker settings, so it needs the same rule.
+- **Revisit:** a Room release whose own consumer rule keeps the constructor.
+
 ### #54 — 2026-11-06 — "Backlit": the visual identity pass
 - **The idea:** a good physical remote has dark moulded keys with legends lit from behind. The app's mark is already a ring around a disc with four carets, so the D-pad is that mark made into a control. The boldness goes there and into the touchpad; everything else stays quiet.
 - **Colour:** the brand accent `#3D5AFE`, the icon and the store art are unchanged. Neutral grey-black gave way to an ink derived from the brand hue (dark `#0B0D18` / `#141726` / `#1F2338` / `#2E3350`, accent `#7F96FF`; light `#F2F3FA` / `#FFFFFF` / `#E9EBF7` / `#CDD1E6`). The native splash follows `bg`, and its dark mark follows the dark accent.

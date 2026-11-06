@@ -4,24 +4,24 @@ _Last updated: 2026-11-06 by Claude (full design pass, decision #54)._
 
 ## Current phase
 
-**Phase 9 (release preparation) is on `feat/phase-9-release-prep`, not yet merged; `main` is at Phase 8.** The owner has started testing on the real phone and TV, and the merge waits for the app-button fix and a quiet full check. Nothing was signed, uploaded or hosted (P9-R1).
+**Phase 9 (release preparation) and the design pass are merged to `main`** at the owner's request on 2026-11-06, ahead of the app-button fix and a clean full check, which are still to come. Nothing was signed, uploaded or hosted (P9-R1).
 
-**The design pass ("Backlit", decision #54) is in the working tree, uncommitted,** waiting for the owner to look at it and say to commit.
+**On the phone:** a dev **release** build of this code, from a clean build, connected to Living Room TV 3. Its crash on launch is fixed (decision #55). Earlier installs on the phone were debug builds.
 
 What remains is the **owner's release work**, in the order of `docs/release/runbook.md`, and the **real-device run** (`docs/knowledge/device-matrix.md`, rows DM-001…DM-113, results empty). The device run gates every upload (runbook step 9).
 
 ## Done
 
-- **Design pass (decision #54, 2026-11-06, uncommitted):**
+- **Design pass (decision #54, 2026-11-06):**
   - **Identity:** a brand-hue ink palette, Atkinson Hyperlegible Next and Mono bundled, and `Relief` / `KeySurface` deriving moulded keys from any palette. The icon and store art are unchanged; the native splash follows the new `bg`.
   - **Remote:** the D-pad is the app's mark as a control (backlit ring, lit arc, accent OK key with a real label); a recessed touchpad with a dot matrix that lights under the thumb; `PadTabs` replaces the `SegmentedButton`; the cluster runs out to the pad's edges; the status lamp is calm while connected, in a strip that never changes height; the quick row lines up with the pad and fades where it scrolls.
   - **Everywhere else:** `AppPanel` on Settings, Your TVs and discovery; complete component themes (fields, snack bars, buttons, list rows); a backlit badge on onboarding; logo tiles get an edge; sheet rows line up with their titles; the paywall's benefit hierarchy; the error log's empty state.
   - **Copy:** "Swipe to move, tap to select" (en, ms). Other wording untouched.
-  - **Verified 2026-11-06:** format and analyze clean; app 2389 passed, with two failures in the full run while `ffmpeg` and headless Chrome from another job held the CPU at 94 %. Both are the known load flakes. The latency test then passed 3 of 3 alone (p95 10 to 20 ms). `discover_pair_press_key_flow` passed 8 of 8 alternating with a pristine `HEAD` checkout, which also passed 8 of 8, under the same load. Gradle +7, atv_remote +208 twice, 52 goldens regenerated. No complete green `tool/check.ps1` yet: rerun it on a quiet machine before committing.
+  - **Verified 2026-11-06:** format and analyze clean; app 2389 passed, with two failures in the full run while `ffmpeg` and headless Chrome from another job held the CPU at 94 %. Both are the known load flakes. The latency test then passed 3 of 3 alone (p95 10 to 20 ms). `discover_pair_press_key_flow` passed 8 of 8 alternating with a pristine `HEAD` checkout, which also passed 8 of 8, under the same load. Gradle +7, atv_remote +208 twice, 52 goldens regenerated. No complete green `tool/check.ps1` yet.
 - **Owner's real-device requests (decision #53):**
   - **Finding the TV:** fixed and proven on the real TV (448961e). Pairing and connecting work.
   - **Task 9.14, error recording and the error log:** approved. Every failure the user sees is recorded, and Settings → Help → Error log keeps the last 50 errors on the phone.
-  - **Task 9.15, real logos:** approved. 27 of 55 apps show a logo. **Not installed on the phone yet.**
+  - **Task 9.15, real logos:** approved. 27 of 55 apps show a logo. Seen on the phone in a release build on 2026-11-06; DM-115 still to be worked through.
 - **Phase 9 (release preparation, decisions #51–#52):**
   - **Release checker:** `app/tool/release_check.dart` with the `tool/release.{ps1,sh}` wrappers. It refuses an incomplete prod build, listing every problem at once. Stages: pre, manifest and post.
   - **Android:** `key.properties` signing; the prod bundle refuses the test or malformed AdMob id and debug signing (`taskGraph` backstop); `localeConfig`; R8 with the Crashlytics mapping upload.
@@ -67,9 +67,9 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## Next up
 
-**Before that:** the owner reviews the design pass; then `tool/check.ps1` on a quiet machine and a commit.
+**First:** the owner tries the design on the phone (DM-116). Then the app-button fix, `tool/check.ps1` on a quiet machine, and a new build on the phone, using `flutter clean` first (learnings). Watch the first CI run on `main`.
 
-**First:** the app-button fix, then `tool/check.ps1` on a quiet machine, a new build on the phone, merge `--no-ff` to `main`, full check on `main`, push, and watch the first CI run.
+**Before any store upload:** run a **prod** release build on a phone. Only the dev flavor has been run in release. `tool/release.ps1` doesn't run `flutter clean`, so clean by hand until it does, or a store build could carry stale Dart.
 
 Then:
 
@@ -102,7 +102,7 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 ## Known flakes and residuals
 
 - **Design pass residuals:**
-  - Only DM-116 can judge the ring, dots, key travel and glare in a real dim room. Nothing here ran on a phone.
+  - Only DM-116 can judge the ring, dots, key travel and glare in a real dim room. On the phone so far: launch, the remote screen and the live connection, looked at with no taps.
   - The `→` in 28 strings has no glyph in the bundled face and relies on system font fallback (DM-116 step 1). `flutter test` draws a box for it.
   - Store screenshots are git-ignored: run `tool/store_screenshots.ps1` to see the new look in them.
   - The Malay layout is covered by the sweeps, but nobody has judged the new face in Malay (DM-113).
