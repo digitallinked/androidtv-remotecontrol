@@ -391,6 +391,27 @@ void main() {
     });
   });
 
+  test('launch_sends_the_link_it_is_told_to_use', () {
+    fakeAsync((a) {
+      final x = RemoteActions(
+        session: session,
+        smoothPress: true,
+        hapticsEnabled: true,
+        haptics: h,
+        onRefused: () => refused++,
+        onSent: sent.add,
+        linkOf: (app) => 'netflix://',
+      );
+      expect(
+        x.launch(const AppEntry(package: 'com.netflix.ninja', name: 'N')),
+        isTrue,
+      );
+      expect(session.sentLinks, ['netflix://']);
+      expect(sent, [const AppLaunched('com.netflix.ninja')]);
+      x.dispose();
+    });
+  });
+
   test('type_text_reports_length_only', () {
     fakeAsync((a) {
       expect(actions().typeText('hello'), isTrue);

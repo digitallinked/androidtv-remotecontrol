@@ -148,7 +148,7 @@ void main() {
     await t.pump();
 
     expect(
-      find.text('Opened market://launch?id=com.netflix.ninja'),
+      find.text('Opened netflix://'),
       findsOneWidget,
     );
     handle.dispose();

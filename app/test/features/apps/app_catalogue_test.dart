@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/features/apps/domain/app_catalogue.dart';
+import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/apps/domain/name_search.dart';
 
 const _file = 'assets/catalogue/apps_v1.json';
@@ -38,10 +39,7 @@ void main() {
     expect(c.apps.map((a) => a.package).toSet(), hasLength(c.apps.length));
     for (final a in c.apps) {
       expect(a.name.trim(), isNotEmpty);
-      expect(
-        a.toEntry().launchLink,
-        anyOf(startsWith('market://launch?id='), startsWith('https://')),
-      );
+      expect(Uri.parse(a.toEntry().launchLink).hasScheme, isTrue);
       expect(a.regions, everyElement(matches(RegExp(r'^(\*|[A-Z]{2})$'))));
     }
   });
@@ -220,10 +218,77 @@ void main() {
       'https://example.com/one',
     );
     expect(
-      c.byPackage('com.netflix.ninja')!.toEntry().launchLink,
-      'market://launch?id=com.netflix.ninja',
+      c.byPackage('com.spotify.tv.android')!.toEntry().launchLink,
+      'market://launch?id=com.spotify.tv.android',
     );
     expect(c.byPackage('no.such.app'), isNull);
+  });
+
+  group('launch links', () {
+    test('the_apps_with_a_published_deep_link_use_it', () {
+      const links = {
+        'com.google.android.youtube.tv': 'https://www.youtube.com',
+        'com.netflix.ninja': 'netflix://',
+        'com.amazon.amazonvideo.livingroom': 'https://app.primevideo.com',
+        'com.disney.disneyplus': 'https://www.disneyplus.com',
+        'com.plexapp.android': 'plex://',
+        'tv.twitch.android.app': 'twitch://home',
+      };
+      for (final MapEntry(key: package, value: link) in links.entries) {
+        expect(c.byPackage(package)!.toEntry().launchLink, link);
+      }
+    });
+
+    test('a_stored_shortcut_follows_the_catalogue', () {
+      const stored = AppEntry(package: 'com.netflix.ninja', name: 'Netflix');
+      expect(stored.launchLink, startsWith('market://'));
+      expect(c.launchLinkFor(stored), 'netflix://');
+      expect(
+        c.launchLinkFor(
+          const AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'Netflix',
+            launchLink: 'https://old.example',
+          ),
+        ),
+        'netflix://',
+      );
+    });
+
+    test('a_catalogue_app_the_user_restyled_still_follows_the_catalogue', () {
+      expect(
+        c.launchLinkFor(
+          const AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'Films',
+            isCustom: true,
+          ),
+        ),
+        'netflix://',
+      );
+    });
+
+    test('a_link_the_user_chose_is_kept', () {
+      const own = 'https://www.netflix.com/title/80100172?source=30';
+      expect(
+        c.launchLinkFor(
+          const AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'My show',
+            launchLink: own,
+            isCustom: true,
+          ),
+        ),
+        own,
+      );
+    });
+
+    test('an_app_the_catalogue_has_no_link_for_keeps_its_own', () {
+      const app = AppEntry(package: 'no.such.app', name: 'Mine');
+      expect(c.launchLinkFor(app), app.launchLink);
+      const known = AppEntry(package: 'com.spotify.tv.android', name: 'S');
+      expect(c.launchLinkFor(known), known.launchLink);
+    });
   });
 
   test('is_available_in_matches_star_or_listed_region', () {

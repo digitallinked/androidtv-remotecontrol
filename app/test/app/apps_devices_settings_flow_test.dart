@@ -272,7 +272,7 @@ void main() {
       await t.tap(find.text('Plex'));
       await t.pumpAndSettle();
 
-      expect(client.sentLinks.last, 'market://launch?id=com.plexapp.android');
+      expect(client.sentLinks.last, 'plex://');
       expect(find.byType(RemoteBody), findsOneWidget);
       expect(find.byType(AppsScreen), findsNothing);
       // The same remote came back, so the usage tracker kept its memory and did
@@ -315,7 +315,7 @@ void main() {
 
       expect(find.byType(RemoteBody), findsOneWidget);
       expect(
-        find.text('Opened market://launch?id=com.netflix.ninja'),
+        find.text('Opened netflix://'),
         findsOneWidget,
       );
       expect(usage.stats, isEmpty);

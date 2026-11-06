@@ -208,7 +208,7 @@ void main() {
     expect(saved.package, 'com.netflix.ninja');
     expect(saved.name, 'Films');
     expect(saved.isCustom, isFalse);
-    expect(saved.launchLink, 'market://launch?id=com.netflix.ninja');
+    expect(saved.launchLink, 'netflix://');
     expect(repo.apps, hasLength(6));
   });
 

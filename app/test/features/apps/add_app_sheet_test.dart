@@ -16,10 +16,15 @@ import '../../helpers/in_memory_shortcut_repository.dart';
 import '../../helpers/pump_router_app.dart';
 import '../../helpers/recording_crash_reporter.dart';
 
-const _netflix = AppEntry(package: 'com.netflix.ninja', name: 'Netflix');
+const _netflix = AppEntry(
+  package: 'com.netflix.ninja',
+  name: 'Netflix',
+  launchLink: 'netflix://',
+);
 const _youtube = AppEntry(
   package: 'com.google.android.youtube.tv',
   name: 'YouTube',
+  launchLink: 'https://www.youtube.com',
 );
 
 void main() {

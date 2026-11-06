@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:atv_remote/atv_remote.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/features/apps/domain/app_catalogue.dart';
 import 'package:tv_remote/features/demo/demo_remote_session.dart';
 
 const _delay = Duration(milliseconds: 600);
@@ -55,6 +57,20 @@ void main() {
       expect(session.isDemo, isTrue);
       expect(session.tvName, isEmpty);
       expect(session.pairingTarget, isNull);
+    });
+  });
+
+  test('every_deep_link_in_the_catalogue_opens_its_app_in_the_demo', () {
+    final catalogue = AppCatalogue.parse(
+      File('assets/catalogue/apps_v1.json').readAsStringSync(),
+    );
+    final deepLinked = catalogue.apps.where((a) => a.launchLink != null);
+    expect(deepLinked, isNotEmpty);
+    _whenConnected((session, async) {
+      for (final app in deepLinked) {
+        session.launchAppLink(app.launchLink!);
+        expect(session.currentApp, app.package, reason: app.launchLink);
+      }
     });
   });
 

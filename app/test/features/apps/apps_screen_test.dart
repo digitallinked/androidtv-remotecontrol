@@ -121,9 +121,7 @@ void main() {
     await pumpApps(t);
     await t.tap(find.bySemanticsLabel('Open YouTube'));
     await t.pumpAndSettle();
-    expect(fake.sentLinks, [
-      'market://launch?id=com.google.android.youtube.tv',
-    ]);
+    expect(fake.sentLinks, ['https://www.youtube.com']);
     // The next thing to do is navigate inside the app: back on the remote.
     expect(find.byType(RemoteBody), findsOneWidget);
     expect(find.byType(AppsScreen), findsNothing);
@@ -216,7 +214,7 @@ void main() {
     await t.tap(find.bySemanticsLabel('Open Plex'));
     await t.pumpAndSettle();
     // Launched without being added to the list.
-    expect(fake.sentLinks, ['market://launch?id=com.plexapp.android']);
+    expect(fake.sentLinks, ['plex://']);
     expect(find.byType(RemoteBody), findsOneWidget);
     handle.dispose();
   });

@@ -36,6 +36,19 @@ final class DemoKeyPressed extends DemoAction {
   String toString() => 'DemoKeyPressed($keyCode, $direction)';
 }
 
+/// The app each deep link in the catalogue opens, by the link's host, or by
+/// its scheme when it has its own. The demo has no real TV to answer with the
+/// app that opened, and no catalogue of its own: a test keeps this in step
+/// with the catalogue, which holds the links themselves.
+const Map<String, String> _deepLinkPackages = {
+  'www.youtube.com': 'com.google.android.youtube.tv',
+  'netflix': 'com.netflix.ninja',
+  'app.primevideo.com': 'com.amazon.amazonvideo.livingroom',
+  'www.disneyplus.com': 'com.disney.disneyplus',
+  'plex': 'com.plexapp.android',
+  'twitch': 'tv.twitch.android.app',
+};
+
 /// A deep link (or `market://launch?id=<package>` link) was opened.
 final class DemoAppOpened extends DemoAction {
   /// Creates the action.
@@ -235,7 +248,9 @@ class DemoRemoteSession implements RemoteSession {
     final uri = Uri.tryParse(link);
     final isMarketLaunch =
         uri != null && uri.scheme == 'market' && uri.host == 'launch';
-    final package = isMarketLaunch ? uri.queryParameters['id'] : null;
+    final package = isMarketLaunch
+        ? uri.queryParameters['id']
+        : _deepLinkPackages[uri?.scheme == 'https' ? uri?.host : uri?.scheme];
     if (package != null && package.isNotEmpty) {
       _currentApp = package;
       _emit(CurrentAppChanged(package));

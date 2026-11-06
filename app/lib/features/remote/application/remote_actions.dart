@@ -13,6 +13,8 @@ import 'package:tv_remote/core/session/not_connected_notices.dart';
 import 'package:tv_remote/core/session/remote_session.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/core/storage/settings_controller.dart';
+import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
+import 'package:tv_remote/features/apps/domain/app_catalogue.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 import 'package:tv_remote/features/remote/application/key_input.dart';
 
@@ -129,7 +131,8 @@ class RemoteActions implements RemoteInput {
   ///
   /// `session` is `null` when there is no TV or the session is reloading (a
   /// TV switch): every command is then refused. `onRefused` is called for
-  /// each refused command, `onSent` for each sent one.
+  /// each refused command, `onSent` for each sent one. `linkOf` picks the
+  /// link that opens an app; without it, the app's own link is sent.
   RemoteActions({
     required this._session,
     required this._smoothPress,
@@ -137,6 +140,7 @@ class RemoteActions implements RemoteInput {
     required this._haptics,
     required this._onRefused,
     this._onSent,
+    this._linkOf,
     this._repeatInterval = const Duration(milliseconds: 120),
     this._maxHold = const Duration(seconds: 15),
   });
@@ -173,6 +177,7 @@ class RemoteActions implements RemoteInput {
   final Haptics _haptics;
   final VoidCallback _onRefused;
   final RemoteActionListener? _onSent;
+  final String? Function(AppEntry app)? _linkOf;
   final Duration _repeatInterval;
   final Duration _maxHold;
 
@@ -229,7 +234,8 @@ class RemoteActions implements RemoteInput {
 
   @override
   bool launch(AppEntry app) {
-    if (!_guard(() => _session!.launchAppLink(app.launchLink))) return false;
+    final link = _linkOf?.call(app) ?? app.launchLink;
+    if (!_guard(() => _session!.launchAppLink(link))) return false;
     _light();
     _report(AppLaunched(app.package));
     return true;
@@ -354,6 +360,15 @@ RemoteActions remoteActions(Ref ref) {
   final haptics = ref.watch(hapticsProvider);
   final onSent = ref.watch(remoteActionListenerProvider);
   final notices = ref.read(notConnectedNoticesProvider.notifier);
+  // Listened to, not watched: the catalogue arriving must not rebuild the
+  // actions, which would release a hold. It also starts the load before the
+  // first tap. Until it is there, or if it fails, the stored link is sent.
+  AppCatalogue? catalogue;
+  ref.listen(
+    catalogueProvider,
+    (_, next) => catalogue = next.value,
+    fireImmediately: true,
+  );
   final actions = RemoteActions(
     session: session,
     smoothPress: smoothPress,
@@ -361,6 +376,7 @@ RemoteActions remoteActions(Ref ref) {
     haptics: haptics,
     onRefused: notices.notify,
     onSent: onSent,
+    linkOf: (app) => catalogue?.launchLinkFor(app),
   );
   ref.onDispose(actions.dispose);
   return actions;
