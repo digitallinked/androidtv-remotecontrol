@@ -13,7 +13,10 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 ## Done
 
 - **CI, app links and release script (2026-11-06):**
-  - **CI's `check` job:** the three red test files were a case bug. The SDK's `fonts.zip` holds `Roboto-Regular.ttf`, Windows unpacks it in lower case, and `real_fonts.dart` hardcoded lower case. `materialFontFile` now matches without case, with a test that catches this on Windows too.
+  - **CI is green on `main`, the first time on record** (`b6acba6`, run 42225620223): goldens 61, app 2337 with 5 skipped, Gradle 7, atv_remote 208. Three bugs were stacked, each hiding the next (learnings):
+    - `real_fonts.dart` hardcoded the lower-case font names that only Windows has. `materialFontFile` now matches without case, with a test that catches this on Windows too.
+    - The Gradle tests ran `sh gradlew`, and Ubuntu's `sh` can't run it. They use bash now, and the workflow warms Gradle first.
+    - The test's `_Peer` had no `socket.done` handler. The real clients do, so users were never exposed.
   - **App buttons (decision #56):** six apps send a published deep link, resolved at launch by `AppCatalogue.launchLinkFor`, so saved shortcuts need no migration. The demo follows.
   - **Release wrappers:** `tool/release.ps1` and `.sh` run `flutter clean` before they build, and a failed clean stops the build.
   - **Verified 2026-11-06, under load from another job (CPU at 100 %):** format and analyze clean; app 2402 passed, 1 skipped, 0 failed. In that run the first two Gradle tests hit the 2-minute limit on a cold Gradle straight after `flutter clean`, which stopped the script before atv_remote. Rerun on the same code: Gradle 7 of 7, atv_remote 208 of 208. So every step has passed on this code, but not in one `tool/check.ps1` run.
@@ -95,7 +98,7 @@ Then:
    - internal → closed → staged production (step 11);
    - App Review with the review notes (step 12);
    - launch week (step 13).
-6. **CI:** the workflow warms Gradle before `tool/check.sh`. If the dry runs still time out on a cold runner, warm more there; never loosen the test.
+6. **CI:** green. The workflow warms Gradle before `tool/check.sh`; if the dry runs ever time out on a cold runner, warm more there and never loosen the test.
 
 After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch backlog. It includes:
 - the CLI minors;
