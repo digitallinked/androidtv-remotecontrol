@@ -22,6 +22,9 @@ const Duration _wait = Duration(seconds: 5);
 /// A raw TLS connection to the fake TV that decodes frames into a queue.
 class _Peer {
   _Peer._(this.socket) {
+    // A write the server didn't wait for fails `done` with a broken pipe on
+    // Linux; without a handler that would fail whichever test is running.
+    unawaited(socket.done.then<void>((_) {}, onError: (Object _) {}));
     socket.listen(
       (chunk) {
         bytesReceived += chunk.length;
