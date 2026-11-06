@@ -75,7 +75,7 @@ Future<(int, String)> dryRun(String task) async {
           workingDirectory: 'android',
           runInShell: true,
         )
-      : await Process.start('sh', [
+      : await Process.start('bash', [
           'gradlew',
           ...args,
         ], workingDirectory: 'android');

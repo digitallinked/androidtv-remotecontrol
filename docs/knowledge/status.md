@@ -95,7 +95,7 @@ Then:
    - internal → closed → staged production (step 11);
    - App Review with the review notes (step 12);
    - launch week (step 13).
-6. **CI:** if the Gradle dry runs time out on a cold runner, warm Gradle in the CI step; never loosen the test.
+6. **CI:** the workflow warms Gradle before `tool/check.sh`. If the dry runs still time out on a cold runner, warm more there; never loosen the test.
 
 After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch backlog. It includes:
 - the CLI minors;

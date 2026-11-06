@@ -27,6 +27,10 @@ jobs:
       # here instead of skipping. Needs no secrets.
       - run: flutter build apk --config-only --flavor dev -t lib/main_dev.dart
         working-directory: app
+      # Downloads Gradle and resolves the build once, so the dry runs in
+      # check.sh measure the build and not a cold runner's downloads.
+      - run: bash gradlew -q -m :app:bundleDevRelease
+        working-directory: app/android
       - run: tool/check.sh
 
   goldens:
