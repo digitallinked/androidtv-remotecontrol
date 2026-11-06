@@ -27,11 +27,8 @@ const List<String> _iosTextFamilies = [
 /// the rest of the test file.
 Future<void> loadRealFonts() async {
   final dir = materialFontsDir();
-  ByteData read(String name) {
-    final file = File('${dir.path}/$name');
-    expect(file.existsSync(), isTrue, reason: '${file.path} exists');
-    return ByteData.sublistView(file.readAsBytesSync());
-  }
+  ByteData read(String name) =>
+      ByteData.sublistView(materialFontFile(dir, name).readAsBytesSync());
 
   final roboto = [
     for (final weight in ['regular', 'medium', 'bold'])
@@ -80,4 +77,15 @@ Directory materialFontsDir() {
     dir = dir.parent;
   }
   fail('the Flutter SDK material fonts were not found');
+}
+
+/// The file called [name] in [dir], whatever its case: the SDK's `fonts.zip`
+/// holds `Roboto-Regular.ttf`, which Linux and macOS keep, but Flutter's
+/// unzip on Windows writes it in lower case.
+File materialFontFile(Directory dir, String name) {
+  final wanted = name.toLowerCase();
+  for (final file in dir.listSync().whereType<File>()) {
+    if (file.uri.pathSegments.last.toLowerCase() == wanted) return file;
+  }
+  fail('$name is not in ${dir.path}');
 }
