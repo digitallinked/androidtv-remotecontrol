@@ -78,8 +78,14 @@ if ($Platform -eq 'ios') {
 }
 Push-Location $appDir
 try {
-    & flutter build $kind --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+    # A build can package stale Dart while reporting success (learnings), and
+    # nothing later would notice: the artifact has to come from a clean tree.
+    & flutter clean
     $code = $LASTEXITCODE
+    if ($code -eq 0) {
+        & flutter build $kind --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+        $code = $LASTEXITCODE
+    }
 } finally {
     Pop-Location
 }

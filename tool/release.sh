@@ -87,7 +87,9 @@ if [ "$platform" = ios ]; then
   export FIREBASE_ANALYTICS_WITHOUT_ADID=true
 fi
 code=0
-(cd "$root/app" && flutter build "$kind" --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json) || code=$?
+# A build can package stale Dart while reporting success (learnings), and
+# nothing later would notice: the artifact has to come from a clean tree.
+(cd "$root/app" && flutter clean && flutter build "$kind" --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json) || code=$?
 if [ "$code" -ne 0 ]; then
   echo "flutter build $kind failed (exit $code). No upload artifact was made."
   exit 1

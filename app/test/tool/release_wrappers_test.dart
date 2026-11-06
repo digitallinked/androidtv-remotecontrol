@@ -177,12 +177,15 @@ void main() {
     if (!await _ready(bash)) return;
     final root = await writeReleaseFixture();
     // A fake `uname` that claims a Mac, and a fake `flutter` that reports
-    // what it was given and fails, so nothing is built (Ruling P9-C4).
+    // what it was given and fails the build, so nothing is built (Ruling
+    // P9-C4).
     final bin = Directory('${root.path}/fake_bin')..createSync();
     File('${bin.path}/uname').writeAsStringSync('#!/bin/sh\necho Darwin\n');
     File('${bin.path}/flutter').writeAsStringSync(
       '#!/bin/sh\n'
       r'echo "flutter $*"'
+      '\n'
+      r'[ "$1" = clean ] && exit 0'
       '\n'
       r'v="${FIREBASE_ANALYTICS_WITHOUT_ADID:-unset}"'
       '\n'
@@ -228,9 +231,27 @@ void main() {
     );
     final out = '${result.stdout}${result.stderr}';
     expect(out, contains('flutter build ipa --flavor prod'), reason: out);
+    expect(
+      out.indexOf('flutter clean'),
+      allOf(
+        isNonNegative,
+        lessThan(out.indexOf('flutter build ipa --flavor prod')),
+      ),
+      reason: out,
+    );
     expect(out, contains('FIREBASE_ANALYTICS_WITHOUT_ADID=true'), reason: out);
     expect(out, contains('flutter build ipa failed (exit 3).'), reason: out);
     expect(result.exitCode, 1);
+  });
+
+  test('both_wrappers_clean_before_they_build', () {
+    for (final script in const ['../tool/release.ps1', '../tool/release.sh']) {
+      final text = File(script).readAsStringSync();
+      final clean = text.indexOf('flutter clean');
+      expect(clean, isNonNegative, reason: script);
+      final build = text.indexOf(RegExp(r'flutter build \S+ --flavor'));
+      expect(clean, lessThan(build), reason: script);
+    }
   });
 
   test('sh_exits_64_on_bad_arguments', () async {
