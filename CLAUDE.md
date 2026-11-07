@@ -30,6 +30,7 @@ General skills that also apply: `superpowers:test-driven-development`, `superpow
 ```
 app/                  Flutter application (lib/, test/, integration_test/)
 packages/atv_remote/  Pure-Dart protocol library (no Flutter imports)
+web/                  Marketing site (Next.js on Vercel; decision #59)
 docs/knowledge/       Shared knowledge base: status, decisions, learnings
 docs/superpowers/     Plans and specs
 docs/competitor-analysis/  Competitor teardowns (reference only)

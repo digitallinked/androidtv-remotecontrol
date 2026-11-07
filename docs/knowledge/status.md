@@ -12,6 +12,11 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## Done
 
+- **Marketing site, live on Vercel (2026-11-07, decision #59):** public at https://remotely-woad.vercel.app, deployed from this PC with the CLI (Vercel project `remotely`, team Newy's projects). Later `vercel deploy` runs from `web/` are previews unless given `--prod`, and pushes don't deploy because the repo isn't connected. `web/` holds the home page with a working remote demo, `/support`, `/privacy`, `/terms`, the share image, sitemap and robots.
+  - **Verified 2026-11-07:** 27 unit tests, the typecheck and a production build pass. Chrome checks passed 27 of 27 against a production build: mouse, touch, keyboard, widths 320, 390 and 1440, no console errors, no owner notes on the legal pages. The script is throwaway and isn't in the repo.
+  - **Live site, 2026-11-07:** the same 27 Chrome checks passed against the deployed address. Every route answers as expected, and an unknown path gives 404.
+  - **Not verified:** Safari, and a real phone (including whether iOS shows its keyboard on OK).
+  - **Waiting on the owner:** the domain. See "Blocked / needs the owner".
 - **CI, app links and release script (2026-11-06):**
   - **CI is green on `main`, the first time on record** (`b6acba6`, run 42225620223): goldens 61, app 2337 with 5 skipped, Gradle 7, atv_remote 208. Three bugs were stacked, each hiding the next (learnings):
     - `real_fonts.dart` hardcoded the lower-case font names that only Windows has. `materialFontFile` now matches without case, with a test that catches this on Windows too.
@@ -130,7 +135,15 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 
 **The code on the TV** blocks the app-button fix.
 
-Everything is a step of `docs/release/runbook.md`; its end has the owner-decision list. In short:
+**The marketing site (decision #59)** needs, from the owner:
+- the domain, then `NEXT_PUBLIC_SITE_URL` on the host;
+- **the move to Coolify before launch** (owner's plan, 2026-11-07). The team is on Vercel's Hobby plan, which is believed to be non-commercial only (unverified against the current terms), and the app earns from ads and Premium. Set `NEXT_PUBLIC_SITE_URL` there: without it the site falls back to localhost, because the Vercel variable won't exist;
+- real `SUPPORT_EMAIL`, publisher name and address. `/support` hides its contact section until the email is real, and the legal pages stay labelled Draft;
+- once the domain is live: `PRIVACY_POLICY_URL`, `TERMS_URL` and `SUPPORT_URL` in `placeholders.json` and `AppLinks`, then `npm run sync:release` in `web/`;
+- `web/public/app-ads.txt` once the AdMob publisher id exists (`docs/release/forms/app-ads-txt.md`);
+- `site.stores` in `web/lib/site.ts` at launch.
+
+Everything else is a step of `docs/release/runbook.md`; its end has the owner-decision list. In short:
 
 - **Accounts:** Play Console and Apple Developer. Recruit the 12 closed-test testers now.
 - **Final name and ids** before the first upload. The placeholders are `Remotely for Android TV` and `com.digitallinked.atvremote`, and that App Store name carries a 2.3.10 risk.
@@ -166,4 +179,5 @@ Everything is a step of `docs/release/runbook.md`; its end has the owner-decisio
 - Store screenshots: `tool/store_screenshots.ps1` / `.sh` → `build/store-screenshots/`.
 - Release docs with values filled: `dart tool/fill_release_docs.dart` from `app/` → `build/release-docs/`.
 - Package tests: from `packages/atv_remote`, run `flutter test`, not `dart test` (see learnings).
+- Marketing site: from `web/`, `npm run dev`, `npm test`, `npm run typecheck`, `npm run build`. After a change in `docs/release/legal/` or `placeholders.json`, run `npm run sync:release`.
 - CLI: from `packages/atv_remote`, `dart run bin/atv_cli.dart <pair|key|watch|text|hold> <host> ...`.

@@ -4,6 +4,15 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #59 — 2026-11-07 — The marketing site is `web/`: Next.js on Vercel, static, with no tracking
+- **Decision (owner's request):** Next.js in `web/`, deployed to Vercel with `web/` as the root directory. Every route is static. Owner asked for the stack and to skip the design questions; the rest was Claude's call, listed here so the owner can overrule it.
+- **Hero:** a working remote driving a simulated TV (`web/lib/tv.ts`), not screenshots, and the room's light follows the screen. It uses the app's tokens and typefaces. Invented titles only, and no third-party logo anywhere on the site, matching store art (P9-R14).
+- **No claims the app can't back:** no prices, ratings, download counts or competitor comparison. Features come from `docs/release/store-listing/en.md`. "Coming soon" stands until `site.stores` in `web/lib/site.ts` holds real links.
+- **Legal pages come from `docs/release/`.** `npm run sync:release` copies them into `web/content/`, so a deploy of `web/` alone has them, and a test fails on drift. `prepareLegal` removes the owner's notes. A page stays labelled Draft and `noindex` until the source's DRAFT line is gone and every value is real.
+- **No analytics or cookies**, so no consent banner, and the app's policy doesn't need a website section. English only, because the Malay is unreviewed (DM-068).
+- **Hosting:** this is the owner's explicit exception to "Claude never hosts" (P9-R1), for this site only. On 2026-11-07 the owner chose Vercel for now (project `remotely`, team Newy's projects, https://remotely-woad.vercel.app) and Coolify at launch. The site uses no Vercel-only feature, so `next build` and `next start` run anywhere; set `NEXT_PUBLIC_SITE_URL` on the new host.
+- **Revisit:** at launch (store links); when the final app name is chosen (`web/lib/site.ts`, domain); if the site gets analytics, which needs the privacy policy and consent reviewed.
+
 ### #56 — 2026-11-06 — App buttons use deep links, and the catalogue decides the link
 - **Decision:** the catalogue carries a deep link for the six apps with a published one: YouTube `https://www.youtube.com`, Netflix `netflix://`, Prime Video `https://app.primevideo.com`, Disney+ `https://www.disneyplus.com`, Plex `plex://`, Twitch `twitch://home`. The other 49 keep `market://launch?id=<package>`.
 - **The link is resolved at launch, not stored:** `AppCatalogue.launchLinkFor` beats the stored row, so shortcuts saved earlier need no migration and a corrected link reaches every phone with the next build. Only a link the user typed on a custom shortcut stays.

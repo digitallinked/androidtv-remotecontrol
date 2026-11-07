@@ -4,6 +4,12 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Marketing site (2026-11-07)
+- **The docs arrive with CRLF on Windows, and a JavaScript `.` doesn't match `\r`.** `^> DRAFT.*\n` missed every real file while the LF test fixture passed, so the draft line was published. Normalise line endings first, and test with CRLF (`web/tests/release.test.ts`).
+- **A key that fires on `pointerdown` can't hand focus on straight away.** The browser's `mousedown` then focuses the key, and on touch that `mousedown` comes after the finger lifts. Calling `.focus()` on the key instead draws a keyboard focus ring on every click. Take focus on the following `click`, which also counts as the gesture iOS wants before it shows a keyboard (`web/components/demo/RemoteDemo.tsx`).
+- **Automation aims at an element's centre.** The centre of a D-pad wedge (`clip-path`) lies under OK, so a locator click times out while a real thumb is fine. Press by coordinates.
+- **Another session can be editing this checkout.** The privacy policy changed while the site was being built, and the drift test caught it. Before committing, stage named paths and read `git status`.
+
 ### CI and shells (2026-11-06)
 - **An unhandled `socket.done` error blames `SecureSocket.connect`.** Dart reports it with the stack of where the socket was created, so a broken pipe from a late write after the server dropped the client looked like a failed connect. Only Linux raises it here. Logging the server's accepts showed the connect had worked. Rule: every socket gets a `done` handler, as `remote_client.dart`, `pairing_client.dart` and the fake server already do; the test's `_Peer` didn't.
 - **When there's no Linux here, a throwaway `diag/**` branch with its own workflow gets a real answer in minutes.** WSL can fail to start under load. Replace `ci.yml` on that branch with a job for just the failing file, add logging, and delete the branch after.

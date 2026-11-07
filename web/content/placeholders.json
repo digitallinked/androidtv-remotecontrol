@@ -1,0 +1,72 @@
+{
+  "APP_NAME": {
+    "value": "Remotely for Android TV",
+    "about": "The app's store name (decision #12 placeholder name; the owner chooses the final one). No \"Google\" in it.",
+    "code": null
+  },
+  "DEVELOPER_NAME": {
+    "value": null,
+    "about": "The person or company that publishes the app, as shown on the store listings.",
+    "code": null
+  },
+  "DEVELOPER_ADDRESS": {
+    "value": null,
+    "about": "The publisher's postal address for legal notices and the stores' developer details.",
+    "code": null
+  },
+  "SUPPORT_EMAIL": {
+    "value": "support@example.com",
+    "about": "The support address: feedback mail goes here, and the store listings and legal pages show it. Placeholder until the owner sets it; the release check refuses it.",
+    "code": "AppLinks.supportEmail"
+  },
+  "SUPPORT_URL": {
+    "value": null,
+    "about": "The support web page (App Store 'Support URL'; Play 'Website').",
+    "code": null
+  },
+  "PRIVACY_POLICY_URL": {
+    "value": "https://example.com/privacy",
+    "about": "Where docs/release/legal/privacy-policy.md is hosted. Placeholder until the owner hosts it; the release check refuses it.",
+    "code": "AppLinks.privacyPolicy"
+  },
+  "TERMS_URL": {
+    "value": "https://example.com/terms",
+    "about": "Where docs/release/legal/terms.md is hosted. Placeholder until the owner hosts it; the release check refuses it.",
+    "code": "AppLinks.terms"
+  },
+  "EFFECTIVE_DATE": {
+    "value": null,
+    "about": "The date the hosted privacy policy and terms take effect, for example 1 January 2027.",
+    "code": null
+  },
+  "ANALYTICS_RETENTION": {
+    "value": null,
+    "about": "The Firebase Analytics data retention chosen in the console (Admin > Data retention), for example 14 months.",
+    "code": null
+  },
+  "GOVERNING_LAW": {
+    "value": null,
+    "about": "The country or state whose law governs the terms, for example Malaysia.",
+    "code": null
+  },
+  "DEMO_VIDEO_URL": {
+    "value": null,
+    "about": "The unlisted video for App Review showing discovery, pairing and control on a real TV.",
+    "code": null
+  },
+  "ADMOB_PUBLISHER_ID": {
+    "value": null,
+    "about": "The AdMob publisher id (pub-0000000000000000 form) for app-ads.txt.",
+    "code": null
+  },
+  "APP_STORE_ID": {
+    "value": "0000000000",
+    "about": "The numeric Apple id from App Store Connect, used in the App Store link. Placeholder until the App Store record exists; the release check refuses it.",
+    "code": "AppLinks.appStoreListing"
+  },
+  "PLAY_PACKAGE": {
+    "value": "com.digitallinked.atvremote",
+    "about": "The prod Android application id (app/lib/app/flavor.dart); fixed once the app is on Play.",
+    "code": null
+  }
+}
