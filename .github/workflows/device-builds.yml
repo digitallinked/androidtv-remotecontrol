@@ -18,6 +18,9 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 75
+    # As tool/release.sh does. It must be set while Swift packages resolve.
+    env:
+      FIREBASE_ANALYTICS_WITHOUT_ADID: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

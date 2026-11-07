@@ -28,6 +28,12 @@ plutil -lint "$app/PrivacyInfo.xcprivacy" || fail "PrivacyInfo.xcprivacy doesn't
 [ -f "$app/ms.lproj/InfoPlist.strings" ] || fail "no Malay InfoPlist.strings in the app"
 plutil -lint "$app/ms.lproj/InfoPlist.strings" || fail "the Malay InfoPlist.strings doesn't parse"
 
+# The privacy policy says Analytics runs without the advertising id.
+echo "=== Analytics without the advertising id"
+if [ -d "$app/Frameworks/GoogleAppMeasurementIdentitySupport.framework" ]; then
+  fail "GoogleAppMeasurementIdentitySupport is in the app: was FIREBASE_ANALYTICS_WITHOUT_ADID set while Swift packages resolved?"
+fi
+
 # The symbols of Apple's required-reason API list that a C library can reach.
 symbols='_stat$|_stat\$|_lstat|_fstat|_fstatat|_getattrlist|_fgetattrlist|_getattrlistat|_getattrlistbulk|_statfs|_fstatfs|_statvfs|_fstatvfs|_mach_absolute_time'
 

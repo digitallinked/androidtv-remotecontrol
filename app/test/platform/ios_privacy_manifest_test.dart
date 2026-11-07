@@ -6,13 +6,17 @@ const String _manifest = 'ios/Runner/PrivacyInfo.xcprivacy';
 const String _project = 'ios/Runner.xcodeproj/project.pbxproj';
 
 void main() {
-  // SQLite reads the size and timestamps of its own database files, and the
-  // framework the sqlite3 build hook makes has no privacy manifest of its own.
-  test('manifest_declares_why_sqlite_reads_file_timestamps', () {
+  // The framework the sqlite3 build hook makes has no privacy manifest of its
+  // own, and `nm -u` on it lists stat, fstat, lstat, statfs and fstatfs
+  // (tool/inspect_ios_product.sh prints this for every framework).
+  test('manifest_declares_the_apis_sqlite_calls', () {
     final manifest = File(_manifest).readAsStringSync();
-    expect(manifest, contains('NSPrivacyAccessedAPICategoryFileTimestamp'));
     // C617.1: metadata of files inside the app container.
+    expect(manifest, contains('NSPrivacyAccessedAPICategoryFileTimestamp'));
     expect(manifest, contains('C617.1'));
+    // E174.1: disk space, for an app that writes files.
+    expect(manifest, contains('NSPrivacyAccessedAPICategoryDiskSpace'));
+    expect(manifest, contains('E174.1'));
   });
 
   test('xcode_project_ships_the_privacy_manifest', () {
