@@ -19,9 +19,9 @@ const List<String> launchOpsDocs = [
   'docs/release/launch-ops/v1.1-backlog.md',
 ];
 
-/// The device-matrix rows Phase 9 adds (Task 9.12).
+/// The device-matrix rows of section 11 (Task 9.12, and DM-117 of decision #58).
 final List<String> phase9RowIds = [
-  for (var n = 103; n <= 116; n++) 'DM-$n',
+  for (var n = 103; n <= 117; n++) 'DM-$n',
 ];
 
 /// The cells of a Markdown table [row], split on unescaped `|`, without the
@@ -158,7 +158,7 @@ void main() {
     expect(runbook, contains('P9-R1'));
   });
 
-  test('device_matrix_phase_9_rows_are_new_and_empty', () {
+  test('device_matrix_phase_9_rows_hold_only_recorded_results', () {
     final doc = repoDoc('docs/knowledge/device-matrix.md');
     final rowId = RegExp(r'^\| (DM-\d{3}) \|');
     final all = [
@@ -181,7 +181,18 @@ void main() {
       expect(cells, hasLength(7), reason: id);
       expect(cells[1], startsWith('**Target:**'), reason: '$id steps');
       expect(cells[2], contains('**Record:**'), reason: '$id expected');
-      expect(cells.sublist(3, 6), ['', '', ''], reason: '$id results');
+      // The matrix's own rule: a result is one of three words, and a row
+      // that ran says on what and when.
+      final [result, device, date, _] = cells.sublist(3);
+      expect(result, isIn(['', 'Pass', 'Fail', 'Not run']), reason: id);
+      if (result == 'Pass' || result == 'Fail') {
+        expect(device, isNotEmpty, reason: '$id device');
+        expect(
+          date,
+          matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')),
+          reason: '$id date',
+        );
+      }
     }
     // `## 11` sits right before `## Coverage`.
     final headings = [

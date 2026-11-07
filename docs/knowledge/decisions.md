@@ -13,6 +13,20 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - **Hosting:** this is the owner's explicit exception to "Claude never hosts" (P9-R1), for this site only. On 2026-11-07 the owner chose Vercel for now (project `remotely`, team Newy's projects, https://remotely-woad.vercel.app) and Coolify at launch. The site uses no Vercel-only feature, so `next build` and `next start` run anywhere; set `NEXT_PUBLIC_SITE_URL` on the new host.
 - **Revisit:** at launch (store links); when the final app name is chosen (`web/lib/site.ts`, domain); if the site gets analytics, which needs the privacy policy and consent reviewed.
 
+### #58 — 2026-11-07 — iOS and emulators are checked in the cloud, on demand
+- **Decision:** `.github/workflows/device-builds.yml` builds iOS for both flavors without signing, inspects the product (`tool/inspect_ios_product.sh`), runs the flows on a simulator (`tool/ios_simulator_flows.sh`), and on API 26 and 35 emulators runs the flows and a prod release build from a clean install (`tool/emulator_smoke.sh`). It runs from the Actions tab or on a push to `diag/**`, never on an ordinary push.
+- **Why:** the iOS app had never been compiled and a prod release build had never run on anything; both were waiting on the owner's Mac and phone. None of this needs a key, an account or a secret, so Ruling P9-R1 stands: Claude still signs and uploads nothing. The repo is public, so these runners cost nothing.
+- **First result (2026-11-07):** the iOS app compiles with Xcode 26.6 for both flavors, both flows pass on a simulator and on API 26 and 35, and a prod release build runs from a clean install on both emulators. What this doesn't cover: signing, an archive, a real iPhone, or anything that needs the real config.
+- **Revisit:** if the repo goes private, when macOS minutes start to count; or if a result here disagrees with a Mac row of the device matrix.
+
+### #57 — 2026-11-07 — The phone's country picks the default apps
+- **Decision:** `deviceRegion` asks the phone first: the SIM's country, then the network's, on Android; the Region setting on iOS. The language list only fills in when there's no answer. It's one native channel, `com.digitallinked.atvremote/region`, read once in `bootstrap()` with a limit of 1 s, and every failure is `null`. The SIM beats the network so a phone roaming abroad keeps its home apps.
+- **Catalogue:** Disney+ Hotstar is gone, and Disney+ takes its place in the MY and ID rows. Astro GO (`com.astro.astro`), sooka (`com.astro.sott`) and Tonton (`my.com.tonton.screen`) join for MY, each confirmed on its Play listing, which closes V11-12 without ADB on a TV.
+- **Why:** a phone in Malaysia set to English (United Kingdom) reports `en-GB`, so it got the UK row with BBC iPlayer; the owner's phone does exactly this. The Hotstar brand ended in Malaysia on 9 October 2025, and Play has no listing for its id in MY, ID, TH or SG.
+- **Proved on an Android 15 emulator in an R8 prod release build:** with a British language on a US SIM, the row is the US one, with no BBC iPlayer.
+- **Shortcuts already saved don't change.** Only a clean install or Reset your apps gets the new row.
+- **Revisit:** DM-028 on a real phone. If a store objects to reading the country, the fallback is the language list alone.
+
 ### #56 — 2026-11-06 — App buttons use deep links, and the catalogue decides the link
 - **Decision:** the catalogue carries a deep link for the six apps with a published one: YouTube `https://www.youtube.com`, Netflix `netflix://`, Prime Video `https://app.primevideo.com`, Disney+ `https://www.disneyplus.com`, Plex `plex://`, Twitch `twitch://home`. The other 49 keep `market://launch?id=<package>`.
 - **The link is resolved at launch, not stored:** `AppCatalogue.launchLinkFor` beats the stored row, so shortcuts saved earlier need no migration and a corrected link reaches every phone with the next build. Only a link the user typed on a custom shortcut stays.

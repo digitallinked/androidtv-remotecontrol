@@ -256,7 +256,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Ea
 **Privacy and legal** (the privacy policy's "Owner to confirm" items 1–16 are the full list):
 
 15. **EEA storage consent:** even non-personalised ads use device storage, which ePrivacy may tie to consent. UMP's "limited ads" handles that case; ask your lawyer whether the policy's section 3 wording is enough.
-16. **"Anonymous" in the app:** the Privacy choices page says "Anonymous counts…", but the app instance id makes the data pseudonymous. The strings are frozen for v1; fix after v1 (backlog V11-17) or accept the wording.
+16. **"Anonymous" in the app:** fixed on 2026-11-07. The app instance id makes the data pseudonymous, so `privacyUsageSubtitle` and `faqPrivacyA` now say "tied to a random ID and not to your name". The Malay goes through DM-068 with the rest.
 17. **California (CCPA/CPRA):** whether personalised AdMob ads count as "sharing" and need a "Do not sell or share" statement.
 18. **Malaysia (PDPA):** if it applies, the notice must be in Malay and English.
 19. **The iPhone pairing certificate:** host the policy before the Play closed test. Confirm the iPhone keychain sentence with DM-108 (3) before the iOS app reaches anyone outside your team (TestFlight external or the App Store). If it fails, fix the app or correct the hosted policy before any iOS release.

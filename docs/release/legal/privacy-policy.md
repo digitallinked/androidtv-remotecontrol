@@ -169,5 +169,5 @@ These points are written from the code and the project's decisions, but someone 
 12. **Consent regions:** the regions named in section 3 are examples; the real list is whatever consent messages you publish in AdMob (UMP then reports consent as required there).
 13. **Privacy Sandbox and SKAdNetwork:** confirm what the merged Android manifest keeps (`ACCESS_ADSERVICES_*`, see the store forms) and the iOS `SKAdNetworkItems`, and that section 3's sentence matches.
 14. **Malaysia (PDPA):** if Malaysia's Personal Data Protection Act applies to you, it requires the notice in both Malay and English; this draft is English only.
-15. **"Anonymous" in the app:** the Privacy choices page says "Anonymous counts…" (`privacyUsageSubtitle`), but the app instance ID makes the data pseudonymous. Fix the in-app copy after v1 (the strings are frozen for this release), or accept the wording.
+15. **"Anonymous" in the app:** fixed on 2026-11-07. The app instance ID makes the data pseudonymous, so the Privacy choices page and the FAQ now say the counts are tied to a random ID and not to your name. Confirm the new wording with the rest of this list.
 16. **Location detail and IP addresses:** Google may derive city-level location from the IP address, and every service the app contacts sees the IP address. Confirm the store forms say the same.

@@ -2231,7 +2231,7 @@ abstract class AppLocalizations {
   /// Answer in the Help page's FAQ about what the app keeps about the user's TV.
   ///
   /// In en, this message translates to:
-  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.'**
+  /// **'Your TV\'s name, network address and MAC address stay on this phone. The app can send usage statistics and crash reports, tied to a random ID and not to your name. They never include those details. You can turn each on or off in Settings → Privacy choices.'**
   String get faqPrivacyA;
 
   /// FAQ question after the privacy question: what happens to saved TVs on a new or restored phone.
@@ -2369,7 +2369,7 @@ abstract class AppLocalizations {
   /// Subtitle of the Privacy choices switch that shares anonymous usage statistics.
   ///
   /// In en, this message translates to:
-  /// **'Anonymous counts of the screens and features you use. Never what you type or anything about your TV.'**
+  /// **'Counts of the screens and features you use, tied to a random ID and not to your name. Never what you type or anything about your TV.'**
   String get privacyUsageSubtitle;
 
   /// Title of the Privacy choices switch that shares crash reports.

@@ -1205,7 +1205,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqPrivacyA =>
-      'Your TV\'s name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.';
+      'Your TV\'s name, network address and MAC address stay on this phone. The app can send usage statistics and crash reports, tied to a random ID and not to your name. They never include those details. You can turn each on or off in Settings → Privacy choices.';
 
   @override
   String get faqNewPhoneQ => 'I moved to a new phone. Where are my TVs?';
@@ -1288,7 +1288,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyUsageSubtitle =>
-      'Anonymous counts of the screens and features you use. Never what you type or anything about your TV.';
+      'Counts of the screens and features you use, tied to a random ID and not to your name. Never what you type or anything about your TV.';
 
   @override
   String get privacyCrashTitle => 'Share crash reports';

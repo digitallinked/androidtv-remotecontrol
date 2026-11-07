@@ -1217,7 +1217,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get faqPrivacyA =>
-      'Nama, alamat rangkaian dan alamat MAC TV anda kekal pada telefon ini. Apl ini boleh menghantar statistik penggunaan dan laporan ranap tanpa nama, yang tidak pernah mengandungi maklumat itu. Anda boleh menghidupkan atau mematikan setiap satu dalam Tetapan → Pilihan privasi.';
+      'Nama, alamat rangkaian dan alamat MAC TV anda kekal pada telefon ini. Apl ini boleh menghantar statistik penggunaan dan laporan ranap yang dikaitkan dengan ID rawak, bukan dengan nama anda. Data ini tidak pernah mengandungi butiran tersebut. Anda boleh menghidupkan atau mematikan setiap satu dalam Tetapan → Pilihan privasi.';
 
   @override
   String get faqNewPhoneQ =>
@@ -1303,7 +1303,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacyUsageSubtitle =>
-      'Kiraan tanpa nama bagi skrin dan ciri yang anda gunakan. Tidak pernah termasuk apa yang anda taip atau apa-apa tentang TV anda.';
+      'Kiraan skrin dan ciri yang anda gunakan, dikaitkan dengan ID rawak dan bukan dengan nama anda. Tidak pernah termasuk apa yang anda taip atau apa-apa tentang TV anda.';
 
   @override
   String get privacyCrashTitle => 'Kongsi laporan ranap';

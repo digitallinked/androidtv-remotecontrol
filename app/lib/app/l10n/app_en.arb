@@ -1642,7 +1642,7 @@
   "@faqPrivacyQ": {
     "description": "Question in the Help page's FAQ about what the app keeps about the user's TV."
   },
-  "faqPrivacyA": "Your TV's name, network address and MAC address stay on this phone. The app can send anonymous usage statistics and crash reports, which never include them. You can turn each on or off in Settings → Privacy choices.",
+  "faqPrivacyA": "Your TV's name, network address and MAC address stay on this phone. The app can send usage statistics and crash reports, tied to a random ID and not to your name. They never include those details. You can turn each on or off in Settings → Privacy choices.",
   "@faqPrivacyA": {
     "description": "Answer in the Help page's FAQ about what the app keeps about the user's TV."
   },
@@ -1760,7 +1760,7 @@
   "@privacyUsageTitle": {
     "description": "Title of the Privacy choices switch that shares anonymous usage statistics."
   },
-  "privacyUsageSubtitle": "Anonymous counts of the screens and features you use. Never what you type or anything about your TV.",
+  "privacyUsageSubtitle": "Counts of the screens and features you use, tied to a random ID and not to your name. Never what you type or anything about your TV.",
   "@privacyUsageSubtitle": {
     "description": "Subtitle of the Privacy choices switch that shares anonymous usage statistics."
   },
