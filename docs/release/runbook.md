@@ -15,7 +15,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
 
 | What | How long | Start |
 |---|---|---|
-| Play closed test: **12 testers** opted in for **14 days** in a row (new personal developer accounts) | 14 days at least, plus recruiting | As soon as the Play account exists (step 2). Recruit the testers now. |
+| Play closed test: **12 testers** opted in for **14 days** in a row (new personal developer accounts; an organisation account with a D-U-N-S number is exempt) | 14 days at least, plus recruiting | As soon as the Play account exists (step 2). Recruit the testers now. |
 | Play and Apple developer account verification | Days | Step 2, first. |
 | `app-ads.txt` verification by AdMob | Up to a day or more | Right after step 4. |
 | Apple multicast entitlement (iOS Wake-on-LAN, v1.1) | Weeks, sometimes no answer | Any time; not needed for v1 ([backlog](launch-ops/v1.1-backlog.md) V11-06). |
@@ -23,7 +23,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
 ## Step 1. Final app name and ids (before the first upload)
 
 1. Choose the store name and the ids. Today's placeholders are `Remotely for Android TV` and `com.digitallinked.atvremote` (decision #12). **The Play package name is permanent after the first upload to any track**, and the iOS bundle id is effectively permanent once an App Store Connect record uses it.
-2. Mind the App Store name risk: "Android" in App Store metadata invites a Guideline 2.3.10 question. A name without it is safer; "for Android TV" can stay in the descriptions. No "Google" in any name, subtitle, keyword or icon (CLAUDE.md).
+2. Mind the App Store name risk: "Android" in App Store metadata invites a Guideline 2.3.10 question. A name without it is safer; "for Android TV" can stay in the descriptions. No "Google" in any name, subtitle, keyword or icon (CLAUDE.md). The name is also the label under the app's icon, and phones cut that off at about 12 characters, so today's 23-character placeholder would show as "Remotely for…". A short final name fixes both.
 3. If anything changes, follow [the rename checklist](rename-checklist.md) file by file: code, native files, store copy, `placeholders.json` (`APP_NAME`, `PLAY_PACKAGE`), the feature graphic title and its re-render.
 
 **Verify:** `powershell -File tool/check.ps1` ends with `All checks passed.` (`rename_checklist_names_every_file_that_holds_the_name_or_id` keeps the checklist complete), and `cd app; flutter test test/release` passes.
@@ -35,8 +35,9 @@ The ordered path from accounts to a staged production rollout on Google Play and
 3. **Create the app records** with the final ids from step 1:
    - Play Console → **Create app** (app, free, the declarations). Then **Test and release → Testing**: set up **Internal testing** and **Closed testing** tracks, and add the tester e-mail list. **The 14-day clock starts when 12 testers have opted in to a closed test with a published build**, so publish to closed testing as early as step 11 allows.
    - App Store Connect → **Apps → +** → New App, with the bundle id registered under Certificates, Identifiers & Profiles. Copy the numeric **Apple ID** of the record: it is `APP_STORE_ID` (step 6).
+4. **EU trader status (Digital Services Act).** App Store Connect → **Business** → your membership → **Compliance**: declare your status before distributing in the EU. Apple counts a developer who earns from in-app purchases as a trader, and removes apps with no verified status from the EU storefronts. **A trader's address, phone number and e-mail are shown publicly on the EU listing**, so decide which ones you want public first, or leave the EU out of the app's availability until you have. Check the Play Console for its own trader declaration under **Developer account** (not confirmed online on 2026-11-07).
 
-**Verify:** both consoles show the app record; the Play closed-test tester list holds at least 12 addresses.
+**Verify:** both consoles show the app record; the Play closed-test tester list holds at least 12 addresses; App Store Connect shows your trader status as verified.
 
 ## Step 3. Firebase: dev and prod projects
 
@@ -239,7 +240,7 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Ea
 7. No code obfuscation in v1. [yes]
 8. Keep the AdServices permissions. [keep; [adservices-permissions.md](forms/adservices-permissions.md)]
 9. Interstitials stay off. [off; if you switch them on, the prod build needs interstitial unit ids and the disclosures stay; [kill-switch-checklist.md](launch-ops/kill-switch-checklist.md)]
-10. Real app logos on the tiles. [on, your decision of 2026-11-05: 27 catalogue apps show their logo as nominative fair use, with no licence from the brands. A brand or store objection is answered by an app update that removes that app's row from `app/lib/features/apps/domain/app_logos.dart`, its SVG, its `SOURCES.md` row and its name in the licence notice, and updates the logo count in the test; the tile goes back to its letter. Nothing does this remotely. The other 28 apps are backlog V11-16.]
+10. Real app logos on the tiles. [on, your decision of 2026-11-05: 27 catalogue apps show their logo as nominative fair use, with no licence from the brands. A brand or store objection is answered by an app update that removes that app's row from `app/lib/features/apps/domain/app_logos.dart`, its SVG, its `SOURCES.md` row and its name in the licence notice, and updates the logo count in the test; the tile goes back to its letter. Nothing does this remotely. The other 30 apps are backlog V11-16.]
 
 **Names and store copy:**
 
@@ -268,10 +269,22 @@ Collected from the Phase 9 task reviews and controller rulings (P9-C1…C13). Ea
 23. **Staged rollout on the first production release:** confirm in the Play Console that a brand-new app's first production release can use a rollout percentage. If it can't, the closed test is the last gate before 100 %: extend it (more testers, more days) rather than skip a gate (step 11). [owner to confirm]
 24. **No ads in a session where the G cap can't be set** (P9-C13): if the app can't set the maximum ad content rating, it shows no ads that session and sends one non-fatal `ads content cap` to Crashlytics. Accepted; watch for it in Crashlytics after launch. [accepted]
 25. **Launch-ops numbers to confirm in the consoles:** the Play reply limit of 350 characters ([review-response-plan.md](launch-ops/review-response-plan.md)), the Android vitals bad-behaviour thresholds ([crashlytics-alerts.md](launch-ops/crashlytics-alerts.md)), and the console and menu names both docs use. [owner to confirm]
-26. **The real Malaysian app ids** (Astro GO, sooka, Tonton): find them with DM-033 during the device run; they go into the catalogue as backlog V11-12, so the MY default row opens the real apps. [device run]
+26. **The real Malaysian app ids** (Astro GO, sooka, Tonton): done, from their Play listings (decision #57). Whether each one opens on a TV is DM-029's job. [device run]
 27. **Conditional deferrals (P9-R16):** deferred until the device run or later; see [the v1.1 backlog](launch-ops/v1.1-backlog.md) groups B and D. [backlog]
 
 **Android 13+ per-app language** (DM-103): the in-app language wins over Android's per-app setting, and the two screens can disagree (the accepted P9-R7 residual). A one-way sync is backlog V11-14.
+
+## Store rules checked on 2026-11-07
+
+Measured on a built APK unless the row says otherwise. Repeat this after any Flutter or SDK upgrade: each row can change with one, and each can block an upload.
+
+| Rule | State |
+|---|---|
+| Play: new apps and updates target API 36 (since 31 August 2026) | `targetSdk` is 36. It comes from Flutter's default, so a Flutter change can move it. |
+| Play: Billing Library 8 or later (since 31 August 2026; the extension window closed on 1 November) | 8.3.0, through RevenueCat. Read it from `com.google.android.play.billingclient.version` in the merged manifest. |
+| Play: 16 KB memory pages | Every 64-bit library is aligned to 16 KB or more, in the zip and in its ELF segments. |
+| App Store: minimum deployment target iOS 13 (from 9 September 2026) | 15.0. |
+| App Store: built with Xcode 26 and the iOS 26 SDK (from April 2026) | Needs the Mac. Secondary sources only; Apple's own page didn't show this line when checked, so confirm it there. |
 
 ## Known issues (tooling)
 

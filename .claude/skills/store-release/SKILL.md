@@ -10,7 +10,7 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 
 ## Versioning & signing
 - `pubspec.yaml` `version: X.Y.Z+build`; the build number always increases.
-- **Android:** upload keystore stored outside the repo (`~/keys/atvremote-upload.jks`), referenced by a git-ignored `android/key.properties`. Play App Signing on. Ship an AAB. targetSdk = latest required by Play (35+ in 2026).
+- **Android:** upload keystore stored outside the repo (`~/keys/atvremote-upload.jks`), referenced by a git-ignored `android/key.properties`. Play App Signing on. Ship an AAB. targetSdk = latest required by Play (36 since 31 August 2026). Re-check the runbook's "Store rules checked" table after any Flutter or SDK upgrade: target API, Billing Library 8+ and 16 KB pages can each block an upload.
 - **iOS:** automatic signing, team in Xcode, bundle id fixed once chosen. Archive via `flutter build ipa --flavor prod`.
 - CI later (GitHub Actions + fastlane); for v1, scripted local builds in `tool/release.ps1`. The CI `check` job runs `flutter build apk --config-only` before `tool/check.sh`, so the Gradle dry-run tests have a `gradlew`.
 
@@ -77,6 +77,7 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 - [ ] **Review notes:** the reviewer has no Android TV. Attach a demo video link showing discovery → pairing → control on a real TV, explain that the app requires an Android TV / Google TV on the same Wi-Fi, and provide the in-app **demo mode** (simulated TV) path for testing.
 - [ ] Guideline 4.2/4.3: enough native value (widgets, Siri Shortcuts / App Intents later) to avoid "minimum functionality".
 - [ ] TestFlight internal → external beta before release.
+- [ ] EU trader status (DSA) verified in App Store Connect before EU distribution; a trader's address, phone and e-mail are public on the EU listing (runbook step 2).
 - [ ] The iOS storage channel (`AppDelegate.swift`, backup-excluded DB directory) compiles and the DB lands in `Application Support/Database` (DM-058/059). There is no fallback: if the channel fails, the database doesn't open.
 
 ## Common rejections → fix

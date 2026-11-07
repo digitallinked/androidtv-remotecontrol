@@ -49,9 +49,13 @@ App Store Connect → the app → App Information → Age Rating → Edit. Apple
 | User-generated content, messaging or chat | **No** |
 | Advertising | **Yes**, if asked (AdMob banners; an occasional full-screen ad may be switched on remotely) |
 | Parental controls, age assurance | **No** |
+| Feeds that surface other people's content (required on every submission since September 2026) | **No** |
+| Sharing a user's real-world location with other users | **No** |
 | Made for Kids | **No** (don't choose the Kids category) |
 
 **Expected result:** **4+**.
+
+Apple adds questions often. A notice of 2 November 2026 is reported to add content descriptors that must be answered from 16 November 2026 (unverified, seen in a search snippet only): answer what the console shows.
 
 **Source:** App Store Connect Help, "Age ratings": https://developer.apple.com/help/app-store-connect/reference/age-ratings.
 
