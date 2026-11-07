@@ -105,8 +105,12 @@ screen restart
 
 echo "=== the default apps follow the SIM, not the language"
 sim=$(adb shell getprop gsm.sim.operator.iso-country | tr -d '\r')
-echo "SIM country: $sim; language: $(adb shell getprop persist.sys.locale | tr -d '\r')"
 adb shell pm clear "$package"
+# A British language on the emulator's US SIM. Android 13 and later can set it
+# for one app with no restart; the region is only proved where that works.
+language=$(adb shell cmd locale set-app-locales "$package" --user 0 --locales en-GB 2>&1 | tr -d '\r')
+if [ -z "$language" ]; then language=en-GB; else language=system; fi
+echo "SIM country: $sim; app language: $language"
 adb shell am start -W -n "$package/$package.MainActivity"
 sleep 12
 tap 'Skip'
@@ -117,13 +121,13 @@ tap 'Apps'
 sleep 3
 screen default-apps
 labels default-apps | tee "$out/default-apps.txt"
-if [ "$sim" = us ]; then
+if [ "$sim" = us ] && [ "$language" = en-GB ]; then
   grep -q 'Hulu' "$out/default-apps.txt" || fail "no US row with a US SIM"
   if grep -q 'BBC iPlayer' "$out/default-apps.txt"; then
     fail "the UK row, from the language, with a US SIM"
   fi
 else
-  echo "The emulator's SIM isn't US, so the row wasn't checked."
+  echo "This emulator can't set up the SIM and language test, so the row wasn't checked."
 fi
 
 adb logcat -d >"$out/logcat.txt"
