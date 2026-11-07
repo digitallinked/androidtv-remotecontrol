@@ -56,7 +56,7 @@ void main() {
         c.defaultShortcutsFor(r).map((e) => e.name).join(', ');
     expect(
       names('MY'),
-      'Netflix, YouTube, Viu, Prime Video, iQIYI, Disney+ Hotstar',
+      'Netflix, YouTube, Viu, Prime Video, iQIYI, Disney+',
     );
     expect(names('my'), names('MY'));
     expect(names('ZZ'), names(null));
@@ -381,10 +381,30 @@ void main() {
     );
   });
 
+  test('malaysia_is_offered_its_own_services', () {
+    expect(
+      _load().suggestedFor('MY').map((a) => a.package),
+      containsAll([
+        'com.astro.astro',
+        'com.astro.sott',
+        'my.com.tonton.screen',
+      ]),
+    );
+  });
+
+  test('the_retired_hotstar_id_is_gone', () {
+    // Disney+ Hotstar became Disney+ in 2025 and its Play listing is gone: a
+    // tile for it could never open anything.
+    expect(
+      _load().apps.map((a) => a.package),
+      isNot(contains('in.startv.hotstar.dplus')),
+    );
+  });
+
   test('default_rows_match_the_agreed_regions', () {
     const expected = {
       'SG': 'Netflix, YouTube, Disney+, Viu, Prime Video, iQIYI',
-      'ID': 'Netflix, YouTube, Vidio, Disney+ Hotstar, Viu, Prime Video',
+      'ID': 'Netflix, YouTube, Vidio, Disney+, Viu, Prime Video',
       'IN': 'JioHotstar, YouTube, Netflix, Prime Video, ZEE5, Sony LIV',
       'US': 'Netflix, YouTube, Prime Video, Hulu, Disney+, HBO Max',
       'GB': 'Netflix, BBC iPlayer, YouTube, Prime Video, Disney+, Channel 4',

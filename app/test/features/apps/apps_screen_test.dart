@@ -419,12 +419,12 @@ void main() {
     handle.dispose();
   });
 
-  // Catalogue order puts Disney+ Hotstar first; in India JioHotstar leads.
-  // "startv" is in both packages and in neither name, so both have the same
+  // Catalogue order puts Channel 4 first; in Australia SBS On Demand leads.
+  // "ondemand" is in both packages and in neither name, so both have the same
   // name rank and only the region orders them (Ruling P7-R10).
   for (final (region, expected) in [
-    (null, ['Disney+ Hotstar', 'JioHotstar']),
-    ('IN', ['JioHotstar', 'Disney+ Hotstar']),
+    (null, ['Channel 4', 'SBS On Demand']),
+    ('AU', ['SBS On Demand', 'Channel 4']),
   ]) {
     testWidgets('search_ranks_the_phones_region_first_${region ?? 'none'}', (
       t,
@@ -441,7 +441,7 @@ void main() {
           deviceRegionProvider.overrideWithValue(region),
         ],
       );
-      await search(t, 'startv');
+      await search(t, 'ondemand');
       expect([
         for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
           tile.app.name,
@@ -449,10 +449,10 @@ void main() {
     });
   }
 
-  // The name rank comes before the region: 'hotstar' starts a word of
-  // "Disney+ Hotstar" but is inside "JioHotstar", so even in India, where
-  // only JioHotstar is listed, Disney+ Hotstar comes first (Ruling P7-R10).
-  testWidgets('hotstar_in_india_lists_disney_plus_hotstar_first', (t) async {
+  // The name rank comes before the region: 'play' starts a word of "SVT Play"
+  // but is inside "Globoplay", so even in Brazil, where only Globoplay is
+  // listed, SVT Play comes first (Ruling P7-R10).
+  testWidgets('play_in_brazil_lists_svt_play_first', (t) async {
     await pumpRouterApp(
       t,
       initialLocation: AppRoutes.apps,
@@ -462,15 +462,15 @@ void main() {
         shortcutRepositoryProvider.overrideWithValue(
           InMemoryShortcutRepository(),
         ),
-        deviceRegionProvider.overrideWithValue('IN'),
+        deviceRegionProvider.overrideWithValue('BR'),
       ],
     );
-    await search(t, 'hotstar');
+    await search(t, 'play');
     final names = [
       for (final tile in t.widgetList<AppTile>(find.byType(AppTile)))
         tile.app.name,
     ];
-    expect(names, containsAllInOrder(['Disney+ Hotstar', 'JioHotstar']));
+    expect(names, containsAllInOrder(['SVT Play', 'Globoplay']));
   });
 
   testWidgets('your_apps_filter_ranks_prefix_first', (t) async {
