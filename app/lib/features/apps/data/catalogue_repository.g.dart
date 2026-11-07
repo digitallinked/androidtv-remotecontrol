@@ -114,20 +114,23 @@ final class CatalogueProvider
 
 String _$catalogueHash() => r'73cd0ebd767d3f575f7f934341dca1a76fd78def';
 
-/// The phone's region: the upper-case country code of the first system locale
-/// that has one, or `null`.
+/// The phone's region: its country if it knows one ([phoneCountryProvider]),
+/// else the upper-case country code of the first system locale that has one,
+/// else `null`.
 
 @ProviderFor(deviceRegion)
 final deviceRegionProvider = DeviceRegionProvider._();
 
-/// The phone's region: the upper-case country code of the first system locale
-/// that has one, or `null`.
+/// The phone's region: its country if it knows one ([phoneCountryProvider]),
+/// else the upper-case country code of the first system locale that has one,
+/// else `null`.
 
 final class DeviceRegionProvider
     extends $FunctionalProvider<String?, String?, String?>
     with $Provider<String?> {
-  /// The phone's region: the upper-case country code of the first system locale
-  /// that has one, or `null`.
+  /// The phone's region: its country if it knows one ([phoneCountryProvider]),
+  /// else the upper-case country code of the first system locale that has one,
+  /// else `null`.
   DeviceRegionProvider._()
     : super(
         from: null,
@@ -161,4 +164,4 @@ final class DeviceRegionProvider
   }
 }
 
-String _$deviceRegionHash() => r'7d1be8818e7cfa16d8b38ed24bf9b2f6f1cf3219';
+String _$deviceRegionHash() => r'47a9af2aa6b72e2d0bf39a5681297f43a6cf5de0';

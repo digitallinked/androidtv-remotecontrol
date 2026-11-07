@@ -23,6 +23,7 @@ The app keeps the following on your phone only. None of it is sent to us, to Fir
 - the pairing certificate the app creates for your phone, and the TV key pins it uses to recognise each TV again;
 - your app shortcuts, and the counts of which TV apps you use (kept on the phone to suggest shortcuts; the counts themselves never leave it, but see section 3 for the event sent when you start an app from the app's list);
 - your settings, including your Privacy choices;
+- your country, which the app reads each time it starts (from the SIM or mobile network on Android, from the Region setting on iPhone) to choose which TV apps to suggest, and doesn't store;
 - anything you type with the keyboard feature, which goes straight to the TV;
 - a short error log (Settings → Help → Error log) with TV names and addresses removed, which leaves your phone only if you copy it yourself.
 

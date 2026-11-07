@@ -16,6 +16,7 @@ import 'package:tv_remote/core/crash/crash_collection.dart';
 import 'package:tv_remote/core/crash/crash_reporter.dart';
 import 'package:tv_remote/core/crash/error_handlers.dart';
 import 'package:tv_remote/core/crash/error_log.dart';
+import 'package:tv_remote/core/device/phone_country.dart';
 import 'package:tv_remote/core/firebase/firebase_bootstrap.dart';
 import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/fresh_database.dart';
@@ -94,6 +95,7 @@ Future<Widget> buildRootWidget({
   Future<SettingsStore> Function() openSettings = SettingsStore.open,
   AppDatabase Function() openDatabase = AppDatabase.open,
   ErrorLog? errorLog,
+  String? phoneCountry,
   @visibleForTesting List<Override> overrides = const [],
 }) async {
   // Assumed failed until it answers: a throw or a timeout leaves it so.
@@ -110,6 +112,7 @@ Future<Widget> buildRootWidget({
   String? location;
   final container = ProviderContainer(
     overrides: [
+      phoneCountryProvider.overrideWithValue(phoneCountry),
       flavorProvider.overrideWithValue(flavor),
       crashReporterProvider.overrideWithValue(crashReporter),
       serviceConfigProvider.overrideWithValue(serviceConfig),
@@ -480,10 +483,13 @@ Future<void> bootstrap(Flavor flavor) async {
   runApp(
     StartupGate(
       reporter: reporter,
-      build: () => buildRootWidget(
+      // The country is read here, not in `buildRootWidget`: a platform channel
+      // awaited outside a pump would hang the tests that call that function.
+      build: () async => buildRootWidget(
         flavor: flavor,
         crashReporter: reporter,
         errorLog: errorLog,
+        phoneCountry: await readPhoneCountry(),
         // `environment` differs from the default whenever defines are given.
         // ignore: avoid_redundant_argument_values
         serviceConfig: ServiceConfig.environment,

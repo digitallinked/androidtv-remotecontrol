@@ -26,6 +26,7 @@ import 'package:tv_remote/core/storage/app_database.dart';
 import 'package:tv_remote/core/storage/identity_store.dart';
 import 'package:tv_remote/core/storage/settings_store.dart';
 import 'package:tv_remote/core/storage/storage_providers.dart';
+import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 
 import 'helpers/existing_database.dart';
 import 'helpers/fake_ads_overrides.dart';
@@ -292,12 +293,14 @@ void main() {
       RecordingCrashReporter reporter,
       Future<FirebaseStatus> Function(ServiceConfig) initFirebase, {
       List<StartupStep> startupSteps = const [],
+      String? phoneCountry,
     }) => buildRootWidget(
       flavor: Flavor.dev,
       crashReporter: reporter,
       serviceConfig: const ServiceConfig(firebaseEnabled: true),
       initFirebase: initFirebase,
       startupSteps: startupSteps,
+      phoneCountry: phoneCountry,
       openDatabase: () => AppDatabase(NativeDatabase.memory()),
       overrides: fakeAdsOverrides(),
     );
@@ -340,6 +343,18 @@ void main() {
       expect(container.read(serviceConfigProvider).firebaseEnabled, isTrue);
       expect(seen?.firebaseEnabled, isTrue);
       expect(rec.errors, isEmpty);
+    });
+
+    testWidgets('the_phone_country_reaches_the_providers', (tester) async {
+      final app = await root(
+        RecordingCrashReporter(),
+        (_) async => FirebaseStatus.ready,
+        phoneCountry: 'MY',
+      );
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      expect(containerOf(tester).read(deviceRegionProvider), 'MY');
     });
 
     testWidgets('firebase_is_the_first_startup_step', (tester) async {

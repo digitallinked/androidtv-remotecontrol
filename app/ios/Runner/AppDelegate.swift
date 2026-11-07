@@ -13,6 +13,21 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     registerStorageChannel(messenger: engineBridge.applicationRegistrar.messenger())
+    registerRegionChannel(messenger: engineBridge.applicationRegistrar.messenger())
+  }
+
+  /// Hands Dart the Region from Settings > General > Language & Region. Flutter
+  /// only reports the language list, and an iPhone in Malaysia set to British
+  /// English reports `en-GB` there. The app's default rows need the country.
+  private func registerRegionChannel(messenger: FlutterBinaryMessenger) {
+    let region = FlutterMethodChannel(
+      name: "com.digitallinked.atvremote/region", binaryMessenger: messenger)
+    region.setMethodCallHandler { call, result in
+      guard call.method == "phoneCountry" else {
+        return result(FlutterMethodNotImplemented)
+      }
+      result(Locale.current.regionCode)
+    }
   }
 
   /// Hands Dart the directory for the database (Ruling P8-R1):

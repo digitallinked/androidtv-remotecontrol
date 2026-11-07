@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tv_remote/core/device/phone_country.dart';
 import 'package:tv_remote/core/session/session_providers.dart';
 import 'package:tv_remote/features/apps/domain/app_catalogue.dart';
 
@@ -27,10 +28,13 @@ Future<String> catalogueSource(Ref ref) =>
 Future<AppCatalogue> catalogue(Ref ref) async =>
     AppCatalogue.parse(await ref.watch(catalogueSourceProvider.future));
 
-/// The phone's region: the upper-case country code of the first system locale
-/// that has one, or `null`.
+/// The phone's region: its country if it knows one ([phoneCountryProvider]),
+/// else the upper-case country code of the first system locale that has one,
+/// else `null`.
 @Riverpod(keepAlive: true)
 String? deviceRegion(Ref ref) {
+  final country = ref.watch(phoneCountryProvider);
+  if (country != null) return country;
   for (final locale in WidgetsBinding.instance.platformDispatcher.locales) {
     final country = locale.countryCode;
     if (country != null && country.isNotEmpty) {

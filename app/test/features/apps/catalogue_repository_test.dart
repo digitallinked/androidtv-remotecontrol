@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tv_remote/core/device/phone_country.dart';
 import 'package:tv_remote/features/apps/data/catalogue_repository.dart';
 
 void main() {
@@ -61,6 +62,17 @@ void main() {
     ];
     addTearDown(t.platformDispatcher.clearLocalesTestValue);
     expect(ProviderContainer.test().read(deviceRegionProvider), 'MY');
+  });
+
+  // A phone in Malaysia set to British English: the language says GB, the
+  // SIM says MY, and the UK's default apps don't work there.
+  testWidgets('device_region_trusts_the_phone_over_the_language', (t) async {
+    t.platformDispatcher.localesTestValue = const [Locale('en', 'GB')];
+    addTearDown(t.platformDispatcher.clearLocalesTestValue);
+    final container = ProviderContainer.test(
+      overrides: [phoneCountryProvider.overrideWithValue('MY')],
+    );
+    expect(container.read(deviceRegionProvider), 'MY');
   });
 
   testWidgets('device_region_is_null_without_a_country', (t) async {
