@@ -131,6 +131,22 @@ else
   echo "This emulator can't set up the SIM and language test, so the row wasn't checked."
 fi
 
+echo "=== the system's per-app language reaches the running app"
+if [ "$language" = en-GB ]; then
+  adb shell cmd locale set-app-locales "$package" --user 0 --locales ms
+  sleep 6
+  labels per-app-language-ms >"$out/per-app-language-ms.txt"
+  screen per-app-language-ms
+  alive || fail "the app died when the language changed"
+  grep -q '^Sunting apl$' "$out/per-app-language-ms.txt" || fail "the app didn't turn Malay"
+  adb shell cmd locale set-app-locales "$package" --user 0 --locales en
+  sleep 6
+  labels per-app-language-en >"$out/per-app-language-en.txt"
+  grep -q '^Edit apps$' "$out/per-app-language-en.txt" || fail "the app didn't turn back to English"
+else
+  echo "This emulator has no per-app language, so it wasn't checked."
+fi
+
 adb logcat -d >"$out/logcat.txt"
 if adb logcat -d -b crash | tee "$out/crash.txt" | grep -q "$package"; then
   fail "a crash in the log"
