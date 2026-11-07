@@ -23,7 +23,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
 ## Step 1. Final app name and ids (before the first upload)
 
 1. Choose the store name and the ids. Today's placeholders are `Remotely for Android TV` and `com.digitallinked.atvremote` (decision #12). **The Play package name is permanent after the first upload to any track**, and the iOS bundle id is effectively permanent once an App Store Connect record uses it.
-2. Mind the App Store name risk: "Android" in App Store metadata invites a Guideline 2.3.10 question. A name without it is safer; "for Android TV" can stay in the descriptions. No "Google" in any name, subtitle, keyword or icon (CLAUDE.md). The name is also the label under the app's icon, and phones cut that off at about 12 characters, so today's 23-character placeholder would show as "Remotely for…". A short final name fixes both.
+2. Mind the App Store name risk: "Android" in App Store metadata invites a Guideline 2.3.10 question. A name without it is safer; "for Android TV" can stay in the descriptions. No "Google" in any name, subtitle, keyword or icon (CLAUDE.md). The name is also the label under the app's icon, where iPhones and some Android launchers cut it off at about 12 characters, so today's 23-character placeholder can show as "Remotely for…". A short final name fixes both.
 3. If anything changes, follow [the rename checklist](rename-checklist.md) file by file: code, native files, store copy, `placeholders.json` (`APP_NAME`, `PLAY_PACKAGE`), the feature graphic title and its re-render.
 
 **Verify:** `powershell -File tool/check.ps1` ends with `All checks passed.` (`rename_checklist_names_every_file_that_holds_the_name_or_id` keeps the checklist complete), and `cd app; flutter test test/release` passes.
@@ -199,7 +199,7 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
 
 1. **Tools:** the Xcode version App Store Connect currently requires, CocoaPods, Flutter 3.44.1. Clone the repo, then `cd app && flutter pub get`.
 2. **Config** (git-ignored; copy them from your PC by a private channel, never through git): `app/ios/Flutter/Secrets.xcconfig` (`ADMOB_APP_ID_PROD`), `app/ios/config/prod/GoogleService-Info.plist` (and the dev one), `app/env/prod.json`.
-3. **Pods:** `cd app/ios && pod install`. If it changes the Xcode project, `Podfile.lock` or `Debug.xcconfig`/`Release.xcconfig`, commit those changes (they hold no secrets) and check that `flutter test test/platform` still passes (**DM-106**).
+3. **Swift packages, then pods.** Every plugin resolves as a Swift package (proved by the Device builds workflow). On a first build, Flutter can give up on the downloads after a minute and leave them half unpacked (`Could not resolve package dependencies … already exists`). If it does, run `export FIREBASE_ANALYTICS_WITHOUT_ADID=true`, delete `~/Library/Caches/org.swift.swiftpm`, and from `app/` run `xcodebuild -resolvePackageDependencies -workspace ios/Runner.xcworkspace -scheme dev` once. Then pods: `cd app/ios && pod install`. If it changes the Xcode project, `Podfile.lock` or `Debug.xcconfig`/`Release.xcconfig`, commit those changes (they hold no secrets) and check that `flutter test test/platform` still passes (**DM-106**).
 4. **Signing:** `open app/ios/Runner.xcworkspace` → Runner target → **Signing & Capabilities** → automatic signing with your team, for the `Release-prod` configuration (and the others you build).
 5. **Build:** from the repo root,
 
