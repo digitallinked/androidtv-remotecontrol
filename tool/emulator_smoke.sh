@@ -30,7 +30,8 @@ labels() {
     grep -v '=""' | cut -d'"' -f2
 }
 
-# Taps the control whose accessibility label, or its first line, is exactly $1.
+# Taps the control with $1 as a whole line of its accessibility label. Below
+# Android 9 a button's label also holds its tooltip, on a line of its own.
 tap() {
   adb shell uiautomator dump /sdcard/smoke.xml >/dev/null
   adb shell cat /sdcard/smoke.xml >"$out/tap.xml"
@@ -40,7 +41,7 @@ import re, sys
 import xml.etree.ElementTree as ET
 for node in ET.parse(sys.argv[2]).getroot().iter('node'):
     label = node.get('content-desc') or node.get('text') or ''
-    if label.split('\n')[0] == sys.argv[1]:
+    if sys.argv[1] in label.split('\n'):
         a, b, c, d = map(int, re.findall(r'\d+', node.get('bounds')))
         print((a + c) // 2, (b + d) // 2)
         break

@@ -255,7 +255,7 @@ List<Override> testAppOverrides({
   appUsageRepositoryProvider.overrideWithValue(
     InMemoryAppUsageRepository(),
   ),
-  catalogueProvider.overrideWith((ref) async => testCatalogue()),
+  catalogueProvider.overrideWith((ref) => loadTestCatalogue()),
   deviceRegionProvider.overrideWithValue(null),
   // What the About page and the legal links read: a flavor, the
   // platform's package info and the url_launcher plugin.
