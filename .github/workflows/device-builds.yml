@@ -27,6 +27,15 @@ jobs:
           cache: true
       - run: xcodebuild -version
       - run: flutter pub get
+      # Flutter gives xcodebuild one minute and then retries over half-unpacked
+      # downloads, which fails on a cold machine. Fetch with no limit first.
+      - name: Fetch the Swift packages
+        run: |
+          flutter build ios --config-only --flavor dev -t lib/main_dev.dart --no-codesign || true
+          pkill -f unzip || true
+          rm -rf ~/Library/Caches/org.swift.swiftpm ~/Library/Developer/Xcode/DerivedData
+          xcodebuild -resolvePackageDependencies -workspace ios/Runner.xcworkspace -scheme dev
+        working-directory: app
       - name: Dev flavor builds
         run: flutter build ios --flavor dev -t lib/main_dev.dart --no-codesign
         working-directory: app
@@ -70,6 +79,8 @@ jobs:
           arch: x86_64
           ram-size: 4096M
           disable-animations: true
+          # A British language on a US SIM: the default apps must follow the SIM.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -change-locale en-GB
           script: bash tool/emulator_smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()

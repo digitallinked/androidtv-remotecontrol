@@ -30,7 +30,7 @@ labels() {
     grep -v '=""' | cut -d'"' -f2
 }
 
-# Taps the control whose accessibility label is exactly $1.
+# Taps the control whose accessibility label, or its first line, is exactly $1.
 tap() {
   adb shell uiautomator dump /sdcard/smoke.xml >/dev/null
   adb shell cat /sdcard/smoke.xml >"$out/tap.xml"
@@ -39,7 +39,8 @@ tap() {
 import re, sys
 import xml.etree.ElementTree as ET
 for node in ET.parse(sys.argv[2]).getroot().iter('node'):
-    if sys.argv[1] in (node.get('content-desc'), node.get('text')):
+    label = node.get('content-desc') or node.get('text') or ''
+    if label.split('\n')[0] == sys.argv[1]:
         a, b, c, d = map(int, re.findall(r'\d+', node.get('bounds')))
         print((a + c) // 2, (b + d) // 2)
         break
@@ -101,6 +102,29 @@ sleep 10
 alive || fail "the app isn't running after a second cold start"
 labels restart
 screen restart
+
+echo "=== the default apps follow the SIM, not the language"
+sim=$(adb shell getprop gsm.sim.operator.iso-country | tr -d '\r')
+echo "SIM country: $sim; language: $(adb shell getprop persist.sys.locale | tr -d '\r')"
+adb shell pm clear "$package"
+adb shell am start -W -n "$package/$package.MainActivity"
+sleep 12
+tap 'Skip'
+sleep 5
+tap 'Settings'
+sleep 3
+tap 'Apps'
+sleep 3
+screen default-apps
+labels default-apps | tee "$out/default-apps.txt"
+if [ "$sim" = us ]; then
+  grep -q 'Hulu' "$out/default-apps.txt" || fail "no US row with a US SIM"
+  if grep -q 'BBC iPlayer' "$out/default-apps.txt"; then
+    fail "the UK row, from the language, with a US SIM"
+  fi
+else
+  echo "The emulator's SIM isn't US, so the row wasn't checked."
+fi
 
 adb logcat -d >"$out/logcat.txt"
 if adb logcat -d -b crash | tee "$out/crash.txt" | grep -q "$package"; then
