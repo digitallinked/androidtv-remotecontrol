@@ -178,7 +178,7 @@ void main() {
     expect(saved.customColor, kShortcutColors[2]);
     expect(saved.customIcon, 'sports');
     // New shortcuts take the default launch link.
-    expect(saved.launchLink, 'market://launch?id=com.example.zed');
+    expect(saved.launchLink, 'market://details?id=com.example.zed');
     handle.dispose();
   });
 

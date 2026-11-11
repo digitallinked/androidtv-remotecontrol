@@ -6,7 +6,7 @@ _Last updated: 2026-11-11 by Claude (production pass: region, catalogue, iOS bui
 
 **Phase 9 (release preparation) and the design pass are merged to `main`** at the owner's request on 2026-11-06. Nothing was signed, uploaded or hosted (P9-R1).
 
-**On the phone (2026-11-11):** the dev release build of `a93c08e` (merged to `main` through PR #1, CI green), from a clean build. The installed APK's hash matches the build (`ddd13fa6…`), and it cold-starts with no crash. Apps saved before the region fix keep the old row: Settings → Apps → More options → Reset gives the MY row. Whether the app buttons open apps is still untested: the TV was off.
+**On the phone (2026-11-11):** the dev release build with decision #60's links (`efb4daf1…`, hash checked), connected to Living Room TV 3, which now sits at a new address the app found by itself. Proved on it: YouTube and Netflix tiles open their apps; Channel 4 opens its Play Store page without dropping the connection.
 
 What remains is the **owner's release work**, in the order of `docs/release/runbook.md`, and the **real-device run** (`docs/knowledge/device-matrix.md`, rows DM-001…DM-113, results empty). The device run gates every upload (runbook step 9).
 
@@ -83,15 +83,11 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## In progress
 
-**App buttons: still not confirmed on the TV (decision #56).** The TV was off the network for the whole of 2026-11-07.
-- **The phone can see the answer:** the TV reports its foreground app (`CurrentAppChanged`), and a quick tile's label becomes "<app>, now on TV", which `uiautomator dump` reads. No TV code is needed.
-- **Ready to run when the TV is on and the phone unlocked for ten minutes:** a throwaway diagnostic debug build (prints every TV message, takes links over `adb forward tcp:8765`) and a probe that tries, per app, `market://launch?id=`, an `intent:` URI with the leanback launcher category, `android-app://` and `market://details?id=`. It stops unless the TV reports its screen on, and never sends Power. The patch is never committed (learnings, "Production pass").
-- **The other 49 apps** still send `market://launch?id=`. If the `intent:` form works, one catalogue change fixes all of them.
-- **DM-114 half done:** a pairing failure shows "<address> didn't respond" with Try again and Troubleshooting; reading the log entry waits for the phone.
+Nothing. **App buttons fixed and proved on Living Room TV 3 on 2026-11-11** (decision #60, DM-029 Pass): real taps on the YouTube and Netflix tiles open the apps and read "now on TV"; tiles without a deep link open the app's Play Store page (press Open), and the remote stays connected. `market://launch` had been rejected with an error and a dropped connection. Still unproved: Prime Video's link (lands on Android's chooser).
 
 ## Next up
 
-**First:** turn the TV on and unlock the phone for ten minutes so Claude can run the app-button probe (see In progress), then DM-116 steps 2–6 in a dim room.
+**First:** DM-116 steps 2–6 in a dim room, and the rest of the device run with Claude (the phone and TV are available on request).
 
 **Before any store upload:** run a **prod** release build on a real phone. It runs on API 26 and 35 emulators (DM-117), not yet on the Note10+.
 
@@ -143,7 +139,7 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 
 ## Blocked / needs the owner
 
-**The TV switched on, and the phone unlocked for ten minutes,** finishes the app-button test (no code needed).
+
 
 **The marketing site (decision #59)** needs, from the owner:
 - the domain, then `NEXT_PUBLIC_SITE_URL` on the host;
