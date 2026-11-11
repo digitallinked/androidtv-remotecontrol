@@ -4,6 +4,13 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #60 — 2026-11-11 — Tiles without a deep link open the app's Play Store page
+- **Decision:** an app with no working deep link sends `market://details?id=<package>`, not `market://launch?id=<package>`. `tvLaunchLink` maps old links at launch, so saved shortcuts need no migration. YouTube sends `vnd.youtube://` and Disney+ `disneyplus://`.
+- **Why (measured on Living Room TV 3, 2026-11-11, through the paired phone):** `market://launch?id=`, `intent:` and `android-app://` links all get a `remoteError` and the TV **closes the connection**, so each such tap failed and dropped the remote into Reconnecting. `market://details?id=` opens the app's Play Store page every time, with Open or Install. `netflix://`, `vnd.youtube://` and `disneyplus://` open their apps. `https://www.youtube.com` and `https://app.primevideo.com` land on Android's app chooser, and `https://www.disneyplus.com` on the TV's browser.
+- **Cost:** two presses instead of one for most apps (the tile, then Open). Better than a dead tile and a dropped connection.
+- **Unresolved:** Prime Video (`primevideo://` and `aiv://` are refused; `https` gives the chooser), Plex and Twitch (refused, most likely not installed on this TV).
+- **Revisit:** a deep link proved for another app; a Google TV that accepts `market://launch` again.
+
 ### #59 — 2026-11-07 — The marketing site is `web/`: Next.js on Vercel, static, with no tracking
 - **Decision (owner's request):** Next.js in `web/`, deployed to Vercel with `web/` as the root directory. Every route is static. Owner asked for the stack and to skip the design questions; the rest was Claude's call, listed here so the owner can overrule it.
 - **Hero:** a working remote driving a simulated TV (`web/lib/tv.ts`), not screenshots, and the room's light follows the screen. It uses the app's tokens and typefaces. Invented titles only, and no third-party logo anywhere on the site, matching store art (P9-R14).

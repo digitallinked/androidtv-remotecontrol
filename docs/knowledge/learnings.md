@@ -10,6 +10,15 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 - **Automation aims at an element's centre.** The centre of a D-pad wedge (`clip-path`) lies under OK, so a locator click times out while a real thumb is fine. Press by coordinates.
 - **Another session can be editing this checkout.** The privacy policy changed while the site was being built, and the drift test caught it. Before committing, stage named paths and read `git status`.
 
+### Real TV, app links (2026-11-11)
+- **A refused app link costs the connection.** The TV answers `remoteAppLinkLaunchRequest` it can't serve with `remoteError` and then closes the socket, so the app goes to Reconnecting. Never send a link the TV hasn't been seen to accept.
+- **`market://launch?id=` is dead on this TV, `market://details?id=` works** (decision #60).
+- **`https` links are ambiguous on a TV:** they reach Android's chooser (reported as package `android`) or the TV's browser (`com.internet.tvbrowser`), not the app. Prefer the app's own scheme: `netflix://`, `vnd.youtube://`, `disneyplus://`.
+- **The TV pings every 5.2 s** (median of 102, 2026-11-11), so the 15 s idle timeout is about three pings (V11-07).
+- **The TV reports its foreground app on every change,** including the home screen (`com.google.android.apps.tv.launcherx`), the chooser (`android`), the browser, the Play Store (`com.android.vending`) and this TV's Disney+ app (`in.startv.hotstar.dplus.tv`).
+- **The phone can test the TV without its pairing code:** a temporary debug build that logs every message and takes links over `adb forward tcp:8765` uses the phone's existing pairing. Install it over the dev build (same key, data kept), test, then reinstall the real build. Never commit the patch.
+- **A TV can change its address.** It moved to another IP between sessions, and the app found it again by itself.
+
 ### Production pass (2026-11-07)
 - **A locale is a language, not a place.** `en-GB` on a phone in Malaysia is ordinary. Anything that depends on where the phone is needs the SIM, the network or the iOS Region setting (decision #57).
 - **`uiautomator dump` reads Flutter's semantics tree, in release builds too.** It gives every control's label and bounds with no screenshot, so a tap can be refused unless exactly one control matches. It also shows state: a quick tile reads "<app>, now on TV".

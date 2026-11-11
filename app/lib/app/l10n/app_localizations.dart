@@ -2219,7 +2219,7 @@ abstract class AppLocalizations {
   /// Answer in the Help page's FAQ about an app shortcut that doesn't open on the TV.
   ///
   /// In en, this message translates to:
-  /// **'The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.'**
+  /// **'Most app shortcuts open the app\'s page in the TV\'s Play Store: press Open there, or Install if the app isn\'t on the TV yet. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.'**
   String get faqAppA;
 
   /// Question in the Help page's FAQ about what the app keeps about the user's TV.

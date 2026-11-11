@@ -1209,7 +1209,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get faqAppA =>
-      'Apl itu mesti dipasang pada TV. Sesetengah apl mempunyai versi berbeza bagi setiap negara: tambah versi yang betul melalui ID aplnya di bawah Tetapan → Apl.';
+      'Kebanyakan pintasan apl membuka halaman apl itu dalam Play Store TV: tekan Buka di situ, atau Pasang jika apl itu belum ada pada TV. Sesetengah apl mempunyai versi berbeza bagi setiap negara: tambah versi yang betul melalui ID aplnya di bawah Tetapan → Apl.';
 
   @override
   String get faqPrivacyQ =>

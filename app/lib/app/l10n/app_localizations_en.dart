@@ -1198,7 +1198,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqAppA =>
-      'The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.';
+      'Most app shortcuts open the app\'s page in the TV\'s Play Store: press Open there, or Install if the app isn\'t on the TV yet. Some apps have a different version in each country: add the right one by its app ID under Settings → Apps.';
 
   @override
   String get faqPrivacyQ => 'What does the app keep about my TV?';
