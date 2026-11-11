@@ -1,14 +1,31 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+/// The link to send the TV for [link].
+///
+/// The owner's TV answers `market://launch?id=` (and `intent:` and
+/// `android-app://` links) with an error and closes the connection, but it
+/// opens `market://details?id=`: the app's Play Store page, with Open when the
+/// app is installed and Install when it isn't (DM-029, 2026-11-11). Shortcuts
+/// saved with the old link are mapped here, at launch, so none needs a
+/// migration.
+String tvLaunchLink(String link) {
+  final uri = Uri.tryParse(link);
+  if (uri == null || uri.scheme != 'market' || uri.host != 'launch') {
+    return link;
+  }
+  final id = uri.queryParameters['id'];
+  return id == null || id.isEmpty ? link : 'market://details?id=$id';
+}
+
 /// An app on the TV that the remote can open.
 ///
 /// Brand names are data, not UI strings. The catalogue, icons and shortcuts
 /// that fill these in come in Phase 5; Phase 4 only needs the model.
 @immutable
 class AppEntry {
-  /// Creates an entry. [launchLink] defaults to the Play Store launch link
-  /// of [package], which opens an installed app on the TV.
+  /// Creates an entry. [launchLink] defaults to the Play Store page of
+  /// [package] on the TV (see [tvLaunchLink]).
   const AppEntry({
     required this.package,
     required this.name,
@@ -17,7 +34,7 @@ class AppEntry {
     this.isCustom = false,
     this.customColor,
     this.customIcon,
-  }) : launchLink = launchLink ?? 'market://launch?id=$package';
+  }) : launchLink = launchLink ?? 'market://details?id=$package';
 
   /// The Android application id, for example `com.netflix.ninja`.
   final String package;

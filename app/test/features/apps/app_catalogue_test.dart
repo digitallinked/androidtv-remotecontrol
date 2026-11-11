@@ -219,7 +219,7 @@ void main() {
     );
     expect(
       c.byPackage('com.spotify.tv.android')!.toEntry().launchLink,
-      'market://launch?id=com.spotify.tv.android',
+      'market://details?id=com.spotify.tv.android',
     );
     expect(c.byPackage('no.such.app'), isNull);
   });
@@ -227,10 +227,10 @@ void main() {
   group('launch links', () {
     test('the_apps_with_a_published_deep_link_use_it', () {
       const links = {
-        'com.google.android.youtube.tv': 'https://www.youtube.com',
+        'com.google.android.youtube.tv': 'vnd.youtube://',
         'com.netflix.ninja': 'netflix://',
         'com.amazon.amazonvideo.livingroom': 'https://app.primevideo.com',
-        'com.disney.disneyplus': 'https://www.disneyplus.com',
+        'com.disney.disneyplus': 'disneyplus://',
         'com.plexapp.android': 'plex://',
         'tv.twitch.android.app': 'twitch://home',
       };
@@ -280,6 +280,31 @@ void main() {
           ),
         ),
         own,
+      );
+    });
+
+    test('a_shortcut_saved_with_the_old_market_link_is_mapped', () {
+      const old = AppEntry(
+        package: 'com.spotify.tv.android',
+        name: 'Spotify',
+        launchLink: 'market://launch?id=com.spotify.tv.android',
+      );
+      expect(
+        c.launchLinkFor(old),
+        'market://details?id=com.spotify.tv.android',
+      );
+      // A restyled catalogue app saved with the old default still gets the
+      // catalogue's deep link: that default isn't a link the user chose.
+      expect(
+        c.launchLinkFor(
+          const AppEntry(
+            package: 'com.netflix.ninja',
+            name: 'Films',
+            launchLink: 'market://launch?id=com.netflix.ninja',
+            isCustom: true,
+          ),
+        ),
+        'netflix://',
       );
     });
 

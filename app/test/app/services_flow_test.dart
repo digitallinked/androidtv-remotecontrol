@@ -726,7 +726,7 @@ void main() {
     await tapAndSettle(t, find.text('Private'));
     expect(
       clients.created.last.sentLinks,
-      contains('market://launch?id=com.example.private'),
+      contains('market://details?id=com.example.private'),
     );
     await t.tap(find.text('D-pad'));
     await t.pumpAndSettle();

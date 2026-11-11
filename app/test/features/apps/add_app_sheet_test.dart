@@ -24,7 +24,7 @@ const _netflix = AppEntry(
 const _youtube = AppEntry(
   package: 'com.google.android.youtube.tv',
   name: 'YouTube',
-  launchLink: 'https://www.youtube.com',
+  launchLink: 'vnd.youtube://',
 );
 
 void main() {
@@ -155,7 +155,7 @@ void main() {
     expect(added.name, 'Newapp');
     expect(added.customIcon, 'app');
     expect(added.isCustom, isFalse);
-    expect(added.launchLink, 'market://launch?id=com.example.newapp');
+    expect(added.launchLink, 'market://details?id=com.example.newapp');
   });
 
   testWidgets('the_by_id_row_needs_a_valid_id_that_is_not_known', (t) async {

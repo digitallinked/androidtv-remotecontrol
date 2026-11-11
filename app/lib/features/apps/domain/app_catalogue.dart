@@ -29,9 +29,9 @@ class CatalogueApp {
   /// The name shown to the user.
   final String name;
 
-  /// A deep link that opens the app, for the apps that have a published one;
-  /// `null` means `market://launch?id=<package>`, which a Google Play change
-  /// stopped working for many apps (decision #56).
+  /// A deep link that opens the app, for the apps that have one; `null`
+  /// means the app's Play Store page on the TV, `market://details?id=<package>`
+  /// (decisions #56 and #60).
   final String? launchLink;
 
   /// The upper-case ISO country codes this app is offered in, or `{'*'}`.
@@ -162,9 +162,15 @@ class AppCatalogue {
   /// row. Only a link the user chose themselves, on a custom shortcut, stays.
   String launchLinkFor(AppEntry app) {
     final link = _byPackage[app.package]?.launchLink;
-    if (link == null) return app.launchLink;
-    final standard = AppEntry(package: app.package, name: app.name).launchLink;
-    return app.isCustom && app.launchLink != standard ? app.launchLink : link;
+    if (link == null) return tvLaunchLink(app.launchLink);
+    // Both defaults count as standard: shortcuts saved before decision #60
+    // hold the old `market://launch` one.
+    final standard = {
+      AppEntry(package: app.package, name: app.name).launchLink,
+      'market://launch?id=${app.package}',
+    };
+    final own = app.isCustom && !standard.contains(app.launchLink);
+    return own ? tvLaunchLink(app.launchLink) : link;
   }
 
   /// The default shortcuts for [region] (any case), or the `*` row when the

@@ -41,10 +41,10 @@ final class DemoKeyPressed extends DemoAction {
 /// app that opened, and no catalogue of its own: a test keeps this in step
 /// with the catalogue, which holds the links themselves.
 const Map<String, String> _deepLinkPackages = {
-  'www.youtube.com': 'com.google.android.youtube.tv',
+  'vnd.youtube': 'com.google.android.youtube.tv',
   'netflix': 'com.netflix.ninja',
   'app.primevideo.com': 'com.amazon.amazonvideo.livingroom',
-  'www.disneyplus.com': 'com.disney.disneyplus',
+  'disneyplus': 'com.disney.disneyplus',
   'plex': 'com.plexapp.android',
   'twitch': 'tv.twitch.android.app',
 };
@@ -247,7 +247,9 @@ class DemoRemoteSession implements RemoteSession {
     _record(DemoAppOpened(link));
     final uri = Uri.tryParse(link);
     final isMarketLaunch =
-        uri != null && uri.scheme == 'market' && uri.host == 'launch';
+        uri != null &&
+        uri.scheme == 'market' &&
+        (uri.host == 'launch' || uri.host == 'details');
     final package = isMarketLaunch
         ? uri.queryParameters['id']
         : _deepLinkPackages[uri?.scheme == 'https' ? uri?.host : uri?.scheme];

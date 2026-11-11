@@ -234,7 +234,7 @@ class RemoteActions implements RemoteInput {
 
   @override
   bool launch(AppEntry app) {
-    final link = _linkOf?.call(app) ?? app.launchLink;
+    final link = tvLaunchLink(_linkOf?.call(app) ?? app.launchLink);
     if (!_guard(() => _session!.launchAppLink(link))) return false;
     _light();
     _report(AppLaunched(app.package));

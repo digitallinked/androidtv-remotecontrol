@@ -2,9 +2,9 @@
   "version": 1,
   "apps": [
     {"package": "com.netflix.ninja", "launchLink": "netflix://", "name": "Netflix", "regions": ["*"]},
-    {"package": "com.google.android.youtube.tv", "launchLink": "https://www.youtube.com", "name": "YouTube", "regions": ["*"]},
+    {"package": "com.google.android.youtube.tv", "launchLink": "vnd.youtube://", "name": "YouTube", "regions": ["*"]},
     {"package": "com.amazon.amazonvideo.livingroom", "launchLink": "https://app.primevideo.com", "name": "Prime Video", "regions": ["*"]},
-    {"package": "com.disney.disneyplus", "launchLink": "https://www.disneyplus.com", "name": "Disney+", "regions": ["*"]},
+    {"package": "com.disney.disneyplus", "launchLink": "disneyplus://", "name": "Disney+", "regions": ["*"]},
     {"package": "com.spotify.tv.android", "name": "Spotify", "regions": ["*"]},
     {"package": "com.apple.atve.androidtv.appletv", "name": "Apple TV", "regions": ["*"]},
     {"package": "com.google.android.youtube.tvkids", "name": "YouTube Kids", "regions": ["*"]},

@@ -224,7 +224,7 @@ void main() {
     await t.tap(find.bySemanticsLabel('Open Zed'));
     await t.pump();
     expect(clients.created.single.sentLinks, [
-      'market://launch?id=com.example.zed',
+      'market://details?id=com.example.zed',
     ]);
     handle.dispose();
   });

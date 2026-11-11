@@ -385,7 +385,7 @@ void main() {
         ),
         isTrue,
       );
-      expect(session.sentLinks, ['market://launch?id=com.netflix.ninja']);
+      expect(session.sentLinks, ['market://details?id=com.netflix.ninja']);
       expect(sent, [const AppLaunched('com.netflix.ninja')]);
       expect(h.events, ['light']);
     });

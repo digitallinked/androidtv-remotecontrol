@@ -121,7 +121,7 @@ void main() {
     await pumpApps(t);
     await t.tap(find.bySemanticsLabel('Open YouTube'));
     await t.pumpAndSettle();
-    expect(fake.sentLinks, ['https://www.youtube.com']);
+    expect(fake.sentLinks, ['vnd.youtube://']);
     // The next thing to do is navigate inside the app: back on the remote.
     expect(find.byType(RemoteBody), findsOneWidget);
     expect(find.byType(AppsScreen), findsNothing);

@@ -3,14 +3,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tv_remote/features/apps/domain/app_entry.dart';
 
 void main() {
-  test('launch_link_defaults_to_market_launch', () {
+  test('launch_link_defaults_to_the_play_store_page', () {
     const app = AppEntry(package: 'com.netflix.ninja', name: 'Netflix');
 
-    expect(app.launchLink, 'market://launch?id=com.netflix.ninja');
+    expect(app.launchLink, 'market://details?id=com.netflix.ninja');
     expect(app.isCustom, isFalse);
     expect(app.iconUrl, isNull);
     expect(app.customColor, isNull);
     expect(app.customIcon, isNull);
+  });
+
+  test('an_old_market_launch_link_goes_out_as_the_store_page', () {
+    // The owner's TV rejects market://launch and drops the connection.
+    expect(
+      tvLaunchLink('market://launch?id=com.netflix.ninja'),
+      'market://details?id=com.netflix.ninja',
+    );
+    expect(tvLaunchLink('netflix://'), 'netflix://');
+    expect(tvLaunchLink('market://launch'), 'market://launch');
+    expect(
+      tvLaunchLink('https://www.netflix.com/browse'),
+      'https://www.netflix.com/browse',
+    );
   });
 
   test('an_explicit_launch_link_wins', () {

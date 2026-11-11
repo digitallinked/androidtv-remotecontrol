@@ -34,7 +34,7 @@ void main() {
     expect(apps.single.name, 'Tvapp');
     expect(apps.single.customIcon, 'app');
     expect(apps.single.customIcon, kGenericAppIconId);
-    expect(apps.single.launchLink, 'market://launch?id=com.example.tvapp');
+    expect(apps.single.launchLink, 'market://details?id=com.example.tvapp');
   });
 
   test('recommendations_skip_system_apps_and_shortcuts_and_rank_by_use', () {
