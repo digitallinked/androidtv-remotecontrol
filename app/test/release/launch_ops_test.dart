@@ -19,7 +19,7 @@ const List<String> launchOpsDocs = [
   'docs/release/launch-ops/v1.1-backlog.md',
 ];
 
-/// The device-matrix rows of section 11 (Task 9.12, and DM-117 of decision #58).
+/// The device-matrix rows of section 11 (Task 9.12; DM-117 is decision #58).
 final List<String> phase9RowIds = [
   for (var n = 103; n <= 117; n++) 'DM-$n',
 ];
