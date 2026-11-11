@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/tool/session_brief.sh\" 2>/dev/null || true",
+            "timeout": 20,
+            "statusMessage": "Loading the project briefing"
+          }
+        ]
+      }
+    ]
+  }
+}

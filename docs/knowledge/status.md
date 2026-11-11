@@ -6,12 +6,17 @@ _Last updated: 2026-11-11 by Claude (app id `my.newy.remotely`, domain `remotely
 
 **Phase 9 (release preparation) and the design pass are merged to `main`** at the owner's request on 2026-11-06. Nothing was signed, uploaded or hosted (P9-R1).
 
-**On the phone (2026-11-11):** the dev release build with decision #60's links (`efb4daf1…`, hash checked), connected to Living Room TV 3, which now sits at a new address the app found by itself. Proved on it: YouTube and Netflix tiles open their apps; Channel 4 opens its Play Store page without dropping the connection.
+**On the phone (2026-11-11):** only the renamed dev build `my.newy.remotely.dev` (decision #61), paired and connected to Living Room TV 3; the old `com.digitallinked.atvremote.dev` is uninstalled. Proved on the earlier build: YouTube and Netflix tiles open their apps; Channel 4 opens its Play Store page without dropping the connection (decision #60).
 
 What remains is the **owner's release work**, in the order of `docs/release/runbook.md`, and the **real-device run** (`docs/knowledge/device-matrix.md`, rows DM-001…DM-113, results empty). The device run gates every upload (runbook step 9).
 
 ## Done
 
+- **App id, domain and knowledge sharing (2026-11-11, decision #61):**
+  - App id `my.newy.remotely` (dev `.dev`) everywhere, with the Kotlin namespace, channel names and `DeviceInfo` vendor `newy` (`86643e3`). Analyze clean; the full suite passed except three load timeouts that pass alone.
+  - Privacy, terms and support links point at `https://remotely.newy.my`; `web/content` synced.
+  - **Knowledge sharing between agents:** `docs/knowledge/activity-log.md` (who did what, newest first); a SessionStart hook (`.claude/settings.json` → `tool/session_brief.sh`) that shows every new session the branch, last commits, the head of this file and the newest log entries; the `project-knowledge` skill now covers hand-offs, subagents and sharing a checkout; new skills `device-testing` and `marketing-site`.
+  - Runbook: the Digital Linked account plan (step 2), the RevenueCat service account (step 5), and "Moving the app to another Play account".
 - **Production pass (2026-11-07, decisions #57–#58):**
   - **The iOS app was built for the first time,** with no Mac of ours: the Device builds workflow (`.github/workflows/device-builds.yml`) builds both flavors with Xcode 26.6, inspects `Runner.app` and runs both flows on a simulator. On API 26 and 35 emulators it runs the flows and a **prod release build** from a clean install. All green in run 42334046970. Manual only (Actions tab or a `diag/**` push); the repo is public, so it costs nothing.
   - **Default apps follow the phone's country** (SIM, then network; iOS Region), not the language (decision #57). Proved on an API 35 R8 build: British language, US SIM, US row.

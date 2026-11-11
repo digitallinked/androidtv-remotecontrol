@@ -22,7 +22,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
 
 ## Step 1. Final app name and ids (before the first upload)
 
-1. Choose the store name and the ids. Today's placeholders are `Remotely for Android TV` and `my.newy.remotely` (decision #12). **The Play package name is permanent after the first upload to any track**, and the iOS bundle id is effectively permanent once an App Store Connect record uses it.
+1. Choose the store name. The ids are final: `my.newy.remotely` and `my.newy.remotely.dev` (decision #61). The name placeholder is `Remotely for Android TV` (decision #12). **The Play package name is permanent after the first upload to any track**, and the iOS bundle id is effectively permanent once an App Store Connect record uses it.
 2. Mind the App Store name risk: "Android" in App Store metadata invites a Guideline 2.3.10 question. A name without it is safer; "for Android TV" can stay in the descriptions. No "Google" in any name, subtitle, keyword or icon (CLAUDE.md). The name is also the label under the app's icon, where iPhones and some Android launchers cut it off at about 12 characters, so today's 23-character placeholder can show as "Remotely for…". A short final name fixes both.
 3. If anything changes, follow [the rename checklist](rename-checklist.md) file by file: code, native files, store copy, `placeholders.json` (`APP_NAME`, `PLAY_PACKAGE`), the feature graphic title and its re-render.
 
@@ -31,6 +31,9 @@ The ordered path from accounts to a staged production rollout on Google Play and
 ## Step 2. Accounts and store records
 
 1. **Google Play Console** developer account ([play.google.com/console](https://play.google.com/console)). Complete identity verification. Note the developer name and address you register: they fill `DEVELOPER_NAME` and `DEVELOPER_ADDRESS` in [placeholders.json](placeholders.json).
+   - **The plan (decision #61):** publish from the existing **Digital Linked** account now, and move the app to the new company account once its D-U-N-S number arrives ([Moving the app to another Play account](#moving-the-app-to-another-play-account)). Create the app in **one** account only: a package name exists once on Play.
+   - **Check the account type** (Play Console → Developer account → Account details). An organisation account, or a personal one created before 13 November 2023, skips the 12-tester, 14-day closed test. A newer personal account needs it, so start it early.
+   - Until the transfer, the listing, the legal pages and any EU trader details name Digital Linked. Fill the placeholders to match that account, and update them after the move.
 2. **Apple Developer Program** membership ([developer.apple.com](https://developer.apple.com/programs/)). In App Store Connect, sign the **Paid Applications** agreement and complete tax and banking: in-app purchases don't work until it is active.
 3. **Create the app records** with the final ids from step 1:
    - Play Console → **Create app** (app, free, the declarations). Then **Test and release → Testing**: set up **Internal testing** and **Closed testing** tracks, and add the tester e-mail list. **The 14-day clock starts when 12 testers have opted in to a closed test with a published build**, so publish to closed testing as early as step 11 allows.
@@ -82,9 +85,14 @@ The ordered path from accounts to a staged production rollout on Google Play and
 ## Step 5. RevenueCat, store products and sandbox testers
 
 1. In [RevenueCat](https://app.revenuecat.com/): a project with the Play app and the App Store app; the entitlement **`premium`**; the products **`premium_monthly`**, **`premium_yearly`** (subscriptions) and **`premium_lifetime`** (one-time, non-consumable), each attached to `premium`; a **current offering** with the three packages. Copy the public SDK keys (`goog_…`, `appl_…`) into `REVENUECAT_ANDROID_KEY` and `REVENUECAT_IOS_KEY` in `app/env/prod.json` (and dev keys into `dev.json`).
-2. In the stores, create the same three products with the same ids. **Play only lets you create in-app products after a build with the billing permission is uploaded**, so do the Play half after the first internal-testing upload (step 10), then come back. In App Store Connect, create a subscription group for the two subscriptions and the non-consumable, with prices and review screenshots.
-3. Add Play **license testers** (Play Console → Settings → License testing) and App Store **sandbox testers** (App Store Connect → Users and Access → Sandbox).
-4. Confirm the prices, the colour style names Ocean, Ember and Midnight, and that interstitials stay off.
+2. **Give RevenueCat access to Play** (from RevenueCat's setup guide as recalled on 2026-11-11, unverified: check their current docs). Without it RevenueCat can't validate Android purchases.
+   - In Google Cloud, create a service account and download its JSON key. **Never commit the JSON**; keep it with the keystore.
+   - Play Console → **Users and permissions** → invite the service account's e-mail with "View app information", "View financial data" and "Manage orders and subscriptions".
+   - RevenueCat → the Play app → **Service account credentials**: upload the JSON. It can take up to about 36 hours to start working.
+   - Recommended: turn on Real-time developer notifications (the Pub/Sub topic RevenueCat sets up).
+3. In the stores, create the same three products with the same ids. **Play only lets you create in-app products after a build with the billing permission is uploaded**, so do the Play half after the first internal-testing upload (step 10), then come back. In App Store Connect, create a subscription group for the two subscriptions and the non-consumable, with prices and review screenshots.
+4. Add Play **license testers** (Play Console → Settings → License testing) and App Store **sandbox testers** (App Store Connect → Users and Access → Sandbox).
+5. Confirm the prices, the colour style names Ocean, Ember and Midnight, and that interstitials stay off.
 
 **Verify:** **DM-044**, which runs every row of [the sandbox purchase checklist](../../app/integration_test/purchase_flow_sandbox.md) on Android and iOS. The release check refuses a missing or test key (`revenuecat-android`, `revenuecat-ios`).
 
@@ -224,6 +232,19 @@ The script is [tool/release.ps1](../../tool/release.ps1) ([tool/release.sh](../.
 - Daily: [the review response plan](launch-ops/review-response-plan.md) (read every review, reply within 48 hours, one bug per pattern), [the crash alerts and gates](launch-ops/crashlytics-alerts.md), Android vitals, the AdMob policy centre.
 - Keep [the kill-switch checklist](launch-ops/kill-switch-checklist.md) at hand: `ads_banner_enabled` is the first lever for any ad problem.
 - Record every halt, fix and new bug pattern in `docs/knowledge/status.md`. What comes next is in [the v1.1 backlog](launch-ops/v1.1-backlog.md).
+
+## Moving the app to another Play account
+
+For decision #61: the app starts in the Digital Linked account and moves to the new company account later. Third-party guides (2026-11-11, unverified against Google's own help page) agree on this; read the Play Console Help article "Transfer apps to a different developer account" before you start.
+
+1. **Both accounts must be fully set up and active**: the new one verified, with its D-U-N-S number. Find each account's registration transaction ID in Google Payments.
+2. Send Google's app transfer request ([the form](https://support.google.com/googleplay/android-developer/contact/appt)). Third-party guides report replies within about 2 business days.
+3. **What moves:** the package name, users, installs, ratings, reviews, statistics and subscriptions. Play App Signing moves with the app, so the upload key keeps working.
+4. **What stays behind:** orders made before the move stay in the Digital Linked account. Keep that account open for refunds and order history.
+5. **Reconnect after the move:** RevenueCat's service account (invite it in the new console, or make a new one), Firebase and AdMob links, any API access, license testers.
+6. **Update the public details:** `DEVELOPER_NAME`, `DEVELOPER_ADDRESS` and `SUPPORT_EMAIL` if they change, then `npm run sync:release` in `web/` and a deploy (`marketing-site` skill). The `DeviceInfo` vendor (`newy`) already matches the new company.
+
+**Verify:** the new console lists the app with its ratings and installs; a sandbox purchase goes through RevenueCat (DM-044); Crashlytics and AdMob still report.
 
 ## Owner decisions and open points
 

@@ -4,6 +4,16 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### App id change and device tooling (2026-11-11)
+- **Changing the application id makes a new app on the phone.** The renamed dev build installed beside the old one with the same label and none of its data, so the TV had to be paired again (the owner reads the code). Uninstall the old package once the new one is paired, and say which is which, because both show "Remotely Dev".
+- **The first Gradle build after a namespace change takes about 15 minutes** (923 s on this PC), so run it in the background. Tests that build with Gradle (`release_gradle_test.dart`) and the flow tests time out in a full run under that load, then pass alone. Rerun the failing files alone before calling a failure real.
+- **Git Bash rewrites `/sdcard/...` arguments** into `C:/Program Files/Git/sdcard/...`. Set `MSYS_NO_PATHCONV=1` for `adb shell` commands.
+- **`adb` isn't on the PATH here.** Use `$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe`.
+- **Wireless ADB's mDNS name disappears after the phone sleeps,** and `adb mdns services` stays empty even after restarting the server. Ask the owner for the IP and port on the Wireless debugging screen and `adb connect` to it.
+- **Auto mode blocks `vercel domains add`** as an outward-facing change. Ask the owner, or let them run it.
+- **A test that pins a placeholder fails once the owner fills it in.** `fill_of_the_repo_keeps_every_placeholder_out` and the rename-checklist test both broke when the URLs became real. Point such tests at a value that is still a placeholder, and add every file holding the domain or the id to `docs/release/rename-checklist.md`.
+- Source: the 2026-11-11 session (`86643e3`).
+
 ### Marketing site (2026-11-07)
 - **The docs arrive with CRLF on Windows, and a JavaScript `.` doesn't match `\r`.** `^> DRAFT.*\n` missed every real file while the LF test fixture passed, so the draft line was published. Normalise line endings first, and test with CRLF (`web/tests/release.test.ts`).
 - **A key that fires on `pointerdown` can't hand focus on straight away.** The browser's `mousedown` then focuses the key, and on touch that `mousedown` comes after the finger lifts. Calling `.focus()` on the key instead draws a keyboard focus ring on every click. Take focus on the following `click`, which also counts as the gesture iOS wants before it shows a keyboard (`web/components/demo/RemoteDemo.tsx`).

@@ -30,6 +30,11 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
   - `store-assets/feature_graphic.png` is a golden.
   - The screenshots come from `tool/store_screenshots.ps1`/`.sh`, which writes to `build/store-screenshots/<set>/<locale>/`. They are never committed.
 
+## Play account and website (decision #61)
+- The app id is `my.newy.remotely` (dev `.dev`), permanent once uploaded. It is published first from the owner's **Digital Linked** Play account, then moved to the new company account once its D-U-N-S number arrives; the runbook section "Moving the app to another Play account" has the steps.
+- The website, privacy policy, terms and support page are on `https://remotely.newy.my` (`marketing-site` skill).
+- RevenueCat needs a Google service account with Play access before it can validate Android purchases (runbook step 5). Its JSON key is a secret: never commit it.
+
 ## Google Play checklist
 - [ ] **New personal developer account:** closed test with ≥ 12 testers opted in for 14 continuous days before production access.
 - [ ] **Backup rules (closed in code, decision #49):** `allowBackup="false"`, `fullBackupContent="false"` and `data_extraction_rules.xml` exclude everything. Before upload, grep the **prodRelease** merged manifest for all three; the Privacy page's "never leave this phone" and the FAQ answers depend on them. Run device-matrix rows DM-056/057 (Android) and DM-060/061 (iOS restore and Quick Start; DM-061 is a release issue if the DB travels).

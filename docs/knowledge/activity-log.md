@@ -1,0 +1,37 @@
+# Activity log
+
+The hand-off log between sessions and agents: what each one did, on which branch, and what it left for the next. Newest first. Every session start shows the five newest entries (the SessionStart hook, `tool/session_brief.sh`).
+
+**Add an entry** at the end of every work session, and before you hand off to another agent. Keep it short and factual:
+
+```markdown
+### YYYY-MM-DD — <who: session/agent, e.g. "Claude, main session"> — <branch>
+- **Did:** what changed, with commit ids.
+- **State:** what is on the phone, the TV, the website, CI, if it changed.
+- **Left open:** what the next agent should pick up, and what waits on the owner.
+```
+
+Details belong in `status.md` (current state), `decisions.md` (why) and `learnings.md` (gotchas). This log only says who did what, and when.
+
+---
+
+### 2026-11-11 — Claude, main session — feat/phase-9-release-prep
+- **Did:** app id `com.digitallinked.atvremote` → `my.newy.remotely` (dev `.dev`), Kotlin namespace and channel names too; privacy, terms and support links on `https://remotely.newy.my` (`86643e3`, decision #61). Then knowledge sharing: this log, the SessionStart briefing hook, the `device-testing` and `marketing-site` skills, runbook steps for the Digital Linked Play account and the RevenueCat service account.
+- **State:** the phone has only `my.newy.remotely.dev`, paired and connected to Living Room TV 3 (the old dev app is gone). The domain resolves to Vercel but is not attached to project `remotely` yet (answers `DEPLOYMENT_NOT_FOUND`).
+- **Left open:** attach the domain and set `NEXT_PUBLIC_SITE_URL` (needs the owner's approval); the real support e-mail; merge this branch to `main`.
+
+### 2026-11-11 — Claude, main session — feat/phase-9-release-prep → main
+- **Did:** app buttons fixed on the real TV: `market://launch` is refused and drops the connection, so tiles send `market://details` (`411f0a3`, `27710ff`, `53b7e1c`, decision #60). PR #2 merged; `main` = `53b7e1c`.
+- **State:** CI green on `main`. TV pings every 5.2 s; the TV moved to a new IP and the app found it.
+- **Left open:** Prime Video's link only reaches the chooser; a prod build on a real phone; DM-116 steps 2–6.
+
+### 2026-11-07 — Claude, main session — feat/phase-9-release-prep
+- **Did:** production pass: default apps by the phone's country (#57), the Device builds workflow and the first iOS build (#58), catalogue fixes, iOS privacy manifest, privacy wording, store rules checked.
+- **State:** Device builds run 42334046970 green on iOS and API 26/35 emulators.
+
+### 2026-11-07 — Claude, other session — feat/phase-9-release-prep
+- **Did:** marketing site in `web/` (`bbf7729`, decision #59), deployed to https://remotely-woad.vercel.app.
+- **Left open:** the domain, the support e-mail, the move to Coolify before launch.
+
+### 2026-11-06 — Claude, main session — main
+- **Did:** Phase 9 and the design pass merged to `main` (`62a6f50`); first green CI on `main` (`b6acba6`); app links by deep link (#56).
