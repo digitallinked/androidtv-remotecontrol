@@ -6,7 +6,7 @@ _Last updated: 2026-11-11 by Claude (production pass: region, catalogue, iOS bui
 
 **Phase 9 (release preparation) and the design pass are merged to `main`** at the owner's request on 2026-11-06. Nothing was signed, uploaded or hosted (P9-R1).
 
-**On the phone:** a dev **release** build with the deep links (decision #56), from a clean build, connected to Living Room TV 3. The installed APK's hash matches the build. It was opened with no taps: no crash, status Connected, volume read from the TV. Whether the links open apps has not been tried.
+**On the phone (2026-11-11):** the dev release build of `a93c08e` (merged to `main` through PR #1, CI green), from a clean build. The installed APK's hash matches the build (`ddd13fa6…`), and it cold-starts with no crash. Apps saved before the region fix keep the old row: Settings → Apps → More options → Reset gives the MY row. Whether the app buttons open apps is still untested: the TV was off.
 
 What remains is the **owner's release work**, in the order of `docs/release/runbook.md`, and the **real-device run** (`docs/knowledge/device-matrix.md`, rows DM-001…DM-113, results empty). The device run gates every upload (runbook step 9).
 
