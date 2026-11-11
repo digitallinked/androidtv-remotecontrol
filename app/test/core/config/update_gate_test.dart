@@ -74,7 +74,7 @@ void main() {
 
   final androidListing = Uri.parse(
     'https://play.google.com/store/apps/details'
-    '?id=com.digitallinked.atvremote.dev',
+    '?id=my.newy.remotely.dev',
   );
 
   /// Opens `/remote` on a connected fake TV with Remote Config serving
@@ -250,7 +250,7 @@ void main() {
     expect(
       opener.opened.single,
       Uri.parse(
-        'https://play.google.com/store/apps/details?id=com.digitallinked.atvremote',
+        'https://play.google.com/store/apps/details?id=my.newy.remotely',
       ),
     );
   });

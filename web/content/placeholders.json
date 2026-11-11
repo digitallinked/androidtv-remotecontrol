@@ -20,17 +20,17 @@
     "code": "AppLinks.supportEmail"
   },
   "SUPPORT_URL": {
-    "value": null,
+    "value": "https://remotely.newy.my/support",
     "about": "The support web page (App Store 'Support URL'; Play 'Website').",
     "code": null
   },
   "PRIVACY_POLICY_URL": {
-    "value": "https://example.com/privacy",
+    "value": "https://remotely.newy.my/privacy",
     "about": "Where docs/release/legal/privacy-policy.md is hosted. Placeholder until the owner hosts it; the release check refuses it.",
     "code": "AppLinks.privacyPolicy"
   },
   "TERMS_URL": {
-    "value": "https://example.com/terms",
+    "value": "https://remotely.newy.my/terms",
     "about": "Where docs/release/legal/terms.md is hosted. Placeholder until the owner hosts it; the release check refuses it.",
     "code": "AppLinks.terms"
   },
@@ -65,7 +65,7 @@
     "code": "AppLinks.appStoreListing"
   },
   "PLAY_PACKAGE": {
-    "value": "com.digitallinked.atvremote",
+    "value": "my.newy.remotely",
     "about": "The prod Android application id (app/lib/app/flavor.dart); fixed once the app is on Play.",
     "code": null
   }

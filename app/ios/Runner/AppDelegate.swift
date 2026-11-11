@@ -21,7 +21,7 @@ import UIKit
   /// English reports `en-GB` there. The app's default rows need the country.
   private func registerRegionChannel(messenger: FlutterBinaryMessenger) {
     let region = FlutterMethodChannel(
-      name: "com.digitallinked.atvremote/region", binaryMessenger: messenger)
+      name: "my.newy.remotely/region", binaryMessenger: messenger)
     region.setMethodCallHandler { call, result in
       guard call.method == "phoneCountry" else {
         return result(FlutterMethodNotImplemented)
@@ -37,7 +37,7 @@ import UIKit
   /// falls back to Documents, which is backed up.
   private func registerStorageChannel(messenger: FlutterBinaryMessenger) {
     let storage = FlutterMethodChannel(
-      name: "com.digitallinked.atvremote/storage", binaryMessenger: messenger)
+      name: "my.newy.remotely/storage", binaryMessenger: messenger)
     storage.setMethodCallHandler { call, result in
       guard call.method == "backupExcludedDatabaseDirectory" else {
         return result(FlutterMethodNotImplemented)

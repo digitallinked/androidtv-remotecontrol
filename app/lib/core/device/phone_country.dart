@@ -8,7 +8,7 @@ part 'phone_country.g.dart';
 /// The native channel that reports the phone's country (`MainActivity.kt`,
 /// `AppDelegate.swift`).
 const MethodChannel regionChannel = MethodChannel(
-  'com.digitallinked.atvremote/region',
+  'my.newy.remotely/region',
 );
 
 /// How long startup waits for the native answer.

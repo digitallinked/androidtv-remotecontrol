@@ -7,13 +7,13 @@ enum Flavor {
   /// Development build, installed beside the store app.
   dev(
     displayName: 'Remotely Dev',
-    applicationId: 'com.digitallinked.atvremote.dev',
+    applicationId: 'my.newy.remotely.dev',
   ),
 
   /// Store build.
   prod(
     displayName: 'Remotely for Android TV',
-    applicationId: 'com.digitallinked.atvremote',
+    applicationId: 'my.newy.remotely',
   );
 
   const Flavor({required this.displayName, required this.applicationId});

@@ -65,7 +65,7 @@ abstract final class FixturePaths {
 }
 
 /// The prod application id in the fixture's `flavor.dart`.
-const fixtureProdId = 'com.digitallinked.atvremote';
+const fixtureProdId = 'my.newy.remotely';
 
 /// A well-formed, fake AdMob app id (not a secret).
 const fakeAdmobAppId = 'ca-app-pub-1234567890123456~1234567890';
@@ -92,7 +92,7 @@ const fixtureFlavorDart =
 enum Flavor {
   dev(
     displayName: 'Remotely Dev',
-    applicationId: 'com.digitallinked.atvremote.dev',
+    applicationId: 'my.newy.remotely.dev',
   ),
   prod(
     displayName: 'Remotely for Android TV',

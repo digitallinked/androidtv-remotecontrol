@@ -22,7 +22,7 @@ The ordered path from accounts to a staged production rollout on Google Play and
 
 ## Step 1. Final app name and ids (before the first upload)
 
-1. Choose the store name and the ids. Today's placeholders are `Remotely for Android TV` and `com.digitallinked.atvremote` (decision #12). **The Play package name is permanent after the first upload to any track**, and the iOS bundle id is effectively permanent once an App Store Connect record uses it.
+1. Choose the store name and the ids. Today's placeholders are `Remotely for Android TV` and `my.newy.remotely` (decision #12). **The Play package name is permanent after the first upload to any track**, and the iOS bundle id is effectively permanent once an App Store Connect record uses it.
 2. Mind the App Store name risk: "Android" in App Store metadata invites a Guideline 2.3.10 question. A name without it is safer; "for Android TV" can stay in the descriptions. No "Google" in any name, subtitle, keyword or icon (CLAUDE.md). The name is also the label under the app's icon, where iPhones and some Android launchers cut it off at about 12 characters, so today's 23-character placeholder can show as "Remotely for…". A short final name fixes both.
 3. If anything changes, follow [the rename checklist](rename-checklist.md) file by file: code, native files, store copy, `placeholders.json` (`APP_NAME`, `PLAY_PACKAGE`), the feature graphic title and its re-render.
 
@@ -45,10 +45,10 @@ The ordered path from accounts to a staged production rollout on Google Play and
 
    | Project | Android package / iOS bundle id | File | Put it at |
    |---|---|---|---|
-   | dev | `com.digitallinked.atvremote.dev` | `google-services.json` | `app/android/app/src/dev/google-services.json` |
-   | dev | `com.digitallinked.atvremote.dev` | `GoogleService-Info.plist` | `app/ios/config/dev/GoogleService-Info.plist` |
-   | prod | `com.digitallinked.atvremote` | `google-services.json` | `app/android/app/src/prod/google-services.json` |
-   | prod | `com.digitallinked.atvremote` | `GoogleService-Info.plist` | `app/ios/config/prod/GoogleService-Info.plist` |
+   | dev | `my.newy.remotely.dev` | `google-services.json` | `app/android/app/src/dev/google-services.json` |
+   | dev | `my.newy.remotely.dev` | `GoogleService-Info.plist` | `app/ios/config/dev/GoogleService-Info.plist` |
+   | prod | `my.newy.remotely` | `google-services.json` | `app/android/app/src/prod/google-services.json` |
+   | prod | `my.newy.remotely` | `GoogleService-Info.plist` | `app/ios/config/prod/GoogleService-Info.plist` |
 
    (Use the final ids from step 1 if they changed.) No other location: the build warns about a `google-services.json` anywhere else.
 2. In each project, open **Crashlytics** once so it is enabled, and set **Analytics → Admin → Data retention**. Write the prod value into `ANALYTICS_RETENTION` (step 6).

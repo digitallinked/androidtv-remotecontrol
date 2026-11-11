@@ -4,6 +4,11 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #61 — 2026-11-11 — App id `my.newy.remotely`; publish first from the Digital Linked Play account, then transfer; site on `remotely.newy.my`
+- **Decision:** the Android application id and iOS bundle id are `my.newy.remotely` (prod) and `my.newy.remotely.dev` (dev), replacing `com.digitallinked.atvremote`. The Kotlin namespace and the internal channel names (`my.newy.remotely/region`, `/storage`) follow, and the `DeviceInfo` vendor is `newy`. The protocol constants (`atvremote` pairing service name, certificate common name) and the database file name `remotely` stay. The website, privacy policy, terms and support page live on `https://remotely.newy.my`.
+- **Why:** the owner's new company account (waiting for its D-U-N-S number) will own the app for good. The app is first published from the owner's existing Digital Linked Play account and moved later with Google's app transfer, which keeps the package name. Nothing was uploaded and no Firebase app existed yet, so the change cost nothing but a reinstall on the test phone.
+- **Revisit:** never for the id once the first build is on Play or the App Store record exists (both permanent). The domain changes only if the website moves (rename checklist).
+
 ### #60 — 2026-11-11 — Tiles without a deep link open the app's Play Store page
 - **Decision:** an app with no working deep link sends `market://details?id=<package>`, not `market://launch?id=<package>`. `tvLaunchLink` maps old links at launch, so saved shortcuts need no migration. YouTube sends `vnd.youtube://` and Disney+ `disneyplus://`.
 - **Why (measured on Living Room TV 3, 2026-11-11, through the paired phone):** `market://launch?id=`, `intent:` and `android-app://` links all get a `remoteError` and the TV **closes the connection**, so each such tap failed and dropped the remote into Reconnecting. `market://details?id=` opens the app's Play Store page every time, with Open or Install. `netflix://`, `vnd.youtube://` and `disneyplus://` open their apps. `https://www.youtube.com` and `https://app.primevideo.com` land on Android's app chooser, and `https://www.disneyplus.com` on the TV's browser.

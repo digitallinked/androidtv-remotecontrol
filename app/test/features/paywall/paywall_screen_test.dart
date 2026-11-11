@@ -632,7 +632,7 @@ void main() {
         links.opened.single,
         Uri.parse(
           'https://play.google.com/store/account/subscriptions'
-          '?package=com.digitallinked.atvremote.dev',
+          '?package=my.newy.remotely.dev',
         ),
       );
     });
@@ -650,7 +650,7 @@ void main() {
         AppLinks.manageSubscriptions(Flavor.prod, TargetPlatform.android),
         Uri.parse(
           'https://play.google.com/store/account/subscriptions'
-          '?package=com.digitallinked.atvremote',
+          '?package=my.newy.remotely',
         ),
       );
       expect(

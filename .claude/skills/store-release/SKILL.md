@@ -92,7 +92,7 @@ Both stores reject remote-control apps for the same few reasons: misleading bran
 ## Config files and secrets (where they live)
 | File | Path | Get it from |
 |---|---|---|
-| Firebase Android | `app/android/app/src/{dev,prod}/google-services.json` | Firebase console → project → Android app per flavor (`com.digitallinked.atvremote.dev` / `com.digitallinked.atvremote`), or `flutterfire configure` |
+| Firebase Android | `app/android/app/src/{dev,prod}/google-services.json` | Firebase console → project → Android app per flavor (`my.newy.remotely.dev` / `my.newy.remotely`), or `flutterfire configure` |
 | Firebase iOS | `app/ios/config/{dev,prod}/GoogleService-Info.plist` (copied by a build phase per scheme) | Firebase console → iOS app per flavor |
 | Dart defines | `app/env/dev.json`, `app/env/prod.json` (copy `app/env/example.json`) → `flutter run --flavor dev -t lib/main_dev.dart --dart-define-from-file=env/dev.json` | 9 keys: `FIREBASE_ENABLED`, `REVENUECAT_ANDROID_KEY`, `REVENUECAT_IOS_KEY`, `ADMOB_BANNER_ANDROID`, `ADMOB_BANNER_IOS`, `ADMOB_INTERSTITIAL_ANDROID`, `ADMOB_INTERSTITIAL_IOS`, `UMP_DEBUG_GEOGRAPHY`, `UMP_TEST_DEVICE_ID`. Empty values keep a service off; dev uses Google test ad IDs |
 | AdMob app id, Android | `app/android/secrets.properties` (`admobAppIdProd`; copy `secrets.example.properties`) | AdMob console. Non-prod builds fall back to Google's test app id; a malformed prod id fails the Gradle build |

@@ -133,7 +133,7 @@ gradle.taskGraph.whenReady {
 }
 
 android {
-    namespace = "com.digitallinked.atvremote"
+    namespace = "my.newy.remotely"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -143,7 +143,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.digitallinked.atvremote"
+        applicationId = "my.newy.remotely"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

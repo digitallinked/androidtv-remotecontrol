@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 /// The native channel that hands out storage locations (`AppDelegate.swift`).
 const MethodChannel storageChannel = MethodChannel(
-  'com.digitallinked.atvremote/storage',
+  'my.newy.remotely/storage',
 );
 
 /// Where the database file lives on [platform], as a

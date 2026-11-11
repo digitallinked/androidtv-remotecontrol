@@ -7,14 +7,14 @@ void main() {
       (Flavor.dev.displayName, Flavor.dev.applicationId),
       (
         'Remotely Dev',
-        'com.digitallinked.atvremote.dev',
+        'my.newy.remotely.dev',
       ),
     );
     expect(
       (Flavor.prod.displayName, Flavor.prod.applicationId),
       (
         'Remotely for Android TV',
-        'com.digitallinked.atvremote',
+        'my.newy.remotely',
       ),
     );
   });

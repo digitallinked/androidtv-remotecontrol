@@ -241,7 +241,7 @@ void main() {
   test('rename_checklist_names_every_file_that_holds_the_name_or_id', () {
     // Case-insensitive, so the database file name `remotely` counts too.
     final needles = [
-      RegExp(r'com\.digitallinked\.atvremote', caseSensitive: false),
+      RegExp(r'my\.newy\.remotely', caseSensitive: false),
       RegExp('remotely for android tv', caseSensitive: false),
       RegExp('remotely dev', caseSensitive: false),
       RegExp('remotely', caseSensitive: false),

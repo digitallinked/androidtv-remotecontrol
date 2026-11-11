@@ -10,7 +10,7 @@ out="$root/build/emulator-smoke"
 mkdir -p "$out"
 cd "$root/app" || exit 1
 
-package=com.digitallinked.atvremote
+package=my.newy.remotely
 failed=0
 
 fail() {

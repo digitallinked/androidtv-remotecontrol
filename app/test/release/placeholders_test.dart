@@ -67,7 +67,7 @@ void main() {
     expect(placeholders['APP_NAME']!['value'], 'Remotely for Android TV');
     expect(
       placeholders['PLAY_PACKAGE']!['value'],
-      'com.digitallinked.atvremote',
+      'my.newy.remotely',
     );
   });
 
@@ -273,10 +273,9 @@ void main() {
           reason: token,
         );
       }
-      expect(
-        result.missing,
-        containsAll(['PRIVACY_POLICY_URL', 'SUPPORT_EMAIL']),
-      );
+      // Non-vacuous: the support address is still a placeholder.
+      expect(result.missing, contains('SUPPORT_EMAIL'));
+      expect(result.missing, isNot(contains('PRIVACY_POLICY_URL')));
     });
   });
 

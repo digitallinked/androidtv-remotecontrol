@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-11 by Claude (production pass: region, catalogue, iOS build, device builds; decisions #57–#58)._
+_Last updated: 2026-11-11 by Claude (app id `my.newy.remotely`, domain `remotely.newy.my`; decisions #60–#61)._
 
 ## Current phase
 
@@ -142,17 +142,18 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 
 
 **The marketing site (decision #59)** needs, from the owner:
-- the domain, then `NEXT_PUBLIC_SITE_URL` on the host;
+- **the domain `remotely.newy.my` (owner's choice, 2026-11-11):** its DNS already points to Vercel (`newy.my` uses Vercel's nameservers), but the domain isn't attached to project `remotely` yet, so it answers `DEPLOYMENT_NOT_FOUND`. Attach it (`vercel domains add remotely.newy.my remotely`, or the dashboard), set `NEXT_PUBLIC_SITE_URL=https://remotely.newy.my` for Production, then `vercel deploy --prod` from `web/`;
 - **the move to Coolify before launch** (owner's plan, 2026-11-07). The team is on Vercel's Hobby plan, which is believed to be non-commercial only (unverified against the current terms), and the app earns from ads and Premium. Set `NEXT_PUBLIC_SITE_URL` there: without it the site falls back to localhost, because the Vercel variable won't exist;
 - real `SUPPORT_EMAIL`, publisher name and address. `/support` hides its contact section until the email is real, and the legal pages stay labelled Draft;
-- once the domain is live: `PRIVACY_POLICY_URL`, `TERMS_URL` and `SUPPORT_URL` in `placeholders.json` and `AppLinks`, then `npm run sync:release` in `web/`;
+- done 2026-11-11: `PRIVACY_POLICY_URL`, `TERMS_URL` and `SUPPORT_URL` (`/support`) in `placeholders.json` and `AppLinks` point at `remotely.newy.my`, and `web/content` is synced. The links in the app only work once the domain serves the site;
 - `web/public/app-ads.txt` once the AdMob publisher id exists (`docs/release/forms/app-ads-txt.md`);
 - `site.stores` in `web/lib/site.ts` at launch.
 
 Everything else is a step of `docs/release/runbook.md`; its end has the owner-decision list. In short:
 
 - **Accounts:** Play Console and Apple Developer. Recruit the 12 closed-test testers now.
-- **Final name and ids** before the first upload. The placeholders are `Remotely for Android TV` and `com.digitallinked.atvremote`, and that App Store name carries a 2.3.10 risk.
+- **Final name** before the first upload. The ids are final: `my.newy.remotely` and `.dev` (decision #61). The placeholder name is `Remotely for Android TV`, and that App Store name carries a 2.3.10 risk.
+- **Play account:** publish first from the existing Digital Linked account, then transfer the app to the new company account once its D-U-N-S number arrives (decision #61). Check whether Digital Linked is an organisation account or a personal one made before 13 November 2023; if so, it skips the 12-tester closed test.
 - **Real config:**
   - Firebase dev/prod and the four config files;
   - AdMob apps and units, the UMP GDPR message, `app-ads.txt`, the **G** cap, and the AdServices permissions (default keep);

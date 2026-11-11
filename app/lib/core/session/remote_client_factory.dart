@@ -21,7 +21,7 @@ const kRemoteClientName = 'Remotely';
 /// How this phone describes itself to the TV in the given [flavor].
 DeviceInfo deviceInfoFor(Flavor flavor) => DeviceInfo(
   model: kRemoteClientName,
-  vendor: 'digitallinked',
+  vendor: 'newy',
   packageName: flavor.applicationId,
   appVersion: kAppVersion,
 );

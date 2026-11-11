@@ -1,4 +1,4 @@
-package com.digitallinked.atvremote
+package my.newy.remotely
 
 import android.content.Context
 import android.telephony.TelephonyManager
@@ -11,7 +11,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "com.digitallinked.atvremote/region",
+            "my.newy.remotely/region",
         ).setMethodCallHandler { call, result ->
             if (call.method == "phoneCountry") {
                 result.success(phoneCountry())

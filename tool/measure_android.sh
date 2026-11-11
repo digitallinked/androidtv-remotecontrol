@@ -5,7 +5,7 @@
 # Results belong in docs/knowledge/device-matrix.md; write down only what a run
 # measured.
 #
-#   tool/measure_android.sh --mode startup [--runs 10] [--package com.digitallinked.atvremote.dev]
+#   tool/measure_android.sh --mode startup [--runs 10] [--package my.newy.remotely.dev]
 #   tool/measure_android.sh --mode trace
 #   tool/measure_android.sh --mode battery [--minutes 30]
 #
@@ -23,7 +23,7 @@
 # With more than one device attached, set ANDROID_SERIAL to pick one.
 set -euo pipefail
 
-activity='com.digitallinked.atvremote.MainActivity'
+activity='my.newy.remotely.MainActivity'
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
 fail() {
@@ -34,7 +34,7 @@ fail() {
 mode=''
 runs=10
 minutes=30
-package='com.digitallinked.atvremote.dev'
+package='my.newy.remotely.dev'
 while [ $# -gt 0 ]; do
   case "$1" in
     --mode) mode="${2:-}"; shift 2 ;;

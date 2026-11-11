@@ -68,7 +68,7 @@ void main() {
   // test can run the native code here.
   group('native_channel', () {
     const android =
-        'android/app/src/main/kotlin/com/digitallinked/atvremote/'
+        'android/app/src/main/kotlin/my/newy/remotely/'
         'MainActivity.kt';
     const ios = 'ios/Runner/AppDelegate.swift';
 

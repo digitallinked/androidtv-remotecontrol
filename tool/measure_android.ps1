@@ -3,7 +3,7 @@
 # and a summary is printed. Results belong in docs/knowledge/device-matrix.md;
 # write down only what a run measured.
 #
-#   powershell -File tool/measure_android.ps1 -Mode startup [-Runs 10] [-Package com.digitallinked.atvremote.dev]
+#   powershell -File tool/measure_android.ps1 -Mode startup [-Runs 10] [-Package my.newy.remotely.dev]
 #   powershell -File tool/measure_android.ps1 -Mode trace
 #   powershell -File tool/measure_android.ps1 -Mode battery [-Minutes 30]
 #
@@ -27,11 +27,11 @@ param(
     [int]$Runs = 10,
     [ValidateRange(1, 1440)]
     [int]$Minutes = 30,
-    [string]$Package = 'com.digitallinked.atvremote.dev'
+    [string]$Package = 'my.newy.remotely.dev'
 )
 $ErrorActionPreference = 'Stop'
 
-$Activity = 'com.digitallinked.atvremote.MainActivity'
+$Activity = 'my.newy.remotely.MainActivity'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 function Fail([string]$Message) {

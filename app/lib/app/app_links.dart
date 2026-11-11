@@ -7,13 +7,15 @@ abstract final class AppLinks {
   ///
   /// Value from `docs/release/placeholders.json` → `PRIVACY_POLICY_URL`;
   /// the release check refuses the placeholder.
-  static final Uri privacyPolicy = Uri.parse('https://example.com/privacy');
+  static final Uri privacyPolicy = Uri.parse(
+    'https://remotely.newy.my/privacy',
+  );
 
   /// The terms of use page.
   ///
   /// Value from `docs/release/placeholders.json` → `TERMS_URL`; the release
   /// check refuses the placeholder.
-  static final Uri terms = Uri.parse('https://example.com/terms');
+  static final Uri terms = Uri.parse('https://remotely.newy.my/terms');
 
   /// The address feedback emails go to.
   ///
