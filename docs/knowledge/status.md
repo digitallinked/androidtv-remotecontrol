@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-06 by Claude (CI, app links and release script fixes, decision #56)._
+_Last updated: 2026-11-11 by Claude (production pass: region, catalogue, iOS build, device builds; decisions #57–#58)._
 
 ## Current phase
 
@@ -12,6 +12,15 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## Done
 
+- **Production pass (2026-11-07, decisions #57–#58):**
+  - **The iOS app was built for the first time,** with no Mac of ours: the Device builds workflow (`.github/workflows/device-builds.yml`) builds both flavors with Xcode 26.6, inspects `Runner.app` and runs both flows on a simulator. On API 26 and 35 emulators it runs the flows and a **prod release build** from a clean install. All green in run 42334046970. Manual only (Actions tab or a `diag/**` push); the repo is public, so it costs nothing.
+  - **Default apps follow the phone's country** (SIM, then network; iOS Region), not the language (decision #57). Proved on an API 35 R8 build: British language, US SIM, US row.
+  - **Catalogue:** Disney+ Hotstar (retired 2025-10-09, no Play listing) replaced by Disney+ in the MY and ID rows; Astro GO, sooka and Tonton added for MY (ids from their Play listings, V11-12 done). All 58 ids checked against Google Play; 54 found, the other four look like TV-only listings the website doesn't show (`uk.co.bbc.iplayer`, `deezer.android.tv`, `com.google.android.youtube.tvkids`) plus the retired Hotstar id.
+  - **iOS privacy manifest:** `PrivacyInfo.xcprivacy` declares file timestamps (C617.1) and disk space (E174.1), because `sqlite3.framework` from the build hook references `stat` and `statfs` and has no manifest. With `FIREBASE_ANALYTICS_WITHOUT_ADID=true`, `GoogleAppMeasurementIdentitySupport` is absent; without it, it ships.
+  - **Privacy wording:** usage data is "tied to a random ID and not to your name", no longer "anonymous" (V11-17 done; Malay through DM-068).
+  - **Store rules checked** (runbook "Store rules checked on 2026-11-07"): target API 36, Billing Library 8.3.0 and 16 KB pages all hold. Added: EU DSA trader status, the D-U-N-S exemption, the newer Apple age-rating questions.
+  - **Device rows recorded:** DM-056 Pass (backup not allowed), DM-058, DM-062, DM-063, DM-117 Pass; DM-116 step 1 passed (the `→` draws); partial notes on DM-038, DM-066, DM-103, DM-104, DM-106, DM-112.
+  - **Release dry run:** refuses five owner-config items per platform and nothing else (DM-104 notes).
 - **Marketing site, live on Vercel (2026-11-07, decision #59):** public at https://remotely-woad.vercel.app, deployed from this PC with the CLI (Vercel project `remotely`, team Newy's projects). Later `vercel deploy` runs from `web/` are previews unless given `--prod`, and pushes don't deploy because the repo isn't connected. `web/` holds the home page with a working remote demo, `/support`, `/privacy`, `/terms`, the share image, sitemap and robots.
   - **Verified 2026-11-07:** 27 unit tests, the typecheck and a production build pass. Chrome checks passed 27 of 27 against a production build: mouse, touch, keyboard, widths 320, 390 and 1440, no console errors, no owner notes on the legal pages. The script is throwaway and isn't in the repo.
   - **Live site, 2026-11-07:** the same 27 Chrome checks passed against the deployed address. Every route answers as expected, and an unknown path gives 404.
@@ -74,15 +83,17 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 
 ## In progress
 
-**App buttons: fix shipped to the phone, not confirmed on the TV (decision #56).**
-- **Waiting on the owner:** tap Netflix, YouTube and Prime Video on the phone and say which open. Nothing on the phone shows the result: the test tool's certificate is rejected by the TV, so seeing it from here needs the code on the TV to pair the tool.
-- **The other 49 apps** still send `market://launch?id=`, which is the form reported broken. BBC iPlayer on the quick row is one of them. If they stay dead, finding a link form that works by package needs the paired tool or DM-029.
+**App buttons: still not confirmed on the TV (decision #56).** The TV was off the network for the whole of 2026-11-07.
+- **The phone can see the answer:** the TV reports its foreground app (`CurrentAppChanged`), and a quick tile's label becomes "<app>, now on TV", which `uiautomator dump` reads. No TV code is needed.
+- **Ready to run when the TV is on and the phone unlocked for ten minutes:** a throwaway diagnostic debug build (prints every TV message, takes links over `adb forward tcp:8765`) and a probe that tries, per app, `market://launch?id=`, an `intent:` URI with the leanback launcher category, `android-app://` and `market://details?id=`. It stops unless the TV reports its screen on, and never sends Power. The patch is never committed (learnings, "Production pass").
+- **The other 49 apps** still send `market://launch?id=`. If the `intent:` form works, one catalogue change fixes all of them.
+- **DM-114 half done:** a pairing failure shows "<address> didn't respond" with Try again and Troubleshooting; reading the log entry waits for the phone.
 
 ## Next up
 
-**First:** the owner taps the app buttons (see In progress), then tries the design on the phone (DM-116).
+**First:** turn the TV on and unlock the phone for ten minutes so Claude can run the app-button probe (see In progress), then DM-116 steps 2–6 in a dim room.
 
-**Before any store upload:** run a **prod** release build on a phone. Only the dev flavor has been run in release.
+**Before any store upload:** run a **prod** release build on a real phone. It runs on API 26 and 35 emulators (DM-117), not yet on the Note10+.
 
 Then:
 
@@ -97,7 +108,7 @@ Then:
    - **Step 7:** the upload keystore and `key.properties`, then DM-105.
 2. **The device-matrix run with Claude** (runbook step 9): DM-001…DM-113, with the Android gates DM-056/057 before the first upload. The iOS restore and Quick Start gates DM-060/061 come before TestFlight external, and so does DM-108 (3): a reinstall must ask for a code again. **Ask before any Power or Wake-on-LAN step.**
 3. **The Malay sign-off** (runbook step 8, DM-068), including "Tahan semula jadi", before any Malay listing.
-4. **The Mac** (runbook step 12): `pod install`, DM-058/059/066/106/107/112, `tool/release.sh --platform ios`, TestFlight.
+4. **The Mac** (runbook step 12): signing, the archive, DM-059/066/106/107/112 (DM-058 passed in CI), `tool/release.sh --platform ios`, TestFlight. The Device builds workflow covers compiling, not signing.
 5. **Release:**
    - `tool/release.ps1 -Platform android` (step 10);
    - internal → closed → staged production (step 11);
@@ -108,9 +119,8 @@ Then:
 After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch backlog. It includes:
 - the CLI minors;
 - the in-app/system language sync;
-- real logos for the 28 apps that still show a letter;
-- the store-art list;
-- "Anonymous" → "pseudonymous" in `privacyUsageSubtitle`.
+- real logos for the 30 apps that still show a letter;
+- the store-art list.
 
 ## Known flakes and residuals
 
@@ -133,7 +143,7 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 
 ## Blocked / needs the owner
 
-**The code on the TV** blocks the app-button fix.
+**The TV switched on, and the phone unlocked for ten minutes,** finishes the app-button test (no code needed).
 
 **The marketing site (decision #59)** needs, from the owner:
 - the domain, then `NEXT_PUBLIC_SITE_URL` on the host;
@@ -172,6 +182,8 @@ Everything else is a step of `docs/release/runbook.md`; its end has the owner-de
 - TV: MediaTek-based Android TV "Living Room TV 3" on the home LAN (192.168.0.x).
 
 ## How to run things
+
+- iOS build and emulator checks: Actions tab → Device builds → Run workflow, or push a `diag/**` branch (decision #58).
 
 - All checks: `powershell -File tool/check.ps1` (Windows) or `tool/check.sh`. It must print "All checks passed."
 - App: `flutter run --flavor dev -t lib/main_dev.dart --dart-define-from-file=env/dev.json` from `app/`. Without the define file, every service stays off.
