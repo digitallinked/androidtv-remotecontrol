@@ -173,7 +173,7 @@ void main() {
     await t.pumpAndSettle();
 
     expect(
-      find.text('No email app found. Write to us at support@example.com.'),
+      find.text('No email app found. Write to us at support@newy.my.'),
       findsOneWidget,
     );
   });

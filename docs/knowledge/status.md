@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-12 by Claude (website live on Coolify at `remotely.newy.my`; decision #62)._
+_Last updated: 2026-11-12 by Claude (website live on Coolify at `remotely.newy.my`, decision #62; support address `support@newy.my`)._
 
 ## Current phase
 
@@ -13,6 +13,7 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 ## Done
 
 - **Website live at https://remotely.newy.my on Coolify (2026-11-12, decision #62):** Coolify app `newy-remotely` (`dfxb7lvq0um2lt8xebxnxjfy`) in project Newy on the shared CargoLinked droplet, image `cargolinked/newy:remotely-latest`, one proxied DNS record `remotely` in Newy's Cloudflare zone. `.github/workflows/deploy-web.yml` tests, builds, pushes and deploys on every push to `main` that touches `web/` (`WEB_AUTODEPLOY=on`). Verified live: `/api/health` `{"ok":true}`, every page 200, 404 for unknown paths, sitemap and robots on `https://remotely.newy.my` only, `running:healthy`. Everything is in `docs/hosting.md`. The privacy, terms and support links in the app now work.
+- **Support address `support@newy.my` (2026-11-12):** owner's choice; in `docs/release/placeholders.json`, `AppLinks.supportEmail` (feedback mail) and the site's `/support` page.
 - **App id, domain and knowledge sharing (2026-11-11, decision #61):**
   - App id `my.newy.remotely` (dev `.dev`) everywhere, with the Kotlin namespace, channel names and `DeviceInfo` vendor `newy` (`86643e3`). Analyze clean; the full suite passed except three load timeouts that pass alone.
   - Privacy, terms and support links point at `https://remotely.newy.my`; `web/content` synced.
@@ -149,7 +150,8 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 
 **The marketing site (decision #59)** needs, from the owner:
 - done 2026-11-12: the site is live on `https://remotely.newy.my`, hosted on Coolify (decision #62, `docs/hosting.md`). The old Vercel project `remotely` still exists, unused; delete it when the owner agrees;
-- real `SUPPORT_EMAIL`, publisher name and address. `/support` hides its contact section until the email is real, and the legal pages stay labelled Draft;
+- done 2026-11-12: `SUPPORT_EMAIL` is `support@newy.my` (owner's choice) in `placeholders.json`, `AppLinks.supportEmail` and `web/content`; `/support` now shows it. Whether the mailbox receives mail is unverified;
+- the publisher name and address (`DEVELOPER_NAME`, `DEVELOPER_ADDRESS`). The legal pages stay labelled Draft until they and the other unset values are real;
 - done 2026-11-11: `PRIVACY_POLICY_URL`, `TERMS_URL` and `SUPPORT_URL` (`/support`) in `placeholders.json` and `AppLinks` point at `remotely.newy.my`, and `web/content` is synced. They work since 2026-11-12;
 - `web/public/app-ads.txt` once the AdMob publisher id exists (`docs/release/forms/app-ads-txt.md`);
 - `site.stores` in `web/lib/site.ts` at launch.

@@ -15,8 +15,8 @@
     "code": null
   },
   "SUPPORT_EMAIL": {
-    "value": "support@example.com",
-    "about": "The support address: feedback mail goes here, and the store listings and legal pages show it. Placeholder until the owner sets it; the release check refuses it.",
+    "value": "support@newy.my",
+    "about": "The support address: feedback mail goes here, and the store listings and legal pages show it. Set by the owner on 2026-11-12.",
     "code": "AppLinks.supportEmail"
   },
   "SUPPORT_URL": {

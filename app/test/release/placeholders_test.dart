@@ -273,8 +273,9 @@ void main() {
           reason: token,
         );
       }
-      // Non-vacuous: the support address is still a placeholder.
-      expect(result.missing, contains('SUPPORT_EMAIL'));
+      // Non-vacuous: the publisher's name is still unset.
+      expect(result.missing, contains('DEVELOPER_NAME'));
+      expect(result.missing, isNot(contains('SUPPORT_EMAIL')));
       expect(result.missing, isNot(contains('PRIVACY_POLICY_URL')));
     });
   });

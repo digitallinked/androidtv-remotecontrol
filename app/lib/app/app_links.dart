@@ -19,9 +19,8 @@ abstract final class AppLinks {
 
   /// The address feedback emails go to.
   ///
-  /// Value from `docs/release/placeholders.json` → `SUPPORT_EMAIL`; the
-  /// release check refuses the placeholder.
-  static const String supportEmail = 'support@example.com';
+  /// Value from `docs/release/placeholders.json` → `SUPPORT_EMAIL`.
+  static const String supportEmail = 'support@newy.my';
 
   /// The App Store page of the app.
   ///
