@@ -16,13 +16,15 @@ The text for the Google Play and App Store listings (Ruling P9-R13). Each field 
 ## play.short_description (max 80)
 
 ```text
-Use your phone as a TV remote. Works with Android TV and Google TV.
+Free TV remote control app for Android TV & Google TV: touchpad, keyboard, apps.
 ```
 
 ## play.full_description (max 4000)
 
 ```text
-Control your TV from your phone. {{APP_NAME}} connects over your home Wi-Fi to TVs and streaming boxes that run Android TV or Google TV, so you can move around, type and open apps without looking for the remote.
+A free TV remote control for Android TV and Google TV. {{APP_NAME}} turns your phone into the remote: it connects over your home Wi-Fi to TVs and streaming boxes that run Android TV or Google TV, so you can move around, type and open apps without looking for the remote.
+
+Works with smart TVs and streaming boxes that run Android TV or Google TV, such as many models from Sony, TCL, Philips, Sharp and Hisense, and boxes like the Xiaomi Mi Box, NVIDIA SHIELD TV and Chromecast with Google TV.
 
 GET CONNECTED
 • The app finds TVs on your Wi-Fi network by itself. If yours doesn't show up, enter its IP address.
@@ -71,6 +73,7 @@ WHAT YOU NEED
 
 Questions or ideas? Write to {{SUPPORT_EMAIL}}.
 
+Other product names are trademarks of their owners and are named only to describe compatibility.
 Android TV and Google TV are trademarks of Google LLC. This app isn't made or endorsed by Google.
 ```
 
@@ -83,7 +86,7 @@ Android TV and Google TV are trademarks of Google LLC. This app isn't made or en
 ## appstore.subtitle (max 30)
 
 ```text
-Touchpad, D-pad and keyboard
+TV remote control & keyboard
 ```
 
 ## appstore.promotional_text (max 170)
@@ -95,7 +98,7 @@ Swipe, tap and type on your TV from your phone. Pair once, open your favourite a
 ## appstore.description (max 4000)
 
 ```text
-Control your TV from your iPhone or iPad. {{APP_NAME}} connects over your home Wi-Fi to TVs and streaming boxes that run Android TV or Google TV, so you can move around, type and open apps without looking for the remote.
+A TV remote control for Android TV and Google TV on your iPhone or iPad. {{APP_NAME}} connects over your home Wi-Fi to TVs and streaming boxes that run Android TV or Google TV, so you can move around, type and open apps without looking for the remote.
 
 GET CONNECTED
 • The app finds TVs on your Wi-Fi network by itself. If yours doesn't show up, enter its IP address.
@@ -152,7 +155,7 @@ Android TV and Google TV are trademarks of Google LLC. This app isn't made or en
 ## appstore.keywords (max 100)
 
 ```text
-tv remote,remote control,touchpad,dpad,keyboard,smart tv,television,controller,pairing,streaming
+remote,control,controller,touchpad,dpad,keyboard,smart,television,streaming,box,wifi,channel,volume
 ```
 
 ## release_notes (max 500)

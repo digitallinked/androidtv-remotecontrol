@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-12 by Claude (publisher Newy Enterprise, Selangor, Malaysia; effective date, retention, governing law; before that: website live on Coolify, decision #62; support address `support@newy.my`; the site shows the real app, decision #63)._
+_Last updated: 2026-11-12 by Claude (legal texts final and bilingual, store copy ASO, decision #64; earlier the same day: publisher and legal values, website on Coolify #62, real app screens #63)._
 
 ## Current phase
 
@@ -152,7 +152,7 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 **The marketing site (decision #59)** needs, from the owner:
 - done 2026-11-12: the site is live on `https://remotely.newy.my`, hosted on Coolify (decision #62, `docs/hosting.md`). The old Vercel project `remotely` still exists, unused; delete it when the owner agrees;
 - done 2026-11-12: `SUPPORT_EMAIL` is `support@newy.my` (owner's choice) in `placeholders.json`, `AppLinks.supportEmail` and `web/content`; `/support` now shows it. Whether the mailbox receives mail is unverified;
-- done 2026-11-12: publisher `DEVELOPER_NAME` = Newy Enterprise, `DEVELOPER_ADDRESS` = Selangor, Malaysia (owner's values) in `placeholders.json` and `web/content`. Also done 2026-11-12: `EFFECTIVE_DATE` 12 November 2026, `ANALYTICS_RETENTION` 14 months, `GOVERNING_LAW` Malaysia. Every legal value is now set; the pages stay labelled Draft only because of the `> DRAFT` line in `docs/release/legal/*.md`, which comes out once the owner has worked through each draft's "Owner to confirm" list (runbook step 2 of the legal section);
+- done 2026-11-12: publisher `DEVELOPER_NAME` = Newy Enterprise, `DEVELOPER_ADDRESS` = Selangor, Malaysia (owner's values) in `placeholders.json` and `web/content`. Also done 2026-11-12: `EFFECTIVE_DATE` 12 November 2026, `ANALYTICS_RETENTION` 14 months, `GOVERNING_LAW` Malaysia. Every legal value is now set. **Done 2026-11-12 (decision #64):** the privacy policy and terms are final (no Draft label) in English and Malay at `/privacy`, `/terms`, `/privacy/ms`, `/terms/ms`; what's still to check (lawyer, Malay native review, AdMob US-states message, the store publisher name, GDPR representative, the iOS DM rows) is in `docs/release/legal/review-notes.md`;
 - done 2026-11-11: `PRIVACY_POLICY_URL`, `TERMS_URL` and `SUPPORT_URL` (`/support`) in `placeholders.json` and `AppLinks` point at `remotely.newy.my`, and `web/content` is synced. They work since 2026-11-12;
 - `web/public/app-ads.txt` once the AdMob publisher id exists (`docs/release/forms/app-ads-txt.md`);
 - `site.stores` in `web/lib/site.ts` at launch.

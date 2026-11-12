@@ -24,7 +24,7 @@ const mono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
-  title: { default: `${site.name}: ${site.tagline}`, template: `%s | ${site.name}` },
+  title: { default: `${site.name}: TV remote app for Android TV and Google TV`, template: `%s | ${site.name}` },
   description: site.description,
   openGraph: {
     title: site.tagline,

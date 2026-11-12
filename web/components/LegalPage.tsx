@@ -1,10 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { marked } from 'marked';
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
 import { prepareLegal, releaseValues } from '@/lib/release';
 import { site } from '@/lib/site';
+
+/** A legal page and its translation: the English path and the Malay one. */
+export interface LegalDoc {
+  file: string;
+  lang: 'en' | 'ms';
+  path: string;
+  other: { path: string; label: string; lang: 'en' | 'ms' };
+}
 
 function load(file: string) {
   const raw = readFileSync(join(process.cwd(), 'content', file), 'utf8');
@@ -16,18 +25,29 @@ function load(file: string) {
   });
 }
 
-export function legalMetadata(file: string, title: string): Metadata {
-  const { draft } = load(file);
-  return { title, robots: draft ? { index: false, follow: true } : undefined };
+export function legalMetadata(doc: LegalDoc, title: string): Metadata {
+  const { draft } = load(doc.file);
+  const en = doc.lang === 'en' ? doc.path : doc.other.path;
+  const ms = doc.lang === 'ms' ? doc.path : doc.other.path;
+  return {
+    title,
+    robots: draft ? { index: false, follow: true } : undefined,
+    alternates: { canonical: doc.path, languages: { en, ms, 'x-default': en } },
+  };
 }
 
-export function LegalPage({ file }: { file: string }) {
-  const page = load(file);
+export function LegalPage({ doc }: { doc: LegalDoc }) {
+  const page = load(doc.file);
   return (
     <>
       <div className="paper">
         <SiteHeader tone="light" />
-        <main className="prose-page">
+        <main className="prose-page" lang={doc.lang}>
+          <p className="lang-switch">
+            <Link href={doc.other.path} hrefLang={doc.other.lang} lang={doc.other.lang}>
+              {doc.other.label}
+            </Link>
+          </p>
           <h1>{page.title}</h1>
           {page.draft && (
             <p className="draft-note">

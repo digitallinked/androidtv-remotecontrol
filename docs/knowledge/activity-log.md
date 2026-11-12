@@ -16,6 +16,11 @@ Details belong in `status.md` (current state), `decisions.md` (why) and `learnin
 ---
 
 ### 2026-11-12 — Claude, main session — feat/phase-9-release-prep → main
+- **Did:** decision #64. Final privacy policy and terms (`docs/release/legal/*.md`), Malay versions (`*.ms.md`, translated by a subagent), `legal/review-notes.md`; website routes `/privacy/ms`, `/terms/ms`, language links, hreflang alternates, table styles, sitemap, `MobileApplication` JSON-LD and a keyword title; store listing ASO in `store-listing/en.md`; runbook step 4 (US-states UMP message) and step 6; `legal_docs_test.dart` now requires final texts and matching Malay placeholders.
+- **State:** store screenshots regenerated in `build/store-screenshots/` (40 PNGs, not committed); the push deploys the site.
+- **Left open:** `review-notes.md` "Still to do"; Malay store listing (`ms.md`) not updated with the new English copy (UNREVIEWED anyway); DM-111 screenshot nits (the quick row cuts "Kids", sparse Apps shot).
+
+### 2026-11-12 — Claude, main session — feat/phase-9-release-prep → main
 - **Did:** owner's legal values: `EFFECTIVE_DATE` 12 November 2026, `ANALYTICS_RETENTION` 14 months, `GOVERNING_LAW` Malaysia (`placeholders.json`, `web/content`); `placeholders_test.dart` now checks `DEMO_VIDEO_URL` is the unset one.
 - **State:** no "(to be confirmed)" left on the hosted privacy policy or terms; the Draft label stays until the owner removes the `> DRAFT` line after the "Owner to confirm" review.
 - **Left open:** that review (privacy items 1–16, terms 1–5); `release_wrappers_test.dart` `ps1_refuses_an_ios_build_off_a_mac` failed once under load and passed alone.

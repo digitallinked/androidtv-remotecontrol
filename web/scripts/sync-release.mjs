@@ -11,6 +11,8 @@ for (const [from, to] of [
   ['placeholders.json', 'placeholders.json'],
   ['legal/privacy-policy.md', 'privacy-policy.md'],
   ['legal/terms.md', 'terms.md'],
+  ['legal/privacy-policy.ms.md', 'privacy-policy.ms.md'],
+  ['legal/terms.ms.md', 'terms.ms.md'],
 ]) {
   const source = join(release, from);
   if (!existsSync(source)) throw new Error(`Missing ${source}`);

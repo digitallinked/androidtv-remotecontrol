@@ -100,12 +100,24 @@ const STATUSES = [
 export default function HomePage() {
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: site.name,
+    '@type': 'MobileApplication',
+    name: site.fullName,
+    alternateName: site.name,
     description: site.description,
     applicationCategory: 'UtilitiesApplication',
     operatingSystem: 'Android, iOS',
     url: site.url,
+    inLanguage: ['en', 'ms'],
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    featureList: [
+      'Touchpad and D-pad',
+      'Type with your phone keyboard',
+      'Open TV apps in one tap',
+      'Volume, channel and power keys',
+      'Several TVs',
+      'Demo mode',
+    ],
+    ...(site.publisher ? { publisher: { '@type': 'Organization', name: site.publisher, email: site.supportEmail } } : {}),
   };
 
   return (

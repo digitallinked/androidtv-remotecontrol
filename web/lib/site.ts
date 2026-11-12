@@ -10,7 +10,7 @@ export const site = {
   fullName: release.APP_NAME ?? 'Remotely',
   tagline: 'The TV remote that lives on your phone',
   description:
-    'Use your phone as a TV remote. Swipe, tap and type on your Android TV or Google TV over your home Wi-Fi.',
+    'A free TV remote app for Android TV and Google TV. Use your phone as the remote: touchpad, D-pad, keyboard and your apps, over your home Wi-Fi.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? (productionHost ? `https://${productionHost}` : 'http://localhost:3000'),
   supportEmail: release.SUPPORT_EMAIL,
   publisher: release.DEVELOPER_NAME,

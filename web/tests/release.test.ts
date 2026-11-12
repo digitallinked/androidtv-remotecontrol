@@ -70,6 +70,8 @@ describe('content copies', () => {
     ['placeholders.json', 'placeholders.json'],
     ['legal/privacy-policy.md', 'privacy-policy.md'],
     ['legal/terms.md', 'terms.md'],
+    ['legal/privacy-policy.ms.md', 'privacy-policy.ms.md'],
+    ['legal/terms.ms.md', 'terms.ms.md'],
   ])('%s matches web/content (run npm run sync:release)', (from, to) => {
     if (!existsSync(release)) return;
     expect(readFileSync(join(content, to), 'utf8')).toBe(readFileSync(join(release, from), 'utf8'));

@@ -1,9 +1,14 @@
-import { LegalPage, legalMetadata } from '@/components/LegalPage';
+import { LegalPage, legalMetadata, type LegalDoc } from '@/components/LegalPage';
 
-const FILE = 'terms.md';
+const DOC: LegalDoc = {
+  file: 'terms.md',
+  lang: 'en',
+  path: '/terms',
+  other: { path: '/terms/ms', label: 'Baca dalam Bahasa Melayu', lang: 'ms' },
+};
 
-export const metadata = legalMetadata(FILE, 'Terms of use');
+export const metadata = legalMetadata(DOC, 'Terms of use');
 
 export default function TermsPage() {
-  return <LegalPage file={FILE} />;
+  return <LegalPage doc={DOC} />;
 }

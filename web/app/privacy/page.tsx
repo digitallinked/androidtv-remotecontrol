@@ -1,9 +1,14 @@
-import { LegalPage, legalMetadata } from '@/components/LegalPage';
+import { LegalPage, legalMetadata, type LegalDoc } from '@/components/LegalPage';
 
-const FILE = 'privacy-policy.md';
+const DOC: LegalDoc = {
+  file: 'privacy-policy.md',
+  lang: 'en',
+  path: '/privacy',
+  other: { path: '/privacy/ms', label: 'Baca dalam Bahasa Melayu', lang: 'ms' },
+};
 
-export const metadata = legalMetadata(FILE, 'Privacy policy');
+export const metadata = legalMetadata(DOC, 'Privacy policy');
 
 export default function PrivacyPage() {
-  return <LegalPage file={FILE} />;
+  return <LegalPage doc={DOC} />;
 }

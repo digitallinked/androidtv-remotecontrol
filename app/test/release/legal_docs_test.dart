@@ -3,10 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The first line of both legal drafts (Ruling P9-R12).
-const String draftLine =
-    '> DRAFT — not legal advice. The owner (and, if they choose, a lawyer) '
-    'reviews this before it is hosted.';
 
 /// The text of `docs/release/legal/<name>`; the tests run from `app/`.
 String legalDoc(String name) =>
@@ -24,9 +20,41 @@ void main() {
   final privacy = legalDoc('privacy-policy.md');
   final terms = legalDoc('terms.md');
 
-  test('legal_docs_are_marked_draft_until_the_owner_reviews_them', () {
-    for (final doc in [privacy, terms]) {
-      expect(const LineSplitter().convert(doc).first, draftLine);
+  // The owner approved the texts on 2026-11-12: they are hosted as they are,
+  // so no draft line, owner note or owner checklist may be left in them, and
+  // each has a Malay version with the same placeholders (PDPA section 7).
+  test('legal_docs_are_final_with_no_draft_or_owner_notes', () {
+    for (final name in const [
+      'privacy-policy.md',
+      'terms.md',
+      'privacy-policy.ms.md',
+      'terms.ms.md',
+    ]) {
+      final doc = legalDoc(name);
+      expect(const LineSplitter().convert(doc).first, startsWith('# '),
+          reason: name);
+      expect(doc, isNot(contains('DRAFT')), reason: name);
+      expect(doc.toLowerCase(), isNot(contains('owner to confirm')),
+          reason: name);
+    }
+  });
+
+  test('malay_legal_docs_carry_the_same_placeholders', () {
+    Set<String> tokens(String doc) =>
+        RegExp(r'\{\{([A-Z_]+)\}\}').allMatches(doc).map((m) => m[1]!).toSet();
+    expect(tokens(legalDoc('privacy-policy.ms.md')), tokens(privacy));
+    expect(tokens(legalDoc('terms.ms.md')), tokens(terms));
+  });
+
+  test('privacy_policy_covers_pdpa_gdpr_and_us_state_laws', () {
+    for (final text in const [
+      'Personal Data Protection Act 2010',
+      'GDPR',
+      'United States',
+      '21 days',
+      'How long information is kept',
+    ]) {
+      expect(privacy, contains(text));
     }
   });
 
