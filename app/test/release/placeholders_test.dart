@@ -273,8 +273,9 @@ void main() {
           reason: token,
         );
       }
-      // Non-vacuous: the effective date is still unset.
-      expect(result.missing, contains('EFFECTIVE_DATE'));
+      // Non-vacuous: the App Review video is still unset.
+      expect(result.missing, contains('DEMO_VIDEO_URL'));
+      expect(result.missing, isNot(contains('EFFECTIVE_DATE')));
       expect(result.missing, isNot(contains('DEVELOPER_NAME')));
       expect(result.missing, isNot(contains('SUPPORT_EMAIL')));
       expect(result.missing, isNot(contains('PRIVACY_POLICY_URL')));

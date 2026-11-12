@@ -16,6 +16,11 @@ Details belong in `status.md` (current state), `decisions.md` (why) and `learnin
 ---
 
 ### 2026-11-12 — Claude, main session — feat/phase-9-release-prep → main
+- **Did:** owner's legal values: `EFFECTIVE_DATE` 12 November 2026, `ANALYTICS_RETENTION` 14 months, `GOVERNING_LAW` Malaysia (`placeholders.json`, `web/content`); `placeholders_test.dart` now checks `DEMO_VIDEO_URL` is the unset one.
+- **State:** no "(to be confirmed)" left on the hosted privacy policy or terms; the Draft label stays until the owner removes the `> DRAFT` line after the "Owner to confirm" review.
+- **Left open:** that review (privacy items 1–16, terms 1–5); `release_wrappers_test.dart` `ps1_refuses_an_ios_build_off_a_mac` failed once under load and passed alone.
+
+### 2026-11-12 — Claude, main session — feat/phase-9-release-prep → main
 - **Did:** publisher details from the owner: `DEVELOPER_NAME` Newy Enterprise, `DEVELOPER_ADDRESS` Selangor, Malaysia in `docs/release/placeholders.json`, synced to `web/content`; `placeholders_test.dart` now checks `EFFECTIVE_DATE` is the unset one.
 - **State:** the push to `main` redeploys the site; the privacy policy and terms name the publisher.
 - **Left open:** `EFFECTIVE_DATE`, `ANALYTICS_RETENTION`, `GOVERNING_LAW` (the legal pages stay Draft until set); the `support@newy.my` mailbox check; delete the Vercel project `remotely`.

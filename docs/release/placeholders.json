@@ -35,18 +35,18 @@
     "code": "AppLinks.terms"
   },
   "EFFECTIVE_DATE": {
-    "value": null,
-    "about": "The date the hosted privacy policy and terms take effect, for example 1 January 2027.",
+    "value": "12 November 2026",
+    "about": "The date the hosted privacy policy and terms take effect, for example 1 January 2027. Set by the owner on 2026-11-12.",
     "code": null
   },
   "ANALYTICS_RETENTION": {
-    "value": null,
-    "about": "The Firebase Analytics data retention chosen in the console (Admin > Data retention), for example 14 months.",
+    "value": "14 months",
+    "about": "The Firebase Analytics data retention chosen in the console (Admin > Data retention), for example 14 months. Set by the owner on 2026-11-12.",
     "code": null
   },
   "GOVERNING_LAW": {
-    "value": null,
-    "about": "The country or state whose law governs the terms, for example Malaysia.",
+    "value": "Malaysia",
+    "about": "The country or state whose law governs the terms, for example Malaysia. Set by the owner on 2026-11-12.",
     "code": null
   },
   "DEMO_VIDEO_URL": {
