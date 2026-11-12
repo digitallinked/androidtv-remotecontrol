@@ -4,6 +4,11 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #62 — 2026-11-12 — The website runs on Coolify beside Newy, not on Vercel
+- **Decision:** `web/` is a Docker image (`web/Dockerfile`, Next standalone, port 3000, `/api/health`) built by `.github/workflows/deploy-web.yml` and run as the Coolify app `newy-remotely` in project Newy on the shared CargoLinked droplet, behind Newy's Cloudflare zone. Images share the registry repository `cargolinked/newy` under `remotely-*` tags. The site address is a build argument defaulting to `https://remotely.newy.my`, so a build needs no env vars. Pushes to `main` that touch `web/` deploy. Full record: `docs/hosting.md`. Supersedes the hosting part of #59 (Vercel).
+- **Why:** the owner planned to leave Vercel before launch (Hobby is believed non-commercial, unverified); Newy already runs this stack, so the site reuses its server, TLS certificate, Cloudflare zone and deploy pattern at no extra cost. The registry's Basic plan allows 5 repositories and all were in use, so a separate repository wasn't possible.
+- **Revisit:** if the registry plan grows (move to a `remotely` repository), if the droplet's owner wants the site elsewhere, or if the site needs a different domain (change the build argument and rebuild).
+
 ### #61 — 2026-11-11 — App id `my.newy.remotely`; publish first from the Digital Linked Play account, then transfer; site on `remotely.newy.my`
 - **Decision:** the Android application id and iOS bundle id are `my.newy.remotely` (prod) and `my.newy.remotely.dev` (dev), replacing `com.digitallinked.atvremote`. The Kotlin namespace and the internal channel names (`my.newy.remotely/region`, `/storage`) follow, and the `DeviceInfo` vendor is `newy`. The protocol constants (`atvremote` pairing service name, certificate common name) and the database file name `remotely` stay. The website, privacy policy, terms and support page live on `https://remotely.newy.my`.
 - **Why:** the owner's new company account (waiting for its D-U-N-S number) will own the app for good. The app is first published from the owner's existing Digital Linked Play account and moved later with Google's app transfer, which keeps the package name. Nothing was uploaded and no Firebase app existed yet, so the change cost nothing but a reinstall on the test phone.
@@ -16,7 +21,7 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 - **Unresolved:** Prime Video (`primevideo://` and `aiv://` are refused; `https` gives the chooser), Plex and Twitch (refused, most likely not installed on this TV).
 - **Revisit:** a deep link proved for another app; a Google TV that accepts `market://launch` again.
 
-### #59 — 2026-11-07 — The marketing site is `web/`: Next.js on Vercel, static, with no tracking
+### #59 — 2026-11-07 — The marketing site is `web/`: Next.js on Vercel, static, with no tracking (hosting SUPERSEDED by #62)
 - **Decision (owner's request):** Next.js in `web/`, deployed to Vercel with `web/` as the root directory. Every route is static. Owner asked for the stack and to skip the design questions; the rest was Claude's call, listed here so the owner can overrule it.
 - **Hero:** a working remote driving a simulated TV (`web/lib/tv.ts`), not screenshots, and the room's light follows the screen. It uses the app's tokens and typefaces. Invented titles only, and no third-party logo anywhere on the site, matching store art (P9-R14).
 - **No claims the app can't back:** no prices, ratings, download counts or competitor comparison. Features come from `docs/release/store-listing/en.md`. "Coming soon" stands until `site.stores` in `web/lib/site.ts` holds real links.

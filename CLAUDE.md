@@ -24,7 +24,7 @@ Use the `project-knowledge` skill. Update `status.md` and add an entry to `docs/
 | `app-services` | Firebase, Remote Config, AdMob + consent, RevenueCat, analytics events |
 | `store-release` | signing, store listings, privacy forms, review notes, submission, the Play account plan |
 | `device-testing` | the owner's real phone and TV: ADB Wi-Fi, installing builds, safe taps, DM results |
-| `marketing-site` | `web/`: the website, legal pages, domain, Vercel deploys |
+| `marketing-site` | `web/`: the website, legal pages, domain, deploys to Coolify (`docs/hosting.md`) |
 
 General skills that also apply: `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `superpowers:verification-before-completion`, `frontend-design:frontend-design` (visual polish), `superpowers:subagent-driven-development` (executing the plan).
 
@@ -33,7 +33,7 @@ General skills that also apply: `superpowers:test-driven-development`, `superpow
 ```
 app/                  Flutter application (lib/, test/, integration_test/)
 packages/atv_remote/  Pure-Dart protocol library (no Flutter imports)
-web/                  Marketing site (Next.js on Vercel, https://remotely.newy.my; decisions #59, #61)
+web/                  Marketing site (Next.js on Coolify, https://remotely.newy.my; decisions #59, #61, #62)
 tool/                 Release, measurement and session-briefing scripts
 docs/knowledge/       Shared knowledge base: status, decisions, learnings
 docs/superpowers/     Plans and specs

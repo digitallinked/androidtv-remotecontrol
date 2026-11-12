@@ -5,7 +5,7 @@ name: Deploy website
 # to the shared DigitalOcean registry, then asks Coolify to roll it out.
 #
 # - Automatic: a push to main that changes web/ (or this file) deploys, once
-#   the repository variable WEB_AUTODEPLOY is `on`.
+#   the repository variable WEB_AUTODEPLOY is `on` (Markdown doesn't count).
 # - Manual: Actions -> Deploy website -> Run workflow, at any ref (a rollback:
 #   the ref's image tag still exists, or it is rebuilt).
 #
@@ -14,7 +14,8 @@ name: Deploy website
 on:
   push:
     branches: [main]
-    paths: ['web/**', '.github/workflows/deploy-web.yml']
+    # Markdown in web/ doesn't ship, so it doesn't deploy.
+    paths: ['web/**', '!web/**/*.md', '.github/workflows/deploy-web.yml']
   workflow_dispatch:
     inputs:
       ref:

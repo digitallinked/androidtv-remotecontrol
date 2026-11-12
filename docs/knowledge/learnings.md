@@ -4,6 +4,12 @@ Facts we discovered the hard way: protocol quirks, device bugs, tooling gotchas.
 
 ---
 
+### Website hosting (2026-11-12)
+- **Vitest fails on Windows when the drive letter is lower-case.** From Git Bash (`d:\...`) every web suite failed with "Cannot read properties of undefined (reading 'config')" and "no tests": vitest resolved itself as `D:/` and `d:/`, so two copies loaded. Run `npm test` from PowerShell at `D:\...`. Source: `web/`, 2026-11-12; 27 of 27 pass from `D:`.
+- **A prerendered Next route bakes in `NEXT_PUBLIC_SITE_URL` at build time.** The sitemap, robots.txt and canonical links are static, so a runtime env var in Coolify doesn't change them. The Dockerfile takes the address as a build argument with the production default. Source: `web/Dockerfile`, decision #62.
+- **The DigitalOcean registry `cargolinked` is on the Basic plan: 5 repositories, all in use.** New images go into an existing repository under their own tag prefix, and each project's prune step must match only its own prefix. Source: `GET /v2/registry/subscription`, 2026-11-12.
+- **An empty folder doesn't survive a git checkout.** `web/public/` is empty and untracked, so the Dockerfile runs `mkdir -p public` before copying it. Source: `web/Dockerfile`.
+
 ### App id change and device tooling (2026-11-11)
 - **Changing the application id makes a new app on the phone.** The renamed dev build installed beside the old one with the same label and none of its data, so the TV had to be paired again (the owner reads the code). Uninstall the old package once the new one is paired, and say which is which, because both show "Remotely Dev".
 - **The first Gradle build after a namespace change takes about 15 minutes** (923 s on this PC), so run it in the background. Tests that build with Gradle (`release_gradle_test.dart`) and the flow tests time out in a full run under that load, then pass alone. Rerun the failing files alone before calling a failure real.
