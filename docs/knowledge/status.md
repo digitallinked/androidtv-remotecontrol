@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-12 by Claude (website live on Coolify at `remotely.newy.my`, decision #62; support address `support@newy.my`; the site shows the real app, decision #63)._
+_Last updated: 2026-11-12 by Claude (publisher Newy Enterprise, Selangor, Malaysia; before that: website live on Coolify, decision #62; support address `support@newy.my`; the site shows the real app, decision #63)._
 
 ## Current phase
 
@@ -152,7 +152,7 @@ After launch: `docs/release/launch-ops/v1.1-backlog.md` holds the post-launch ba
 **The marketing site (decision #59)** needs, from the owner:
 - done 2026-11-12: the site is live on `https://remotely.newy.my`, hosted on Coolify (decision #62, `docs/hosting.md`). The old Vercel project `remotely` still exists, unused; delete it when the owner agrees;
 - done 2026-11-12: `SUPPORT_EMAIL` is `support@newy.my` (owner's choice) in `placeholders.json`, `AppLinks.supportEmail` and `web/content`; `/support` now shows it. Whether the mailbox receives mail is unverified;
-- the publisher name and address (`DEVELOPER_NAME`, `DEVELOPER_ADDRESS`). The legal pages stay labelled Draft until they and the other unset values are real;
+- done 2026-11-12: publisher `DEVELOPER_NAME` = Newy Enterprise, `DEVELOPER_ADDRESS` = Selangor, Malaysia (owner's values) in `placeholders.json` and `web/content`. The legal pages stay labelled Draft until `EFFECTIVE_DATE`, `ANALYTICS_RETENTION` and `GOVERNING_LAW` are set too;
 - done 2026-11-11: `PRIVACY_POLICY_URL`, `TERMS_URL` and `SUPPORT_URL` (`/support`) in `placeholders.json` and `AppLinks` point at `remotely.newy.my`, and `web/content` is synced. They work since 2026-11-12;
 - `web/public/app-ads.txt` once the AdMob publisher id exists (`docs/release/forms/app-ads-txt.md`);
 - `site.stores` in `web/lib/site.ts` at launch.

@@ -15,6 +15,11 @@ Details belong in `status.md` (current state), `decisions.md` (why) and `learnin
 
 ---
 
+### 2026-11-12 — Claude, main session — feat/phase-9-release-prep → main
+- **Did:** publisher details from the owner: `DEVELOPER_NAME` Newy Enterprise, `DEVELOPER_ADDRESS` Selangor, Malaysia in `docs/release/placeholders.json`, synced to `web/content`; `placeholders_test.dart` now checks `EFFECTIVE_DATE` is the unset one.
+- **State:** the push to `main` redeploys the site; the privacy policy and terms name the publisher.
+- **Left open:** `EFFECTIVE_DATE`, `ANALYTICS_RETENTION`, `GOVERNING_LAW` (the legal pages stay Draft until set); the `support@newy.my` mailbox check; delete the Vercel project `remotely`.
+
 ### 2026-11-12 — Claude, website session — feat/phase-9-release-prep → main
 - **Did:** the website uses the real app's screens (decision #63): `app/test/store_assets/web_screens_test.dart` + `tool/web_screens.ps1`/`.sh` + `web/scripts/screens.mjs` → `web/public/screens/*.webp`; new hero, step screens, a screen row with the store captions, the demo moved to `#try`, share image with the real remote, support FAQ aligned with the app's. `sharp` 0.35.5 is now a direct dependency of `web/`; `agentRules: false` stops `next dev` writing `web/AGENTS.md`.
 - **State:** merged to `main` and pushed at the owner's request; the push runs `deploy-web.yml`.
