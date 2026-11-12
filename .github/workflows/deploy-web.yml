@@ -1,0 +1,147 @@
+name: Deploy website
+
+# The marketing site in web/ -> https://remotely.newy.my, a Coolify app on the
+# shared CargoLinked droplet (docs/hosting.md). Builds the image here, pushes it
+# to the shared DigitalOcean registry, then asks Coolify to roll it out.
+#
+# - Automatic: a push to main that changes web/ (or this file) deploys, once
+#   the repository variable WEB_AUTODEPLOY is `on`.
+# - Manual: Actions -> Deploy website -> Run workflow, at any ref (a rollback:
+#   the ref's image tag still exists, or it is rebuilt).
+#
+# The repository is public: this workflow never runs on pull requests, so forks
+# never see its secrets.
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/deploy-web.yml']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit SHA to deploy
+        default: main
+      deploy:
+        description: Trigger the Coolify deployment after the image is pushed
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # The registry's Basic plan allows 5 repositories and all are in use, so the
+  # site shares Newy's repository under its own tag prefix. Newy's prune only
+  # touches web-/admin-/app- tags; ours only touches remotely- tags.
+  IMAGE: registry.digitalocean.com/cargolinked/newy
+  PREFIX: remotely
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch' || vars.WEB_AUTODEPLOY == 'on'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.sha }}
+      - id: meta
+        run: echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Test and typecheck
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+          npm run typecheck
+
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      # The registry is shared; CargoLinked's deploys garbage-collect it, which
+      # makes it read-only for a few minutes (a push fails with 401). Wait and
+      # re-run.
+      - run: doctl registry login --expiry-seconds 1800
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: web
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.PREFIX }}-${{ steps.meta.outputs.sha }}
+            ${{ env.IMAGE }}:${{ env.PREFIX }}-latest
+          cache-from: type=gha,scope=remotely-web
+          cache-to: type=gha,mode=max,scope=remotely-web
+
+      - name: Trigger Coolify deployment and wait for it
+        if: github.event_name == 'push' || inputs.deploy
+        env:
+          COOLIFY_URL: ${{ vars.COOLIFY_URL }}
+          APP_UUID: ${{ vars.COOLIFY_REMOTELY_UUID }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          # coolify.cargolinked.com sits behind Cloudflare Access; this service
+          # token lets the runner reach the API.
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_UUID" ] || [ -z "$COOLIFY_URL" ]; then
+            echo "::error::Set the repository variables COOLIFY_URL and COOLIFY_REMOTELY_UUID"; exit 1
+          fi
+          api() {
+            curl -sS -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+              -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" "$@"
+          }
+          # The app runs the remotely-latest tag, pushed above.
+          response=$(api -f -X POST "$COOLIFY_URL/api/v1/deploy?uuid=$APP_UUID&force=false")
+          deployment=$(echo "$response" | jq -r '.deployments[0].deployment_uuid // empty')
+          echo "Deploying $SHA (Coolify deployment ${deployment:-unknown})"
+          [ -n "$deployment" ] || { echo "::warning::No deployment id returned; not waiting."; exit 0; }
+          for _ in $(seq 1 60); do
+            code=$(api -o "$RUNNER_TEMP/dep.json" -w '%{http_code}' "$COOLIFY_URL/api/v1/deployments/$deployment" || echo 000)
+            if [ "$code" != 200 ]; then
+              echo "::warning::Could not read the deployment status (HTTP $code); not waiting."; exit 0
+            fi
+            status=$(jq -r '.status // empty' "$RUNNER_TEMP/dep.json")
+            case "$status" in
+              finished) echo "Rollout finished"; exit 0 ;;
+              failed|cancelled*) echo "::error::Coolify deployment ended '$status'. The previous container keeps serving."; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Coolify deployment still '$status' after 10 minutes."; exit 1
+
+      - name: Check the live site
+        if: github.event_name == 'push' || inputs.deploy
+        run: |
+          set -eu
+          for _ in $(seq 1 12); do
+            if curl -fsS https://remotely.newy.my/api/health | grep -q '"ok":true'; then echo healthy; exit 0; fi
+            sleep 10
+          done
+          echo "::error::https://remotely.newy.my/api/health is not answering {\"ok\":true}"; exit 1
+
+  prune:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      # Only remotely-* tags, and never garbage collection: the registry is
+      # shared, and collection makes all of it read-only for a while.
+      - name: Keep the newest 10 remotely tags
+        run: |
+          doctl registry repository list-tags newy --format Tag,UpdatedAt --no-header 2>/dev/null \
+            | grep '^remotely-' | grep -v '^remotely-latest ' | sort -k2 -r | awk 'NR>10 {print $1}' \
+            | xargs -r -n1 doctl registry repository delete-tag newy --force
