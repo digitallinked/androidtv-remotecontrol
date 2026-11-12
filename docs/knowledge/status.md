@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-12 by Claude (website live on Coolify at `remotely.newy.my`, decision #62; support address `support@newy.my`)._
+_Last updated: 2026-11-12 by Claude (website live on Coolify at `remotely.newy.my`, decision #62; support address `support@newy.my`; the site shows the real app, decision #63)._
 
 ## Current phase
 
@@ -13,6 +13,7 @@ What remains is the **owner's release work**, in the order of `docs/release/runb
 ## Done
 
 - **Website live at https://remotely.newy.my on Coolify (2026-11-12, decision #62):** Coolify app `newy-remotely` (`dfxb7lvq0um2lt8xebxnxjfy`) in project Newy on the shared CargoLinked droplet, image `cargolinked/newy:remotely-latest`, one proxied DNS record `remotely` in Newy's Cloudflare zone. `.github/workflows/deploy-web.yml` tests, builds, pushes and deploys on every push to `main` that touches `web/` (`WEB_AUTODEPLOY=on`). Verified live: `/api/health` `{"ok":true}`, every page 200, 404 for unknown paths, sitemap and robots on `https://remotely.newy.my` only, `running:healthy`. Everything is in `docs/hosting.md`. The privacy, terms and support links in the app now work.
+- **Website shows the real app (2026-11-12, decision #63):** the hero, the "How it works" steps, a new five-screen row and the share image use screens rendered from the app (`tool/web_screens.ps1` → `web/public/screens/*.webp`); the interactive demo moved to "Try the controls here". The support FAQ matches the in-app FAQ (Play Store page then Open, decision #60; "My TV isn't in the list"). `npm test` (27), typecheck, `next build` (standalone) and `flutter analyze` pass; checked in Chrome at 1440 and 390 px with no sideways scroll. Merged to `main` and pushed at the owner's request, which deploys it. Regenerate the screens after any visible change to those app screens.
 - **Support address `support@newy.my` (2026-11-12):** owner's choice; in `docs/release/placeholders.json`, `AppLinks.supportEmail` (feedback mail) and the site's `/support` page.
 - **App id, domain and knowledge sharing (2026-11-11, decision #61):**
   - App id `my.newy.remotely` (dev `.dev`) everywhere, with the Kotlin namespace, channel names and `DeviceInfo` vendor `newy` (`86643e3`). Analyze clean; the full suite passed except three load timeouts that pass alone.

@@ -4,6 +4,12 @@ Newest first. Each entry: date, decision, why, and what would make us revisit it
 
 ---
 
+### #63 — 2026-11-12 — The website shows the real app; the demo moves down the page
+- **Decision (owner's request: "use the real apps images"):** the home page hero shows two real screens of the app (the remote in dark, D-pad in front of touchpad), each "How it works" step shows its screen (discovery, pairing, the remote), and a new row shows five more with the store captions (`shot.phone.*`). The share image carries the real remote. The interactive TV demo stays, as "Try the controls here" lower down, introduced as a simplified remote. Amends the hero part of #59.
+- **How the screens are made:** `tool/web_screens.ps1` / `.sh` runs `app/test/store_assets/web_screens_test.dart`, which pumps the real app through the store-screenshot rig (`captureScreen`, same made-up data and the same checks for app names, "Google", logos and ads, Ruling P9-R14), unframed, on a 412 × 732 dp Play phone in English. `web/scripts/screens.mjs` turns them into 720 px WebP files in `web/public/screens/` (about 240 KB for all ten), which are committed; the PNGs in `build/web-screens/` are not.
+- **Why:** visitors judge the app by what it looks like; the demo's drawn phone no longer matched the app (no shortcut row, no Numbers tab, no power key).
+- **Revisit:** whenever the remote, Apps, keyboard, discovery, pairing, Your TVs or Appearance screens change visibly: regenerate and commit the WebP files.
+
 ### #62 — 2026-11-12 — The website runs on Coolify beside Newy, not on Vercel
 - **Decision:** `web/` is a Docker image (`web/Dockerfile`, Next standalone, port 3000, `/api/health`) built by `.github/workflows/deploy-web.yml` and run as the Coolify app `newy-remotely` in project Newy on the shared CargoLinked droplet, behind Newy's Cloudflare zone. Images share the registry repository `cargolinked/newy` under `remotely-*` tags. The site address is a build argument defaulting to `https://remotely.newy.my`, so a build needs no env vars. Pushes to `main` that touch `web/` deploy. Full record: `docs/hosting.md`. Supersedes the hosting part of #59 (Vercel).
 - **Why:** the owner planned to leave Vercel before launch (Hobby is believed non-commercial, unverified); Newy already runs this stack, so the site reuses its server, TLS certificate, Cloudflare zone and deploy pattern at no extra cost. The registry's Basic plan allows 5 repositories and all were in use, so a separate repository wasn't possible.

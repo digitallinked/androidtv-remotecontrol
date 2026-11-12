@@ -1,21 +1,57 @@
 import Link from 'next/link';
+import { AppScreen, type ScreenName } from '@/components/AppScreen';
 import { RemoteDemo } from '@/components/demo/RemoteDemo';
 import { Icon, type IconName } from '@/components/icons';
 import { Availability, SiteFooter, SiteHeader } from '@/components/SiteChrome';
 import { site } from '@/lib/site';
 
-const STEPS = [
+const STEPS: { title: string; body: string; screen: ScreenName; alt: string }[] = [
   {
+    screen: 'discovery',
+    alt: 'The app listing two TVs it found on the network, Bedroom TV and Living Room TV.',
     title: 'Find your TV',
     body: "The app finds TVs on your Wi-Fi network by itself. If yours doesn't show up, enter its IP address.",
   },
   {
+    screen: 'pairing',
+    alt: 'The pairing page asking for the code shown on Kitchen TV.',
     title: 'Pair once',
     body: 'Type the code your TV shows. You only do this once for each TV.',
   },
   {
+    screen: 'touchpad',
+    alt: 'The remote connected to Living Room TV, with app shortcuts, the touchpad, and volume and channel keys.',
     title: 'Pick up your phone',
     body: 'After that, the app reconnects by itself, so the remote is ready when you are.',
+  },
+];
+
+// Captions from docs/release/store-listing/en.md (shot.phone.*).
+const TOUR: { screen: ScreenName; caption: string; alt: string }[] = [
+  {
+    screen: 'dpad',
+    caption: "A D-pad that's easy to hit",
+    alt: 'The remote with a large D-pad around an OK button.',
+  },
+  {
+    screen: 'apps',
+    caption: 'Open your TV apps in one tap',
+    alt: 'The Apps screen with shortcuts for Movies, Music, News, Sports, Kids and Photos.',
+  },
+  {
+    screen: 'keyboard',
+    caption: "Type with your phone's keyboard",
+    alt: 'The keyboard sheet over the remote, with Hello typed and an Enter button.',
+  },
+  {
+    screen: 'tvs',
+    caption: 'Switch between all your TVs',
+    alt: 'Your TVs: Living Room TV in use, Bedroom TV and Kitchen TV.',
+  },
+  {
+    screen: 'styles',
+    caption: 'Dark mode and Premium colour styles',
+    alt: 'Appearance settings in dark mode with the Ocean colour style chosen.',
   },
 ];
 
@@ -81,15 +117,32 @@ export default function HomePage() {
       <div className="hero">
         <SiteHeader tone="dark" />
         <main>
-          <section className="hero-inner" aria-labelledby="hero-title">
+          <section className="hero-intro" aria-labelledby="hero-title">
             <div className="hero-copy">
               <h1 id="hero-title">{site.tagline}</h1>
               <p className="hero-lead">
-                Swipe, tap and type on your Android TV or Google TV over your home Wi-Fi.
+                Swipe, tap and type on your Android TV or Google TV over your home Wi-Fi. Pair
+                once, and the remote is ready every time you pick up your phone.
               </p>
               <Availability />
+              <p className="hero-more">
+                <a href="#try">Try the controls in your browser</a>
+              </p>
             </div>
-            <RemoteDemo />
+            <div className="hero-phones">
+              <AppScreen
+                name="touchpad_dark"
+                className="device-back"
+                alt="The remote in dark mode with the touchpad."
+                priority
+              />
+              <AppScreen
+                name="dpad_dark"
+                className="device-front"
+                alt="The remote in dark mode, connected to Living Room TV, with the D-pad, volume and channel keys."
+                priority
+              />
+            </div>
           </section>
         </main>
       </div>
@@ -100,16 +153,12 @@ export default function HomePage() {
           <ol className="steps">
             {STEPS.map((step, index) => (
               <li key={step.title} className="step">
+                <AppScreen name={step.screen} alt={step.alt} className="step-screen" />
                 <span className="step-number" aria-hidden="true">
                   {index + 1}
                 </span>
                 <h3>{step.title}</h3>
                 <p>{step.body}</p>
-                {index === 1 && (
-                  <p className="pair-code" aria-hidden="true">
-                    4F7A2C
-                  </p>
-                )}
               </li>
             ))}
           </ol>
@@ -133,6 +182,20 @@ export default function HomePage() {
           </ul>
         </section>
 
+        <section className="section" aria-labelledby="tour-title">
+          <h2 id="tour-title">Here&rsquo;s the app, as it looks on your phone.</h2>
+          <ul className="tour" tabIndex={0} aria-label="Screens from the app">
+            {TOUR.map(({ screen, caption, alt }) => (
+              <li key={screen}>
+                <figure>
+                  <AppScreen name={screen} alt={alt} />
+                  <figcaption>{caption}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <section className="section" aria-labelledby="controls-title">
           <h2 id="controls-title">The keys you reach for, plus a real keyboard.</h2>
           <ul className="controls">
@@ -150,6 +213,19 @@ export default function HomePage() {
           </ul>
         </section>
       </div>
+
+      <section className="hero try" id="try" aria-labelledby="try-title">
+        <div className="hero-inner">
+          <div className="hero-copy">
+            <h2 id="try-title">Try the controls here.</h2>
+            <p className="hero-lead">
+              A simplified remote drives a simulated TV, so you can get a feel for the D-pad, the
+              touchpad and the keyboard before you install the app.
+            </p>
+          </div>
+          <RemoteDemo />
+        </div>
+      </section>
 
       <section className="privacy-band" aria-labelledby="privacy-title">
         <div className="privacy-band-inner">

@@ -22,6 +22,10 @@ const QUESTIONS = [
     a: "TVs and streaming boxes that run Android TV or Google TV, on the same Wi-Fi network as your phone. TVs with other systems, such as Samsung (Tizen), LG (webOS), Roku or Fire TV, can't be controlled by this app.",
   },
   {
+    q: "My TV isn't in the list.",
+    a: 'Make sure the TV is on and connected to the same Wi-Fi as your phone, and that "Android TV Remote Service" is up to date on the TV. You can also add the TV by its IP address. The checks above go through each step.',
+  },
+  {
     q: 'Why does the TV ask for a code again?',
     a: "Pairing makes the TV and your phone trust each other. Clearing the app's data, reinstalling the app or resetting the TV removes that trust, so you pair once more with a new code.",
   },
@@ -35,11 +39,11 @@ const QUESTIONS = [
   },
   {
     q: "An app shortcut doesn't open.",
-    a: "The app has to be installed on the TV. Some apps have a different version in each country: add the right one by its app ID under Settings, then Apps.",
+    a: "Most app shortcuts open the app's page in the TV's Play Store: press Open there, or Install if the app isn't on the TV yet. Some apps have a different version in each country: add the right one by its app ID under Settings, then Apps.",
   },
   {
     q: 'What does the app keep about my TV?',
-    a: "Your TV's name, network address and MAC address stay on your phone. The app can send usage statistics and crash reports, which never include them. You can turn each on or off in Settings, then Privacy choices.",
+    a: "Your TV's name, network address and MAC address stay on your phone. The app can send usage statistics and crash reports, tied to a random ID and not to your name. They never include those details. You can turn each on or off in Settings, then Privacy choices.",
   },
   {
     q: 'I moved to a new phone. Where are my TVs?',

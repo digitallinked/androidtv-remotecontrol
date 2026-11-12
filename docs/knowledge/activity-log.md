@@ -15,6 +15,11 @@ Details belong in `status.md` (current state), `decisions.md` (why) and `learnin
 
 ---
 
+### 2026-11-12 — Claude, website session — feat/phase-9-release-prep → main
+- **Did:** the website uses the real app's screens (decision #63): `app/test/store_assets/web_screens_test.dart` + `tool/web_screens.ps1`/`.sh` + `web/scripts/screens.mjs` → `web/public/screens/*.webp`; new hero, step screens, a screen row with the store captions, the demo moved to `#try`, share image with the real remote, support FAQ aligned with the app's. `sharp` 0.35.5 is now a direct dependency of `web/`; `agentRules: false` stops `next dev` writing `web/AGENTS.md`.
+- **State:** merged to `main` and pushed at the owner's request; the push runs `deploy-web.yml`.
+- **Left open:** check the deploy (`docs/hosting.md` → "Verify a deploy").
+
 ### 2026-11-12 — Claude, main session — feat/phase-9-release-prep → main
 - **Did:** website moved to Coolify (decision #62): `web/Dockerfile`, `/api/health`, standalone output behind `NEXT_OUTPUT_STANDALONE=1`, `.github/workflows/deploy-web.yml` (`eb4deae`); `docs/hosting.md`. Created, with the owner's go-ahead each time: Coolify app `newy-remotely` (`dfxb7lvq0um2lt8xebxnxjfy`), the proxied DNS record `remotely → 174.138.20.56` in zone `newy.my`, the first deploy. Repo secrets and variables set (names in `docs/hosting.md`); `WEB_AUTODEPLOY=on`.
 - **State:** https://remotely.newy.my live and `running:healthy`; the other three Newy apps untouched and healthy; mail records match Newy's export. Registry `cargolinked/newy` holds `remotely-eb4deae22b01` and `remotely-latest`.

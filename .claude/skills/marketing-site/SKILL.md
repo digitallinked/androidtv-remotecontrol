@@ -17,6 +17,7 @@ A static Next.js site: a home page whose hero is a working remote driving a simu
 | Deploys | `.github/workflows/deploy-web.yml`: every push to `main` touching `web/` (variable `WEB_AUTODEPLOY=on`), or by hand from Actions |
 | DNS | Newy's Cloudflare zone `newy.my`, one proxied A record `remotely` |
 | App links | `AppLinks.privacyPolicy` / `terms` in `app/lib/app/app_links.dart` → `/privacy`, `/terms`; `SUPPORT_URL` → `/support` |
+| App screens | `public/screens/*.webp`, rendered from the real app by `tool/web_screens.ps1` / `.sh` (`app/test/store_assets/web_screens_test.dart`, then `web/scripts/screens.mjs`). Regenerate and commit after a visible change to those screens (decision #63). Never hand-draw app UI or use a device screenshot with real TV names or addresses. |
 | Old | Vercel project `remotely` (team `newys-projects-9aa78c8d`, https://remotely-woad.vercel.app) is unused; nothing deploys there |
 
 ## Rules
